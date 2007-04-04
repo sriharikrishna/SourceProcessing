@@ -3,6 +3,8 @@ from unittest  import *
 
 from fortStmts import *
 from fortStmts import _Kind
+from fortStmts import _Star
+from fortStmts import _F90ExplLen,_NoInit
 from useparse  import *
 
 class C1(TestCase):
@@ -256,9 +258,73 @@ class C7(TestCase):
         ae(typemerge([t3,t4,],t1),t4)
         ae(typemerge([t1,t2,t3,t4,t5,t6],t1),t5)
 
-s1    = makeSuite(C7)
+class C8(TestCase):
+    'more declarations, esp character statements'
+    def test1(self):
+        '''f77 style character decls
+        '''
+        ae = self.assertEquals
+        a_ = self.assert_
 
-suite = asuite(C1,C2,C3,C4,C5,C6,C7)
+        v = pps('character*5  foo,bar,baz(10)')
+        a_(isinstance(v,CharacterStmt))
+        a_(v.mod)
+        ae(v.mod[0].len,'5')
+        a_(not v.attrs)
+        a_(v.decls)
+        vars = [repr(i.lhs) for i in v.decls]
+        for vv in ['foo','bar']: a_(repr(vv) in vars)
+        a_(repr(App('baz',['10'])) in vars)
+
+    def test2(self):
+        '''f77 style character decls, w *(*) len
+        '''
+        ae = self.assertEquals
+        a_ = self.assert_
+
+        v = pps('character*(*)  foo,bar,baz(10)')
+        a_(isinstance(v,CharacterStmt))
+        a_(isinstance(v.mod[0].len,_Star))
+        a_(not v.attrs)
+        a_(v.decls)
+        vars = [repr(i.lhs) for i in v.decls]
+        for vv in ['foo','bar']: a_(repr(vv) in vars)
+        a_(repr(App('baz',['10'])) in vars)
+
+    def test3(self):
+        '''f90 style decls, w len modifiers & attribs
+        '''
+        ae = self.assertEquals
+        a_ = self.assert_
+
+        ss = 'character(len=AAA+9),dimension(3) :: gack(*,*)*5,floob,foo*2,bar(2)'
+        v = pps(ss)
+        ae(repr(v),
+           repr(CharacterStmt(
+            [_F90ExplLen(Ops('+','AAA','9'))],
+            [App('dimension',['3'])],
+            [_NoInit(Ops('*',App('gack',['*', '*']),'5')),
+             _NoInit('floob'),
+             _NoInit(Ops('*','foo','2')),
+             _NoInit(App('bar',['2']))])))
+
+    def test4(self):
+        '''double precision w attributes, and '*' dimensions
+        '''
+        ae = self.assertEquals
+        a_ = self.assert_
+
+        ss = pps('double precision,dimension(5) :: x,y(*,*,3),z')
+        ae(repr(ss),
+           repr(DoubleStmt([],[App('dimension',['5'])],
+                           [_NoInit('x'),
+                            _NoInit(App('y',['*', '*', '3'])),
+                            _NoInit('z')])))
+
+
+s1    = makeSuite(C8)
+
+suite = asuite(C1,C2,C3,C4,C5,C6,C7,C8)
 
 if __name__ == '__main__':
     runit(suite)

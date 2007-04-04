@@ -35,26 +35,27 @@ class _Star(_Mutable_T):
     def __str__(self):
         return '(*)'
 
-class _F90Len(_Mutable_T):
+class _FLenMod(_Mutable_T):
+    'generic fortran char len type'
+    _sons = ['len']
+    def __init__(self,len):
+        self.len = len
+    def __repr__(self):
+        return '%s(%s)' % (self.__class__.__name__,repr(self.len))
+    def __str__(self):
+        return self.pat_ % str(self.len)
+    
+class _F90ExplLen(_FLenMod):
+    'utility modifier for explicit len in F90 char data'
+    pat_ = '(len=%s)'
+
+class _F90Len(_FLenMod):
     'Utility modifier for character data, F90 style'
-    _sons = ['len']
-    def __init__(self,len):
-        self.len = len
-    def __repr__(self):
-        return '_F90Len(%s)' % repr(self.len)
-    def __str__(self):
-        return '(%s)' % str(self.len)
+    pat_ = '(%s)'
 
-class _F77Len(_Mutable_T):
+class _F77Len(_FLenMod):
     'Utility modifier for character data, F77 style'
-    _sons = ['len']
-
-    def __init__(self,len):
-        self.len = len
-    def __repr__(self):
-        return '_F77Len(%s)' % repr(self.len)
-    def __str__(self):
-        return '*%s' % str(self.len)
+    pat_ = '*%s'
 
 class _Prec(_TypeMod):
     pat = '*%s'
@@ -84,6 +85,8 @@ f77mod   = treat(f77mod,lambda l: _F77Len(l[1]))
 f90mod   = seq(lit('('),disj(lit('*'),Exp),lit(')'))
 f90mod   = treat(f90mod,lambda l: _F90Len(l[1]))
 
+explLen  = seq(lit('('),lit('len'),lit('='),Exp,lit(')'))
+
 id_l     = treat(id,str.lower)
 _typeid  = disj(lit('real'),
                 lit('integer'),
@@ -105,7 +108,7 @@ pstd = seq(_typeid,
          )
 
 pchar = seq(lit('character'),
-         zo1(disj(f77mod,f90mod)),
+         zo1(disj(f77mod,f90mod,explLen)),
          )
 
 type_pat = disj(pchar,pstd)
@@ -167,8 +170,19 @@ def _handle_init(asm):
 
 init_spec = zo1(seq(disj(lit('=>'),lit('=')),Exp))
 
-decl_item = seq(Exp,init_spec)
+var_w_dim = seq(id,zo1(seq(lit('('),cslist(disj(lit('*'),Exp)),lit(')'))))
+var_w_dim = treat(var_w_dim,lambda x: x[1] and App(x[0],x[1][0][1]) or x[0])
+
+decl_item = seq(var_w_dim,init_spec)
 decl_item = treat(decl_item,_handle_init)
+
+char_override  = seq(lit('*'),Exp)
+
+char_decl_     = seq(var_w_dim,zo1(char_override))
+char_decl_     = treat(char_decl_,lambda x: x[1] and Ops('*',x[0],x[1][0][1]) or x[0])
+
+char_decl_item = seq(char_decl_,init_spec)
+char_decl_item = treat(char_decl_item,_handle_init)
 
 def typestr(raw):
     (tyid,mod) = raw
@@ -554,6 +568,8 @@ class ExternalStmt(Decl):
 class CharacterStmt(TypeDecl):
     kw = 'character'
     kw_str = kw
+    _sons  = ['mod','attrs','decls']
+
     @staticmethod
     def parse(scan):
         starmod  = seq(lit('('),lit('*'),lit(')'))
@@ -565,32 +581,40 @@ class CharacterStmt(TypeDecl):
 
         f90mod   = seq(lit('('),disj(lit('*'),Exp),lit(')'))
         f90mod   = treat(f90mod,lambda l: _F90Len(l[1]))
+
+        explLen  = seq(lit('('),lit('len'),lit('='),Exp,lit(')'))
+        explLen  = treat(explLen,lambda l: _F90ExplLen(l[3]))
                 
         p1 = seq(lit('character'),
-                 zo1(disj(f77mod,f90mod)),
-                 app_id_l)
+                 zo1(disj(f77mod,f90mod,explLen)),type_attr_list,zo1(lit('::')),
+                 cslist(char_decl_item))
         try: 
-          ((dc,mod,decls),rest) = p1(scan)
+          ((dc,mod,attrs,dc1,decls),rest) = p1(scan)
         except AssemblerException,e:
           raise ParseError(scan,'character variable declaration')  
 
-        return CharacterStmt(mod,decls)
+        return CharacterStmt(mod,attrs,decls)
 
-    def __init__(self,mod,decls):
+    def __init__(self,mod,attrs,decls):
         self.mod   = mod
         self.decls = decls
-        _sons  = ['mod','decls']
+        self.attrs = attrs
 
     def __repr__(self):
-        return 'CharacterStmt(%s,%s)' % (repr(self.mod),repr(self.decls))
+        return 'CharacterStmt(%s,%s,%s)' % (repr(self.mod),repr(self.attrs),repr(self.decls))
 
     def __str__(self):
         modstr = ''
         if self.mod:
             modstr = str(self.mod[0])
         
-        return 'character%s %s' % (modstr,
-                                   ','.join([str(d) for d in self.decls]))
+        attr_str = ''
+        if self.attrs:
+            attr_str = ','+','.join([str(a) for a in self.attrs])
+            
+        return 'character%s%s :: %s' % (modstr,
+                                        attr_str,
+                                        ','.join([str(d) for d in self.decls]))
 
 class IntrinsicStmt(Decl):
     pass
