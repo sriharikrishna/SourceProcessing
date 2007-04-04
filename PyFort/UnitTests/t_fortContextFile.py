@@ -85,10 +85,29 @@ class C2(TestCase):
         a_(not dims)
 #        for l in e.lines: print l
 
+    def test4(self):
+        'file character decls + attrs'
+        ae = self.assertEquals
+        a_ = self.assert_
+        e  = fortContextFile(fname_t('char_decls.f'))
+        (ty,mod) = e.lines[0].ctxt.lookup_type('x')
+        ae(ty.kw_str,'character')
+        a_(mod)
+        dims = e.lines[0].ctxt.lookup_dims('x')
+        a_(dims)
+        ae(len(dims),1)
+        ae([str(d) for d in dims],['2'])
+        (ty,mod) = e.lines[0].ctxt.lookup_type('y')
+        ae(ty.kw_str,'character')
+        a_(mod)
+        dims = e.lines[0].ctxt.lookup_dims('y')
+        a_(dims)
+        ae([str(d) for d in dims],['2','4'])
+#        for l in e.lines: print l
+
 s1 = makeSuite(C2)
 
 suite = asuite(C1,C2)
 
 if __name__ == "__main__":
     runit(suite)
-

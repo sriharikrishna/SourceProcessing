@@ -125,8 +125,12 @@ def typesep(dd,default_dims):
     a type declaration will either be a simple var (string)
     or an App expression
     '''
+    _helper = lambda e: isinstance(e,str) and (e,default_dims) or (e.head,tuple(e.args))
+
     d = dd.lhs
-    return isinstance(d,str) and (d,default_dims) or (d.head,tuple(d.args))
+
+    if isinstance(d,fe.Ops): return _helper(d.a1)
+    return _helper(d)
 
 def default_dims(attrs_list):
     for a in attrs_list:
