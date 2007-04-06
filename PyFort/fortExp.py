@@ -107,6 +107,9 @@ class Sel(_Exp):
     def __str__(self):
         return '%s%%%s' % (str(self.head),str(self.proj))
 
+    def map(self,fn):
+        return Sel(fn(self.head),fn(self.proj))
+
 class _AtomH(object):
     'helper class, captures the args of app or selection'
 
