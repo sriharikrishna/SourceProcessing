@@ -42,8 +42,8 @@ def main():
       print >>sys.stderr, "Error: scanner fails at line:", e.aFortLine.line
       print >>sys.stderr, " tokens scanned ok: ", e.scanned
       print >>sys.stderr, "    unable to scan: ", e.rest
-      print >>sys.stderr, " This failure is likely due to possibly legal but unconventional Fortran, such as unusual spacing.", e.rest
-      print >>sys.stderr, " Please consider modifying your source code.", e.rest
+      print >>sys.stderr, " This failure is likely due to possibly legal but unconventional Fortran,"
+      print >>sys.stderr, " such as unusual spacing. Please consider modifying your source code."
       return 1 
     except ParseError,e : 
       print >>sys.stderr, "Error: parser fails to assemble tokens in scanned line:", e.scannedLine, " as ", e.target

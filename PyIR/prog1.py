@@ -48,7 +48,11 @@ class Prog1(object):
             print >> out,s.rawline,
 
     def writeit(self,fname):
-        ff = open(fname,'w')
+        try:
+          ff = open(fname,'w')
+        except IOError:
+          msg="Error cannot open file named: "+name
+          raise UserError(msg)
         self.printit(ff)
         ff.close()
 

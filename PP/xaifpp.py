@@ -1,8 +1,7 @@
 '''
    Transformations:
       1. add the active_module
-      2. convert type(OpenAD_type)  ...
-         or type(OpenAD_type_init)  ... TO
+      2. convert type(openadty_active)  ... TO
          type(active) :: ...
       3. convert __value__($p) --> $p%v
       4. convert __deriv__($p) --> $p
@@ -17,7 +16,7 @@ def type_active_m(self,arg):
     '''convert type(OpenAD_type) to type(active)
     only applied to type declaration stmts
     '''
-    if self.name.lower() in set(['openad_type','openad_type_init']):
+    if self.name.lower() in set(['openadty_active']):
         self.name = 'active'
         self.dblc = True
         self.reflow()
@@ -38,9 +37,10 @@ def val_deriv_m(self,top):
 
 def add_active_module(self,arg):
     'add the active module'
-    new_stmt = fs.UseStmt('active_module')
-    new_stmt.clone_fmt(self)
-    arg.attach(self,new_stmt)
+    if (self.name == 'w2f__types'):
+      new_stmt = fs.UseStmt('active_module')
+      new_stmt.clone_fmt(self)
+      arg.attach(self,new_stmt)
 
 def xUse(self,arg):
     'add the active module'
