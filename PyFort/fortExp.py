@@ -6,8 +6,6 @@ from _Setup import *
 from PyUtil.l_assembler import *
 import fortScan  as fs
 
-# import fortStmts as fst
-# import sre
 import re
 from PyUtil.flatten import flatten
 from op_prec import OpPrec

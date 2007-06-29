@@ -170,7 +170,10 @@ def _handle_init(asm):
 
 init_spec = zo1(seq(disj(lit('=>'),lit('=')),Exp))
 
-var_w_dim = seq(id,zo1(seq(lit('('),cslist(disj(lit('*'),Exp)),lit(')'))))
+star_range = seq(Exp,lit(':'),lit('*'))
+star_range = treat(star_range,lambda x: Ops(':',x[0],'*'))
+
+var_w_dim = seq(id,zo1(seq(lit('('),cslist(disj(star_range,lit('*'),Exp)),lit(')'))))
 var_w_dim = treat(var_w_dim,lambda x: x[1] and App(x[0],x[1][0][1]) or x[0])
 
 decl_item = seq(var_w_dim,init_spec)

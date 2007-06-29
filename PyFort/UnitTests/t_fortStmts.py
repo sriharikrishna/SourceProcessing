@@ -320,7 +320,17 @@ class C8(TestCase):
                            [_NoInit('x'),
                             _NoInit(App('y',['*', '*', '3'])),
                             _NoInit('z')])))
+    def test5(self):
+        '''star ranges (gawd)'''
+        ae = self.assertEquals
+        a_ = self.assert_
 
+        ss = pps('double precision,dimension(5) :: x,y(*,2*x:*,3),z')
+        ae(repr(ss),
+           repr(DoubleStmt([],[App('dimension',['5'])],
+                           [_NoInit('x'),
+                            _NoInit(App('y',['*', Ops(':',Ops('*','2','x'),'*'), '3'])),
+                            _NoInit('z')])))
 
 s1    = makeSuite(C8)
 
