@@ -1,103 +1,75 @@
-'''
-Logical line iterator for free format lines
-'''
 from _Setup import *
-import fortStmts as fs
-from kill_bang import kill_bang_comment
-import re
-import string
-import PyUtil.assembler as as
-import PyUtil.buf_iter as b
-from PyUtil.chomp import chomp
-from PyUtil.flatten import flatten
-from fortScan import scan1
-import cStringIO as cs
 
-def comment_p(l):
-    '''given a line l, return true if l is a comment (or blank) line'''
-    comre   = re.compile(r'''[^\d\s]''')
-    blankre = re.compile(r'''\s* $''',re.X)
-    shoutre = re.compile(r''' \s* !''',re.X)
-    return comre.match(l) or blankre.match(l) or shoutre.match(l)
+from PyUtil.flatten import flatten
+from PyUtil.chomp import chomp
+from kill_bang import *
+from PyUtil.assembler import *
 
 def cont_p(l):
     '''given a line l, return true if l is a continuation line'''
-    contre = re.compile(r'''\s{5} \S''',re.X)
+    contre = re.compile(r'''\ {5} \S''',re.X)
     return contre.match(l)
 
-def strt_p(l):
+def comment_p(l):
+    '''given a line l, return true if l is a comment (or blank) line'''
+    blankre = re.compile(r'''\s* $''',re.X)
+    return nbl_comment_p(l) or blankre.match(l)
+
+def stmt_p(l):
     '''given a line l, return true if l is a starting statement'''
     return not (comment_p(l) or cont_p(l))
 
-_lineno_re = re.compile(r'\s* (\d+) \s*',re.X)
-_lead_re   = re.compile(r'([\d\s]*) (.+) $',re.X)
+comm   = pred(comment_p)
 
-__leadtbl = string.maketrans(string.digits,' ' * 10)
+strt   = pred(stmt_p)
+cont   = pred(cont_p)
+a_stmt   = seq(strt,star(seq(star(comm),cont)))
 
-def _makelead(s):
-    return s.translate(__leadtbl)
+_comre   = re.compile(r'''[^\d\s]''')
+_shoutre = re.compile(r''' \s* !''',re.X)
 
-def fjoin(asm):
-    '''a true fortran line dta structure comes in as:
+def nbl_comment_p(l):
+    'return true if line is a (nonblank) comment'
+    return _comre.match(l) or _shoutre.match(l)
+
+def fjoin(dta):
+    '''take in a pattern match nested seq data structure for a fortran stmt,
+    return tuple (rawline,joined_line,internal_comments)
+
+    For fixed format lines:
+    a true fortran line dta structure comes in as:
     [initial stmt [continuation_lines]]
 
     continuation_lines are structures as well:
         [[comments] continuation_line]
     '''
-    rawline = ''.join(flatten(asm))
+    rawline           = ''.join(flatten(dta))
     internal_comments = []
-
-    (strt,conts) = asm
-    (s,c)        = kill_bang_comment(chomp(strt))
-    current_line = [s]
-
-    if c:
+    (line,c)          = kill_bang_comment(chomp(dta[0]))
+    if not c == '':
         internal_comments.append(chomp(c))
 
-    for (comments,cl) in conts:
-        (l,eol_comm) = kill_bang_comment(chomp(cl))
-        if eol_comm:
-            internal_comments.append(eol_comm)
-        internal_comments.extend(comments)
-        l = l[6:]
-        current_line.append(l)
+    for cont in dta[1]:
+        internal_comments.extend([ chomp(l) for l in cont[0]])
+        (l,c) = kill_bang_comment(chomp(cont[1])[6:])
+        if not c == '':
+            internal_comments.append(chomp(c))
+        line += l
 
-    joined    = ''.join(current_line)
-    if joined[0] == '\t':
-        joined = ' ' * 8 + joined[1:]
+    return (rawline,line,internal_comments)
 
-    m                = _lineno_re.match(joined)
-    lineno           = m and int(m.group(1))
-    leadstr          = _lead_re.match(joined)
-    lead,rest        = leadstr.groups()
-    
-    scan,scan_rm     = scan1.scan(rest)
+def flow_line(l,cont='+'):
+    '''given a long line, write it out as a series of continued lines'''
+    l1 = chomp(l)
+    if comment_p(l) or (len(l1) <= 72):
+        return l
 
-    rv               = fs.parse(scan)
-    rv.rm            = scan_rm
-    rv.rawline       = rawline
-    rv.lineno        = lineno
-    rv.lead          = _makelead(lead)
-    rv.internal_com  = internal_comments
-    
+    rv = l1[0:72] + '\n'
+    rem = l1[72:]
+    while len(rem) > 66:
+        tmp  = rem[0:66]
+        rv  += ' ' * 5 + cont + tmp + '\n'
+        rem  = rem[66:]
+    if len(rem) > 0:
+        rv  += ' ' * 5 + cont + rem + '\n'
     return rv
-
-strt   = as.pred(strt_p)
-comm   = as.pred(comment_p)
-cont   = as.pred(cont_p)
-
-cblk   = as.plus(comm)
-cblk   = as.treat(cblk,lambda l: fs.Comments(''.join(l)))
-
-stmt   = as.seq(strt,as.star(as.seq(as.star(comm),cont)))
-stmt   = as.treat(stmt,fjoin)
-
-a_line = as.disj(cblk,stmt)
-
-def stmt_iter_file(fname):
-    'given a file name, return the stmt_iter derived from the file'
-    return as.vgen(a_line,b.buf_iter(open(fname)))
-
-def stmt_iter_str(here):
-    'given a string, return the stmt_iter derived from the string'
-    return as.vgen(a_line,b.buf_iter(cs.StringIO(here)))

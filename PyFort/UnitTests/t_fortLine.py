@@ -4,60 +4,6 @@ from unittest  import *
 from fortLine  import *
 from cStringIO import StringIO
 
-class preds(TestCase):
-    s1 = '''
-c This is a comment
-'''
-    s2 = '''
-
-'''
-    s3 = '''
-      x(10) = y * 14
-'''
-    s4 = '''
-     +x = y * 10 + 'qqq' // 'rrr'
-'''
-    s5 = '''
-10    foo = sin(bar)
-'''
-    (s1,s2,s3,s4,s5) = [ l[1:] for l in (s1,s2,s3,s4,s5)]
-
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
-
-    def test1(self):
-        '''s1 is a comment'''
-        s1 = preds.s1
-        self.assert_(comment_p(s1))
-
-    def test2(self):
-        '''s1 is not a stmt or continuation'''
-        s1 = preds.s1
-        self.assert_(not (stmt_p(s1) or cont_p(s1)))
-
-    def test3(self):
-        '''s2 (blank) is a comment and not a stmt nor a continuation'''
-        s2 = preds.s2
-        self.assert_(comment_p(s2) and not (stmt_p(s2) or cont_p(s2)))
-
-    def test4(self):
-        '''s3 is a stmt, and nothing else'''
-        s3 = preds.s3
-        self.assert_(stmt_p(s3) and not (comment_p(s3) or cont_p(s3)))
-
-    def test5(self):
-        '''s4 is a continuation, and nothing else'''
-        s4 = preds.s4
-        self.assert_(cont_p(s4) and not (comment_p(s4) or stmt_p(s4)))
-
-    def test6(self):
-        '''s5 is a stmt, and nothing else'''
-        s5 = preds.s5
-        self.assert_(stmt_p(s5) and not (comment_p(s5) or cont_p(s5)))
-
 class flow(TestCase):
 
     s1 = '''
@@ -99,30 +45,6 @@ c This is a comment line that may be a little long, but that should be ok
         s3 = flow.s3
         self.assertEquals(flow_line(s3),s3)
 
-class kill_bang(TestCase):
-    s1 = "       x(ii,jj) = 'foo '' ' // 'bar' ! eol comment"
-    s2 = "       x(ii,jj) = 'foo '' ' // 'bar'"
-    s3 = "       x(ii,jj) = 'foo '' ' // 'bar ! eol comment"
-
-    def test1(self):
-        'kill bang comments from end of line'
-        s1 = kill_bang.s1
-        s2 = kill_bang.s2
-        s3 = kill_bang.s3
-        ae = self.assertEquals
-
-        (l,c) = kill_bang_comment(s1)
-        ae(l,"       x(ii,jj) = 'foo '' ' // 'bar' ")
-        ae(c,"! eol comment")
-
-        (l,c) = kill_bang_comment(s2)
-        ae(l,s2)
-        ae(c,'')
-
-        (l,c) = kill_bang_comment(s3)
-        ae(l,s3)
-        ae(c,'')
-
 class fline_t(TestCase):
     right = "       x = foo // 'bar  '' '    // ' some more string with ! in itfinishes the string'"
     p1 = '''
@@ -136,10 +58,7 @@ c
 '''
     p1 = p1[1:]
     p1f = StringIO(p1)
-    stmt = pred(stmt_p)
-    cmnt = pred(comment_p)
-    cont = pred(cont_p)
-    full = treat(seq(stmt,star(seq(star(cmnt),cont))),fline_from_asm)
+    full = stmt
 
     (fln1,rst) = full(buf_iter(p1f))
 
@@ -172,8 +91,6 @@ d    a possible debugging line
 '''
         p1   = p1[1:]
         p1f  = buf_iter(StringIO(p1))
-        cmnt = pred(comment_p)
-        cblk = treat(plus(cmnt),cline)
 
         (fln1,rst) = cblk(p1f)
 
@@ -212,9 +129,7 @@ def s1():
 
 def suite():
     
-    rv = makeSuite(preds)
-    rv.addTest(makeSuite(flow))
-    rv.addTest(makeSuite(kill_bang))
+    rv = makeSuite(flow)
     rv.addTest(makeSuite(fline_t))
     rv.addTest(makeSuite(fline_from_line_t))
 
