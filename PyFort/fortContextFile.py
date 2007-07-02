@@ -9,6 +9,8 @@ import fortExp       as fe
 import PyIR.mapper   as mapper
 from   PyIR.mapper   import _Map
 
+from   PyUtil.caselessDict import caselessDict
+
 '''
 def _ident(self,*args,**kw):
     return [self]
@@ -49,7 +51,8 @@ class Context(object):
         self.toplev     = toplev
         self.uname      = '__dummy__'
         self.utype      = None
-        self.vars       = dict()
+#        self.vars       = dict()
+        self.vars       = caselessDict()
         self._getnew    = False
         self._seekmarks = False
         self.implicit   = dict()

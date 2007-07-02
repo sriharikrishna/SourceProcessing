@@ -53,7 +53,7 @@ class C1(TestCase):
         for (a,b) in izip([1,2,3,3.5,4,4.5,5],v):
             ae(a,b.val)
 
-s1 = makeSuite(C1)
+s1 = asuite(C1)
 
 suite = asuite(C1)
 
