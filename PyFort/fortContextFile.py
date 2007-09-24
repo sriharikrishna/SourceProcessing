@@ -247,6 +247,9 @@ ctxt_lexi = [(fs.PUend,         nextunit),
              (fs.ImplicitStmt,  implicit),
              ]
 
+def fortUnitContext(line_iter):
+    yield fortContext(line_iter)
+
 class fortContext(_Map):
     '''create a list of contextLine objects:
     At the moment, this is just a list of parsed lines
@@ -345,6 +348,11 @@ def _gen_context(parse_iter,hook=mapper.noop):
             is_decl_prev = False
             decl_lead    = ''
             ctxt_mutable[0] = _new
+
+def fortUnitContextFile(fname,hook=mapper.noop):
+    'create an iterator that returns each unit as a fortContext object'
+
+    return fortUnitContext(_gen_context(fpf.fortParseFileIter(fname),hook))
 
 def fortContextFile(fname,hook=mapper.noop):
     'from a file name create a fortContext object'
