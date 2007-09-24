@@ -5,7 +5,7 @@ canonicalization
 import sys
 import cPickle as cp
 
-from PyFort.fortContextFile import fortContextFile
+from PyFort.fortContextFile import fortContextFile,fortUnitContextFile
 
 from Canon.canon import canon_lexi,decl_lexi,_verbose
 
