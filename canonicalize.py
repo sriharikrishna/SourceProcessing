@@ -35,7 +35,7 @@ def main():
 	  pp = cp.Pickler(slcf)
 	  pp.dump(f1rw.lines[0].ctxt.toplev.slice_undo)
 	  slcf.close()
-	  f1rwn.printit()
+	  f1rw.printit()
     except UserError,e :
 	print >>sys.stderr, "Error: ", e.msg
 	return 1 
