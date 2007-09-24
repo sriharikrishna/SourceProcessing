@@ -39,6 +39,14 @@ class T2(TestCase):
                'yy','enddo','end']
         for (v1,v2) in izip(f1.map(lex),chain(ok,repeat(None))):
             ae(v1,v2)
+
+class T3(TestCase):
+    'free fmt scan from file'
+    def test1(self):
+        ae  = self.assertEquals
+        a_  = self.assert_
+        
+
 def s1():
     return makeSuite(T2)
 

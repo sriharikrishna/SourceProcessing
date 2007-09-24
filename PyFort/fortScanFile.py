@@ -7,7 +7,7 @@ from PyUtil.chomp import chomp
 from PyUtil.errors import ScanError
 
 import re
-_lineno_re = re.compile(r'(\d+)')
+_lineno_re = re.compile(r'(\s*)(\d+)')
 _lead_re   = re.compile(r'(\s*)')
 
 def _ident(self):
@@ -46,10 +46,11 @@ class fortScanLine(_fortScanLine):
         line                 = fline.line
         if line[0] == '\t':
             line = ' ' * 8 + line[1:]
-        m                    = _lineno_re.search(line[:6])
-        self.lineno          = m and int(m.group(1))
-        self.lead            = _lead_re.match(line[6:]).group(1)
-        (self.scan,self.rm)  = scan1.scan(line[6:])
+        m                    = _lineno_re.match(line)
+        self.lineno          = m and int(m.group(2))
+        linelead             = m and m.end(0) or 0
+        self.lead            = linelead * ' '+_lead_re.match(line[linelead:]).group(1)
+        (self.scan,self.rm)  = scan1.scan(line[len(self.lead):])
 	if(self.rm) : 
 	  raise ScanError(m,fline,self.scan, self.rm)
 
