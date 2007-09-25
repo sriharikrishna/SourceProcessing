@@ -12,18 +12,21 @@ from fortLine  import fortLine
 from PyUtil.assembler import vgen
 from PyUtil.buf_iter  import buf_iter
 from PyUtil.errors import UserError
+from freefmt       import freefmt
+from fixedfmt      import fixedfmt
 
 def _ident(s):
     return [s]
 
 class Ffile(object):
-    def __init__(self,fobj):
-        a_line = fortLine().a_line
+    def __init__(self,fobj,free=False):
+        fmt = (free and freefmt) or fixedfmt
+        a_line = fortLine(fmt).a_line
         self.lines = vgen(a_line,buf_iter(fobj))
         self.fobj  = fobj
 
     @staticmethod
-    def file(name):
+    def file(name,free=False):
         try:
           file=open(name)
         except IOError:
@@ -32,7 +35,7 @@ class Ffile(object):
         return Ffile(open(name))
 
     @staticmethod
-    def here(str):
+    def here(str,free=False):
         return Ffile(StringIO(str))
 
     def str(self):

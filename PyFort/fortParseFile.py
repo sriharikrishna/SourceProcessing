@@ -52,11 +52,11 @@ class fortParse(_fortParse):
     def __init__(self,scan_iter):
         self.lines = list(fortParseIter(scan_iter).lines)
         
-def fortParseFile(fname):
+def fortParseFile(fname,free=False):
     'from a file name create a fortParse object'
 
-    return fortParse(fsf.fortScanFile(fname))
+    return fortParse(fsf.fortScanFile(fname,free))
 
-def fortParseFileIter(fname):
+def fortParseFileIter(fname,free=False):
     'return an iterator for the parseLine objects'
-    return fortParseIter(fsf.fortScanFile(fname))
+    return fortParseIter(fsf.fortScanFile(fname,free))

@@ -60,14 +60,14 @@ class fortScanLine(_fortScanLine):
 class fortScanFile(object):
     'scan File object should have a generator for scanned lines'
 
-    def __init__(self,fname):
+    def __init__(self,fname,free=False):
         from fortFile import Ffile
         import fortLine as fl
 
         lexi = ((fl.cline,lambda l: [fortScanComment(l)]),
                 (fl.fline,lambda l: [fortScanLine(l)]))
 
-        self.scanlines = Ffile.file(fname).map(lexi)
+        self.scanlines = Ffile.file(fname,free).map(lexi)
 
     def map(self,lexi):
         for (cls,meth) in lexi:

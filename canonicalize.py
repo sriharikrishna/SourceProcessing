@@ -28,15 +28,12 @@ def main():
   opt.add_option('-r','--free',dest='free',
                  help="free format source",
                  action='store_true',default=False)
-  opt.add_option('-x','--fixed',dest='fixed',
-                 help='fixed format source',
-                 action='store_true',default=True)
   config, args = opt.parse_args()
   if len(args) != 1:
      opt.error("expect input file argument")
   fn         = args[0]
   try: 
-      fu = fortUnitContextFile(fn,hook1)
+      fu = fortUnitContextFile(fn,config.free,hook1)
       for f1 in fu:
 	  f1rw = f1.rewrite(canon_lexi).rewrite(decl_lexi)
 	  slcf = open('reslice.dat','w')

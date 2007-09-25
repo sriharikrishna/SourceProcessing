@@ -349,15 +349,15 @@ def _gen_context(parse_iter,hook=mapper.noop):
             decl_lead    = ''
             ctxt_mutable[0] = _new
 
-def fortUnitContextFile(fname,hook=mapper.noop):
+def fortUnitContextFile(fname,free=False,hook=mapper.noop):
     'create an iterator that returns each unit as a fortContext object'
 
-    return fortUnitContext(_gen_context(fpf.fortParseFileIter(fname),hook))
+    return fortUnitContext(_gen_context(fpf.fortParseFileIter(fname,free),hook))
 
-def fortContextFile(fname,hook=mapper.noop):
+def fortContextFile(fname,free=False,hook=mapper.noop):
     'from a file name create a fortContext object'
 
-    return fortContext(_gen_context(fpf.fortParseFileIter(fname),hook))
+    return fortContext(_gen_context(fpf.fortParseFileIter(fname,free),hook))
 
 def fortContextEmpty(hook=mapper.noop):
     return fortContext([])
