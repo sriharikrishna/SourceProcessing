@@ -7,7 +7,8 @@ Provide mappers, rewriters, string conversion facilities
 '''
 from _Setup import *
 from cStringIO import StringIO
-from fortLine  import a_line
+#from fortLine  import a_line
+from fortLine  import fortLine
 from PyUtil.assembler import vgen
 from PyUtil.buf_iter  import buf_iter
 from PyUtil.errors import UserError
@@ -17,6 +18,7 @@ def _ident(s):
 
 class Ffile(object):
     def __init__(self,fobj):
+        a_line = fortLine().a_line
         self.lines = vgen(a_line,buf_iter(fobj))
         self.fobj  = fobj
 

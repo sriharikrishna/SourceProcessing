@@ -3,8 +3,9 @@ import Setup
 from unittest  import *
 from fortLine  import *
 from cStringIO import StringIO
+from flow      import flow_line
 
-class flow(TestCase):
+class T1(TestCase):
 
     s1 = '''
       x1(3:5) = 'This is an extremely long string that must be spread over several lines' // 'concatenated with another extreeeeeeeeemly long string'_foobar // 'one more string just to round things out ...'
@@ -18,14 +19,15 @@ c This is a comment line that may be a little long, but that should be ok
     (s1,s2,s3) = [x[1:] for x in (s1,s2,s3)]
     
     def setUp(self):
-        pass
+        T1.fl = fortLine()
 
     def tearDown(self):
         pass
 
     def test1(self):
         '''flow a long line'''
-        s1 = flow.s1
+        fl = T1.fl
+        s1 = T1.s1
         correct = '''
       x1(3:5) = 'This is an extremely long string that must be spread ov
      +er several lines' // 'concatenated with another extreeeeeeeeemly l
@@ -37,12 +39,12 @@ c This is a comment line that may be a little long, but that should be ok
 
     def test2(self):
         '''flow a comment gives no change'''
-        s2 = flow.s2
+        s2 = T1.s2
         self.assertEquals(flow_line(s2),s2)
 
     def test3(self):
         '''flow a line shorter than 72 leaves line unchanged'''
-        s3 = flow.s3
+        s3 = T1.s3
         self.assertEquals(flow_line(s3),s3)
 
 class fline_t(TestCase):
@@ -57,8 +59,9 @@ c
      *finishes the string'
 '''
     p1 = p1[1:]
+    fl = fortLine()
     p1f = StringIO(p1)
-    full = stmt
+    full = fl.a_line
 
     (fln1,rst) = full(buf_iter(p1f))
 
@@ -80,6 +83,8 @@ c
         'cline class, rawline attribute, comment_list method'
         aa = self.assert_
         ae = self.assertEquals
+        fl = fortLine()
+        cblk = fl.a_line
 
         p1 = '''
    ! This is a comment
@@ -98,9 +103,12 @@ d    a possible debugging line
         ae(fln1.comment_list(),['   ! This is a comment', 'C', 'c Internal comment', 'c', '* ! another !', 'd    a possible debugging line'])
 
 class fline_from_line_t(TestCase):
+    def setUp(self):
+        fline_from_line_t.fl = fortLine()
 
     def test1(self):
         'convert a long line to an fline object'
+        fl = fline_from_line_t.fl
         p1 = '''
        x = somefn('This is an extremely long string to be put on 1 line' // 'Another line')
 '''
@@ -110,17 +118,18 @@ class fline_from_line_t(TestCase):
      + // 'Another line')
 '''
         ok = ok[1:]
-        t  = fline_from_line(p1)
+        t  = fl.fline_from_line(p1)
         self.assert_(isinstance(t,fline))
         self.assertEquals(t.rawline,ok)
 
     def test2(self):
         'convert comment line to cline object'
+        fl = fline_from_line_t.fl
         p1 = '''
 c This is a comment
 '''
         p1 = p1[1:]
-        t  = fline_from_line(p1)
+        t  = fl.fline_from_line(p1)
         self.assert_(isinstance(t,cline))
         self.assertEquals(t.rawline,p1)
 
@@ -129,7 +138,7 @@ def s1():
 
 def suite():
     
-    rv = makeSuite(flow)
+    rv = makeSuite(T1)
     rv.addTest(makeSuite(fline_t))
     rv.addTest(makeSuite(fline_from_line_t))
 
@@ -140,4 +149,3 @@ def runSuite(s):
 
 if __name__ == "__main__":
     runSuite(suite())
-

@@ -6,7 +6,8 @@ from _Setup import *
 from fortExp      import *
 from PyUtil.l_assembler  import *
 from PyUtil.chomp        import chomp
-from fortLine     import flow_line
+from flow     import flow_line
+from fixedfmt     import fixedfmt
 from PyIR.mapper       import _Mappable
 from PyIR.mutable_tree import _Mutable_T
 from PyUtil.errors  import ParseError
@@ -233,7 +234,8 @@ class NonComment(GenStmt):
         if lineno:
             init = ' ' + ('%-4d' % lineno) + ' '
         else:
-            init = ' ' * 6
+            init = ''
+#            init = ' ' * 6
         self.rawline = flow_line(init + self.lead + str(self))+'\n'
         return self
 

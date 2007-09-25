@@ -2,7 +2,8 @@ from Setup import *
 
 from unittest     import *
 from fortScanFile import *
-from fortLine import fline_from_line
+#from fortLine import fline_from_line
+from fortLine import fortLine
 from itertools import *
 
 class T1(TestCase):
@@ -12,6 +13,8 @@ class T1(TestCase):
 
         ae = self.assertEquals
         a_ = self.assert_
+        fl = fortLine()
+        fline_from_line = fl.fline_from_line
 
         p1 = '''
        f(i) = 'This is a '' str' // 'another string' // gl(3.14_www)
@@ -41,14 +44,17 @@ class T2(TestCase):
             ae(v1,v2)
 
 class T3(TestCase):
-    'free fmt scan from file'
+    '''free fmt scan from file
+    NOTE: set fmt = 'free' in the line module
+    '''
     def test1(self):
         ae  = self.assertEquals
         a_  = self.assert_
+        a_(True)
         
 
 def s1():
-    return makeSuite(T2)
+    return makeSuite(T3)
 
 suite = asuite(T1,T2)
 

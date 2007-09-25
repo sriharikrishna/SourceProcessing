@@ -10,20 +10,20 @@ def cont_p(l):
     contre = re.compile(r'''\ {5} \S''',re.X)
     return contre.match(l)
 
-def comment_p(l):
+def _comment_p(l):
     '''given a line l, return true if l is a comment (or blank) line'''
     blankre = re.compile(r'''\s* $''',re.X)
     return nbl_comment_p(l) or blankre.match(l)
 
 def stmt_p(l):
     '''given a line l, return true if l is a starting statement'''
-    return not (comment_p(l) or cont_p(l))
+    return not (_comment_p(l) or cont_p(l))
 
-comm   = pred(comment_p)
+_comm   = pred(_comment_p)
 
 strt   = pred(stmt_p)
 cont   = pred(cont_p)
-a_stmt   = seq(strt,star(seq(star(comm),cont)))
+_a_stmt   = seq(strt,star(seq(star(_comm),cont)))
 
 _comre   = re.compile(r'''[^\d\s]''')
 _shoutre = re.compile(r''' \s* !''',re.X)
@@ -32,7 +32,7 @@ def nbl_comment_p(l):
     'return true if line is a (nonblank) comment'
     return _comre.match(l) or _shoutre.match(l)
 
-def fjoin(dta):
+def _fjoin(dta):
     '''take in a pattern match nested seq data structure for a fortran stmt,
     return tuple (rawline,joined_line,internal_comments)
 
@@ -58,18 +58,10 @@ def fjoin(dta):
 
     return (rawline,line,internal_comments)
 
-def flow_line(l,cont='+'):
-    '''given a long line, write it out as a series of continued lines'''
-    l1 = chomp(l)
-    if comment_p(l) or (len(l1) <= 72):
-        return l
+class fixedfmt(object):
+    'hold helper functions for fixed fmt'
 
-    rv = l1[0:72] + '\n'
-    rem = l1[72:]
-    while len(rem) > 66:
-        tmp  = rem[0:66]
-        rv  += ' ' * 5 + cont + tmp + '\n'
-        rem  = rem[66:]
-    if len(rem) > 0:
-        rv  += ' ' * 5 + cont + rem + '\n'
-    return rv
+    a_stmt    = staticmethod(_a_stmt)
+    comm      = staticmethod(_comm)
+    comment_p = staticmethod(_comment_p)
+    fjoin     = staticmethod(_fjoin)
