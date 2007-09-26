@@ -41,9 +41,12 @@ def add_active_module(self,arg):
       new_stmt = fs.UseStmt('active_module')
       new_stmt.clone_fmt(self)
       arg.attach(self,new_stmt)
+    else:
+      arg.attach(self)  
 
 def xUse(self,arg):
     'add the active module'
+    print "arg is", arg
     if (self.name == 'w2f__types'):
         new_stmt = fs.UseStmt('active_module')
         new_stmt.clone_fmt(self)
