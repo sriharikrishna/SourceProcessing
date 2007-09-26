@@ -39,23 +39,30 @@ def main():
   opt.add_option('-f','--forward',dest='fwd',
                  help="use forward mode postprocessing",
                  action='store_true',default=False)
-  opt.add_option('-r','--real',dest='real',
-                 help='"old style" postprocessing:transform real vars',
+  opt.add_option('--free',dest='free',
+                 help='free format source',
                  action='store_true',default=False)
   opt.add_option('-t','--template',dest='tfile',
                  default='ad_template.f',
-                 help='template file (default=ad_template.f)',metavar='FILE')
+                 help='template file (defaults to ad_template.f)',
+                 metavar='<template_file>')
   opt.add_option('-i','--inline',dest='ifile',
                  default='ad_inline.f',
-                 help='inline definition file(default=ad_inline.f)',
-                 metavar='FILE')
+                 help='inline definition file (defaults to ad_inline.f)',
+                 metavar='<inline_file>')
+  opt.add_option('-o','--output',dest='ofile',
+                 help='output file (defaults to <input_file.base>.pp.<input_file.extension>)',
+                 metavar='<output_file>')
   config, args = opt.parse_args()
   if len(args) != 1:
      opt.error("expect input file argument")
   fn         = args[0]
   try: 
     (base,ext) = os.path.splitext(fn)
-    newfn      = base + '.pp' + ext
+    if config.ofile is None:
+        newfn      = base + '.pp' + ext
+    else:    
+        newfn      = config.ofile
     exp1  = mt.LexiMutator([(fe._Exp,noop),
                             (fe.App,valm),
                             ])
@@ -65,7 +72,7 @@ def main():
                             (fs.UseStmt,addm),
                             ],'build')
     xaifv = lv.MultiLexiVisitor(vstr,exp1)
-    Prog1(xaifv,fpf(fn).lines).writeit(newfn)
+    Prog1(xaifv,fpf(fn,config.free).lines).writeit(newfn)
   except UserError,e : 
     print >>sys.stderr, "Error: ", e.msg
     return 1 

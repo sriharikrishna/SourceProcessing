@@ -25,9 +25,12 @@ def main():
   _verbose   = True
   usage = '%prog [options] <input_file>'
   opt = OptionParser(usage=usage)
-  opt.add_option('-r','--free',dest='free',
+  opt.add_option('--free',dest='free',
                  help="free format source",
                  action='store_true',default=False)
+  opt.add_option('-o','--output',dest='ofile',
+                 help='output file (defaults to <input_file.base>.pp.<input_file.extension>)',
+                 metavar='<output_file>')
   config, args = opt.parse_args()
   if len(args) != 1:
      opt.error("expect input file argument")
