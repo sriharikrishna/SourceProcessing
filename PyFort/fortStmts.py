@@ -462,6 +462,11 @@ class CommonStmt(Decl):
 class DataStmt(Decl):
     pass
 
+class EndInterfaceStmt(DeclLeaf):
+    'End of interface block'
+    kw    = 'endinterface'
+    kw_str = 'end interface'
+
 class VarAttrib(Decl):
     @classmethod
     def parse(cls,scan):
@@ -992,6 +997,13 @@ class ElseStmt(Leaf):
 class EndStmt(PUend):
     kw =  'end'
 
+class EndPseudoStmt(GenStmt):
+    @staticmethod
+    def parse(scan):
+        if len(scan) >= 2 and scan[1].lower() == 'interface':
+            return EndInterfaceStmt.parse(scan)
+        return EndStmt.parse(scan)
+
 class EndifStmt(Leaf):
     kw = 'endif'
 
@@ -1053,6 +1065,7 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              elseif          = ElseifStmt,
              endif           = EndifStmt,
              end             = EndStmt,
+             endinterface    = EndInterfaceStmt,
              endmodule       = EndStmt,
              endprogram      = EndStmt,
              endfunction     = EndStmt,

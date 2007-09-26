@@ -55,6 +55,7 @@ class Context(object):
         self.vars       = caselessDict()
         self._getnew    = False
         self._seekmarks = False
+        self._in_iface  = False
         self.implicit   = dict()
         for l in 'abcdefghopqrstuvwxyz':
             self.implicit[l] = (fs.RealStmt,[])
@@ -101,6 +102,10 @@ def newunit(line,ctxtm):
     import sys
 
     ctxt = ctxtm[0]
+
+    if ctxt._in_iface:
+        return line
+
     ctxt.utype = line.__class__.utype_name
     ctxt.uname = line.name
     ctxt.retntype = None
@@ -111,8 +116,13 @@ def newunit(line,ctxtm):
 
 def fnunit(line,ctxtm):
     'function unit needs to record return type for function'
+
     dc = newunit(line,ctxtm)
     ctxt = ctxtm[0]
+
+    if ctxt._in_iface:
+        return line
+
     ctxt.utype = 'function'
     ctxt.retntype = line.ty
     if line.ty:
@@ -146,6 +156,9 @@ def typedecl(line,ctxtm):
 
     ctxt = ctxtm[0]
 
+    if ctxt._in_iface:
+        return line
+    
     typeof  = line.__class__
     kw_str  = line.kw_str
     mod     = line.mod
@@ -166,6 +179,9 @@ def typedecl(line,ctxtm):
 
 def dimen(line,ctxtm):
     ctxt = ctxtm[0]
+
+    if ctxt._in_iface:
+        return line
 
     for d in line.decls:
         (name,dims) = (d.head,d.args)
@@ -199,6 +215,10 @@ def use_module(line,ctxtm):
     '''
     from sys import stderr 
     ctxt    = ctxtm[0]
+
+    if ctxt._in_iface:
+        return line
+    
     modules = ctxt.toplev.modules
     mod     = line.name
     if mod not in modules:
@@ -220,6 +240,9 @@ def implicit(line,ctxtm):
     '''
     ctxt = ctxtm[0]
 
+    if ctxt._in_iface:
+        return line
+
     letters = 'abcdefghijklmnopqrstuvwxyz'
 
     for (t,tlst) in line.lst:
@@ -237,14 +260,30 @@ def implicit(line,ctxtm):
 
     return line
 
-ctxt_lexi = [(fs.PUend,         nextunit),
-             (fs.PUstart,       newunit),
-             (fs.FunctionStmt,  fnunit),
-             (fs.TypeDecl,      typedecl),
-             (fs.DimensionStmt, dimen),
-             (fs.AssignStmt,    assgn),
-             (fs.UseStmt,       use_module),
-             (fs.ImplicitStmt,  implicit),
+def iface(line,ctxtm):
+    'interface block entry -- no new context'
+    ctxt = ctxtm[0]
+    ctxt._in_iface = True
+
+    return line
+
+def endiface(line,ctxtm):
+    'interface block entry -- no new context'
+    ctxt = ctxtm[0]
+    ctxt._in_iface = False
+
+    return line
+
+ctxt_lexi = [(fs.PUend,            nextunit),
+             (fs.PUstart,          newunit),
+             (fs.FunctionStmt,     fnunit),
+             (fs.InterfaceStmt,    iface),
+             (fs.EndInterfaceStmt, endiface),
+             (fs.TypeDecl,         typedecl),
+             (fs.DimensionStmt,    dimen),
+             (fs.AssignStmt,       assgn),
+             (fs.UseStmt,          use_module),
+             (fs.ImplicitStmt,     implicit),
              ]
 
 def fortUnitContext(line_iter):

@@ -7,6 +7,7 @@ import cPickle as cp
 from optparse import OptionParser
 
 from PyFort.fortContextFile import fortContextFile,fortUnitContextFile
+from PyFort.flow import free_flow
 
 from Canon.canon import canon_lexi,decl_lexi,_verbose
 
@@ -32,6 +33,8 @@ def main():
   if len(args) != 1:
      opt.error("expect input file argument")
   fn         = args[0]
+  
+  free_flow(config.free)
   try: 
       fu = fortUnitContextFile(fn,config.free,hook1)
       for f1 in fu:

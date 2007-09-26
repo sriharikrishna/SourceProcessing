@@ -105,9 +105,22 @@ class C2(TestCase):
         ae([str(d) for d in dims],['2','4'])
 #        for l in e.lines: print l
 
-s1 = makeSuite(C2)
+class C3(TestCase):
+    def test1(self):
+        'interface blocks stuff (using freefmt read)'
+        ae = self.assertEquals
+        a_ = self.assert_
+        e  = fortContextFile(fname_t('intrfblk.f90'),True)
+        (ty,mod) = e.lines[0].ctxt.lookup_type('x')
+        ae(ty.kw_str,'integer')
+        (ty,mod) = e.lines[0].ctxt.lookup_type('y')
+        ae(ty.kw_str,'complex')
+#        for l in e.lines: print repr(l)
 
-suite = asuite(C1,C2)
+
+s1 = makeSuite(C3)
+
+suite = asuite(C1,C2,C3)
 
 if __name__ == "__main__":
     runit(suite)

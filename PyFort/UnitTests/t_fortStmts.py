@@ -332,9 +332,29 @@ class C8(TestCase):
                             _NoInit(App('y',['*', Ops(':',Ops('*','2','x'),'*'), '3'])),
                             _NoInit('z')])))
 
-s1    = makeSuite(C8)
+class C9(TestCase):
+    'end interface block stuff'
+    def test1(self):
+        '''end interface block
+        '''
+        ae = self.assertEquals
+        a_ = self.assert_
+        it = pps('end interface')
+        a_(isinstance(it,EndInterfaceStmt))
+        
+    def test2(self):
+        '''end other things
+        '''
+        ae = self.assertEquals
+        a_ = self.assert_
+        chk = ['module','program','function','subroutine','block data']
+        for l in chk:
+            a_(isinstance(pps('end '+l),EndStmt))
 
-suite = asuite(C1,C2,C3,C4,C5,C6,C7,C8)
+
+s1    = makeSuite(C9)
+
+suite = asuite(C1,C2,C3,C4,C5,C6,C7,C8,C9)
 
 if __name__ == '__main__':
     runit(suite)
