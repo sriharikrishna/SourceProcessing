@@ -37,7 +37,6 @@ def val_deriv_m(self,top):
 
 def add_active_module(self,arg):
     'add the active module'
-    print "self is", self
     if (self.name == 'w2f__types'):
       new_stmt = fs.UseStmt('active_module')
       new_stmt.clone_fmt(self)
