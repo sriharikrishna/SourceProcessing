@@ -29,5 +29,3 @@ suite = asuite(T1)
 
 if __name__ == '__main__':
     runit(suite)
-
-

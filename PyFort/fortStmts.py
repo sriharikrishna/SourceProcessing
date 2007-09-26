@@ -6,12 +6,11 @@ from _Setup import *
 from fortExp      import *
 from PyUtil.l_assembler  import *
 from PyUtil.chomp        import chomp
-from flow     import flow_line
 from fixedfmt     import fixedfmt
 from PyIR.mapper       import _Mappable
 from PyIR.mutable_tree import _Mutable_T
 from PyUtil.errors  import ParseError
-
+import flow
 
 class _TypeMod(_Mutable_T):
     'modifier for type declaration'
@@ -235,8 +234,7 @@ class NonComment(GenStmt):
             init = ' ' + ('%-4d' % lineno) + ' '
         else:
             init = ''
-#            init = ' ' * 6
-        self.rawline = flow_line(init + self.lead + str(self))+'\n'
+        self.rawline = flow.flow_line(init + self.lead + str(self))+'\n'
         return self
 
     def reflow(self):

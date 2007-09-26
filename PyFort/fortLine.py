@@ -5,7 +5,7 @@ from PyUtil.flatten import flatten
 from PyUtil.assembler import *
 from PyUtil.chomp import chomp
 from fixedfmt import fixedfmt
-from flow import flow_line
+import flow
 import re
 
 fmt = 'fix'
@@ -60,6 +60,7 @@ class fortLine(object):
 
     def fline_from_line(self,line):
         comment_p = self.fmtobj.comment_p
+        flow_line = flow.flow_line
 
         if comment_p(line):
             return cline([line])
