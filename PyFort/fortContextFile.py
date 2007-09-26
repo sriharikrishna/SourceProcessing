@@ -323,7 +323,7 @@ class fortContext(_Map):
     def extend(self,iter):
         self.lines.extend(list(iter))
 
-    def printit(self,showmarks=False,out=None):
+    def printit(self,showmarks=False,out=sys.stdout):
         for l in self.lines:
             if showmarks:
                 if isinstance(l,fs.LastDecl):
@@ -334,13 +334,14 @@ class fortContext(_Map):
                     pass
             else:
                 if isinstance(l,fs.Marker): continue
-            if out:
-                print >> out,l.rawline,
-            else:
-                print l.rawline,
+            print >> out,l.rawline,
 
-    def write(self,fname,showmarks=False):
-        ff = open(fname,'w')
+    def writeit(self,fname,showmarks=False):
+        try:
+            ff = open(fname,'w')
+        except IOError:
+            msg="Error cannot open file named: "+name
+            raise UserError(msg)
         self.printit(showmarks,ff)
         ff.close()
 
