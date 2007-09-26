@@ -59,7 +59,9 @@ def _fjoin(asm):
         internal_comments.extend(comments)
         cl = kill_cont(kill_token_cont(cl))
         current_line.append(cl)
-    prim = kill_token_cont(chomp(prim))
+    (prim,eol_comm) = kill_bang_comment(kill_token_cont(chomp(prim)))
+    if eol_comm:
+        internal_comments.append(eol_comm)
     current_line.append(prim)
 
     joined    = ''.join(current_line)
