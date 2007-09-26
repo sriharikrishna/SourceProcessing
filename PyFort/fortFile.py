@@ -32,11 +32,11 @@ class Ffile(object):
         except IOError:
           msg="Error cannot open file named: "+name
           raise UserError(msg)
-        return Ffile(open(name))
+        return Ffile(open(name),free)
 
     @staticmethod
     def here(str,free=False):
-        return Ffile(StringIO(str))
+        return Ffile(StringIO(str),free)
 
     def str(self):
         '''return all of the original file lines concatenated together

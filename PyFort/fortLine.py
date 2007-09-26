@@ -10,13 +10,6 @@ import re
 
 fmt = 'fix'
 
-'''
-if fmt == 'fix':
-    from fixedfmt import fjoin,comm,a_stmt,comment_p
-else:
-    from freefmt import fjoin,comm,a_stmt,comment_p
-'''
-
 _ad_directive_prefix_re    = r'\$OpenAD\s*\$?' # comments that have $OpenAD w opt trailing $
 
 def ident(self):

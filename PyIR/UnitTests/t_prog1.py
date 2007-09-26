@@ -49,7 +49,6 @@ vstr = lv.LexiVisitor([(fs.GenStmt,normal),
 class C1(TestCase):
     def test1(self):
         'build simple prog1'
-        global ostr,ok
         ae = self.assertEquals
         a_ = self.assert_
 
