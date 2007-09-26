@@ -117,6 +117,20 @@ class C3(TestCase):
         ae(ty.kw_str,'complex')
 #        for l in e.lines: print repr(l)
 
+    def test2(self):
+        'change class of subroutine,function in interface block'
+        ae = self.assertEquals
+        a_ = self.assert_
+        e  = fortContextFile(fname_t('intrfblk.f90'),True)
+        a_(isinstance(e.lines[2],fs.IfPUstart))
+        a_(isinstance(e.lines[5],fs.IfPUend))
+
+    def test3(self):
+        'ignore ifaceblk in JU test file'
+        ae = self.assertEquals
+        a_ = self.assert_
+        e  = fortContextFile(fname_t('iblk.f'))
+        a_(True)
 
 s1 = makeSuite(C3)
 

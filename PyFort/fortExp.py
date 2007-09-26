@@ -435,6 +435,8 @@ def subst(a,pat,repl):
         return repl(a)
     elif isinstance(a,str):
         return a
+    elif not a._sons:
+        return a
     else:
         return a.map(lambda x:subst(x,pat,repl))
 

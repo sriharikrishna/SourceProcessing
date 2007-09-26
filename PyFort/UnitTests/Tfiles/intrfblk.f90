@@ -3,6 +3,7 @@
     subroutine foo(x,y)
       double precision x
       double precision y
+    end subroutine
   end interface
   integer,dimension(4) :: x
   complex :: y

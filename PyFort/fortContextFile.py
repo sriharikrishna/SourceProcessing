@@ -91,9 +91,20 @@ def nextunit(line,ctxtm):
     toplevel module table
     '''
     ctxt = ctxtm[0]
+
+    if ctxt._in_iface:
+        line.__class__ = fs.IfPUend
+        return line
+    
     ctxt._getnew = True
     if ctxt.utype == 'module':
         ctxt.toplev.modules[ctxt.uname] = ctxt
+    return line
+
+def _if_alter(line,newclass):
+    'alter the class of a line to the appropriate new interface class'
+    cls            = line.__class__
+    line.__class__ = newclass
     return line
 
 _showparse = False
@@ -104,7 +115,7 @@ def newunit(line,ctxtm):
     ctxt = ctxtm[0]
 
     if ctxt._in_iface:
-        return line
+        return _if_alter(line,fs.IfPUstart)
 
     ctxt.utype = line.__class__.utype_name
     ctxt.uname = line.name

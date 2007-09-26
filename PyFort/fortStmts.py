@@ -453,6 +453,12 @@ class DeclLeaf(Decl):
 class PUend(Leaf):
     pass
 
+class IfPUstart(DeclLeaf):
+    kw_str = '(If)prog_unit_start'
+
+class IfPUend(DeclLeaf):
+    kw_str = '(If)prog_unit_end'
+
 class BlockdataStmt(PUstart):
     pass
 
