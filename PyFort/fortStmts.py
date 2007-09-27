@@ -965,10 +965,10 @@ class IfThenStmt(IfStmt):
 
 class IfNonThenStmt(IfStmt):
 
-    _sons = ['e','stmt']
+    _sons = ['test','stmt']
 
-    def __init__(self,e,stmt):
-        self.test = e
+    def __init__(self,test,stmt):
+        self.test = test
         self.stmt = stmt
 
     def __repr__(self):
