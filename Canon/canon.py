@@ -57,6 +57,14 @@ def gen_repl_fns(line):
 
     def ety(e):
         ety1 = fe.exptype
+        vvv  = ety1(e,
+                    line.ctxt.lookup_type,
+                    fs.kw2type,
+                    fs.lenfn,
+                    fs._Kind,
+                    fs.poly,
+                    fs.typemerge)
+
         return ety1(e,
                     line.ctxt.lookup_type,
                     fs.kw2type,

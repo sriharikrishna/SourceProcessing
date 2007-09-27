@@ -462,7 +462,7 @@ def const_type(e,kw2type,lenfn,kindfn):
 
 def exptype(e,idchk,kw2type,lenfn,kindfn,poly,typemerge):
     if isinstance(e,str) and is_const(e):
-        return const_type(e,kw2type,kindfn,lenfn)
+        return const_type(e,kw2type,lenfn,kindfn)
     if isinstance(e,str) and _id_re.match(e):
         return idchk(e)
     return e.typeit(exptype,idchk,kw2type,lenfn,kindfn,poly,typemerge)

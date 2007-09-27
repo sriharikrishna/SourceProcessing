@@ -1176,7 +1176,6 @@ def typecompare(t1,t2):
                    doublecomplex=6,
                    )
 
-#    print 't1 = ',t1,'t2 = ',t2
     if t1[0] == t2[0]:
         return(t1[0],modcompare(t1[1],t2[1]))
 

@@ -37,9 +37,23 @@ class C1(TestCase):
         f1ok = fcf(fname_t('t0.f.ok'))
         ae(str(f1rw),str(f1ok))
 
+    def test2(self):
+        'canon of max using int consts w embedded kinds'
+        ae = self.assertEquals
+        a_ = self.assert_
+        e  = fcf(fname_t('int-const-w-kind.f90'),True,hook1)
+        set_verbose(False)
+        f1rw = e.rewrite(canon_lexi)
+        f1ok = fcf(fname_t('int-const-w-kind.ok.f90'),True,hook1)
+        ae(str(f1rw),str(f1ok))
+
 s1 = makeSuite(C1)
 
 suite = asuite(C1)
 
+'''
+e  = fcf(fname_t('int-const-w-kind.f90'),True,hook1)
+f1rw = e.rewrite(canon_lexi)
 if __name__ == "__main__":
     runit(suite)
+'''

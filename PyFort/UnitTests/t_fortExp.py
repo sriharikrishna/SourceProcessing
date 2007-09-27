@@ -440,6 +440,7 @@ class C6(TestCase):
         ae(const_type(ep('3.787D00'),kw2type,lenfn,kindfn),('doubleprecision',[]))
         ae(const_type(ep('3.787_foo'),kw2type,lenfn,kindfn),('real',['Kind(foo)']))
         ae(const_type(ep('3'),kw2type,lenfn,kindfn),('integer',[]))
+        ae(const_type(ep('0_w2f__i8'),kw2type,lenfn,kindfn),('integer', ['Kind(w2f__i8)']))
         ae(const_type(ep('.true.'),kw2type,lenfn,kindfn),('logical',[]))
         ae(const_type(ep(r"'food'"),kw2type,lenfn,kindfn),('character',['Len(4)']))
 
@@ -484,5 +485,7 @@ s1    = makeSuite(C6)
 
 suite = asuite(C1,C2,C3,C4,C6)
 
+'''
 if __name__ == '__main__':
     runit(suite)
+'''
