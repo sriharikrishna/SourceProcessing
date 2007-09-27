@@ -458,7 +458,7 @@ def const_type(e,kw2type,lenfn,kindfn):
     if e.lower() in _logicon_set:
         return (kw2type('logical'),[])
     if e[0] in _quote_set:
-        return (kw2type('character'),[lenfn(len(e)-2)])
+        return (kw2type('character'),lenfn(len(e)-2))
 
 def exptype(e,idchk,kw2type,lenfn,kindfn,poly,typemerge):
     if isinstance(e,str) and is_const(e):
