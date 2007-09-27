@@ -485,7 +485,5 @@ s1    = makeSuite(C6)
 
 suite = asuite(C1,C2,C3,C4,C6)
 
-'''
 if __name__ == '__main__':
     runit(suite)
-'''

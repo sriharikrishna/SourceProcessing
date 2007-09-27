@@ -137,9 +137,9 @@ class C3(TestCase):
         ae = self.assertEquals
         a_ = self.assert_
         e  = fortContextFile(fname_t('selarr.f90'),True)
-        a_(isinstance(e.lines[2],fs.StmtF))
-        a_()
-        for l in e.lines: print repr(l)
+        a_(isinstance(e.lines[2],fs.StmtFnStmt))
+        a_(not isinstance(e.lines[4],fs.StmtFnStmt))
+#        for l in e.lines: print repr(l)
 
 s1 = makeSuite(C3)
 
