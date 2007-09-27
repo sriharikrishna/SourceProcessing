@@ -366,6 +366,7 @@ def _gen_context(parse_iter,hook=mapper.noop):
     is_decl_prev = False
     decl_lead = ''
     for l in parse_iter.map1(ctxt_lexi,ctxt_mutable):
+#        print "FCF: ",repr(l)
         ctxt   = ctxt_mutable[0]
         l.ctxt = ctxt
         if ctxt._seekmarks:
@@ -386,6 +387,7 @@ def _gen_context(parse_iter,hook=mapper.noop):
                 hold.append(l)
                 continue
             elif is_decl_prev and isinstance(l,fs.Decl):
+                decl_lead = l.lead
                 for ll in hold: yield ll
                 hold = []
             else:

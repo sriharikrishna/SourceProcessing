@@ -336,7 +336,7 @@ class TypeDecl(Decl):
                                  attr_str,
                                    ','.join([str(d) for d in self.decls]))
 
-class DrvdTypeDecl(Decl):
+class DrvdTypeDecl(TypeDecl):
     _sons = ['attrs','decls']
     
     kw     = 'derivedDcl'
@@ -379,7 +379,7 @@ class DrvdTypeDefn(Decl):
     def __repr__(self):
         return 'DrvdTypeDefn(%s)' % repr(self.name)
 
-    def __str(self):
+    def __str__(self):
         return 'type %s' % str(self.name)
     
     @staticmethod
@@ -472,6 +472,11 @@ class EndInterfaceStmt(DeclLeaf):
     'End of interface block'
     kw    = 'endinterface'
     kw_str = 'end interface'
+
+class EndTypeStmt(DeclLeaf):
+    'end of a type definition'
+    kw     = 'endtype'
+    kw_str = 'end type'
 
 class VarAttrib(Decl):
     @classmethod
@@ -1072,6 +1077,7 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              endif           = EndifStmt,
              end             = EndStmt,
              endinterface    = EndInterfaceStmt,
+             endtype         = EndTypeStmt,
              endmodule       = EndStmt,
              endprogram      = EndStmt,
              endfunction     = EndStmt,

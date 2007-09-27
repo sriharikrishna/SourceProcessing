@@ -1,7 +1,6 @@
 from Setup import *
-from canon import *
 from _Setup import *
-from Canon import *
+from canon import *
 import Canon as cc
 from unittest import *
 from PyFort.fortContextFile import fortContextFile as fcf
@@ -47,13 +46,19 @@ class C1(TestCase):
         f1ok = fcf(fname_t('int-const-w-kind.ok.f90'),True,hook1)
         ae(str(f1rw),str(f1ok))
 
+    def test3(self):
+        'canon + var decl of array of derived types'
+        ae = self.assertEquals
+        a_ = self.assert_
+        e  = fcf(fname_t('derived-type-arr.f90'),True,hook1)
+        set_verbose(False)
+        f1rw = e.rewrite(canon_lexi).rewrite(decl_lexi)
+        f1ok = fcf(fname_t('derived-type-arr.ok.f90'),True,hook1)
+        ae(str(f1rw),str(f1ok))
+
 s1 = makeSuite(C1)
 
 suite = asuite(C1)
 
-'''
-e  = fcf(fname_t('int-const-w-kind.f90'),True,hook1)
-f1rw = e.rewrite(canon_lexi)
 if __name__ == "__main__":
     runit(suite)
-'''
