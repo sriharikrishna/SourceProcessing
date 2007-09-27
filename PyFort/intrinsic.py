@@ -20,6 +20,7 @@ __intrinsics = (
     'sqrt',
     'tan',
     'tanh',
+    'trim',
     )
 
 def is_intrinsic(op):
