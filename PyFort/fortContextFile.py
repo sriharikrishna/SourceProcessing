@@ -211,7 +211,7 @@ def assgn(line,ctxtm):
     ctxt = ctxtm[0]
     lhs  = line.lhs
     look = ctxt.lookup_var
-    if isinstance(lhs,fe.App) and not look(lhs.head).dims:
+    if isinstance(lhs,fe.App) and isinstance(lhs.head,str) and not look(lhs.head).dims:
         ret = fs.StmtFnStmt(lhs.head,lhs.args,line.rhs)
         ret.rawline = line.rawline
         ret.lineno  = line.lineno
