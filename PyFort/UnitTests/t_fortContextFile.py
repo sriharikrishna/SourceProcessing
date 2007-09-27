@@ -106,7 +106,7 @@ class C2(TestCase):
 #        for l in e.lines: print l
 
 class C3(TestCase):
-    def test1(self):
+    def ntest1(self):
         'interface blocks stuff (using freefmt read)'
         ae = self.assertEquals
         a_ = self.assert_
@@ -117,7 +117,7 @@ class C3(TestCase):
         ae(ty.kw_str,'complex')
 #        for l in e.lines: print repr(l)
 
-    def test2(self):
+    def ntest2(self):
         'change class of subroutine,function in interface block'
         ae = self.assertEquals
         a_ = self.assert_
@@ -125,12 +125,21 @@ class C3(TestCase):
         a_(isinstance(e.lines[2],fs.IfPUstart))
         a_(isinstance(e.lines[5],fs.IfPUend))
 
-    def test3(self):
+    def ntest3(self):
         'ignore ifaceblk in JU test file'
         ae = self.assertEquals
         a_ = self.assert_
         e  = fortContextFile(fname_t('iblk.f'))
         a_(True)
+
+    def test4(self):
+        'a%b NOT a statement function'
+        ae = self.assertEquals
+        a_ = self.assert_
+        e  = fortContextFile(fname_t('selarr.f90'),True)
+        a_(isinstance(e.lines[2],fs.StmtF))
+        a_()
+        for l in e.lines: print repr(l)
 
 s1 = makeSuite(C3)
 
