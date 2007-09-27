@@ -1156,13 +1156,12 @@ def modcompare(m1,m2):
     if not m2: return m1
     mm1 = m1[0]
     mm2 = m2[0]
-    c1  = mm1.__class__
-    c2  = mm2.__class__
-
-    if c1 == c2:
+    if (mm1.__class__ == mm2.__class__) and isinstance(mm1,_TypeMod) :
         if mm1.mod >= mm2.mod: return m1
         return m2
-
+    if isinstance(mm2,_FLenMod) and isinstance(mm1,_FLenMod) :
+        if mm1.len >= mm2.len: return m1
+        return m2
     if _modhash[c1] >= _modhash[c2]: return m1
     return m2
 
