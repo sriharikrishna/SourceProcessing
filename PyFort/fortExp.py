@@ -83,8 +83,9 @@ class App(_Exp):
         return App(self.head,[fn(a) for a in self.args])
 
     def typeit(self,exptype,idchk,kw2type,lenfn,kindfn,poly,typemerge):
-        headtype = idchk(self.head)
-        if poly(self.head):
+        head     = self.head
+        headtype = exptype(head,idchk,kw2type,lenfn,kindfn,poly,typemerge)
+        if poly(head):
             return typemerge([exptype(l,idchk,kw2type,lenfn,kindfn,poly,typemerge) \
                               for l in self.args],
                              headtype)
@@ -107,6 +108,15 @@ class Sel(_Exp):
 
     def map(self,fn):
         return Sel(fn(self.head),fn(self.proj))
+
+    def typeit(self,exptype,idchk,kw2type,lenfn,kindfn,poly,typemerge,aux=None):
+        head     = self.head
+        headtype = exptype(head,idchk,kw2type,lenfn,kindfn,poly,typemerge,aux)
+        if poly(head):
+            return typemerge([exptype(l,idchk,kw2type,lenfn,kindfn,poly,typemerge,aux) \
+                              for l in self.args],
+                             headtype)
+        return headtype
 
 class _AtomH(object):
     'helper class, captures the args of app or selection'
@@ -460,9 +470,9 @@ def const_type(e,kw2type,lenfn,kindfn):
     if e[0] in _quote_set:
         return (kw2type('character'),lenfn(len(e)-2))
 
-def exptype(e,idchk,kw2type,lenfn,kindfn,poly,typemerge):
+def exptype(e,idchk,kw2type,lenfn,kindfn,poly,typemerge,aux=None):
     if isinstance(e,str) and is_const(e):
         return const_type(e,kw2type,lenfn,kindfn)
     if isinstance(e,str) and _id_re.match(e):
         return idchk(e)
-    return e.typeit(exptype,idchk,kw2type,lenfn,kindfn,poly,typemerge)
+    return e.typeit(exptype,idchk,kw2type,lenfn,kindfn,poly,typemerge,aux=None)

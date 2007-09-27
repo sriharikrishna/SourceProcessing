@@ -51,11 +51,12 @@ class Context(object):
         self.toplev     = toplev
         self.uname      = '__dummy__'
         self.utype      = None
-#        self.vars       = dict()
         self.vars       = caselessDict()
+        self.types      = caselessDict()
         self._getnew    = False
         self._seekmarks = False
         self._in_iface  = False
+        self._derived_t = False
         self.implicit   = dict()
         for l in 'abcdefghopqrstuvwxyz':
             self.implicit[l] = (fs.RealStmt,[])
@@ -162,6 +163,29 @@ def default_dims(attrs_list):
             return tuple(a.args)
     return ()
 
+def drvdtypedefn(line,ctxtm):
+    'start a derived type definition'
+
+    ctxt = ctxtm[0]
+    if ctxt._in_iface:
+        return line
+
+    ctxt._derived_t   = True
+    dtype             = line.name
+    ctxt.dtype        = dtype
+    ctxt.types[dtype] = caselessDict()
+    return line
+
+def endtype(line,ctxtm):
+    'end a derived type definition'
+
+    ctxt = ctxtm[0]
+    if ctxt._in_iface:
+        return line
+
+    ctxt._derived_t      = False
+    return line
+
 def typedecl(line,ctxtm):
     'type declaration -- record type in symbol table'
 
@@ -175,17 +199,17 @@ def typedecl(line,ctxtm):
     mod     = line.mod
     lngth   = kw_str == 'character' and (mod and mod[0] or 1)
     dflt_d  = default_dims(line.attrs)
+    symtab  = (ctxt._derived_t and [ctxt.types[ctxt.dtype]] or [ctxt.vars])[0]
     for d in line.decls:
         (name,dims)     = typesep(d,dflt_d)
-        if name in ctxt.vars:
-            ctxt.vars[name].typeof = typeof
-            ctxt.vars[name].mod    = mod
+        if name in symtab:
+            symtab[name].typeof = (typeof,mod)
         else:
-            ctxt.vars[name] = SymEntry(typeof=(typeof,mod),
-                                       kw_str=kw_str,
-                                       dims=dims,
-                                       vclass='local',
-                                       lngth=lngth)
+            symtab[name] = SymEntry(typeof=(typeof,mod),
+                                    kw_str=kw_str,
+                                    dims=dims,
+                                    vclass='local',
+                                    lngth=lngth)
     return line
 
 def dimen(line,ctxtm):
@@ -291,6 +315,8 @@ ctxt_lexi = [(fs.PUend,            nextunit),
              (fs.InterfaceStmt,    iface),
              (fs.EndInterfaceStmt, endiface),
              (fs.TypeDecl,         typedecl),
+             (fs.DrvdTypeDefn,     drvdtypedefn),
+             (fs.EndTypeStmt,      endtype),
              (fs.DimensionStmt,    dimen),
              (fs.AssignStmt,       assgn),
              (fs.UseStmt,          use_module),

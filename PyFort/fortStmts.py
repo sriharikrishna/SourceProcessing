@@ -346,6 +346,7 @@ class DrvdTypeDecl(TypeDecl):
         self.attrs = attrs
         self.decls = decls
         self.dblc  = bool(dc)
+        self.mod   = name
 
     def __repr__(self):
         return 'DrvdTypeDecl(%s,%s,%s)' % (repr(self.name),

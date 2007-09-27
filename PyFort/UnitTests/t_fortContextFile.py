@@ -106,7 +106,7 @@ class C2(TestCase):
 #        for l in e.lines: print l
 
 class C3(TestCase):
-    def ntest1(self):
+    def test1(self):
         'interface blocks stuff (using freefmt read)'
         ae = self.assertEquals
         a_ = self.assert_
@@ -117,7 +117,7 @@ class C3(TestCase):
         ae(ty.kw_str,'complex')
 #        for l in e.lines: print repr(l)
 
-    def ntest2(self):
+    def test2(self):
         'change class of subroutine,function in interface block'
         ae = self.assertEquals
         a_ = self.assert_
@@ -125,7 +125,7 @@ class C3(TestCase):
         a_(isinstance(e.lines[2],fs.IfPUstart))
         a_(isinstance(e.lines[5],fs.IfPUend))
 
-    def ntest3(self):
+    def test3(self):
         'ignore ifaceblk in JU test file'
         ae = self.assertEquals
         a_ = self.assert_
@@ -141,9 +141,23 @@ class C3(TestCase):
         a_(not isinstance(e.lines[4],fs.StmtFnStmt))
 #        for l in e.lines: print repr(l)
 
-s1 = makeSuite(C3)
+class C4(TestCase):
+    def test1(self):
+        'derived types recording'
+        ae = self.assertEquals
+        a_ = self.assert_
+        e  = fortContextFile(fname_t('drvd-types.f90'),True)
+#        for l in e.lines: print repr(l)
+        (ty,mod) = e.lines[0].ctxt.lookup_type('x')
+        ae(ty.kw_str,'integer')
+        (ty,mod) = e.lines[0].ctxt.lookup_type('y')
+        ae(ty.kw_str,'complex')
 
-suite = asuite(C1,C2,C3)
+s1 = makeSuite(C4)
 
+suite = asuite(C1,C2,C3,C4)
+
+'''
 if __name__ == "__main__":
     runit(suite)
+'''
