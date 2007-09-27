@@ -212,6 +212,9 @@ def nontriv(e,line):
                                   lookup_lngth(e.head) ):
         return (e,[])
 
+    if isinstance(e,fe.Sel):
+        return (e,[])
+
     ety  = line.ctxt.repl_fns['ety']
     tvar = __tmp_prefix + str(line.ctxt._tcnt)
     line.ctxt._tcnt += 1
