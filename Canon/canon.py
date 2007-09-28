@@ -7,7 +7,7 @@ from _Setup import *
 import PyFort.fortStmts as fs
 import PyFort.fortExp  as fe
 from   PyFort.fortContextFile import SymEntry
-from intrinsic import is_intrinsic
+from   PyFort.intrinsic import is_intrinsic
 
 __tmp_prefix   = 'ad_ctmp'
 __call_prefix  = 'ad_s_'
