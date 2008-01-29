@@ -3,6 +3,6 @@ subroutine foo(a,b)
    integer(w2f__i4) NNZ
    integer ifoo
 
-   call ad_s_MAX_i(NNZ,0_w2f__i8,ad_ctmp0)
+   call ad_s_max_i(nnz,0_w2f__i8,ad_ctmp0)
    ifoo = ad_ctmp0
 end

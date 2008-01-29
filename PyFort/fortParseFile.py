@@ -2,61 +2,30 @@
 Turn a scanned line into a parsed line
 '''
 from _Setup import *
-import fortScanFile as fsf
+from fortFile import Ffile
+from fortScan import scan1
+from PyUtil.errors import ScanError,ParseError
+
 import fortStmts    as fs
 from   PyIR.mapper       import _Map
-from PyUtil.chomp import chomp
 
-class _fortParseLine(object):
-    'base class for parsed lines'
+def parse_stmt(jl):
+    'parse a statment from a line'
+    (scan,rm) = scan1.scan(jl)
+    if rm:
+        raise ScanError(jl,scan,rm)
+    obj = fs.parse(scan)
+    return obj
 
-    parse =  fs.Skip()
+def parse_cmnt(dta):
+    return fs.Comments('')
 
-    def __str__(self):
-        return chomp(self.rawline)
-    def __repr__(self):
-        return '%s(%s)' % (self.__class__.__name__,repr(str(self)))
+class fortParseFile:
+    def __init__(self,fn,free=False):
+        self.ff    = Ffile.file(fn,free,parse_cmnt,parse_stmt)
+        self.lines = self.ff.lines
 
-def fortParseComment(scanline):
-    'parsed comments = scanned comments'
+    def map(self,lexi,*args,**kwargs):
+        return self.ff.map(lexi,*args,**kwargs)
 
-    return fs.Comments(scanline.rawline)
-
-def fortParseLine(scanline):
-
-    line         = fs.parse(scanline.scan)
-
-    line.rawline = scanline.rawline
-    line.lineno  = scanline.lineno
-    line.lead    = scanline.lead
-    line.rm      = scanline.rm
-
-    return line
-
-class _fortParse(_Map):
-    'base class for fortParseIterator and fortParse'
-    pass
-
-class fortParseIter(_fortParse):
-    'return an iterator for parseLine objects'
-
-    def __init__(self,scan_iter):
-        lexi = ((fsf.fortScanComment,lambda l: [fortParseComment(l)]),
-                (fsf.fortScanLine,   lambda l: [fortParseLine(l)]))
-
-        self.lines = scan_iter.map(lexi)
-
-class fortParse(_fortParse):
-    'create a list of parseLine objects'
-
-    def __init__(self,scan_iter):
-        self.lines = list(fortParseIter(scan_iter).lines)
-        
-def fortParseFile(fname,free=False):
-    'from a file name create a fortParse object'
-
-    return fortParse(fsf.fortScanFile(fname,free))
-
-def fortParseFileIter(fname,free=False):
-    'return an iterator for the parseLine objects'
-    return fortParseIter(fsf.fortScanFile(fname,free))
+fortParseFileIter = fortParseFile

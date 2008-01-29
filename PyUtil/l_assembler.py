@@ -10,6 +10,23 @@ is the 'remainder' after the assembly
 
 '''
 
+class _pat(object):
+    'add functionality to pattern functions by making them callable objects'
+
+    def __init__(self,fn):
+        self.fn   = fn
+        self.post = []
+
+    def __call__(self,*args,**kwargs):
+        (v,rst) = self.fn(*args,**kwargs)
+        for f in self.post:
+            v = f(v)
+        return (v,rst)
+
+    def addpost(self,*fns):
+        self.post.extend(fns)
+        return self
+
 from flatten import flatten
 
 class AssemblerException(Exception):
@@ -30,7 +47,7 @@ def pred(p):
             return (v,s[1:])
         raise AssemblerException("predicate failure",s)
 
-    return asm
+    return _pat(asm)
 
 any = pred(lambda x:True)
 
@@ -50,7 +67,7 @@ def star(a):
         except AssemblerException,excp:
             return (rv,excp.rest)        
 
-    return asm
+    return _pat(asm)
 
 def seq(*asms):
     '''assembler that produces a sequence of assemblies'''
@@ -71,7 +88,7 @@ def seq(*asms):
 
             raise AssemblerException(msg,rest)
 
-    return asm
+    return _pat(asm)
 
 def disj(*asms):
     '''assembler that produces 1st valid assembly from a list of
@@ -87,18 +104,16 @@ def disj(*asms):
 
         raise AssemblerException('disj failure',s)
 
-    return asm
+    return _pat(asm)
 
 def treat(a,f):
     '''Given an assembler a, and a function f, apply f to the
     assembler a return value, and return the value of the application
-    as the return value of the treated assembler
+    as the return value of the treated assembler.
+    NOTE: supplied for back compatibility. New code should use the
+          addpost method
     '''
-    def asm(s):
-        (rv,rst) = a(s)
-        return(f(rv),rst)
-
-    return asm
+    return a.addpost(f)
 
 def plus(a):
     '''given an assembler a, return the Kleene '+' operation.
@@ -131,7 +146,7 @@ def zo1(a):
         except AssemblerException:
             return ([],s)
 
-    return asm
+    return _pat(asm)
 
 def lit(s):
     '''a recognizer for a literal string

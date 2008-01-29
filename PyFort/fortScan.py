@@ -5,6 +5,8 @@ to use these expressions, be sure to re.compile with re.X
 import re
 import myscan
 
+from tokens import *
+
 def __str_intern(s):
     template = r"""
          (?:            # body of quote is a collection of chars

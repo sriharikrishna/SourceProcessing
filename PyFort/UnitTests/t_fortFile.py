@@ -1,4 +1,4 @@
-import Setup
+from Setup     import *
 
 from unittest  import *
 from fortFile  import *
@@ -8,10 +8,17 @@ from PyUtil.chomp     import chomp
 
 import fortLine as fl
 
+class C1(TestCase):
+    def test1(self):
+        'file gets lines'
+        ff = Ffile.file(fname_t('f2.f'))
+        a_(ff,'fortFile object is screwed')
+        for l in ff.lines: print l
+
 class file1(TestCase):
     def setUp(self):
-        self.fname = Setup.fname_t('f1.f')
-        self.ff    = Setup.open_t('f1.f')
+        self.fname = fname_t('f1.f')
+        self.ff    = open_t('f1.f')
 
     def tearDown(self):
         self.ff.close()
@@ -42,7 +49,7 @@ class file1(TestCase):
 class fileops(TestCase):
     def setUp(self):
 
-        fname     = Setup.fname_t('f1.f')
+        fname     = fname_t('f1.f')
         f         = file(fname)
         self.ff   = Ffile.file(fname)
         self.fstr = f.read()
@@ -66,8 +73,6 @@ class fileops(TestCase):
         os.remove(fname)
 
 class heretst(TestCase):
-    import os.path
-
     p1 = '''
       subroutine foo(x)
       x = x +
@@ -86,9 +91,9 @@ c
      & 13.2
       end
 '''
-    p1    = p1[1:]
+    p1    = preclip(p1)
     ff    = Ffile.here(p1)
-    fname = os.path.join(Setup.mypath,'Tfiles','f1.f')
+    fname = fname_t('f1.f')
     f     = file(fname)
 
     def test1(self):
@@ -101,18 +106,16 @@ c
 
 class maptest(TestCase):
 
-    fname = Setup.fname_t('f2.f')
-
+    fname = fname_t('f2.f')
 
     def test1(self):
-        
         'map operation, join short continuation lines'
 
         ae   = self.assertEquals
-        ok   = Setup.open_t('f2.f.map_ok.1').read()
+        ok   = open_t('f2.f.map_ok.1').read()
         ff   = Ffile.file(maptest.fname)
         lex1 = ((fl.cline,lambda l:[ chomp(l.rawline) ]),
-                (fl.fline,lambda l:[ l.line ]))
+                (fl.fline,lambda l:[ l.lead + l.line ]))
         res  = ''.join(l+'\n' for l in ff.map(lex1))
         ae(res,ok)
 
@@ -120,26 +123,19 @@ class maptest(TestCase):
         'map operation, filter comments'
 
         ae = self.assertEquals
-        ok = Setup.open_t('f2.f.map_ok.2').read()
+        ok = open_t('f2.f.map_ok.2').read()
         ff   = Ffile.file(maptest.fname)
         lex1 = ((fl.cline,lambda l:[]),
-                (fl.fline,lambda l:[ l.line ]))
+                (fl.fline,lambda l:[ l.lead + l.line ]))
         res  = ''.join(l+'\n' for l in ff.map(lex1))
         ae(res,ok)
 
-def s1():
-    return makeSuite(maptest)
+s  = asuite(C1)
+s1 = asuite(maptest)
 
-def suite():
-    rv = makeSuite(file1)
-    rv.addTest(makeSuite(fileops))
-    rv.addTest(makeSuite(heretst))
-    rv.addTest(makeSuite(maptest))
+suite = asuite(file1,fileops,heretst,maptest)
 
-    return rv
-
-def runSuite(s):
-    TextTestRunner(verbosity=2).run(s)
 
 if __name__ == '__main__':
-    runSuite(suite())
+    runit(suite)
+

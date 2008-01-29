@@ -1,6 +1,8 @@
-import Setup
-
 from unittest  import *
+#from copy      import copy as ocp
+#from copy      import deepcopy as docp
+
+from Setup     import *
 from fixedfmt  import *
 from fixedfmt  import _comment_p
 from cStringIO import StringIO
@@ -65,18 +67,45 @@ c $openad$ foob bar glurg
         s5 = preds.s5
         self.assert_(stmt_p(s5) and not (_comment_p(s5) or cont_p(s5)))
 
-def s1():
-    return makeSuite(fline_from_line_t)
+class C2(TestCase):
 
-def suite():
-    
-    rv = makeSuite(preds)
+    def test1(self):
+        'stmt pattern'
+        f1 = file(fname_t('f1.f'))
+        stmt = fixedfmt.a_stmt
+        (v,rst) = stmt(buf_iter(f1))
+        ae(v,['      subroutine foo(x)\n', []])
 
-    return rv
+    def test2(self):
+        'vgen(stmt)'
+        f1 = file(fname_t('f1.f'))
+        stmt = fixedfmt.a_stmt
+        ll   = vgen(stmt,buf_iter(f1))
+        lll  = list(ll)
+        ae(len(lll),5)
+        ae(lll[2],['      x = 5.0\n', []])
 
-def runSuite(s):
-    TextTestRunner(verbosity=2).run(s)
+    def test3(self):
+        'fjoin'
+        f1 = file(fname_t('f1.f'))
+        stmt = docp(fixedfmt.a_stmt)
+        stmt.addpost(fixedfmt.fjoin)
+        ll   = vgen(stmt,buf_iter(f1))
+        lll  = list(ll)
+        (r,jl,ic) = lll[1]
+        a_(ic)
+        ae(jl,'      x = x +5 + 2 * x + sin(x+2.0)')
+
+    def test4(self):
+        'cblk'
+        f1 = file(fname_t('f2.f'))
+        cblk = plus(fixedfmt.comm)
+        (v,rst) = cblk(buf_iter(f1))
+        ae(v,['c\n', 'c\n', 'c  actual comment lines\n', '\n', '\n'])
+
+s = asuite(C2)
+
+suite = asuite(preds,C2)
 
 if __name__ == "__main__":
-    runSuite(suite())
-
+    runit(suite)

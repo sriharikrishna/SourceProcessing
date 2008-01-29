@@ -1,7 +1,8 @@
 from _Setup import *
 from PyUtil.l_assembler import *
+from PyUtil.l_assembler import _pat
 
-class OpPrec(object):
+class _OpPrec(object):
     '''create an operator precedence expression parser
     from an atom assembler, an operator table, and a list
     of the operators that are right associative
@@ -70,3 +71,10 @@ class OpPrec(object):
 
     def exp(self,p):
         return seq(self.atom,star(self.opseq(p)))
+
+def OpPrec(atom,optbl,right=()):
+    'wrapper function to make _OpPrec class into a proper l_assembler pattern object'
+    tmp = _OpPrec(atom,optbl,right)
+    return _pat(tmp)
+
+

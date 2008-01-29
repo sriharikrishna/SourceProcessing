@@ -10,9 +10,6 @@ class C1(TestCase):
     def test1(self):
         'parsed file w default map function'
 
-        ae = self.assertEquals
-        a_ = self.assert_
-
         f1   = fortParseFile(fname_t('f3.f'))
         lexi = ()
         r    = [ l for l in f1.map(lexi) ]

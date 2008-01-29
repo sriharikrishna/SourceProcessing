@@ -4,6 +4,8 @@ from unittest  import *
 from fortLine  import *
 from cStringIO import StringIO
 from flow      import flow_line
+from PyUtil.flatten   import flatten
+from PyUtil.chomp     import chomp
 
 class T1(TestCase):
 
@@ -74,10 +76,10 @@ c
         fln1 = fline_t.fln1
         rst  = fline_t.rst
 
-        aa(fln1.rawline == fline_t.p1)
-        ae(fln1.line,fline_t.right)
+        aa(fln1[0] == fline_t.p1)
+        ae(fln1[1],fline_t.right)
         ae(list(rst),[])
-        ae('|'.join(fln1.internal),internal_c)
+        ae('|'.join(fln1[2]),internal_c)
 
     def test2(self):
         'cline class, rawline attribute, comment_list method'
@@ -99,39 +101,9 @@ d    a possible debugging line
 
         (fln1,rst) = cblk(p1f)
 
-        aa(fln1.rawline == p1)
-        ae(fln1.comment_list(),['   ! This is a comment', 'C', 'c Internal comment', 'c', '* ! another !', 'd    a possible debugging line'])
-
-class fline_from_line_t(TestCase):
-    def setUp(self):
-        fline_from_line_t.fl = fortLine()
-
-    def test1(self):
-        'convert a long line to an fline object'
-        fl = fline_from_line_t.fl
-        p1 = '''
-       x = somefn('This is an extremely long string to be put on 1 line' // 'Another line')
-'''
-        p1 = p1[1:]
-        ok = '''
-       x = somefn('This is an extremely long string to be put on 1 line'
-     + // 'Another line')
-'''
-        ok = ok[1:]
-        t  = fl.fline_from_line(p1)
-        self.assert_(isinstance(t,fline))
-        self.assertEquals(t.rawline,ok)
-
-    def test2(self):
-        'convert comment line to cline object'
-        fl = fline_from_line_t.fl
-        p1 = '''
-c This is a comment
-'''
-        p1 = p1[1:]
-        t  = fl.fline_from_line(p1)
-        self.assert_(isinstance(t,cline))
-        self.assertEquals(t.rawline,p1)
+        aa(''.join(flatten(fln1)) == p1)
+        ae([chomp(c) for c in fln1],
+           ['   ! This is a comment', 'C', 'c Internal comment', 'c', '* ! another !', 'd    a possible debugging line'])
 
 def s1():
     return makeSuite(fline_from_line_t)
@@ -140,7 +112,6 @@ def suite():
     
     rv = makeSuite(T1)
     rv.addTest(makeSuite(fline_t))
-    rv.addTest(makeSuite(fline_from_line_t))
 
     return rv
 

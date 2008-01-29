@@ -188,11 +188,11 @@ class C1(TestCase):
                        '(.NOT. IMPLICITADVECTION))) THEN')
         (e1,dc) = Exp(l1)
         ae(repr(e1),
-           repr(App('IF',[Ops('.AND.',
-                              ParenExp(Ops('.GE.','K','2')),
-                              ParenExp(Ops('.AND.',
-                                           'CALCADVECTION',
-                                           ParenExp(Not('IMPLICITADVECTION'))
+           repr(App('if',[Ops('.and.',
+                              ParenExp(Ops('.ge.','k','2')),
+                              ParenExp(Ops('.and.',
+                                           'calcadvection',
+                                           ParenExp(Not('implicitadvection'))
                                            ))
                               )]))
            )
@@ -367,7 +367,7 @@ class C3(TestCase):
             '1.39999997615814208984D00 /'
 
         (e1,dc) = Exp(scan(s))
-        ae(e1,'DATA')
+        ae(e1,'data')
         ae(dc,['(', 'A1', '(', 'tmp0', ')',
                ',', 'tmp0', '=', '1', ',', '5', ',', '1', ')',
                '/', '3.49999994039535522461D-01', ',',

@@ -82,7 +82,7 @@ class App(_Exp):
     def map(self,fn):
         return App(self.head,[fn(a) for a in self.args])
 
-    def typeit(self,exptype,idchk,kw2type,lenfn,kindfn,poly,typemerge):
+    def typeit(self,exptype,idchk,kw2type,lenfn,kindfn,poly,typemerge,aux=None):
         head     = self.head
         headtype = exptype(head,idchk,kw2type,lenfn,kindfn,poly,typemerge)
         if poly(head):
@@ -165,8 +165,8 @@ class Zslice(_Exp):
 class Unary(_Exp):
     _sons = ['exp']
 
-    def typeit(self,exptype,idchk,kw2type,lenfn,kindfn,poly,typemerge):
-        return exptype(self.exp,idchk,kw2type,lenfn,kindfn,poly,typemerge)
+    def typeit(self,exptype,idchk,kw2type,lenfn,kindfn,poly,typemerge,aux=None):
+        return exptype(self.exp,idchk,kw2type,lenfn,kindfn,poly,typemerge,aux=None)
     
 class Umi(Unary):
     'unary minus'
@@ -244,7 +244,7 @@ class Ops(_Exp):
     def map(self,fn):
         return Ops(self.op,fn(self.a1),fn(self.a2))
 
-    def typeit(self,exptype,idchk,kw2type,lenfn,kindfn,poly,typemerge):
+    def typeit(self,exptype,idchk,kw2type,lenfn,kindfn,poly,typemerge,aux=None):
         return typemerge([exptype(self.a1,idchk,kw2type,lenfn,kindfn,
                                   poly,typemerge),
                           exptype(self.a2,idchk,kw2type,lenfn,kindfn,
@@ -381,7 +381,7 @@ def atom(scan):
 
 '''
 FIXME:
-   duplicated *_trail code, can't factor out easily due to fwd ref
+   duplicated *_trail code, cannot factor out easily due to fwd ref
 '''
 
 def lv_exp(scan):
@@ -407,7 +407,7 @@ Exp = OpPrec(atom,_optbl,('**',))
 Exp = treat(Exp,_mkexp)
 
 ExpList   = seq(Exp,star(seq(lit(','),Exp)))
-ExpList_l = treat(ExpList,_squeeze)
+#ExpList_l = treat(docp(ExpList),_squeeze)
 
 _appExpR = seq(lit(':'),zo1(Exp))
 _appExpR = treat(_appExpR,_mkapp_e_r)

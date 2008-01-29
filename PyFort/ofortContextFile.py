@@ -3,6 +3,7 @@ Turn a parsed line into a context line
 '''
 
 from _Setup import *
+import fortParseFile as fpf
 import fortStmts     as fs
 import fortExp       as fe
 import PyIR.mapper   as mapper

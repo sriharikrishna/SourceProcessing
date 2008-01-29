@@ -21,7 +21,7 @@ class T1(TestCase):
         ll = list(f1.lines)
         ae(len(ll),1)
         a_(isinstance(ll[0],fline))
-        ae(ll[0].line,'  logical subroutine(x,y,  z)')
+        ae(ll[0].line,'logical subroutine(x,y,  z)')
         ae(ll[0].rawline,l1)
 
     def test2(self):
@@ -37,7 +37,7 @@ class T1(TestCase):
         ll = list(f1.lines)
         ae(len(ll),1)
         a_(isinstance(ll[0],fline))
-        ae(ll[0].line,'  logical subroutine(x,y,  z) ')
+        ae(ll[0].line,'logical subroutine(x,y,  z) ')
         ae(ll[0].rawline,l1)
 
     def test3(self):

@@ -1,4 +1,5 @@
 from Setup import *
+
 from unittest import *
 
 from fortContextFile import *
@@ -153,11 +154,10 @@ class C4(TestCase):
         (ty,mod) = e.lines[0].ctxt.lookup_type('y')
         ae(ty.kw_str,'complex')
 
-s1 = makeSuite(C4)
+s1 = makeSuite(C2)
 
 suite = asuite(C1,C2,C3,C4)
 
-'''
+
 if __name__ == "__main__":
     runit(suite)
-'''

@@ -7,36 +7,50 @@ Provide mappers, rewriters, string conversion facilities
 '''
 from _Setup import *
 from cStringIO import StringIO
-#from fortLine  import a_line
-from fortLine  import fortLine
-from PyUtil.assembler import vgen
+from fortLine  import fortLine,cline,fline
+from PyUtil.assembler import vgen,treat,disj
 from PyUtil.buf_iter  import buf_iter
 from PyUtil.errors import UserError
 from freefmt       import freefmt
 from fixedfmt      import fixedfmt
+from process_fort_stmt import process_fort_stmt,process_fort_cmnt
 
 def _ident(s):
     return [s]
 
+def tmpp(s):
+    'temp fn to debug'
+    print 'tmpp inputs = ',s
+    def tmpp_fn(t):
+        print 'tmpp_fn input = ',t
+        return process_fort_stmt(t,s)
+    return tmpp_fn
+
 class Ffile(object):
-    def __init__(self,fobj,free=False):
-        fmt = (free and freefmt) or fixedfmt
-        a_line = fortLine(fmt).a_line
+    def __init__(self,fobj,free=False,c_action=cline,s_action=fline):
+        fmt      = (free and freefmt) or fixedfmt
+        fl       = fortLine(fmt)
+        s      = lambda x:process_fort_stmt(x,s_action)
+        c      = lambda x:process_fort_cmnt(x,c_action)
+        cblk   = treat(fl.cblk,c)
+        stmt   = treat(fl.stmt,s)
+        a_line = disj(cblk,stmt)
+
         self.lines = vgen(a_line,buf_iter(fobj))
         self.fobj  = fobj
 
     @staticmethod
-    def file(name,free=False):
+    def file(name,free=False,c_action=cline,s_action=fline):
         try:
-          file=open(name)
+          f=open(name)
         except IOError:
           msg="Error cannot open file named: "+name
           raise UserError(msg)
-        return Ffile(open(name),free)
+        return Ffile(f,free,c_action,s_action)
 
     @staticmethod
-    def here(str,free=False):
-        return Ffile(StringIO(str),free)
+    def here(str,free=False,c_action=cline,s_action=fline):
+        return Ffile(StringIO(str),free,c_action,s_action)
 
     def str(self):
         '''return all of the original file lines concatenated together
@@ -69,11 +83,11 @@ class Ffile(object):
 
         ff.close()
 
-    def map(self,lexi):
+    def map(self,lexi,*args,**kwargs):
         for (cls,meth) in lexi:
             cls.map = meth
         for l in self.lines:
-            for ll in l.map():
+            for ll in l.map(*args,**kwargs):
                 yield ll
         for (cls,meth) in lexi:
             cls.map = _ident

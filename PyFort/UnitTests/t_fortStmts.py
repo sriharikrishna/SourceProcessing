@@ -301,7 +301,7 @@ class C8(TestCase):
         v = pps(ss)
         ae(repr(v),
            repr(CharacterStmt(
-            [_F90ExplLen(Ops('+','AAA','9'))],
+            [_F90ExplLen(Ops('+','aaa','9'))],
             [App('dimension',['3'])],
             [_NoInit(Ops('*',App('gack',['*', '*']),'5')),
              _NoInit('floob'),

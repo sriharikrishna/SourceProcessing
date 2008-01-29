@@ -1,7 +1,21 @@
-import Setup
+from Setup import *
 
 from unittest import *
 from fortScan import *
+
+class C1(TestCase):
+    def test1(self):
+        'scan string1'
+
+        p1 = preclip('''
+       f(i) = 'This is a '' str' // 'another string' // gl(3.14_www)
+''')
+        ok = ['f', '(', 'i', ')', '=',
+              "'This is a '' str'", '//',
+              "'another string'", '//', 'gl', '(', '3.14_www', ')']
+        (v,rm) = scan1.scan(p1)
+        ae(v,ok)
+        a_(not rm)
 
 class qstrings(TestCase):
     def test1(self):
@@ -150,20 +164,9 @@ class C4(TestCase):
         ae(s,t1p1)
         a_(not r)
         
-def s1():
-    return makeSuite(C4)
-
-def suite():
-    rv = makeSuite(qstrings)
-    rv.addTest(makeSuite(ro_qstrings))
-    rv.addTest(makeSuite(qstrings2))
-    rv.addTest(makeSuite(scanit))
-    rv.addTest(makeSuite(C4))
-
-    return rv
-
-def runSuite(s):
-    TextTestRunner(verbosity=2).run(s)
+s = asuite(C1)
+suite = asuite(C1,qstrings,ro_qstrings,qstrings2,scanit,C4)
 
 if __name__ == "__main__":
-    runSuite(suite())
+    runit(suite)
+

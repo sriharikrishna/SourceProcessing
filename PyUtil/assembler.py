@@ -13,6 +13,21 @@ is the 'remainder' after the assembly
 from flatten   import flatten
 from buf_iter  import buf_iter
 
+class pat(object):
+    def __init__(self,fn):
+        self.fn   = fn
+        self.post = []
+
+    def __call__(self,*args,**kwargs):
+        (v,rst) = self.fn(*args,**kwargs)
+        for f in self.post:
+            v = f(v)
+        return (v,rst)
+
+    def addpost(self,*fns):
+        self.post.extend(fns)
+        return self
+
 class AssemblerException(Exception):
     '''exception for failure to assemble'''
     def __init__(self,msg,rest):
@@ -32,7 +47,7 @@ def pred(p):
             return (v,s)
         raise AssemblerException('Predicate Failure',s.putback([v]))
 
-    return asm
+    return pat(asm)
 
 any = pred(lambda x:True)
 
@@ -52,7 +67,7 @@ def star(a):
         except AssemblerException,excp:
             return (rv,excp.rest)
 
-    return asm
+    return pat(asm)
 
 def seq(*asms):
     '''assembler that produces a sequence of assemblies'''
@@ -71,7 +86,7 @@ def seq(*asms):
             rest = excp.rest.putback(flatten(rv))
             raise AssemblerException(msg,rest)
 
-    return asm
+    return pat(asm)
 
 def disj(*asms):
     '''assembler that produces 1st valid assembly from a list of
@@ -87,18 +102,16 @@ def disj(*asms):
 
         raise AssemblerException('disj failure',s)
 
-    return asm
+    return pat(asm)
 
 def treat(a,f):
     '''Given an assembler a, and a function f, apply f to the
     assembler a return value, and return the value of the application
-    as the return value of the treated assembler
+    as the return value of the treated assembler.
+    NOTE: supplied for back compatibility. New code should use the
+          addpost method
     '''
-    def asm(s):
-        (rv,rst) = a(s)
-        return(f(rv),rst)
-
-    return asm
+    return a.addpost(f)
 
 def plus(a):
     '''given an assembler a, return the Kleene '+' operation.
@@ -106,6 +119,19 @@ def plus(a):
     be a list of values
     '''
     return treat(seq(a,star(a)),lambda x: [x[0]] + x[1])
+
+def zo1(a):
+    '''implement the '?' operator of classical regexp
+    engines. That is, 0 or 1 occurrences of a
+    '''
+    def asm(s):
+        try:
+            (v,r) = a(s)
+            return ([v],r)
+        except AssemblerException,excp:
+            return ([],excp.rest)
+
+    return pat(asm)
 
 def vgen(a,src):
     '''for a given assembler a, and source stream src

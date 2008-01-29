@@ -887,6 +887,7 @@ class CallStmt(Exec):
     def parse(scan):
         prefix = seq(lit('call'),disj(app,id))
         ((dc,a),rst) = prefix(scan)
+
         if (isinstance(a,App)):
             return CallStmt(a.head,a.args)
         else:

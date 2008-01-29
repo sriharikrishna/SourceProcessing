@@ -21,42 +21,43 @@ class anyFortLine(object):
     pass
 
 class fline(anyFortLine):
-    '''a non-comment (semantic) class for a fortran line'''
+    '''a non-comment (semantic) class for a fortran line
+    This is a trivial joined line processor
+    '''
 
-    def __init__(self,rawline,line,internal):
+    def __init__(self,line):
 
-        self.rawline  = rawline
-        self.line     = line
-        self.internal = internal
+        self.line = line
 
 class cline(anyFortLine):
     '''a comment (or blank) line'''
-    def __init__(self,dta):
-        self.rawline = ''.join(flatten(dta))
+    def __init__(self,dta): pass
+#        self.rawline = ''.join(flatten(dta))
 
     def comment_list(self):
         return self.rawline.splitlines()
 
+def fline_from_asm(fj,dta):
+    '''a true fortran line dta structure comes in as:
+    [initial stmt [continuation_lines]]
+
+    continuation_lines are structures as well:
+    [[comments] continuation_line]
+    '''
+
+    sep = fj(dta)
+    return fline(sep[0],sep[1],sep[2])
+
 class fortLine(object):
     def __init__(self,fmtobj=fixedfmt):
         self.fmtobj    = fmtobj
-        a_stmt         = fmtobj.a_stmt
+        a_stmt         = docp(fmtobj.a_stmt)
         comm           = fmtobj.comm
-        cblk           = treat(plus(comm),cline)
-        stmt           = treat(a_stmt,self.fline_from_asm)
+        cblk           = plus(comm)
+        stmt           = treat(a_stmt,fmtobj.fjoin)
         self.a_line    = disj(cblk,stmt)
-
-    def fline_from_asm(self,dta):
-        '''a true fortran line dta structure comes in as:
-        [initial stmt [continuation_lines]]
-
-        continuation_lines are structures as well:
-        [[comments] continuation_line]
-        '''
-
-        fj  = self.fmtobj.fjoin
-        sep = fj(dta)
-        return fline(sep[0],sep[1],sep[2])
+        self.cblk      = cblk
+        self.stmt      = stmt
 
     def fline_from_line(self,line):
         comment_p = self.fmtobj.comment_p
