@@ -215,7 +215,7 @@ class filetst(TestCase):
         stmt    = seq(s,star(seq(star(c),k)))
         cblk    = plus(c)
     
-        self.f    = file(os.path.join(Setup.mypath,'Tfiles','f0.f')).readlines()
+        self.f    = file(Setup.fname_t('f0.f')).readlines()
         self.stmt = stmt
         self.cblk = cblk
 
@@ -248,7 +248,7 @@ class generatorTest(TestCase):
         cblk      = treat(plus(c),jjj)
 
         self.asem = disj(cblk,stmt)
-        self.f    = file(os.path.join(Setup.mypath,'Tfiles','f0.f')).readlines()
+        self.f    = file(Setup.fname_t('f0.f')).readlines()
 
     def tearDown(self):
         pass

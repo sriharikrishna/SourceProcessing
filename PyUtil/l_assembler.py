@@ -106,14 +106,20 @@ def disj(*asms):
 
     return _pat(asm)
 
-def treat(a,f):
+def treat(a,*ff):
     '''Given an assembler a, and a function f, apply f to the
     assembler a return value, and return the value of the application
     as the return value of the treated assembler.
     NOTE: supplied for back compatibility. New code should use the
           addpost method
     '''
-    return a.addpost(f)
+    def trt(s):
+        (v,rst) = a(s)
+        for f in ff:
+            v = f(v)
+        return (v,rst)
+
+    return _pat(trt)
 
 def plus(a):
     '''given an assembler a, return the Kleene '+' operation.

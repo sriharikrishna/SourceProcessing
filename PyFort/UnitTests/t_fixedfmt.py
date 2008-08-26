@@ -1,6 +1,6 @@
 from unittest  import *
-#from copy      import copy as ocp
-#from copy      import deepcopy as docp
+from copy      import copy as ocp
+from copy      import deepcopy as docp
 
 from Setup     import *
 from fixedfmt  import *

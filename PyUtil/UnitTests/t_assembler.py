@@ -1,4 +1,4 @@
-import Setup
+from Setup import *
 
 from assembler import *
 from unittest import *
@@ -13,6 +13,69 @@ def mkpred(id):
 def mklinepred(id):
     '''make a predicate assembler for an id on a line'''
     return pred(lambda(x): x == (id+'\n'))
+
+def mkl(id):
+    'just check 1st letter'
+    return pred(lambda x: x[0] == id)
+
+class _T(object):
+    def __init__(self,parent=None):
+        self.cmnt     =  None
+        self.unit     =  None
+        self.decls    = []
+        self.execs    = []
+        self.contains = []
+        self.ulist    = []
+        self.end      = []
+        self.parent   = parent
+
+class _TT(object):
+    def __init__(self):
+        self.val    = _T()
+        self.fval   = None
+
+    def uhead(self,s,dc=None):
+        self.uinfo(s[1])
+        if s[0]:
+            self.ucomm(s[0][0])
+        return self.val
+
+    def ucomm(self,s,dc=None):
+        self.val.cmnt = s
+        return self.val
+
+    def uinfo(self,s,dc=None):
+        self.val.unit = s
+        return self.val
+
+    def udecl(self,s,dc=None):
+        self.val.decls = s
+        return self.val
+
+    def uexec(self,s,dc=None):
+        u = self.val
+        u.execs = s
+        return u
+
+    def uend(self,s,dc=None):
+        u = self.val
+        p = u.parent
+        u.end = s
+        self.fval = u
+        self.val  = _T(p)
+        return u
+
+    def ucont(self,s,dc=None):
+        u = self.val
+        u.contains = s
+        self.val = _T(u)
+        return u
+
+    def ulist(self,l,dc=None):
+        p = self.val.parent
+        self.val = p
+        self.val.ulist = l
+        return self.val
 
 def jjj(dta):
     return ''.join([chomp(x) for x in flatten(dta)])
@@ -216,7 +279,7 @@ class filetst(TestCase):
         stmt    = seq(s,star(seq(star(c),k)))
         cblk    = plus(c)
     
-        self.f    = Setup.open_t('f0.f')
+        self.f    = open_t('f0.f')
         self.stmt = stmt
         self.cblk = cblk
 
@@ -249,7 +312,7 @@ class generatorTest(TestCase):
         cblk      = treat(plus(c),jjj)
 
         self.asem = disj(cblk,stmt)
-        self.f    = file(os.path.join(Setup.mypath,'Tfiles','f0.f'))
+        self.f    = file(fname_t('f0.f'))
 
     def tearDown(self):
         self.f.close()
@@ -263,25 +326,149 @@ class generatorTest(TestCase):
 
         ae(asems,['skk','s','s','ccc'])
 
-def s1():
-    return makeSuite(simple)
+def install_pat(cur,lst):
+    (c,u,d,x,n,e) = lst
 
-def suite():
-    s1 = makeSuite(simple)
-    s2 = makeSuite(strings)
-    s3 = makeSuite(misc1)
+    def cmst(p): return treat(seq(zo1(c),p),flatten)
 
-    rv = s1
-    rv.addTest(s2)
-    rv.addTest(s3)
-    rv.addTest(makeSuite(filetst))
-    rv.addTest(makeSuite(generatorTest))
+    def _ul(s):
+        'eta expansion for recursive patterns'
+        return uu(s)
 
-    return rv
+    uh    = treat(seq(zo1(c),u),cur.uhead)
+    udcl  = treat(star(cmst(d)),flatten,cur.udecl)
+    uexc  = treat(star(cmst(x)),flatten,cur.uexec)
+    cnth  = treat(cmst(n),cur.ucont)
+    cntl  = treat(star(_ul),cur.ulist)
+    uctn  = zo1(seq(cnth,cntl))
+    uend  = treat(cmst(e),cur.uend)
 
-def runSuite(s):
-    TextTestRunner(verbosity=2).run(s)
+    uu    = treat(seq(uh,udcl,uexc,uctn,uend),lambda s:cur.fval)
+    return uu
+
+class C4(TestCase):
+    'check side-effecting incremental value building from pattern'
+
+    def setUp(self):
+        ptns = [ mkl(l) for l in 'cudxne' ]
+        self.uu = install_pat(_TT(),ptns)
+
+    def test1(self):
+        'incremental side effect build f simple unit'
+        uu = self.uu
+        ts = 'c1 u1 d1 x1 e1'
+        ii = buf_iter((i for i in ts.split()))
+        (v,r) = uu(ii)
+        a_(isinstance(v,_T))
+        a_(not list(r))
+        ae(v.cmnt,'c1')
+        ae(v.unit,'u1')
+        ae(v.decls,['d1'])
+        ae(v.execs,['x1'])
+        ae(v.contains,[])
+        ae(v.ulist,[])
+        ae(v.end,['e1'])
+
+    def test2(self):
+        'incremental side effect build vgen f 2 simple units'
+        uu = self.uu
+        ts = 'ua c1 d1 c3 x1 e1 cb ub cdb1 db1 cxb1 xb1 xb2 eb'
+        ii = buf_iter((i for i in ts.split()))
+        units = list(vgen(uu,ii))
+        ae(len(units),2)
+        (u1,u2) = units
+        ae(u1.cmnt,None)
+        ae(u2.execs,['cxb1','xb1','xb2'])
+
+    def test3(self):
+        'incremental side effect build w recursive pattern'
+        uu = self.uu
+        ts = 'ua cd1 d1 cx1 x1 cn1 n cnu1 un1 cn1d dn1 cnx1 xn1 cne en e1'
+        ii = buf_iter((i for i in ts.split()))
+        (u,r) = uu(ii)
+        ae(list(r),[])
+        ae(u.cmnt,None)
+        ae(u.decls,['cd1','d1'])
+        ae(u.contains,['cn1','n'])
+        ae(len(u.ulist),1)
+        ae(u.end,['e1'])
+
+        u = u.ulist[0]
+        a_(isinstance(u,_T))
+        ae(u.cmnt,'cnu1')
+        ae(u.unit,'un1')
+        ae(u.execs,['cnx1','xn1'])
+
+    def test4(self):
+        'incremental side effect build 1 unit w 2 subunits'
+        uu = self.uu
+        ts = '''ua cd1 d1 cx1 x1 cn1 n
+                   cnu1 un1 cn1d dn1 cnx1 xn1 cne en
+                   unb db1 db2 xb1 xb2 xb3 eb
+                 e1'''
+        ii = buf_iter((i for i in ts.split()))
+        (u,r) = uu(ii)
+        ae(list(r),[])
+        ae(u.cmnt,None)
+        ae(u.decls,['cd1','d1'])
+        ae(u.contains,['cn1','n'])
+        ae(len(u.ulist),2)
+        ae(u.end,['e1'])
+
+        (u,u2) = u.ulist
+        a_(isinstance(u,_T))
+        ae(u.cmnt,'cnu1')
+        ae(u.unit,'un1')
+        ae(u.execs,['cnx1','xn1'])
+        u = u2
+        a_(isinstance(u,_T))
+        ae(u.cmnt,None)
+        ae(u.unit,'unb')
+        ae(u.execs,['xb1','xb2','xb3'])
+        ae(u.end,['eb'])
+
+    def test5(self):
+        'incremental side effect build 1 unit w subunits having subunits'
+        uu = self.uu
+        ts = '''umod
+                   dm1 dm2 nmod
+                     ua cd1 d1 cx1 x1 cn1 n
+                      cnu1 un1 cn1d dn1 cnx1 xn1 cne eun1
+                      unb db1 db2 xb1 xb2 xb3 eb
+                     ea
+                 emod'''
+
+        ii = buf_iter((i for i in ts.split()))
+        (u,r) = uu(ii)
+        ae(list(r),[])
+        ae(u.cmnt,None)
+        ae(u.decls,['dm1','dm2'])
+        ae(u.contains,['nmod'])
+        ae(len(u.ulist),1)
+        ae(u.end,['emod'])
+
+        u = u.ulist[0]
+        a_(isinstance(u,_T))
+        ae(u.cmnt,None)
+        ae(u.unit,'ua')
+        ae(u.execs,['cx1','x1'])
+        ae(len(u.ulist),2)
+        ae(u.end,['ea'])
+
+        (u,u2) = u.ulist
+        a_(isinstance(u,_T))
+        ae(u.cmnt,'cnu1')
+        ae(u.unit,'un1')
+        ae(u.execs,['cnx1','xn1'])
+        u = u2
+        a_(isinstance(u,_T))
+        ae(u.cmnt,None)
+        ae(u.unit,'unb')
+        ae(u.execs,['xb1','xb2','xb3'])
+        ae(u.end,['eb'])
+
+suite = asuite(simple,strings,misc1,filetst,generatorTest,C4)
+_s    = asuite(C4)
 
 if __name__ == '__main__':
-    runSuite(suite())
-
+    runit(suite)

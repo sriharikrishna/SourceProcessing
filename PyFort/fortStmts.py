@@ -1,3 +1,6 @@
+#### FIXME: functions returning derived types !!! ###
+#### function parsing in general: distinguish 'real function' (a var decl) from 'real function foo()'
+
 '''
 Various Fortran statement types and Fortran parsing functions
 '''
@@ -11,6 +14,12 @@ from PyIR.mapper       import _Mappable
 from PyIR.mutable_tree import _Mutable_T
 from PyUtil.errors  import ParseError
 import flow
+
+class __FakeUnit(object):
+    def __init__(self):
+        self._in_iface = False
+
+_non = __FakeUnit()
 
 class _TypeMod(_Mutable_T):
     'modifier for type declaration'
@@ -53,15 +62,31 @@ class _F90Len(_FLenMod):
     'Utility modifier for character data, F90 style'
     pat_ = '(%s)'
 
+    def _separate_implicit_list(self):
+        app = self.len
+        return ([],app)
+
 class _F77Len(_FLenMod):
     'Utility modifier for character data, F77 style'
     pat_ = '*%s'
+    def _separate_implicit_list(self):
+        app = self.len
+        return ([_F77Len(app.head)],app.args)
 
 class _Prec(_TypeMod):
     pat = '*%s'
 
+    def _separate_implicit_list(self):
+        app = self.mod
+        return ([_Prec(app.head)],app.args)
+
 class _Kind(_TypeMod):
     pat = '(%s)'
+
+    def _separate_implicit_list(self):
+        l = self.mod
+        return ([],self.mod)
+
 
 class _ExplKind(_TypeMod):
     pat = '(kind = %s)'
@@ -69,6 +94,7 @@ class _ExplKind(_TypeMod):
 prec = seq(lit('*'),Exp)
 prec = treat(prec,lambda a:_Prec(a[1]))
 
+# kind = seq(lit('('),cslist(Exp),lit(')')) #### KILL THIS??
 kind = seq(lit('('),Exp,lit(')'))
 kind = treat(kind,lambda a:_Kind(a[1]))
 
@@ -112,6 +138,13 @@ pchar = seq(lit('character'),
          )
 
 type_pat = disj(pchar,pstd)
+
+def _get_class(p):
+    return (kwtbl[p[0].lower()],p[1])
+
+type_pat_sem = treat(type_pat,_get_class)
+
+def _name2class(name): return kwtbl[name.lower()]
 
 def _ta_listify(asm):
     rv = []
@@ -191,9 +224,9 @@ def typestr(raw):
     (tyid,mod) = raw
     return kwtbl[tyid].kw_str + (mod and str(mod[0]) or '')
 
-def typestr(raw):
-    (tyid,mod) = raw
-    return kwtbl[tyid].kw_str + (mod and str(mod[0]) or '')
+def typestr2(raw):
+    (tycls,mod) = raw
+    return tycls.kw_str + (mod and str(mod[0]) or '')
 
 class GenStmt(_Mappable,_Mutable_T):
     _sons = []
@@ -208,6 +241,14 @@ class GenStmt(_Mappable,_Mutable_T):
     def parse(cls,scan):
         return cls(scan)
 
+
+    def is_exec(self,unit=_non): return False
+    def is_decl(self,unit=_non): return False
+    def is_ustart(self,unit=_non): return False
+    def is_uend(self,unit=_non): return False
+    def is_contains(self,unit=_non): return False
+    def is_comment(self,unit=_non): return False
+
 class Skip(GenStmt):
     def __init__(self):
         self.scan = []
@@ -219,6 +260,8 @@ class Comments(GenStmt):
         return 'Comments(blk)'
     def viz(self):
         return 'Comments(%s)' % self.rawline
+
+    def is_comment(self,unit=_non): return True
 
 def comment_bl(*comlines):
     return Comments('\n'.join(['c '+ chomp(s) for s in comlines])+'\n')
@@ -285,7 +328,7 @@ class FirstExec(Marker):
     ptxt = 'first executable follows'
 
 class Decl(NonComment):
-    pass
+    def is_decl(self,unit=_non): return True
 
 def attrstr(l):
     if not l: return ''
@@ -423,10 +466,11 @@ class TypePseudoStmt(GenStmt):
         return DrvdTypeDefn.parse(scan)
 
 class PUstart(Decl):
-    pass
+    def is_decl(self,unit=_non):  return True
+    def is_ustart(self,unit=_non): return True
 
 class Exec(NonComment):
-    pass
+    def is_exec(self,unit=_non): return True
 
 class Leaf(Exec):
     "special Exec that doesn't have components"
@@ -515,10 +559,32 @@ class PublicStmt(VarAttrib):
 class ContainsStmt(DeclLeaf):
     kw     = 'contains'
     kw_str = kw
+
+    def is_contains(self,unit=_non): return True
+    def is_decl(self,unit=_non): return False
     
 class ImplicitNone(DeclLeaf):
     kw     = 'implicitnone'
     kw_str = 'implicit none'
+
+def _extract_imp_elts(type_pair):
+    '''hack to extract the list of implicit letters from
+    the absorbed type modifier in the case of type*Exp or
+    type(Explist)
+    '''
+    (cls,m) = type_pair
+    m = m[0]
+    (nmod,implst) = m._separate_implicit_list()
+    return ((cls,nmod),implst)
+
+impelt1 = seq(type_pat_sem,lit('('),cslist(Exp),lit(')'))
+impelt1f = treat(impelt1,lambda l: (l[0],l[2]))
+
+impelt2 = type_pat_sem
+impelt2f = treat(impelt2,_extract_imp_elts)
+
+impelt = disj(impelt1,impelt2)
+impeltf = disj(impelt1f,impelt2f)
 
 class ImplicitStmt(Decl):
     _sons = ['lst']
@@ -528,8 +594,13 @@ class ImplicitStmt(Decl):
         p0 = seq(lit('implicit'),lit('none'))
         p0 = treat(p0,ImplicitNone)
 
-        impelt = seq(type_pat,lit('('),ExpList_l,lit(')'))
-        impelt = treat(impelt,lambda l: (l[0],l[2]))
+        impelt1 = seq(type_pat_sem,lit('('),cslist(Exp),lit(')'))
+        impelt1 = treat(impelt1,lambda l: (l[0],l[2]))
+
+        impelt2 = type_pat_sem
+        impelt2 = treat(impelt2,_extract_imp_elts)
+
+        impelt = disj(impelt1,impelt2)
 
         p1 = seq(lit('implicit'),
                  cslist(impelt))
@@ -550,7 +621,7 @@ class ImplicitStmt(Decl):
 
         def _helper(elt):
             (typ,explst) = elt
-            return '%s (%s)' % (typestr(typ),
+            return '%s (%s)' % (typestr2(typ),
                                 ','.join([str(l).replace(' ','') \
                                           for l in explst]))
             
@@ -566,6 +637,7 @@ class SaveStmt(Decl):
     pass
 
 class StmtFnStmt(Decl):
+
     _sons = ['args','body']
 
     def __init__(self,name,args,body):
@@ -812,7 +884,7 @@ class FunctionStmt(PUstart):
 
     @staticmethod
     def parse(scan):
-        p1 = seq(zo1(type_pat),
+        p1 = seq(zo1(type_pat_sem),
                  lit('function'),
                  id,
                  lit('('),cslist(id),lit(')'),
@@ -822,7 +894,16 @@ class FunctionStmt(PUstart):
         return FunctionStmt(ty,name,args)
 
     def __init__(self,ty,name,args):
-        self.ty   = ty
+        '''
+        typ = None
+
+        if ty:
+            (type_name,mod) = ty[0]
+            type_class = _name2class(type_name)
+            typ        = (type_class,mod)
+        '''
+
+        self.ty   = ty or None
         self.name = name
         self.args = args
 
@@ -1009,6 +1090,12 @@ class ElseStmt(Leaf):
 
 class EndStmt(PUend):
     kw =  'end'
+
+    def is_uend(self,unit=_non): return True
+    def is_decl(self,unit=_non):
+        return unit.val._in_iface
+    def is_exec(self,unit=_non): return False
+
 
 class EndPseudoStmt(GenStmt):
     @staticmethod
@@ -1197,3 +1284,8 @@ def typemerge(lst,default):
     for l in lst[2:]:
         t1 = typecompare(t1,l)
     return t1
+
+'''
+if __name__ == '__main__':
+    from _Setup.testit import *
+'''

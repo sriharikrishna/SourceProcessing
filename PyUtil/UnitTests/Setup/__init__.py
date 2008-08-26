@@ -1,11 +1,12 @@
 import sys,os.path
 
-mypath  = sys.path[0]
-libpath = os.path.normpath(os.path.join(sys.path[0],'..'))
+__mypath  = sys.path[0]
+__libpath = os.path.normpath(os.path.join(sys.path[0],'..'))
 
-sys.path.insert(0,libpath)
+if __libpath not in sys.path:
+    sys.path.insert(0,__libpath)
 
-from unittest import TestCase
+from unittest import TestCase,makeSuite,TextTestRunner
 
 class _C(TestCase):
     def runTest(self):
@@ -24,15 +25,14 @@ def preclip(s):
 
 def open_t(fname,mode='r',bufsize=-1):
     '''utility to open a file in the Tfiles directory'''
-    return open(os.path.join(mypath,'Tfiles',fname),mode,bufsize)
+    return open(fname_t(fname),mode,bufsize)
 
 def fname_t(fname):
     '''add the path to Tfiles to fname'''
-    return os.path.join(mypath,'Tfiles',fname)
+    return os.path.join(__mypath,'Tfiles',fname)
 
 def asuite(*cases):
     'make a suite from a list of cases'
-    from unittest import makeSuite
     rv = makeSuite(cases[0])
     for case in cases[1:]:
         rv.addTest(makeSuite(case))
@@ -41,5 +41,4 @@ def asuite(*cases):
 
 def runit(s):
     'standard way to run the test runner'
-    from unittest import TextTestRunner
     TextTestRunner(verbosity=2).run(s)

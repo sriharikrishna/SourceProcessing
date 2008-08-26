@@ -1,9 +1,11 @@
 import sys,os.path
+from string import maketrans
 
 mypath  = sys.path[0]
 libpath = os.path.normpath(os.path.join(sys.path[0],'..'))
 
-sys.path.insert(0,libpath)
+if libpath not in sys.path:
+    sys.path.insert(0,libpath)
 
 from unittest import TestCase
 
@@ -14,6 +16,10 @@ class _C(TestCase):
 _cc = _C()
 ae = _cc.assertEquals
 a_ = _cc.assert_
+
+def kill_blanks(s):
+    t = maketrans('','')
+    return s.translate(t,' ')
 
 def preclip(s):
     'clip leading "\n" on string s'

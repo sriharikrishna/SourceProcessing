@@ -142,3 +142,11 @@ def flatten( seq, descend = ( list, tuple ) ):
     +seq+uence. See +walk()+ for the interpretation of +descend+."""
     return [ element for element in walk( seq, descend ) ]
 
+def eflatten(seq,descend = (list, tuple)):
+    '''like flatten, unless initial seq is not a seq'''
+    if iterable(seq):
+        return flatten(seq,descend)
+    else:
+        return seq
+
+    

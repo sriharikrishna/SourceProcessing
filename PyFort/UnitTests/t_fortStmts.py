@@ -299,14 +299,14 @@ class C8(TestCase):
 
         ss = 'character(len=AAA+9),dimension(3) :: gack(*,*)*5,floob,foo*2,bar(2)'
         v = pps(ss)
-        ae(repr(v),
+        ae(repr(v).lower(),
            repr(CharacterStmt(
             [_F90ExplLen(Ops('+','aaa','9'))],
             [App('dimension',['3'])],
             [_NoInit(Ops('*',App('gack',['*', '*']),'5')),
              _NoInit('floob'),
              _NoInit(Ops('*','foo','2')),
-             _NoInit(App('bar',['2']))])))
+             _NoInit(App('bar',['2']))])).lower())
 
     def test4(self):
         '''double precision w attributes, and '*' dimensions
@@ -351,10 +351,140 @@ class C9(TestCase):
         for l in chk:
             a_(isinstance(pps('end '+l),EndStmt))
 
+class C10(TestCase):
+    'check statement property predicates'
+    def test1(self):
+        'subroutine is both decl and ustart'
+        s = pps('subroutine foo')
+        a_(s.is_decl() and s.is_ustart())
 
-s1    = makeSuite(C9)
+class C11(TestCase):
+    'check implicit statements'
+    def test1(self):
+        'implicit character*10'
+        s1 = 'implicit character*10 (b,d,f-h,l-n)'
+        v = pps(s1)
+        a_(isinstance(v,ImplicitStmt))
+        ae(len(v.lst),1)
+        ae(len(v.lst[0]),2)
+        ae(len(v.lst[0][1]),4)
+        l = v.lst[0][1]
+        ae(str(l[0]).lower(),str(ep('b')).lower())
+        ae(str(l[1]).lower(),str(ep('d')).lower())
+        ae(str(l[2]).lower(),str(ep('f-h')).lower())
+        ae(str(l[3]).lower(),str(ep('l-n')).lower())
+        impl_typ = v.lst[0][0]
+        proto    = pps('character*10 a')
+        ae(impl_typ[0],proto.__class__)
+        ae(repr(impl_typ[1]),repr(proto.mod))
+        ae(kill_blanks(s1),kill_blanks(str(v)))
 
-suite = asuite(C1,C2,C3,C4,C5,C6,C7,C8,C9)
+    def test2(self):
+        'implicit character (no len)'
+        s1 = 'implicit character (b,d,f-h,l-n)'
+        v = pps(s1)
+        a_(isinstance(v,ImplicitStmt))
+        ae(len(v.lst),1)
+        ae(len(v.lst[0]),2)
+        ae(len(v.lst[0][1]),4)
+        l = v.lst[0][1]
+        ae(str(l[0]).lower(),str(ep('b')).lower())
+        ae(str(l[1]).lower(),str(ep('d')).lower())
+        ae(str(l[2]).lower(),str(ep('f-h')).lower())
+        ae(str(l[3]).lower(),str(ep('l-n')).lower())
+        impl_typ = v.lst[0][0]
+        proto    = pps('character a')
+        ae(impl_typ[0],proto.__class__)
+        ae(repr(impl_typ[1]),repr(proto.mod))
+        ae(kill_blanks(s1),kill_blanks(str(v)))
+
+    def test3(self):
+        'implicit real*4'
+        s1 = 'implicit real*4 (a,f,h-k)'
+        v = pps(s1)
+        a_(isinstance(v,ImplicitStmt))
+        ae(len(v.lst),1)
+        ae(len(v.lst[0]),2)
+        ae(len(v.lst[0][1]),3)
+        l = v.lst[0][1]
+        ae(str(l[0]).lower(),str(ep('a')).lower())
+        ae(str(l[1]).lower(),str(ep('f')).lower())
+        ae(str(l[2]).lower(),str(ep('h-k')).lower())
+        impl_typ = v.lst[0][0]
+        proto    = pps('real * 4 a')
+        ae(impl_typ[0],proto.__class__)
+        ae(repr(impl_typ[1]),repr(proto.mod))
+        ae(kill_blanks(s1),kill_blanks(str(v)))
+
+    def test4(self):
+        'implicit integer (a,f)'
+        s1 = 'implicit integer (a,f)'
+        v = pps(s1)
+        a_(isinstance(v,ImplicitStmt))
+        ae(len(v.lst),1)
+        ae(len(v.lst[0]),2)
+        ae(len(v.lst[0][1]),2)
+        l = v.lst[0][1]
+        ae(str(l[0]).lower(),str(ep('a')).lower())
+        ae(str(l[1]).lower(),str(ep('f')).lower())
+        impl_typ = v.lst[0][0]
+        proto    = pps('integer a')
+        ae(impl_typ[0],proto.__class__)
+        ae(repr(impl_typ[1]),repr(proto.mod))
+        ae(kill_blanks(s1),kill_blanks(str(v)))
+
+    def test6(self):
+        'implicit real(RARB) (h,i,j)'
+        s1 = 'implicit real(RARB) (h,i,j)'
+        v = pps(s1)
+        a_(isinstance(v,ImplicitStmt))
+        ae(len(v.lst),1)
+
+        ae(len(v.lst[0]),2)
+        ae(len(v.lst[0][1]),3)
+        l = v.lst[0][1]
+        ae(str(l[0]).lower(),str(ep('h')).lower())
+        ae(str(l[1]).lower(),str(ep('i')).lower())
+        ae(str(l[2]).lower(),str(ep('j')).lower())
+        impl_typ = v.lst[0][0]
+        proto    = pps('real(RARB) a')
+        ae(impl_typ[0],proto.__class__)
+        ae(repr(impl_typ[1]),repr(proto.mod))
+
+        ae(kill_blanks(s1),kill_blanks(str(v)))
+
+    def test7(self):
+        'implicit real(kind=FOOB) (b-d,f),real(RARB) (h,i,j)'
+        s1 = 'implicit real(kind=FOOB) (b-d,f),real(RARB) (h,i,j)'
+        v = pps(s1)
+        a_(isinstance(v,ImplicitStmt))
+        ae(len(v.lst),2)
+        ae(len(v.lst[0]),2)
+        ae(len(v.lst[0][1]),2)
+        l = v.lst[0][1]
+        ae(str(l[0]).lower(),str(ep('b-d')).lower())
+        ae(str(l[1]).lower(),str(ep('f')).lower())
+        impl_typ = v.lst[0][0]
+        proto    = pps('real(kind=FOOB) a')
+        ae(impl_typ[0],proto.__class__)
+        ae(repr(impl_typ[1]),repr(proto.mod))
+
+        ae(len(v.lst[1]),2)
+        ae(len(v.lst[1][1]),3)
+        l = v.lst[1][1]
+        ae(str(l[0]).lower(),str(ep('h')).lower())
+        ae(str(l[1]).lower(),str(ep('i')).lower())
+        ae(str(l[2]).lower(),str(ep('j')).lower())
+        impl_typ = v.lst[1][0]
+        proto    = pps('real(RARB) a')
+        ae(impl_typ[0],proto.__class__)
+        ae(repr(impl_typ[1]),repr(proto.mod))
+
+        ae(kill_blanks(s1),kill_blanks(str(v)))
+
+s     = makeSuite(C8)
+
+suite = asuite(C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11)
 
 if __name__ == '__main__':
     runit(suite)

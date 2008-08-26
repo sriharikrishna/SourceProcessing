@@ -1,9 +1,8 @@
-import sys,os.path
-mypath = sys.path[0]
+import sys,os
+__mypath = sys.path[0]
 
-libpath = os.path.normpath(os.path.join(sys.path[0],'..'))
+__libpath = os.path.normpath(os.path.join(sys.path[0],'..'))
 
-sys.path.insert(0,libpath)
-
-from copy import copy as ocp
-from copy import deepcopy as docp
+if __libpath not in sys.path:
+    sys.path.insert(1,__libpath)
+#    print "PyFort/_Setup inserting %s, giving path = %s" %(__libpath,sys.path)

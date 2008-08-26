@@ -187,14 +187,14 @@ class C1(TestCase):
         l1      = scan('IF((K .GE. 2) .AND.(CALCADVECTION .AND.' + \
                        '(.NOT. IMPLICITADVECTION))) THEN')
         (e1,dc) = Exp(l1)
-        ae(repr(e1),
+        ae(repr(e1).lower(),
            repr(App('if',[Ops('.and.',
                               ParenExp(Ops('.ge.','k','2')),
                               ParenExp(Ops('.and.',
                                            'calcadvection',
                                            ParenExp(Not('implicitadvection'))
                                            ))
-                              )]))
+                              )])).lower()
            )
 
     def test17(self):
@@ -367,12 +367,12 @@ class C3(TestCase):
             '1.39999997615814208984D00 /'
 
         (e1,dc) = Exp(scan(s))
-        ae(e1,'data')
-        ae(dc,['(', 'A1', '(', 'tmp0', ')',
-               ',', 'tmp0', '=', '1', ',', '5', ',', '1', ')',
-               '/', '3.49999994039535522461D-01', ',',
-               '6.00000023841857910156D-01', ',', '1.0D00', ',',
-               '1.5D00', ',', '1.39999997615814208984D00', '/'])
+        ae(e1.lower(),'data')
+        ae([v.lower() for v in dc],[v.lower() for v in ['(', 'A1', '(', 'tmp0', ')',
+                                                        ',', 'tmp0', '=', '1', ',', '5', ',', '1', ')',
+                                                        '/', '3.49999994039535522461D-01', ',',
+                                                        '6.00000023841857910156D-01', ',', '1.0D00', ',',
+                                                        '1.5D00', ',', '1.39999997615814208984D00', '/']])
 
 class C4(TestCase):
     'test binary operations from _optbl'
@@ -481,9 +481,10 @@ for o in [x for (op,p) in _optbl for x in op]:
     setattr(C4,'test%d' % __c,__mkt2(o))
     __c += 1
 
-s1    = makeSuite(C6)
+s1    = asuite(C1,C3)
 
 suite = asuite(C1,C2,C3,C4,C6)
 
 if __name__ == '__main__':
     runit(suite)
+

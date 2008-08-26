@@ -51,7 +51,7 @@ def fline_from_asm(fj,dta):
 class fortLine(object):
     def __init__(self,fmtobj=fixedfmt):
         self.fmtobj    = fmtobj
-        a_stmt         = docp(fmtobj.a_stmt)
+        a_stmt         = fmtobj.a_stmt
         comm           = fmtobj.comm
         cblk           = plus(comm)
         stmt           = treat(a_stmt,fmtobj.fjoin)

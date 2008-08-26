@@ -10,6 +10,8 @@ is the 'remainder' after the assembly
 
 '''
 
+from _Setup import *
+
 from flatten   import flatten
 from buf_iter  import buf_iter
 
@@ -17,8 +19,11 @@ class pat(object):
     def __init__(self,fn):
         self.fn   = fn
         self.post = []
+        self.pre  = []
 
     def __call__(self,*args,**kwargs):
+        for f in self.pre:
+            f()
         (v,rst) = self.fn(*args,**kwargs)
         for f in self.post:
             v = f(v)
@@ -26,6 +31,10 @@ class pat(object):
 
     def addpost(self,*fns):
         self.post.extend(fns)
+        return self
+
+    def addpre(self,*fns):
+        self.pre.extend(fns)
         return self
 
 class AssemblerException(Exception):
@@ -104,14 +113,30 @@ def disj(*asms):
 
     return pat(asm)
 
-def treat(a,f):
-    '''Given an assembler a, and a function f, apply f to the
-    assembler a return value, and return the value of the application
+def treat(a,*ff):
+    '''Given an assembler a, and a list of functions *ff, apply each function in the list
+    to the assembler a return value, and return the value of the applications
     as the return value of the treated assembler.
-    NOTE: supplied for back compatibility. New code should use the
-          addpost method
     '''
-    return a.addpost(f)
+    def trt(s):
+        (v,rst) = a(s)
+        for f in ff:
+            v = f(v)
+        return (v,rst)
+
+    return pat(trt)
+
+#    return a.addpost(f)
+
+def pretreat(a,*ff):
+    'before invoking an assembler a, call all the functions in the list'
+
+    def pretrt(s):
+        for f in ff:
+            f()
+        return a(s)
+
+    return pat(pretrt)
 
 def plus(a):
     '''given an assembler a, return the Kleene '+' operation.
@@ -145,3 +170,8 @@ def vgen(a,src):
             yield v
         except AssemblerException:
             break
+
+if __name__ == '__main__':
+
+    from _Setup.testit import *
+
