@@ -18,14 +18,6 @@ from process_fort_stmt import process_fort_stmt,process_fort_cmnt
 def _ident(s):
     return [s]
 
-def tmpp(s):
-    'temp fn to debug'
-    print 'tmpp inputs = ',s
-    def tmpp_fn(t):
-        print 'tmpp_fn input = ',t
-        return process_fort_stmt(t,s)
-    return tmpp_fn
-
 class Ffile(object):
     def __init__(self,fobj,free=False,c_action=cline,s_action=fline):
         fmt      = (free and freefmt) or fixedfmt
@@ -69,13 +61,9 @@ class Ffile(object):
         '''
         return ( (ll for l in self.lines for ll in l.rawline.splitlines(True)) )
 
-    def printit(self,out=None):
-        if out:
-            for l in self.iterlines():
-                print >> out,l,
-        else:
-            for l in self.iterlines():
-                print l,
+    def printit(self,out=sys.stdout):
+        for l in self.iterlines():
+            print >> out,l,
     
     def write(self,fname):
         ff = open(fname,'w')

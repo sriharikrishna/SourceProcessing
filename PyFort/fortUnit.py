@@ -61,10 +61,10 @@ def install_pat(cur):
 
     fmod = cur.module_handler
 
-    def handle_mod(u):
-        if isinstance(u.uinfo,fs.ModuleStmt):
-            fmod.add_module(u.uinfo.name,u)
-        return u
+    def handle_mod(aUnit):
+        if isinstance(aUnit.uinfo,fs.ModuleStmt):
+            fmod.add_module(aUnit.uinfo.name,aUnit)
+        return aUnit
 
     def cmst(p): return treat(seq(zo1(c),p),flatten)
 
@@ -91,14 +91,16 @@ def _symtab_of(v):
 
 class Unit(object):
     '''unit object
-    unit comment block (may not exist)
-    unit type (module,subroutine,function,blockdata,program)
-    decl stmt list (including comments)
-    exec stmt list (including comments)
-    contains list  (including comments)
-    unit list      (the units "contain"ed within this one
-    end list       (including comments)
-    symtab         (hierachical symbol table)
+    cmnt       unit comment block (may not exist)
+    uinfo      unit type (module,subroutine,function,blockdata,program)
+    decls      list of declaration statements (including comments)
+    execs      list of executable statements (including comments)
+    contains   contains list (including comments)
+    ulist      unit list (the units "contain"ed within this one)
+    end        end list (including comments)
+    symtab     hierachical symbol table
+    fmod       ???? (fmod = cur.module_handler)
+    _in_iface  ????
     '''
     def __init__(self,parent=None,fmod=None):
         'create a unit'
@@ -151,9 +153,8 @@ class _curr(object):
         return self.val
 
     def uexec(self,s):
-        u = self.val
-        u.execs = s
-        return u
+        self.val.execs = s
+        return self.val
 
     def uend(self,s):
         u = self.val
@@ -161,7 +162,6 @@ class _curr(object):
         u.end = s
         self.fval = u
         self.val  = Unit(p,self.module_handler)
-        
         return u
 
     def ucont(self,s):
