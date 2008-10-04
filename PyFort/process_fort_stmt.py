@@ -5,7 +5,7 @@ import re
 _lineno_re = re.compile(r'(\s*)(\d+)')
 _lead_re   = re.compile(r'(\s*)')
 
-def process_fort_stmt(stmt_tuple,jlf):
+def process_fort_stmt(stmt_tuple,rawLineNumber,jlf):
     '''process a stmt tuple = (rawline,joined_line,internal_comments), using
     jlf routine on the jointed_line part
     convert !@#$% leading tabs into spaces
@@ -26,7 +26,7 @@ def process_fort_stmt(stmt_tuple,jlf):
     lineno   = m and int(m.group(2))
     linelead = m and m.end(0) or 0
     lead     = linelead * ' '+_lead_re.match(jl[linelead:]).group(1)
-    obj      = jlf(jl[len(lead):])
+    obj      = jlf(jl[len(lead):],rawLineNumber)
 
     obj.rawline  = raw
     obj.internal = intl
@@ -35,8 +35,8 @@ def process_fort_stmt(stmt_tuple,jlf):
 
     return obj
 
-def process_fort_cmnt(dta,cmnt_list_fn):
-    obj         = cmnt_list_fn(dta)
+def process_fort_cmnt(dta,rawLineNumber,cmnt_list_fn):
+    obj         = cmnt_list_fn(dta,rawLineNumber)
     obj.rawline = ''.join(flatten(dta))
     return obj
 

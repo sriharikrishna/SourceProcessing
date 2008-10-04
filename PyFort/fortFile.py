@@ -30,13 +30,14 @@ class Ffile(object):
     def __init__(self,fobj,free=False,c_action=cline,s_action=fline):
         fmt      = (free and freefmt) or fixedfmt
         fl       = fortLine(fmt)
-        s      = lambda x:process_fort_stmt(x,s_action)
-        c      = lambda x:process_fort_cmnt(x,c_action)
+        s      = lambda x:process_fort_stmt(x,self.rawBufIter.myCounter,s_action)
+        c      = lambda x:process_fort_cmnt(x,self.rawBufIter.myCounter,c_action)
         cblk   = treat(fl.cblk,c)
         stmt   = treat(fl.stmt,s)
         a_line = disj(cblk,stmt)
 
-        self.lines = vgen(a_line,buf_iter(fobj))
+        self.rawBufIter = buf_iter(fobj)
+        self.lines = vgen(a_line,self.rawBufIter)
         self.fobj  = fobj
 
     @staticmethod
