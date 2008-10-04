@@ -188,7 +188,6 @@ fs.EndInterfaceStmt.unit_action = _end_iface
 '''
 if __name__ == '__main__':
     from _Setup.testit import *
-    from fortParseFile import fortParseFile as fpf
     from unit_symtab import Symtab
     from _Setup.testit import scan
 

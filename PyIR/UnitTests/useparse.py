@@ -2,7 +2,6 @@ from _Setup import *
 from PyFort.fortScan import scan1
 from PyFort.fortExp import Exp
 from PyFort.fortStmts import parse
-from PyFort.fortParseFile import fortParseFile as fpf
 
 def scan(s):
     (v,rst) = scan1.scan(s)

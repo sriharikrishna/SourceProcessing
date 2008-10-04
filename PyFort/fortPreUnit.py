@@ -27,7 +27,7 @@ TODO:
 from _Setup import *
 import fortStmts as fs
 from fortFile import Ffile
-from fortParseFile import fortParseFile
+from fortParse import parse_stmt,parse_cmnt
 from PyUtil.assembler import *
 from PyUtil.buf_iter import buf_iter
 
@@ -60,8 +60,8 @@ baseunit    = seq(startunit,star(ustmt),zo1(cblk),endunit)
 unit        = disj(seq(zo1(cblk),baseunit),cblk)
 unitlist    = plus(unit)
 
-def fortPreUnitIterator(fn,free):
-    return vgen(unit,buf_iter(fortParseFile(fn,free).lines))
+def fortPreUnitIterator(fileName,free):
+    return vgen(unit,buf_iter(Ffile.file(fileName,free,parse_cmnt,parse_stmt).lines))
 
 if __name__ == '__main__':
     from _Setup.utest import *

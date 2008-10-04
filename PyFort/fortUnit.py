@@ -2,7 +2,7 @@ import sys
 from _Setup import *
 import fortStmts as fs
 from fortFile import Ffile
-from fortParseFile import fortParseFile
+from fortParse import parse_stmt,parse_cmnt
 from PyUtil.assembler import *
 from PyUtil.buf_iter import buf_iter
 from PyUtil.flatten import flatten
@@ -184,9 +184,9 @@ class _curr(object):
         self.val  = None # no need for Unit(p), as this must be last
         return u
 
-def fortUnitIterator(fn,free):
+def fortUnitIterator(fileName,free):
     unit = install_pat(_curr(ModuleHandler()))
-    return vgen(unit,buf_iter(fortParseFile(fn,free).lines))
+    return vgen(unit,buf_iter(Ffile.file(fileName,free,parse_cmnt,parse_stmt).lines))
 
 if __name__ == '__main__':
     from _Setup.testit import *

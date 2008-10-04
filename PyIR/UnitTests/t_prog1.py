@@ -10,6 +10,8 @@ from cStringIO import StringIO
 
 from prog1 import Prog1
 import PyUtil.lexi_visitor as lv
+from PyFort.fortFile import Ffile
+from PyFort.fortParse import parse_stmt,parse_cmnt
 import PyFort.fortStmts as fs
 import PyFort.fortExp   as fe
 import PyIR.mutable_tree as mt
@@ -52,7 +54,7 @@ class C1(TestCase):
         ae = self.assertEquals
         a_ = self.assert_
 
-        f1   = fpf(fname_t('t0.f'))
+        f1   = Ffile.file(fname_t('t0.f'),free=False,c_action=parse_cmnt,s_action=parse_stmt)
         vst2 = lv.MultiLexiVisitor(vstr,exp1)
         p1   = Prog1(vst2,f1.lines)
 
