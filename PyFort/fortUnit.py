@@ -84,8 +84,6 @@ def install_pat(cur):
     ucm   = treat(c,cur.ucm,lambda s:cur.fval)
     return disj(uu,ucm)
 
-#### TODO: add write method for units ######
-
 def _symtab_of(v):
     return v and v.symtab or None
 
@@ -122,6 +120,30 @@ class Unit(object):
     def name(self):
         return self.uinfo.name
 
+    def __myPrint(self,outObject,out=sys.stdout):
+        if isinstance(outObject,fs.Comments):
+            print >> out,outObject.rawline,
+        else:
+            print >> out,outObject.flow().rawline,
+
+    def printit(self,out=sys.stdout):
+        if self.cmnt:
+            self.__myPrint(self.cmnt,out)
+        if self.uinfo:
+            self.__myPrint(self.uinfo,out)
+        for aDeclStmt in self.decls:
+            self.__myPrint(aDeclStmt,out)
+        for anExecStmt in self.execs:
+            self.__myPrint(anExecStmt,out)
+        for aContainsEntry in self.contains:
+            self.__myPrint(aContainsEntry,out)
+        for aSubUnit in self.ulist:
+            aSubUnit.printit(out)
+        if self.end:
+            for anEndListEntry in self.end:
+                self.__myPrint(anEndListEntry,out)
+
+# end class Unit
 
 class _curr(object):
     '''helper object:

@@ -44,6 +44,11 @@ class Symtab(Base_symtab):
         if entry: return entry.lookup_dims()
         return None
 
+    def lookup_lngth(self,name):
+        entry = self.lookup_name(name)
+        if entry: return entry.lookup_lngth()
+        return None
+
     def lookup_type(self,name):
         (entry,level) = self.lookup_name_level(name)
         if entry: return entry.lookup_type(level.implicit[name[0]])
