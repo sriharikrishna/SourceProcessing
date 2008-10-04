@@ -25,13 +25,13 @@ class fline(anyFortLine):
     This is a trivial joined line processor
     '''
 
-    def __init__(self,line):
+    def __init__(self,line,rawLineNumber):
 
         self.line = line
 
 class cline(anyFortLine):
     '''a comment (or blank) line'''
-    def __init__(self,dta): pass
+    def __init__(self,dta,rawLineNumber): pass
 #        self.rawline = ''.join(flatten(dta))
 
     def comment_list(self):
