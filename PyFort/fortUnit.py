@@ -100,6 +100,12 @@ class Unit(object):
     fmod       ???? (fmod = cur.module_handler)
     _in_iface  ????
     '''
+    _verbose = False
+
+    @staticmethod
+    def setVerbose(isVerbose):
+        Unit._verbose = isVerbose
+
     def __init__(self,parent=None,fmod=None):
         'create a unit'
         self.cmnt      = None
@@ -115,33 +121,27 @@ class Unit(object):
         self._in_iface = False
 
         self.symtab._set_dbg(False)
-#        print 'new unit created:',self,',new symtab being created = ',self.symtab
+        if self._verbose: print >> sys.stderr,'new unit created:',self,',new symtab being created = ',self.symtab
 
     def name(self):
         return self.uinfo.name
 
-    def __myPrint(self,outObject,out=sys.stdout):
-        if isinstance(outObject,fs.Comments):
-            print >> out,outObject.rawline,
-        else:
-            print >> out,outObject.flow().rawline,
-
     def printit(self,out=sys.stdout):
         if self.cmnt:
-            self.__myPrint(self.cmnt,out)
+            print >> out,self.cmnt.rawline,
         if self.uinfo:
-            self.__myPrint(self.uinfo,out)
+            print >> out,self.uinfo.rawline,
         for aDeclStmt in self.decls:
-            self.__myPrint(aDeclStmt,out)
+            print >> out,aDeclStmt.rawline,
         for anExecStmt in self.execs:
-            self.__myPrint(anExecStmt,out)
+            print >> out,anExecStmt.rawline,
         for aContainsEntry in self.contains:
-            self.__myPrint(aContainsEntry,out)
+            print >> out,aContainsEntry.rawline,
         for aSubUnit in self.ulist:
             aSubUnit.printit(out)
         if self.end:
             for anEndListEntry in self.end:
-                self.__myPrint(anEndListEntry,out)
+                print >> out,anEndListEntry.rawline,
 
 # end class Unit
 
