@@ -46,7 +46,7 @@ class Symtab(Base_symtab):
 
     def lookup_lngth(self,name):
         entry = self.lookup_name(name)
-        if entry: return entry.lookup_lngth()
+        if entry: return entry.lngth
         return None
 
     def lookup_type(self,name):
