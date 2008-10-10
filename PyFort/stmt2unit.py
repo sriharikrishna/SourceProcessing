@@ -36,7 +36,7 @@ def _typedecl(stmt,curr):
 #    print 'unit = ',unit
     vtype   = (stmt.__class__,stmt.mod)
     kw_str  = stmt.kw_str
-    lngth   = kw_str == 'character' and (mod and mod[0] or 1)
+    lngth   = kw_str == 'character' and (stmt.mod and stmt.mod[0] or 1)
     dflt_d  = default_dims(stmt.attrs)
     symtab = unit.symtab
 #    print 'symtab in typedecl = ',symtab

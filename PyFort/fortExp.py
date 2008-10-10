@@ -354,12 +354,9 @@ const   = pred(is_const)
 const   = treat(const,_lc_const)
 unary   = pred(is_unary)
 
-
 def atom0(scan):
     '''eta expansion, since letrec unavail in python'''
-#    return disj(app,id,const,unaryExp,paren)(scan)
     return disj(id,const,unaryExp,paren)(scan)
-
 
 def atom(scan):
 

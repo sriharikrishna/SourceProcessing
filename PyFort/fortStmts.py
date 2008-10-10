@@ -272,9 +272,8 @@ class NonComment(GenStmt):
         return '%s(%s)' % (self.__class__.__name__, self.scan[0])
 
     def flow(self):
-        lineno = self.lineno
-        if lineno:
-            init = ' ' + ('%-4d' % lineno) + ' '
+        if self.lineno:
+            init = ' ' + ('%-4d' % self.lineno) + ' '
         else:
             init = ''
         self.rawline = flow.flow_line(init + self.lead + str(self))+'\n'
@@ -310,22 +309,6 @@ class NonComment(GenStmt):
 #        self.ctxt   = src.ctxt
         self.flow()
         return self
-
-class Marker(NonComment):
-    def __init__(self):
-        pass
-
-    def __str__(self):
-        return '!! %s (marker)' % self.ptxt
-
-    def __repr__(self):
-        return '%s()' % self.__class__.__name__
-
-class LastDecl(Marker):
-    ptxt = 'last declaration'
-
-class FirstExec(Marker):
-    ptxt = 'first executable follows'
 
 class Decl(NonComment):
     def is_decl(self,unit=_non): return True
@@ -365,19 +348,18 @@ class TypeDecl(Decl):
                                  repr(self.mod),
                                  repr(self.attrs),
                                  repr(self.decls),)
+
     def __str__(self):
         modstr = ''
         if self.mod:
             modstr = str(self.mod[0])
-
         attr_str = ''
         if self.attrs:
             attr_str = ','+','.join([str(a) for a in self.attrs])
-            
         return '%s%s%s :: %s' % (self.__class__.kw_str,
                                  modstr,
                                  attr_str,
-                                   ','.join([str(d) for d in self.decls]))
+                                 ','.join([str(d) for d in self.decls]))
 
 class DrvdTypeDecl(TypeDecl):
     _sons = ['attrs','decls']
@@ -524,6 +506,8 @@ class EndTypeStmt(DeclLeaf):
     kw_str = 'end type'
 
 class VarAttrib(Decl):
+    _sons  = ['vlist']
+
     @classmethod
     def parse(cls,scan):
         p0 = seq(lit(cls.kw),zo1(seq(lit('::'),cslist(id))))
@@ -536,7 +520,6 @@ class VarAttrib(Decl):
 
     def __init__(self,vlist):
         self.vlist = vlist
-        _sons  = ['vlist']
 
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__, repr(self.vlist))
@@ -715,6 +698,8 @@ class IncludeStmt(Decl):
     pass
 
 class BasicTypeDecl(TypeDecl):
+    _sons  = ['mod','decls']
+
     @classmethod
     def parse(cls,scan):
         prec = seq(lit('*'),Exp)
@@ -737,7 +722,6 @@ class BasicTypeDecl(TypeDecl):
     def __init__(self,mod,decls):
         self.mod   = mod
         self.decls = decls
-        _sons  = ['mod','decls']
 
     def __repr__(self):
         return '%s(%s,%s)' % (self.__class__.__name__,
@@ -777,6 +761,8 @@ class F77Type(TypeDecl):
     '''
     These types do not have kinds or modifiers
     '''
+    _sons  = ['decls']
+
     @classmethod
     def parse(cls,scan):
         p1 = seq(lit(cls.kw),
@@ -790,7 +776,6 @@ class F77Type(TypeDecl):
         'same interface as other type decls, but mod is always empty'
         self.mod   = []
         self.decls = decls
-        _sons  = ['decls']
 
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__,
@@ -1049,7 +1034,7 @@ class IfThenStmt(IfStmt):
         return 'IfThenStmt(%s)' % (repr(self.test),)
 
     def __str__(self):
-        return 'if ( %s ) then' % (str(self.test),)
+        return 'if (%s) then' % (str(self.test),)
 
 class IfNonThenStmt(IfStmt):
 
@@ -1064,10 +1049,11 @@ class IfNonThenStmt(IfStmt):
                                          repr(self.stmt))
 
     def __str__(self):
-        return 'if ( %s ) %s' % (str(self.test),str(self.stmt))
+        return 'if (%s) %s' % (str(self.test),str(self.stmt))
 
 class ElseifStmt(Exec):
     _sons = ['test']
+    kw = 'elseif'
 
     @staticmethod
     def parse(scan):
