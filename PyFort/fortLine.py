@@ -24,15 +24,15 @@ class fline(anyFortLine):
     '''a non-comment (semantic) class for a fortran line
     This is a trivial joined line processor
     '''
-
-    def __init__(self,line,rawLineNumber):
-
+    def __init__(self,line,lineNumber):
         self.line = line
+        self.lineNumber = lineNumber
 
 class cline(anyFortLine):
     '''a comment (or blank) line'''
-    def __init__(self,dta,rawLineNumber): pass
-#        self.rawline = ''.join(flatten(dta))
+    def __init__(self,dta,lineNumber):
+        self.lineNumber = lineNumber
+#       self.rawline = ''.join(flatten(dta))
 
     def comment_list(self):
         return self.rawline.splitlines()

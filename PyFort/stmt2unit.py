@@ -60,10 +60,8 @@ def _assign2stmtfn(s,cur):
 #    print 'converting ',s,' to stmt fn'
     unit = cur.val
     lhs = s.lhs
-    rv = fs.StmtFnStmt(lhs.head,lhs.args,s.rhs)
+    rv = fs.StmtFnStmt(lhs.head,lhs.args,s.rhs,s.lineNumber,s.label,s.lead)
     rv.rawline = s.rawline
-    rv.lineno  = s.lineno
-    rv.lead    = s.lead
 
     entry      = SE.stmtfn(lhs.args,s.rhs)
     unit.symtab.enter_name(lhs.head,entry)

@@ -16,7 +16,7 @@ def ep(s):
 
 def pps(s):
 
-    return parse(scan(s))
+    return parse(scan(s),lineNumber=0)
 #
 #    (t,rst) = parse(scan(s))
 #    if not rst:
