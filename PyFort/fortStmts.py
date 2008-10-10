@@ -1242,10 +1242,6 @@ _kw_parse = parse
 
 def kw2type(s): return(kwtbl[s.lower()])
 def lenfn(n): return [_F77Len(str(n))]
-def poly(s):
-    return s.lower() in ('max',
-                         'min',
-                         )
 
 _modhash = { _Prec     : 0,
              _Kind     : 1,
