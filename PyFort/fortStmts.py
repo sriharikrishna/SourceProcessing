@@ -371,26 +371,13 @@ class TypeDecl(Decl):
                                  ','.join([str(d) for d in self.decls]))
 
 class DrvdTypeDecl(TypeDecl):
+    '''
+    Derived type declarations are treated as declarations of type "type,"
+     with a modifier that is the name of the type.
+    '''
     _sons = ['attrs','decls']
-    
-    kw     = 'derivedDcl'
+    kw     = 'type'
     kw_str = kw
-    def __init__(self,name,attrs,dc,decls):
-        self.name  = name
-        self.attrs = attrs
-        self.decls = decls
-        self.dblc  = bool(dc)
-        self.mod   = name
-
-    def __repr__(self):
-        return 'DrvdTypeDecl(%s,%s,%s)' % (repr(self.name),
-                                           repr(self.attrs),
-                                           repr(self.decls))
-    def __str__(self):
-        return 'type(%s)%s %s%s' % (str(self.name),
-                                     attrstr(self.attrs),
-                                     self.dblc and ':: ' or '',
-                                     ditemstr(self.decls))
 
     @staticmethod
     def parse(scan,lineNumber):
@@ -401,8 +388,7 @@ class DrvdTypeDecl(TypeDecl):
                  type_attr_list,
                  zo1(lit('::')),
                  cslist(decl_item))
-        p0 = treat(p0,lambda l: DrvdTypeDecl(l[2],l[4],l[5],l[6]))
-
+        p0 = treat(p0,lambda l: DrvdTypeDecl([l[1]+l[2]+l[3]],l[4],l[6],lineNumber))
         (v,r) = p0(scan)
         return v
 

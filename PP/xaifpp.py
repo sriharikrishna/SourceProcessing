@@ -16,8 +16,8 @@ def type_active_m(self,arg):
     '''convert type(OpenAD_type) to type(active)
     only applied to type declaration stmts
     '''
-    if self.name.lower() in set(['openadty_active','openad_type']):
-        self.name = 'active'
+    if self.mod[0].lower() in set(['(openadty_active)','(openad_type)']):
+        self.mod = ['(active)']
         self.dblc = True
         self.reflow()
     arg.attach(self)
