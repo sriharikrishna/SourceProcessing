@@ -256,8 +256,10 @@ class Skip(GenStmt):
 class Comments(GenStmt):
     def __init__(self,rawline):
         self.rawline = rawline
+
     def __repr__(self):
         return 'Comments(blk)'
+
     def viz(self):
         return 'Comments(%s)' % self.rawline
 
@@ -321,6 +323,9 @@ def ditemstr(l):
     return ','.join([str(ll) for ll in l])
 
 class TypeDecl(Decl):
+    '''
+    The double colon "::" is optional when parsing, but we have chosen to always include it when printing
+    '''
     kw = '__unknown__'
     kw_str = kw
     mod = None
@@ -328,13 +333,11 @@ class TypeDecl(Decl):
 
     @classmethod
     def parse(cls,scan):
-        p0 = seq(type_pat,type_attr_list,zo1(lit('::')),
+        p0 = seq(type_pat,
+                 type_attr_list,
+                 zo1(lit('::')),
                  cslist(decl_item))
-
         (v,r) = p0(scan)
-
-### FIXME: '::' is optional, so set flag to indicate presence ###
-#
         ((typ,mod),attrs,dc,decls) = v
         return cls(mod,attrs,decls)
 
@@ -385,8 +388,13 @@ class DrvdTypeDecl(TypeDecl):
 
     @staticmethod
     def parse(scan):
-        p0 = seq(lit('type'),lit('('),id,lit(')'),
-                 type_attr_list,zo1(lit('::')),cslist(decl_item))
+        p0 = seq(lit('type'),
+                 lit('('),
+                 id,
+                 lit(')'),
+                 type_attr_list,
+                 zo1(lit('::')),
+                 cslist(decl_item))
         p0 = treat(p0,lambda l: DrvdTypeDecl(l[2],l[4],l[5],l[6]))
 
         (v,r) = p0(scan)
@@ -697,104 +705,31 @@ class IntrinsicStmt(Decl):
 class IncludeStmt(Decl):
     pass
 
-class BasicTypeDecl(TypeDecl):
-    _sons  = ['mod','decls']
-
-    @classmethod
-    def parse(cls,scan):
-        prec = seq(lit('*'),Exp)
-        prec = treat(prec,lambda a:_Prec(a[1]))
-
-        kind = seq(lit('('),Exp,lit(')'))
-        kind = treat(kind,lambda a:_Kind(a[1]))
-
-        explKind = seq(lit('('),lit('kind'),lit('='),Exp,lit(')'))
-        explKind = treat(explKind,lambda a:_ExplKind(a[3]))
-
-        p1 = seq(lit(cls.kw),
-                 star(disj(prec,kind,explKind)),
-                 star(lit('::')),
-                 app_id_l)
-
-        ((dc,mod,dc1,decls),rest) = p1(scan)
-        return cls(mod,decls)
-
-    def __init__(self,mod,decls):
-        self.mod   = mod
-        self.decls = decls
-
-    def __repr__(self):
-        return '%s(%s,%s)' % (self.__class__.__name__,
-                              repr(self.mod),
-                              repr(self.decls))
-    def __str__(self):
-        modtype = self.kw
-
-        if self.mod:
-            modtype += str(self.mod[0])
-
-        return '%s %s' %(modtype,
-                         ','.join([str(d).replace('()','') \
-                                   for d in self.decls]))
-
-# class RealStmt(BasicTypeDecl):
 class RealStmt(TypeDecl):
     kw = 'real'
     kw_str = kw
 
-# class ComplexStmt(BasicTypeDecl):
 class ComplexStmt(TypeDecl):
     kw = 'complex'
     kw_str = kw
 
-# class IntegerStmt(BasicTypeDecl):
 class IntegerStmt(TypeDecl):
     kw = 'integer'
     kw_str = kw
 
-# class LogicalStmt(BasicTypeDecl):
 class LogicalStmt(TypeDecl):
     kw = 'logical'
     kw_str = kw
 
-class F77Type(TypeDecl):
-    '''
-    These types do not have kinds or modifiers
-    '''
-    _sons  = ['decls']
-
-    @classmethod
-    def parse(cls,scan):
-        p1 = seq(lit(cls.kw),
-                 star(lit('::')),
-                 app_id_l)
-
-        ((dc,dc1,decls),rest) = p1(scan)
-        return cls([],decls)
-
-    def __init__(self,mod,decls):
-        'same interface as other type decls, but mod is always empty'
-        self.mod   = []
-        self.decls = decls
-
-    def __repr__(self):
-        return '%s(%s)' % (self.__class__.__name__,
-                           repr(self.decls))
-
-    def __str__(self):
-        return '%s  %s' % (self.__class__.kw_str,
-                           ','.join([str(d) for d in self.decls]))
-
-# class DoubleStmt(F77Type):
 class DoubleStmt(TypeDecl):
     kw     = 'doubleprecision'
     kw_str = 'double precision'
 
-class DoubleCplexStmt(F77Type):
+class DoubleCplexStmt(TypeDecl):
     kw     = 'doublecomplex'
     kw_str = 'double complex'
 
-class DimensionStmt(BasicTypeDecl):
+class DimensionStmt(Decl):
     _sons = ['lst']
 
     @staticmethod
@@ -808,7 +743,7 @@ class DimensionStmt(BasicTypeDecl):
         self.lst = lst
 
     def __repr__(self):
-        return 'dimension(%s)' % repr(self.lst)
+        return '%s(%s)' % (self.__class__.__name__,repr(self.lst))
 
     def __str__(self):
         return 'dimension %s' % ','.join([str(l) for l in self.lst])
