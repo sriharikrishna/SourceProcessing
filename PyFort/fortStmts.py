@@ -645,7 +645,32 @@ class EquivalenceStmt(Decl):
     pass
 
 class ParameterStmt(Decl):
-    pass
+    _sons = ['namedParamList']
+    kw = 'parameter'
+    kw_str = kw
+
+    @staticmethod
+    def parse(scan,lineNumber):
+        aNamedParam = seq(id,lit('='),Exp)
+        p0 = seq(lit('parameter'),
+                 lit('('),
+                 cslist(aNamedParam),
+                 lit(')'))
+        p0 = treat(p0,lambda l:ParameterStmt(l[2],lineNumber))
+        (v,r) = p0(scan)
+        return v
+   
+    def __init__(self,namedParamList,lineNumber=0,label=False,lead=''):
+        self.namedParamList = namedParamList
+        self.lineNumber = lineNumber
+        self.label = label
+        self.lead = lead
+
+    def __repr__(self):
+        return 'ParamterStmt(%s)' % ','.join([repr(aNamedParam) for aNamedParam in self.myNamedParamList])
+
+    def __str__(self):
+        return 'parameter (%s)' % ','.join([str(aNamedParam) for aNamedParam in self.myNamedParamList])
 
 class SaveStmt(Decl):
     pass

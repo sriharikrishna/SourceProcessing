@@ -8,10 +8,6 @@ from fortExp  import *
 from fortExp  import _optbl
 from fortExp  import _unary_ops
 
-#def scan(s):
-#    (v,rst) = scan1.scan(s)
-#    return v
-
 class C1(TestCase):
     def test01(self):
         'simple function app'
@@ -325,6 +321,13 @@ class C1(TestCase):
            repr(Sel('x','v')))
         a_(not r)
 
+    def test23(self):
+        'named parameters in app'
+        (v,r) = Exp(scan('f(x,y=3.14)'))
+        ae(repr(v),
+           repr(App('f',['x',NamedParam('y','3.14')])))
+        a_(not r)
+
 class C2(TestCase):
     'Test for all ops being covered'
 
@@ -367,11 +370,8 @@ class C3(TestCase):
             '1.39999997615814208984D00 /'
 
         (e1,dc) = Exp(scan(s))
-        ae(e1.lower(),'data')
-        ae([v.lower() for v in dc],[v.lower() for v in ['(', 'A1', '(', 'tmp0', ')',
-                                                        ',', 'tmp0', '=', '1', ',', '5', ',', '1', ')',
-                                                        '/', '3.49999994039535522461D-01', ',',
-                                                        '6.00000023841857910156D-01', ',', '1.0D00', ',',
+        ae(e1.a1.head.lower(),'data')
+        ae([v.lower() for v in dc],[v.lower() for v in [',', '6.00000023841857910156D-01', ',', '1.0D00', ',',
                                                         '1.5D00', ',', '1.39999997615814208984D00', '/']])
 
 class C4(TestCase):
@@ -480,8 +480,6 @@ __c = 1
 for o in [x for (op,p) in _optbl for x in op]:
     setattr(C4,'test%d' % __c,__mkt2(o))
     __c += 1
-
-s1    = asuite(C1,C3)
 
 suite = asuite(C1,C2,C3,C4,C6)
 

@@ -91,6 +91,26 @@ class App(_Exp):
                              headtype)
         return headtype
 
+class NamedParam(object):
+    '''
+    Class to implement named paramter expressions i.e. call foo(arg=10)
+    these may occur either in a parameter statement or as an argument to a function or subroutine call
+    '''
+    _sons = ['myId','myRHS']
+
+    def __init__(self,anId,aRHS):
+        self.myId = anId
+        self.myRHS = aRHS
+
+    def __repr__(self):
+        return 'NamedParam(%s,%s)' % (self.myId,repr(self.myRHS))
+
+    def __str__(self):
+        return str(myId)+' = '+str(myRHS)
+
+    def typeit(self,exptype,idchk,kw2type,lenfn,kindfn,isPolymorphic,typemerge,aux=None):
+        return exptype(self.myRHS,idchk,kw2type,lenfn,kindfn,isPolymorphic,typemerge)
+
 class Sel(_Exp):
     'selection expressions like foo(i,j)%k'
 
@@ -274,22 +294,23 @@ def _squeeze(exp_list):
     (e1,rest) = exp_list
     return [e1] + [e2 for (dc,e2) in rest]
 
-def _mkapp_e_r(a):
-    'return either an Rslice or a Zslice object'
-    (colon,lst) = a
-    if lst:
-        return Rslice(lst[0])
-    else:
-        return Zslice()
+def _mkapp_e_r(aPatternMatchResult):
+    'return an Rslice object'
+    (colon,e) = aPatternMatchResult
+    return Rslice(e)
 
-def _mkapp_e_l(a):
-    'return either an Lslice or an unadorned Exp'
-    (e,lst) = a
-    if lst:
-        return Lslice(e)
-    else:
-        return e
+def _mkapp_z(aPatternMatchResult):
+    'return a Zslice object'
+    return Zslice()
 
+def _mkapp_e_l(aPatternMatchResult):
+    'return an Lslice object'
+    (e,colon) = aPatternMatchResult
+    return Lslice(e)
+
+def _mk_namedParamExp(a):
+    'return named parameter binding'
+    return NamedParam(a[0],a[2])
 
 def _mkapp1(a):
     '''turn a recognized app into an App object'''
@@ -403,16 +424,21 @@ def lv_exp(scan):
 Exp = OpPrec(atom,_optbl,('**',))
 Exp = treat(Exp,_mkexp)
 
-ExpList   = seq(Exp,star(seq(lit(','),Exp)))
-#ExpList_l = treat(docp(ExpList),_squeeze)
+ExpList = seq(Exp,star(seq(lit(','),Exp)))
 
-_appExpR = seq(lit(':'),zo1(Exp))
+_appExpR = seq(lit(':'),Exp)
 _appExpR = treat(_appExpR,_mkapp_e_r)
 
-_appExpL = seq(Exp,zo1(lit(':')))
+_appExpL = seq(Exp,lit(':'))
 _appExpL = treat(_appExpL,_mkapp_e_l)
 
-_appExp = disj(_appExpR,_appExpL)
+_appExpZ = lit(':')
+_appExpZ = treat(_appExpZ,_mkapp_z)
+
+_appExpA = seq(id,lit('='),Exp)
+_appExpA = treat(_appExpA,_mk_namedParamExp)
+
+_appExp = disj(_appExpR,_appExpL,_appExpZ,_appExpA,Exp)
 
 app1      = seq(id,lit('('),ExpList,lit(')'))
 app1      = treat(app1,_mkapp1)
