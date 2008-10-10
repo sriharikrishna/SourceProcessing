@@ -18,7 +18,7 @@ class C1(TestCase):
         a_ = self.assert_
 
         s  = 'real  x(10),y,z'
-        a_(isinstance(parse(scan(s)),RealStmt))
+        a_(isinstance(pps(s),RealStmt))
 
     def test2(self):
         'simple if stmt'
@@ -26,7 +26,7 @@ class C1(TestCase):
         a_ = self.assert_
 
         s  = 'if (x(11).EQ.y.OR.x(12).lt.(floob*(i**k))) goto 10'
-        a_(isinstance(parse(scan(s)),IfStmt))
+        a_(isinstance(pps(s),IfStmt))
 
     def test3(self):
         'endif stmt as "end if"'
@@ -34,7 +34,7 @@ class C1(TestCase):
         a_ = self.assert_
 
         s  = 'end if'
-        a_(isinstance(parse(scan(s)),EndifStmt))
+        a_(isinstance(pps(s),EndifStmt))
 
     def test4(self):
         'endif stmt as "endif"'
@@ -42,7 +42,7 @@ class C1(TestCase):
         a_ = self.assert_
 
         s  = 'endif'
-        a_(isinstance(parse(scan(s)),EndifStmt))
+        a_(isinstance(pps(s),EndifStmt))
 
     def test5(self):
         'simple subroutine stmt'
@@ -50,7 +50,7 @@ class C1(TestCase):
         a_ = self.assert_
 
         s  = 'subroutine foo(x,y,z)'
-        a_(isinstance(parse(scan(s)),SubroutineStmt))
+        a_(isinstance(pps(s),SubroutineStmt))
 
 class C2(TestCase):
     '''assignment statement'''
@@ -62,8 +62,7 @@ class C2(TestCase):
         a_ = self.assert_
 
         s  = 'foo(5,7) = x.lt.y'
-        v = parse(scan(s))
-        ae(repr(v),
+        ae(repr(pps(s)),
            repr(AssignStmt(App('foo',['5','7']),Ops('.lt.','x','y')))
            )
 
@@ -73,27 +72,26 @@ class C2(TestCase):
         a_ = self.assert_
 
         s  = 'if(ix,iy) = sin(x)'
-        v = parse(scan(s))
-        ae(repr(v),
+        ae(repr(pps(s)),
            repr(AssignStmt(App('if',['ix','iy']),App('sin',['x'])))
            )
+
     def test3(self):
         "selection(%) operator works on lhs"
         ae = self.assertEquals
         a_ = self.assert_
 
         s  = 'x%v = 5'
-        v  = parse(scan(s))
-        ae(repr(v),
+        ae(repr(pps(s)),
            repr(AssignStmt(Sel('x','v'),'5')))
+
     def test4(self):
         "complicated exp including selection(%) works on lhs"
         ae = self.assertEquals
         a_ = self.assert_
 
         s  = 'x%v(1,2)%q(xx)%r = 5'
-        v  = parse(scan(s))
-        ae(repr(v),
+        ae(repr(pps(s)),
            repr(AssignStmt(Sel(App(Sel(App(Sel('x','v'),['1', '2']),'q'),
                                    ['xx']),'r'),'5')))
 
@@ -112,8 +110,7 @@ class C4(TestCase):
         ae = self.assertEquals
         a_ = self.assert_
 
-        s  = 'if(ix,iy) = sin(x)'
-        v = parse(scan(s))
+        v = pps('if(ix,iy) = sin(x)')
         a_(hasattr(v,'_sons'))
         ae(v._sons,['lhs','rhs'])
 
@@ -123,8 +120,7 @@ class C4(TestCase):
         a_ = self.assert_
 
         s  = 'if (x .eq. 5) goto 23'
-        v = parse(scan(s))
-        a_(hasattr(v,'_sons'))
+        a_(hasattr(pps(s),'_sons'))
 
 class C5(TestCase):
     '''Test derived type
