@@ -3,250 +3,258 @@ canonicalization routines
 '''
 
 from _Setup import *
-
+from PyFort.sym_entries import var
+import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
-import PyFort.fortExp  as fe
-from   PyFort.fortContextFile import SymEntry
-from   PyFort.intrinsic import is_intrinsic
 
-__tmp_prefix   = 'ad_ctmp'
-__call_prefix  = 'ad_s_'
-__slice_prefix = 'ad_slc'
+class CanonError(Exception):
+   '''exception for errors that occur during canonicalization'''
+   def __init__(self,msg,lineNumber):
+       self.msg  = msg
+       self.lineNumber = lineNumber
 
-_verbose = True
+class UnitCanonicalizer(object):
+    'class to facilitate canonicalization on a per-unit basis'
 
-def set_verbose(l):
-    global _verbose
-    _verbose = l
-    
-def new_call(a,v,polyfix=''):
-    '''from an app term, and a new var v,
-    generate a call to a related subroutine, with v as the last var
-    '''
-    return fs.CallStmt(__call_prefix + a.head + polyfix,
-                       a.args + [v])
-    
-def gen_repl_fns(line):
-    '''routine to generate closures that keep track of various
-    function replacement ops
-    '''
+    _verbose = False
 
-    line.ctxt._tcnt    = 0
-    line.ctxt.new_vars = []
+    @staticmethod
+    def setVerbose(isVerbose):
+        UnitCanonicalizer._verbose = isVerbose
 
-    def repl_fn(a):
-        tvar = __tmp_prefix + str(line.ctxt._tcnt)
+    def __init__(self,aUnit):
+        self.__myUnit = aUnit
+        self.__myNewDecls = []
+        self.__myNewExecs = []
+        self.__tmp_prefix   = 'oad_ctmp'
+        self.__call_prefix  = 'oad_s_'
+        self.__tempCounter = 0
+        self.__recursionDepth = 0
 
-        line.ctxt._tcnt += 1
-        ty = line.ctxt.repl_fns['ety'](a)
+    def __newTemp(self,anExpression):
+        '''The new temporary variable assumes the value of anExpression'''
+        theNewTemp = self.__tmp_prefix + str(self.__tempCounter)
+        self.__tempCounter += 1
+        (varTypeClass,varModifierList) = fe.exptype(anExpression,
+                                                    self.__myUnit.symtab.lookup_type,
+                                                    fs.kw2type,
+                                                    fs.lenfn,
+                                                    fs._Kind,
+                                                    fe.isPolymorphic,
+                                                    fs.typemerge)
+        if self._verbose: print >> sys.stderr,str(theNewTemp)+': varTypeClass = "'+str(varTypeClass)+'" varModifierList = "'+str(varModifierList)+'"'
+        theNewDecl = varTypeClass(varModifierList,[],[theNewTemp])
+        self.__myNewDecls.append(theNewDecl)
+        self.__myUnit.symtab.enter_name(theNewTemp,var((varTypeClass,varModifierList),()))
+        return (theNewTemp,varTypeClass)
 
-        line.ctxt.new_vars.append((ty,tvar),)
-        post_tag = ''
-        if fs.poly(a.head):
-            post_tag = '_' + ty[0].kw.lower()[0]
-        line.ctxt.new_calls.append(new_call(a,tvar,post_tag))
+    def __canonicalizeFuncCall(self,theFuncCall,lead):
+        '''turn a function call into a sunroutine call
+        returns the new temp created as return value for the new subroutine call'''
+        if self._verbose: print >> sys.stderr,self.__recursionDepth*'|\t'+'canonicalizing nonintrinsic function call "'+str(theFuncCall)+'"'
+        self.__recursionDepth += 1
+        if self._verbose: print >> sys.stderr,(self.__recursionDepth-1)*'|\t'+'|  creating new temp for the result of the subroutine that replaces "'+str(theFuncCall)+'":',
+        (theNewTemp,newTempType) = self.__newTemp(theFuncCall)
+        polymorphismSuffix = ''
+        if fs.isPolymorphic(theFuncCall):
+            polymorphismSuffix = '_'+newTempType.kw.lower()[0]
+        self.__canonicalizeSubCallStmt(fs.CallStmt(self.__call_prefix + theFuncCall.head + polymorphismSuffix,
+                                                   theFuncCall.args + [theNewTemp],
+                                                   lead=lead
+                                                  ).flow())
+        if self._verbose: print >> sys.stderr,(self.__recursionDepth-1)*'|\t'+'|_'
+        self.__recursionDepth -= 1
+        return theNewTemp
 
-        return tvar
+    def __canonicalizeExpression(self,theExpression,lead):
+        '''Canonicalize an expression tree by recursively replacing function calls with subroutine calls
+           returns an expression that replaces theExpression'''
+        if self._verbose: print >> sys.stderr,self.__recursionDepth*'|\t'+'canonicalizing expression "'+str(theExpression)+'"',
+        self.__recursionDepth += 1
+        # Variable or constant: do nothing
+        if isinstance(theExpression, str):
+            if self._verbose: print >> sys.stderr,', which is a string (should be a constant or a variable => no canonicalization necessary)'
+            theNewExpression = theExpression
+        # Nonintrinsic function call -> replace with subroutine call and hoist its arguments
+        elif fe.isNonintrinsicFuncApp(theExpression,self.__myUnit.symtab):
+            if self._verbose: print >> sys.stderr,', which is a non-intrinsic function app with argument(s) "'+str(theExpression.args)+'"'
+            theNewExpression = self.__canonicalizeFuncCall(theExpression,lead)
+        # Intrinsic function call or array ref (any App that's not a nonintrinsic) -> recursively canonicalize args
+        elif isinstance(theExpression, fe.App):
+            if self._verbose: print >> sys.stderr,', which is either an intrinsic or array ref with argument(s) "'+str(theExpression.args)+'"'
+            replacementArgs = []
+            for arg in theExpression.args:
+                replacementArgs.append(self.__canonicalizeExpression(arg,lead))
+            theNewExpression = fe.App(theExpression.head,replacementArgs)
+        # Unary operation
+        elif isinstance(theExpression,fe.Unary):
+            if self._verbose: print >> sys.stderr,', which is a unary op. with exp: "'+str(theExpression.exp)+'"'
+            if isinstance(theExpression,fe.Umi): # Unary Minus
+                theNewExpression = fe.Umi(self.__canonicalizeExpression(theExpression.exp,lead))
+            elif isinstance(theExpression,fe.Upl): # Unary plus
+                theNewExpression = fe.Upl(self.__canonicalizeExpression(theExpression.exp,lead))
+            elif isinstance(theExpression,fe.Not): # Not expression
+                theNewExpression = fe.Not(self.__canonicalizeExpression(theExpression.exp,lead))
+            elif isinstance(theExpression,fe.ParenExp): # Parenthesized expression
+                theNewExpression = fe.ParenExp(self.__canonicalizeExpression(theExpression.exp,lead))
+        # Binary operation
+        elif isinstance(theExpression,fe.Ops):
+            if self._verbose: print >> sys.stderr,', which is a binary op. with a1="'+str(theExpression.a1)+'", a2="'+str(theExpression.a2)+'"'
+            a1Result = self.__canonicalizeExpression(theExpression.a1,lead)
+            a2result = self.__canonicalizeExpression(theExpression.a2,lead)
+            theNewExpression = fe.Ops(theExpression.op,a1Result,a2result)
+        # Everything else...
+        else:
+            if self._verbose: print >> sys.stderr,', which is some other nontrivial type that is assumed to require no canonicalization'
+            theNewExpression = theExpression
+        if self._verbose: print >> sys.stderr,(self.__recursionDepth-1)*'|\t'+'|_'
+        self.__recursionDepth -= 1
+        return theNewExpression
 
-    def pat_fn(a):
-        lookup = line.ctxt.lookup_var
-        return isinstance(a,fe.App) and \
-               not ( lookup(a.head).dims or \
-                     lookup(a.head).lngth or \
-                     is_intrinsic(a.head) )
+    def __canonicalizeSubCallStmt(self,aSubCallStmt):
+        '''Canonicalize a subroutine call by hoisting all arguments (except simple variables) to temporaries.'''
+        if self._verbose: print >> sys.stderr,self.__recursionDepth*'|\t'+'canonicalizing subroutine call statement "'+str(aSubCallStmt)+'"'
+        self.__recursionDepth += 1
+        # canonicalize each of the the expressions that serve as arguments
+        replacementArgs = []
+        for anArg in aSubCallStmt.args:
+            if self._verbose: print >> sys.stderr,(self.__recursionDepth - 1)*'|\t'+'|- argument "'+str(anArg)+'" ',
+            # string that resides in symbol table: a variable
+            if isinstance(anArg,str) and self.__myUnit.symtab.lookup_name(anArg):
+                if self._verbose: print >> sys.stderr,'is a variable'+ \
+                                                 ' with symbol table entry "'+str(self.__myUnit.symtab.lookup_name(anArg))+ \
+                                                 '" and dims "'+str(self.__myUnit.symtab.lookup_dims(anArg))+'"'
+                replacementArgs.append(anArg)
+            # Array accesses
+            elif fe.isArrayAccess(anArg,self.__myUnit.symtab):
+                replacementArgs.append(self.__canonicalizeExpression(anArg,aSubCallStmt.lead))
+            # function calls
+            elif fe.isNonintrinsicFuncApp(anArg,self.__myUnit.symtab):
+                if self._verbose: print >> sys.stderr,'is a nonintrinsic function call'
+                replacementArgs.append(self.__canonicalizeFuncCall(anArg,aSubCallStmt.lead))
+            # everything else: nontrivial expressions (including constants)
+            else:
+                if self._verbose: print >> sys.stderr,'is a nontrivial expression that is to be hoisted.  Creating new temp:',
+                # create a new temp and add it to decls
+                (theNewTemp,newTempType) = self.__newTemp(anArg)
+                replacementArgs.append(theNewTemp)
+                self.__canonicalizeAssignStmt(fs.AssignStmt(theNewTemp,
+                                                            anArg,
+                                                            lead=aSubCallStmt.lead))
+        # replace aCallStmt with the canonicalized version
+        self.__myNewExecs.append(fs.CallStmt(aSubCallStmt.head,
+                                              replacementArgs,
+                                              lineNumber=aSubCallStmt.lineNumber,
+                                              lead=aSubCallStmt.lead
+                                             ).flow())
+        if self._verbose: print >> sys.stderr,(self.__recursionDepth-1)*'|\t'+'|_'
+        self.__recursionDepth -= 1
 
-    def ety(e):
-        ety1 = fe.exptype
-        vvv  = ety1(e,
-                    line.ctxt.lookup_type,
-                    fs.kw2type,
-                    fs.lenfn,
-                    fs._Kind,
-                    fs.poly,
-                    fs.typemerge)
+    def __canonicalizeAssignStmt(self,anAssignStmt):
+        '''Canonicalize an assigment statement by removing function calls from the rhs'''
+        if self._verbose: print >> sys.stderr,self.__recursionDepth*'|\t'+'canonicalizing assignment statement "'+str(anAssignStmt)+'"'
+        self.__recursionDepth += 1
+        self.__myNewExecs.append(fs.AssignStmt(anAssignStmt.lhs,
+                                                  self.__canonicalizeExpression(anAssignStmt.rhs,anAssignStmt.lead),
+                                                  lineNumber=anAssignStmt,
+                                                  label=anAssignStmt.label,
+                                                  lead=anAssignStmt.lead
+                                                 ).flow())
+        if self._verbose: print >> sys.stderr,(self.__recursionDepth-1)*'|\t'+'|_'
+        self.__recursionDepth -= 1
 
-        return ety1(e,
-                    line.ctxt.lookup_type,
-                    fs.kw2type,
-                    fs.lenfn,
-                    fs._Kind,
-                    fs.poly,
-                    fs.typemerge)
+    def __canonicalizeIfNonThenStmt(self,anIfNonThenStmt):
+        '''Canonicalize if stmt (without "then" by canonicalizing the test component and the conditionally executed statement
+        returns a list of statements that replace anIfNonThenStmt'''
+        if self._verbose: print >> sys.stderr,self.__recursionDepth*'|\t'+'canonicalizing if statement (without "then") "'+str(anIfNonThenStmt)+'"'
+        self.__recursionDepth += 1
+        self.__myNewExecs.append(fs.IfNonThenStmt(self.__canonicalizeExpression(anIfNonThenStmt.test,lead=anIfNonThenStmt.lead),
+                                                     self.__canonicalizeExpression(anIfNonThenStmt.stmt,lead=anIfNonThenStmt.lead),
+                                                     lineNumber=anIfNonThenStmt.lineNumber,
+                                                     label=anIfNonThenStmt.label,
+                                                     lead=anIfNonThenStmt.lead
+                                                    ).flow())
+        if self._verbose: print >> sys.stderr,(self.__recursionDepth-1)*'|\t'+'|_'
+        self.__recursionDepth -= 1
 
-    def slice_pat(e):
+    def __canonicalizeIfThenStmt(self,anIfThenStmt):
+        '''Canonicalize if-then stmt by canonicalizing the test component
+        returns a list of statements that replace anIfThenStmt'''
+        if self._verbose: print >> sys.stderr,self.__recursionDepth*'|\t'+'canonicalizing if-then statement "'+str(anIfThenStmt)+'"'
+        self.__recursionDepth += 1
+        self.__myNewExecs.append(fs.IfThenStmt(self.__canonicalizeExpression(anIfThenStmt.test,anIfThenStmt.lead),
+                                                  lineNumber=anIfThenStmt.lineNumber,
+                                                  label=anIfThenStmt.label,
+                                                  lead=anIfThenStmt.lead
+                                                 ).flow())
+        if self._verbose: print >> sys.stderr,(self.__recursionDepth-1)*'|\t'+'|_'
+        self.__recursionDepth -= 1
 
-        import sys
-        lookup_lngth = line.ctxt.lookup_lngth
-        if isinstance(e,fe.App) and lookup_lngth(e.head):
-            if len(e.args) == 1 and \
-               isinstance(e.args[0],fe.Ops) and \
-               e.args[0].op == ':' :
-                if _verbose:
-                    print >> sys.stderr,'Progress: found a substring to replace:',e
-                return True
+    def __canonicalizeElseifStmt(self,anElseifStmt):
+        '''Canonicalize elseif-then stmt by canonicalizing the test component
+        returns a list of statements that replace anElseifStmt'''
+        if self._verbose: print >> sys.stderr,self.__recursionDepth*'|\t'+'canonicalizing elseif-then statement "'+str(anElseifStmt)+'"'
+        self.__recursionDepth += 1
+#       print 'before canon elseif: len(self.__myNewExecs) =',len(self.__myNewExecs)
+        execTreeLength = len(self.__myNewExecs)
+        self.__myNewExecs.append(fs.ElseifStmt(self.__canonicalizeExpression(anElseifStmt.test,anElseifStmt.lead),
+                                                  lineNumber=anElseifStmt.lineNumber,
+                                                  label=anElseifStmt.label,
+                                                  lead=anElseifStmt.lead
+                                                 ).flow())
+        if len(self.__myNewExecs) > execTreeLength +1: # this is the case when some new statements were inserted
+            raise CanonError('elseif test-component "'+str(anElseifStmt.test)+'" requires canonicalization, but the placement of the extra assignments is problematic.\nHoisting for elseif test-components is not yet implemented',anElseifStmt.lineNumber)
+        if self._verbose: print >> sys.stderr,(self.__recursionDepth-1)*'|\t'+'|_'
+        self.__recursionDepth -= 1
 
-        return isinstance(e,fe.Ops) and e.op == ':'
+    def __flattenStmtTree(self,theStmtTree,theResultList):
+        for subTree in theStmtTree:
+            if isinstance(subTree,fs.GenStmt):
+                theResultList.append(subTree)
+            else:
+                flattenStmtTree(subTree,theResultList)
 
-    def slice_subst(a):
+    def canonicalizeUnit(self):
+        '''Recursively canonicalize \p aUnit'''
+        if self._verbose: print >>sys.stderr,'+++++++++++++++++++++++++++++++++++++++++++++++++++++', \
+                                             'Begin canonicalize unit <',self.__myUnit.uinfo,'>', \
+                                             '+++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n'
+        if (self._verbose and self.__myUnit.ulist): print >> sys.stderr,'subunits (len =',len(self.__myUnit.ulist),'):'
+        for subUnit in self.__myUnit.ulist:
+            if self._verbose: print >> sys.stderr,subUnit
+            UnitCanonicalizer(subUnit).canonicalizeUnit()
 
-        tvar = __slice_prefix + str(line.ctxt.toplev._scnt)
-        line.ctxt.toplev._scnt += 1
+        if (self._verbose and self.__myUnit.execs): print >> sys.stderr,'canonicalizing executable statements:'
+        for anExecStmt in self.__myUnit.execs:
+            if self._verbose: print >> sys.stderr,'Line '+str(anExecStmt.lineNumber)+':'
+            if isinstance(anExecStmt,fs.CallStmt):
+                self.__canonicalizeSubCallStmt(anExecStmt)
+            elif isinstance(anExecStmt,fs.AssignStmt):
+                self.__canonicalizeAssignStmt(anExecStmt)
+            elif isinstance(anExecStmt,fs.IfNonThenStmt):
+                self.__canonicalizeIfNonThenStmt(anExecStmt)
+            elif isinstance(anExecStmt,fs.IfThenStmt):
+                self.__canonicalizeIfThenStmt(anExecStmt)
+            elif isinstance(anExecStmt,fs.ElseifStmt):
+                self.__canonicalizeElseifStmt(anExecStmt)
+            else:
+                if self._verbose: print >> sys.stderr,'Statement "'+str(anExecStmt)+'" is assumed to require no canonicalization'
+                self.__myNewExecs.append(anExecStmt)
+            if self._verbose: print >>sys.stderr,''
+            if self.__recursionDepth != 0:
+                raise CanonError('Recursion depth did not resolve to zero',anExecStmt.lineNumber)
+ 
+        # build rawlines for the new declarations and add them to the unit
+        for aDecl in self.__myNewDecls:
+            aDecl.lead = self.__myUnit.uinfo.lead+'  '
+            aDecl.flow()
+        self.__myUnit.decls.extend(self.__myNewDecls)
 
-        ty = (fs.IntegerStmt,[])
-        if line.ctxt.repl_fns['ety'](a)[0].kw == 'character':
-            ty = (fs.CharacterStmt,[fs._F90Len('5')])
+        # replace the executable statements for the unit
+        self.__myUnit.execs = self.__myNewExecs
 
-        line.ctxt.new_vars.append((ty,tvar),)
+        if self._verbose: print >>sys.stderr,'++++++++++++++++++++++++++++++++++++++++++++++++++++++', \
+                                             'End canonicalize unit <',self.__myUnit.uinfo,'>', \
+                                             '++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n'
+        return self.__myUnit
 
-        line.ctxt.toplev.slice_undo[tvar] = a
-
-        return tvar
-
-    return dict(fn_pat=pat_fn,
-                fn_repl=repl_fn,
-                ety=ety,
-                slice_pat=slice_pat,
-                slice_subst=slice_subst)
-
-fn2sub = fe.subst
-
-def canon_call(self):
-    '''
-    Canonicalize a call statement by replacing function calls with
-    subroutine calls, and replacing all arguments that are not
-    a simple variable or a constant with new temporaries
-    '''
-    newargs = []
-    self.ctxt.new_calls   = []
-
-
-    new_assigns = []
-    repl_fns    = self.ctxt.repl_fns
-    slice_pat   = repl_fns['slice_pat']
-    slice_subst = repl_fns['slice_subst']
-    fn_pat      = repl_fns['fn_pat']
-    fn_repl     = repl_fns['fn_repl']
-
-    for a in self.args:
-        a0           = fe.subst(a,slice_pat,slice_subst)
-        a1           = fn2sub(a0,fn_pat,fn_repl)
-        (a1,assigns) = nontriv(a1,self)
-        new_assigns.extend(assigns)
-        newargs.append(a1)
-
-    new_call = self.same(fs.CallStmt(self.head,newargs))
-    pre = []
-    for c in self.ctxt.new_calls:
-        pre.extend([l for l in self.same(c).map()])
-
-    pre.extend(new_assigns)
-    pre.append(new_call)
-
-    return pre
-
-def canon_assign(self):
-    '''
-    Canonicalize an assigment statement by removing function
-    calls from the rhs
-    '''
-
-    self.ctxt.new_calls   = []
-
-    slice_pat = self.ctxt.repl_fns['slice_pat']
-    slice_subst = self.ctxt.repl_fns['slice_subst']
-    fn_pat      = self.ctxt.repl_fns['fn_pat']
-    fn_repl     = self.ctxt.repl_fns['fn_repl']
-    rhs1 = fe.subst(self.rhs,slice_pat,slice_subst)
-    rhs = fn2sub(rhs1,fn_pat,fn_repl)
-    pre = []
-    for c in self.ctxt.new_calls:
-        pre.extend([l for l in self.same(c).map()])
-    
-    new_assign = self.same(fs.AssignStmt(self.lhs,rhs))
-    pre.append(new_assign)
-
-    return pre
-
-def canon_ifthen(self):
-    '''
-    Canonicalize if-then stmt by canonicalizing the test
-    component of the if
-    '''
-    self.ctxt.new_calls   = []
-
-    repl_fns = self.ctxt.repl_fns
-    slice_pat   = repl_fns['slice_pat']
-    slice_subst = repl_fns['slice_subst']
-    fn_pat      = repl_fns['fn_pat']
-    fn_repl     = repl_fns['fn_repl']
-    tst1 = fe.subst(self.test,slice_pat,slice_subst)
-    tst = fn2sub(tst1,fn_pat,fn_repl)
-    pre = []
-    for c in self.ctxt.new_calls:
-        pre.extend([l for l in self.same(c).map()])
-    
-    new_if = self.same(fs.IfThenStmt(tst))
-    pre.append(new_if)
-
-    return pre
-
-
-def canon_PUstart(self):
-
-    import sys
-    self.ctxt.repl_fns    = gen_repl_fns(self)
-
-    if _verbose:
-        print >> sys.stderr, 'Progress: working on program unit ',self.ctxt.uname
-
-    return [self]
-    
-def nontriv(e,line):
-    if isinstance(e,str):
-        return (e,[])
-
-    lookup_dims   = line.ctxt.lookup_dims
-    lookup_lngth  = line.ctxt.lookup_lngth
-
-    if isinstance(e,fe.App) and ( lookup_dims(e.head) or \
-                                  lookup_lngth(e.head) ):
-        return (e,[])
-
-    if isinstance(e,fe.Sel):
-        return (e,[])
-
-    ety  = line.ctxt.repl_fns['ety']
-    tvar = __tmp_prefix + str(line.ctxt._tcnt)
-    line.ctxt._tcnt += 1
-    line.ctxt.new_vars.append((ety(e),tvar),)
-    a1 = line.same(fs.AssignStmt(tvar,e))
-    return (tvar,[a1])
-
-def declare_tmpvars(line):
-    '''Declare all temporary variables generated by
-    canonicalization phase.
-    This routine should be called at the decls marker
-    '''
-    rv = []
-    for (ty,tvar) in line.ctxt.new_vars:
-        (cls,mod) = ty
-        decl = cls(mod,[],[tvar])
-        decl.lineno = False
-        decl.lead   = line.lead
-        decl.ctxt   = line.ctxt
-        decl.ctxt.vars[tvar] = SymEntry(typeof=ty)
-        decl.flow()
-        rv.append(decl)
-
-    rv.append(line)
-    return rv
-
-canon_lexi = [(fs.PUstart,    canon_PUstart),
-              (fs.CallStmt,   canon_call),
-              (fs.AssignStmt, canon_assign),
-              (fs.IfThenStmt, canon_ifthen),
-              ]
-
-decl_lexi  = [(fs.LastDecl,   declare_tmpvars),
-              ]
-    

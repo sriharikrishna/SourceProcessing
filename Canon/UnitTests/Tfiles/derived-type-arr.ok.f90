@@ -3,13 +3,11 @@ subroutine bar(a)
       integer :: f1
    end type
 
-   type(baz),dimension(4) :: it
-  real :: ad_ctmp0
-  type(baz) :: ad_ctmp1
+   type(baz), dimension(4) :: it
+  real :: oad_ctmp0
 
    it(1)%f1 = 3
-   ad_ctmp1 = it(2)
-   call ad_s_ff(ad_ctmp1,ad_ctmp0)
-   it(1)%f1 = 6 + ad_ctmp0
+   call oad_s_ff(it(2),oad_ctmp0)
+   it(1)%f1 = 6 + oad_ctmp0
 end
 

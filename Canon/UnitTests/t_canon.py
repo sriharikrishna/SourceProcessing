@@ -1,64 +1,73 @@
+#!/usr/bin/env python
+
+import tempfile
 from Setup import *
 from _Setup import *
-from canon import *
-import Canon as cc
 from unittest import *
-from PyFort.fortContextFile import fortContextFile as fcf
+from PyUtil.errors import UserError
+from PyFort.fortUnit import fortUnitIterator
+from canon import UnitCanonicalizer
 
 '''
-Tests for canonicalizer
+Unit tests for canonicalizer
 
 '''
-def hook1(self):
-    if hasattr(self.toplev,'_scnt'):
-        pass
-    else:
-        self.toplev._scnt = 0
-        self.toplev.slice_undo = dict()
 
 class C1(TestCase):
-    def notest1(self):
-        'read and context a fortran file'
-        ae = self.assertEquals
-        a_ = self.assert_
-        e  = fcf(fname_t('t0.f'),hook1)
 
-        print e
-        a_(True)
+    def canonTest(self,originalFileName,RefFileName,free):
+        UnitCanonicalizer.setVerbose(False) 
+        try:
+            (fd,testFileName) = tempfile.mkstemp()
+            testFile  = open(testFileName,'w')
+            for aUnit in fortUnitIterator(fname_t(originalFileName),free):
+                UnitCanonicalizer(aUnit).canonicalizeUnit()
+                aUnit.printit(testFile)
+            testFile.close()
+            testFile = open(testFileName,'r')
+            testFileLines = testFile.readlines()
+            refFile = open(fname_t(RefFileName),'r')
+            refFileLines = refFile.readlines()
+            self.assertEquals(len(testFileLines),len(refFileLines))
+            for testLine,refLine in zip(testFileLines,refFileLines):
+                self.assertEquals(testLine,refLine)
+            refFile.close()
+            testFile.close()
+            os.remove(testFileName)
+        except UserError,e:
+            print >>sys.stderr,"Error: ",e.msg
+            return 1
+
+    def test00(self):
+        'canonicalize empty file'
+        self.canonTest('empty.f','empty.pre.f',free=False)
+
+    def test0(self):
+        'hoist function call from if statement (without "then")'
+        self.canonTest('ifNonThenStmt.f','ifNonThenStmt.pre.f',free=False)
 
     def test1(self):
-        'idemp rewrite using canon_lexi'
-        ae = self.assertEquals
-        a_ = self.assert_
-        e  = fcf(fname_t('t0.f'),hook1)
-        set_verbose(False)
-        f1rw = e.rewrite(canon_lexi)
-        f1ok = fcf(fname_t('t0.f.ok'))
-        ae(str(f1rw),str(f1ok))
+        'hoist function call from if-then statement'
+        self.canonTest('ifThenStmt.f','ifThenStmt.pre.f',free=False)
 
     def test2(self):
         'canon of max using int consts w embedded kinds'
-        ae = self.assertEquals
-        a_ = self.assert_
-        e  = fcf(fname_t('int-const-w-kind.f90'),True,hook1)
-        set_verbose(False)
-        f1rw = e.rewrite(canon_lexi)
-        f1ok = fcf(fname_t('int-const-w-kind.ok.f90'),True,hook1)
-        ae(str(f1rw),str(f1ok))
+        self.canonTest('int-const-w-kind.f90','int-const-w-kind.ok.f90',free=True)
 
     def test3(self):
-        'canon + var decl of array of derived types'
-        ae = self.assertEquals
-        a_ = self.assert_
-        e  = fcf(fname_t('derived-type-arr.f90'),True,hook1)
-        set_verbose(False)
-        f1rw = e.rewrite(canon_lexi).rewrite(decl_lexi)
-        f1ok = fcf(fname_t('derived-type-arr.ok.f90'),True,hook1)
-        ae(str(f1rw),str(f1ok))
+        'canon array of derived types'
+        self.canonTest('derived-type-arr.f90','derived-type-arr.ok.f90',free=True)
 
-s1 = makeSuite(C1)
+#   def test5(self):
+#       'canonicalization of conditional statements'
+#       self.canonTest('conditionals.f','conditionals.pre.f',free=False)
+
+    def test5(self):
+        'preserve inline comments for statements that have been altered during canonicalization'
+        self.canonTest('inlineComment.f90','inlineComment.pre.f90',free=True)
 
 suite = asuite(C1)
 
 if __name__ == "__main__":
     runit(suite)
+
