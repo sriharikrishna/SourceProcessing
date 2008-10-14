@@ -58,10 +58,10 @@ class UnitCanonicalizer(object):
         polymorphismSuffix = ''
         if fs.isPolymorphic(theFuncCall):
             polymorphismSuffix = '_'+newTempType.kw.lower()[0]
-        self.__canonicalizeSubCallStmt(fs.CallStmt(self.__call_prefix + theFuncCall.head + polymorphismSuffix,
-                                                   theFuncCall.args + [theNewTemp],
-                                                   lead=lead
-                                                  ).flow())
+        self.__myNewExecs.append(self.__canonicalizeSubCallStmt(fs.CallStmt(self.__call_prefix + theFuncCall.head + polymorphismSuffix,
+                                                                            theFuncCall.args + [theNewTemp],
+                                                                            lead=lead
+                                                                           ).flow()))
         if self._verbose: print >> sys.stderr,(self.__recursionDepth-1)*'|\t'+'|_'
         self.__recursionDepth -= 1
         return theNewTemp
@@ -127,6 +127,7 @@ class UnitCanonicalizer(object):
                 replacementArgs.append(anArg)
             # Array accesses
             elif fe.isArrayAccess(anArg,self.__myUnit.symtab):
+                if self._verbose: print >> sys.stderr,'is an array access expression'
                 replacementArgs.append(self.__canonicalizeExpression(anArg,aSubCallStmt.lead))
             # function calls
             elif fe.isNonintrinsicFuncApp(anArg,self.__myUnit.symtab):
@@ -138,57 +139,61 @@ class UnitCanonicalizer(object):
                 # create a new temp and add it to decls
                 (theNewTemp,newTempType) = self.__newTemp(anArg)
                 replacementArgs.append(theNewTemp)
-                self.__canonicalizeAssignStmt(fs.AssignStmt(theNewTemp,
-                                                            anArg,
-                                                            lead=aSubCallStmt.lead))
+                self.__myNewExecs.append(self.__canonicalizeAssignStmt(fs.AssignStmt(theNewTemp,
+                                                                                     anArg,
+                                                                                     lead=aSubCallStmt.lead)))
         # replace aCallStmt with the canonicalized version
-        self.__myNewExecs.append(fs.CallStmt(aSubCallStmt.head,
-                                              replacementArgs,
-                                              lineNumber=aSubCallStmt.lineNumber,
-                                              lead=aSubCallStmt.lead
-                                             ).flow())
+        replacementStatement = fs.CallStmt(aSubCallStmt.head,
+                                           replacementArgs,
+                                           lineNumber=aSubCallStmt.lineNumber,
+                                           lead=aSubCallStmt.lead
+                                          ).flow()
         if self._verbose: print >> sys.stderr,(self.__recursionDepth-1)*'|\t'+'|_'
         self.__recursionDepth -= 1
+        return replacementStatement
 
     def __canonicalizeAssignStmt(self,anAssignStmt):
         '''Canonicalize an assigment statement by removing function calls from the rhs'''
         if self._verbose: print >> sys.stderr,self.__recursionDepth*'|\t'+'canonicalizing assignment statement "'+str(anAssignStmt)+'"'
         self.__recursionDepth += 1
-        self.__myNewExecs.append(fs.AssignStmt(anAssignStmt.lhs,
-                                                  self.__canonicalizeExpression(anAssignStmt.rhs,anAssignStmt.lead),
-                                                  lineNumber=anAssignStmt,
-                                                  label=anAssignStmt.label,
-                                                  lead=anAssignStmt.lead
-                                                 ).flow())
+        replacementStatement = fs.AssignStmt(anAssignStmt.lhs,
+                                             self.__canonicalizeExpression(anAssignStmt.rhs,anAssignStmt.lead),
+                                             lineNumber=anAssignStmt,
+                                             label=anAssignStmt.label,
+                                             lead=anAssignStmt.lead
+                                            ).flow()
         if self._verbose: print >> sys.stderr,(self.__recursionDepth-1)*'|\t'+'|_'
         self.__recursionDepth -= 1
+        return replacementStatement
 
     def __canonicalizeIfNonThenStmt(self,anIfNonThenStmt):
         '''Canonicalize if stmt (without "then" by canonicalizing the test component and the conditionally executed statement
         returns a list of statements that replace anIfNonThenStmt'''
         if self._verbose: print >> sys.stderr,self.__recursionDepth*'|\t'+'canonicalizing if statement (without "then") "'+str(anIfNonThenStmt)+'"'
         self.__recursionDepth += 1
-        self.__myNewExecs.append(fs.IfNonThenStmt(self.__canonicalizeExpression(anIfNonThenStmt.test,lead=anIfNonThenStmt.lead),
-                                                     self.__canonicalizeExpression(anIfNonThenStmt.stmt,lead=anIfNonThenStmt.lead),
-                                                     lineNumber=anIfNonThenStmt.lineNumber,
-                                                     label=anIfNonThenStmt.label,
-                                                     lead=anIfNonThenStmt.lead
-                                                    ).flow())
+        replacementStatement = fs.IfNonThenStmt(self.__canonicalizeExpression(anIfNonThenStmt.test,lead=anIfNonThenStmt.lead),
+                                                self.__canonicalizeExpression(anIfNonThenStmt.stmt,lead=anIfNonThenStmt.lead),
+                                                lineNumber=anIfNonThenStmt.lineNumber,
+                                                label=anIfNonThenStmt.label,
+                                                lead=anIfNonThenStmt.lead
+                                               ).flow()
         if self._verbose: print >> sys.stderr,(self.__recursionDepth-1)*'|\t'+'|_'
         self.__recursionDepth -= 1
+        return replacementStatement
 
     def __canonicalizeIfThenStmt(self,anIfThenStmt):
         '''Canonicalize if-then stmt by canonicalizing the test component
         returns a list of statements that replace anIfThenStmt'''
         if self._verbose: print >> sys.stderr,self.__recursionDepth*'|\t'+'canonicalizing if-then statement "'+str(anIfThenStmt)+'"'
         self.__recursionDepth += 1
-        self.__myNewExecs.append(fs.IfThenStmt(self.__canonicalizeExpression(anIfThenStmt.test,anIfThenStmt.lead),
-                                                  lineNumber=anIfThenStmt.lineNumber,
-                                                  label=anIfThenStmt.label,
-                                                  lead=anIfThenStmt.lead
-                                                 ).flow())
+        replacementStatement = fs.IfThenStmt(self.__canonicalizeExpression(anIfThenStmt.test,anIfThenStmt.lead),
+                                             lineNumber=anIfThenStmt.lineNumber,
+                                             label=anIfThenStmt.label,
+                                             lead=anIfThenStmt.lead
+                                            ).flow()
         if self._verbose: print >> sys.stderr,(self.__recursionDepth-1)*'|\t'+'|_'
         self.__recursionDepth -= 1
+        return replacementStatement
 
     def __canonicalizeElseifStmt(self,anElseifStmt):
         '''Canonicalize elseif-then stmt by canonicalizing the test component
@@ -196,23 +201,18 @@ class UnitCanonicalizer(object):
         if self._verbose: print >> sys.stderr,self.__recursionDepth*'|\t'+'canonicalizing elseif-then statement "'+str(anElseifStmt)+'"'
         self.__recursionDepth += 1
 #       print 'before canon elseif: len(self.__myNewExecs) =',len(self.__myNewExecs)
-        execTreeLength = len(self.__myNewExecs)
-        self.__myNewExecs.append(fs.ElseifStmt(self.__canonicalizeExpression(anElseifStmt.test,anElseifStmt.lead),
-                                                  lineNumber=anElseifStmt.lineNumber,
-                                                  label=anElseifStmt.label,
-                                                  lead=anElseifStmt.lead
-                                                 ).flow())
-        if len(self.__myNewExecs) > execTreeLength +1: # this is the case when some new statements were inserted
+        newExecsLength = len(self.__myNewExecs)
+        replacementStatement = fs.ElseifStmt(self.__canonicalizeExpression(anElseifStmt.test,anElseifStmt.lead),
+                                             lineNumber=anElseifStmt.lineNumber,
+                                             label=anElseifStmt.label,
+                                             lead=anElseifStmt.lead
+                                            ).flow()
+        if len(self.__myNewExecs) > newExecsLength+1: # this is the case when some new statements were inserted
             raise CanonError('elseif test-component "'+str(anElseifStmt.test)+'" requires canonicalization, but the placement of the extra assignments is problematic.\nHoisting for elseif test-components is not yet implemented',anElseifStmt.lineNumber)
         if self._verbose: print >> sys.stderr,(self.__recursionDepth-1)*'|\t'+'|_'
         self.__recursionDepth -= 1
+        return replacementStatement
 
-    def __flattenStmtTree(self,theStmtTree,theResultList):
-        for subTree in theStmtTree:
-            if isinstance(subTree,fs.GenStmt):
-                theResultList.append(subTree)
-            else:
-                flattenStmtTree(subTree,theResultList)
 
     def canonicalizeUnit(self):
         '''Recursively canonicalize \p aUnit'''
@@ -227,23 +227,29 @@ class UnitCanonicalizer(object):
         if (self._verbose and self.__myUnit.execs): print >> sys.stderr,'canonicalizing executable statements:'
         for anExecStmt in self.__myUnit.execs:
             if self._verbose: print >> sys.stderr,'Line '+str(anExecStmt.lineNumber)+':'
+            newExecsLength = len(self.__myNewExecs) # store the current number of execs (to determine afterwards whether we've added some)
+            replacementStatement = anExecStmt
             if isinstance(anExecStmt,fs.CallStmt):
-                self.__canonicalizeSubCallStmt(anExecStmt)
+                replacementStatement = self.__canonicalizeSubCallStmt(anExecStmt)
             elif isinstance(anExecStmt,fs.AssignStmt):
-                self.__canonicalizeAssignStmt(anExecStmt)
+                replacementStatement = self.__canonicalizeAssignStmt(anExecStmt)
             elif isinstance(anExecStmt,fs.IfNonThenStmt):
-                self.__canonicalizeIfNonThenStmt(anExecStmt)
+                replacementStatement = self.__canonicalizeIfNonThenStmt(anExecStmt)
             elif isinstance(anExecStmt,fs.IfThenStmt):
-                self.__canonicalizeIfThenStmt(anExecStmt)
+                replacementStatement = self.__canonicalizeIfThenStmt(anExecStmt)
             elif isinstance(anExecStmt,fs.ElseifStmt):
-                self.__canonicalizeElseifStmt(anExecStmt)
+                replacementStatement = self.__canonicalizeElseifStmt(anExecStmt)
             else:
                 if self._verbose: print >> sys.stderr,'Statement "'+str(anExecStmt)+'" is assumed to require no canonicalization'
-                self.__myNewExecs.append(anExecStmt)
             if self._verbose: print >>sys.stderr,''
             if self.__recursionDepth != 0:
-                raise CanonError('Recursion depth did not resolve to zero',anExecStmt.lineNumber)
- 
+                raise CanonError('Recursion depth did not resolve to zero when canonicalizing',anExecStmt,anExecStmt.lineNumber)
+            # determine whether a change was made
+            if len(self.__myNewExecs) > newExecsLength: # some new statements were inserted
+                self.__myNewExecs.append(replacementStatement) # => replace anExecStmt with the canonicalized version
+            else: # no new statements were inserted
+                self.__myNewExecs.append(anExecStmt) # => leave anExecStmt alone
+
         # build rawlines for the new declarations and add them to the unit
         for aDecl in self.__myNewDecls:
             aDecl.lead = self.__myUnit.uinfo.lead+'  '
