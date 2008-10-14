@@ -478,9 +478,31 @@ class C11(TestCase):
 
         ae(kill_blanks(s1),kill_blanks(str(v)))
 
-s     = makeSuite(C8)
+class C12(TestCase):
+    '''Dimension statements'''
 
-suite = asuite(C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11)
+    def test1(self):
+        'dimension m(4,4), v(1000)'
+        self.assertEquals(repr(pps('dimension m(4,4), v(1000)')),
+                          repr(DimensionStmt([App('m',['4', '4']),
+                                              App('v',['1000'])])))
+
+    def test2(self):
+        'dimension helio (-3:3, 4, 3:9)'
+        self.assertEquals(repr(pps('dimension helio (-3:3, 4, 3:9)')),
+                          repr(DimensionStmt([App('helio',
+                                                  [Ops(':',Umi('3'),'3'),
+                                                   '4',
+                                                   Ops(':','3','9')])])))
+
+    def test3(self):
+        'dimension a(hi, hi*3 + lo )'
+        self.assertEquals(repr(pps('dimension a(hi, hi*3 + lo )')),
+                          repr(DimensionStmt([App('a',
+                                                  ['hi',
+                                                   Ops('+',Ops('*','hi','3'),'lo')])])))
+
+suite = asuite(C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12)
 
 if __name__ == '__main__':
     runit(suite)
