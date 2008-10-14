@@ -196,23 +196,60 @@ class UnitCanonicalizer(object):
         return replacementStatement
 
     def __canonicalizeElseifStmt(self,anElseifStmt):
-        '''Canonicalize elseif-then stmt by canonicalizing the test component
-        returns a list of statements that replace anElseifStmt'''
+        '''Canonicalize anElseifStmt by canonicalizing the test component.  Returns a canonicalized ElseifStmt that replaces anElseifStmt'''
         if self._verbose: print >> sys.stderr,self.__recursionDepth*'|\t'+'canonicalizing elseif-then statement "'+str(anElseifStmt)+'"'
         self.__recursionDepth += 1
-#       print 'before canon elseif: len(self.__myNewExecs) =',len(self.__myNewExecs)
         newExecsLength = len(self.__myNewExecs)
         replacementStatement = fs.ElseifStmt(self.__canonicalizeExpression(anElseifStmt.test,anElseifStmt.lead),
                                              lineNumber=anElseifStmt.lineNumber,
                                              label=anElseifStmt.label,
                                              lead=anElseifStmt.lead
                                             ).flow()
-        if len(self.__myNewExecs) > newExecsLength+1: # this is the case when some new statements were inserted
-            raise CanonError('elseif test-component "'+str(anElseifStmt.test)+'" requires canonicalization, but the placement of the extra assignments is problematic.\nHoisting for elseif test-components is not yet implemented',anElseifStmt.lineNumber)
+        if len(self.__myNewExecs) > newExecsLength: # this is the case iff some new statements were inserted
+            raise CanonError('elseif test-component "'+str(anElseifStmt.test)+'" requires hoisting, but the placement of the extra assignment(s) is problematic.',anElseifStmt.lineNumber)
         if self._verbose: print >> sys.stderr,(self.__recursionDepth-1)*'|\t'+'|_'
         self.__recursionDepth -= 1
         return replacementStatement
 
+    def __canonicalizeDoStmt(self,aDoStmt):
+        '''
+        Canonicalize aDoStmt statement by canonicalizing the loop start, end, and stride expressions.  Returns a canonicalized DoStmt that replaces aDoStmt.
+        '''
+        if self._verbose: print >> sys.stderr,self.__recursionDepth*'|\t'+'canonicalizing do statement "'+str(aDoStmt)+'"'
+        self.__recursionDepth += 1
+        replacementStart = self.__canonicalizeExpression(aDoStmt.loopStart,aDoStmt.lead)
+        newExecsLength = len(self.__myNewExecs)
+        replacementStatement = fs.DoStmt(aDoStmt.loopVar,
+                                         replacementStart,
+                                         self.__canonicalizeExpression(aDoStmt.loopEnd,aDoStmt.lead),
+                                         self.__canonicalizeExpression(aDoStmt.loopStride,aDoStmt.lead),
+                                         lineNumber=aDoStmt.lineNumber,
+                                         label=aDoStmt.label,
+                                         lead=aDoStmt.lead
+                                        ).flow()
+        if len(self.__myNewExecs) > newExecsLength: # this is the case iff loopEnd or loopStride required hopisting
+            raise CanonError('Either loopEnd "'+str(aDoStmt.loopEnd)+'" or loopStride "'+str(aDoStmt.loopStride)+'" for DoStmt "'+str(aDoStmt)+'" requires hoisting, but the placement of the extra assignment(s) is problematic.',aDoStmt.lineNumber)
+        if self._verbose: print >> sys.stderr,(self.__recursionDepth-1)*'|\t'+'|_'
+        self.__recursionDepth -= 1
+        return replacementStatement
+
+    def __canonicalizeWhileStmt(self,aWhileStmt):
+        '''
+        Canonicalize aWhileStmt statement by canonicalizing the test expression.  Returns a canonicalized while statement that replaces aWhileStmt.
+        '''
+        if self._verbose: print >> sys.stderr,self.__recursionDepth*'|\t'+'canonicalizing while statement "'+str(aWhileStmt)+'"'
+        self.__recursionDepth += 1
+        newExecsLength = len(self.__myNewExecs)
+        replacementStatement = fs.WhileStmt(self.__canonicalizeExpression(aWhileStmt.testExpression,aWhileStmt.lead),
+                                            lineNumber=aWhileStmt.lineNumber,
+                                            label=aWhileStmt.label,
+                                            lead=aWhileStmt.lead
+                                           ).flow()
+        if len(self.__myNewExecs) > newExecsLength: # this is the case iff some new statements were inserted
+            raise CanonError('while statement test expression "'+str(aWhileStmt.testExpression)+'" requires hoisting, but the placement of the extra assignment(s) is problematic.',aWhileStmt.lineNumber)
+        if self._verbose: print >> sys.stderr,(self.__recursionDepth-1)*'|\t'+'|_'
+        self.__recursionDepth -= 1
+        return replacementStatement
 
     def canonicalizeUnit(self):
         '''Recursively canonicalize \p aUnit'''
@@ -239,6 +276,10 @@ class UnitCanonicalizer(object):
                 replacementStatement = self.__canonicalizeIfThenStmt(anExecStmt)
             elif isinstance(anExecStmt,fs.ElseifStmt):
                 replacementStatement = self.__canonicalizeElseifStmt(anExecStmt)
+            elif isinstance(anExecStmt,fs.DoStmt):
+                replacementStatement = self.__canonicalizeDoStmt(anExecStmt)
+            elif isinstance(anExecStmt,fs.WhileStmt):
+                replacementStatement = self.__canonicalizeWhileStmt(anExecStmt)
             else:
                 if self._verbose: print >> sys.stderr,'Statement "'+str(anExecStmt)+'" is assumed to require no canonicalization'
             if self._verbose: print >>sys.stderr,''

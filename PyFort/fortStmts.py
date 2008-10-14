@@ -458,7 +458,12 @@ class PUstart(Decl):
     def is_ustart(self,unit=_non): return True
 
 class Exec(NonComment):
+    ''' base class for all executable statements'''
     def is_exec(self,unit=_non): return True
+
+    def __repr__(self):
+        return '%s(%s)' % (self.__class__.__name__,
+                           ','.join([repr(aSon) for aSon in self._sons]))
 
 class Leaf(Exec):
     "special Exec that doesn't have components"
@@ -1101,7 +1106,70 @@ class EndifStmt(Leaf):
     kw = 'endif'
 
 class DoStmt(Exec):
-    pass
+    #FIXME: optional construct name, label, and comma are not handled
+    '''
+    [do-construct-name :] do [label] [,] &
+      scalar-integer-variable-name = scalar-integer-expression , scalar-integer-expression [, scalar-integer-expression]
+    '''
+    _sons = ['loopVar','loopStart','loopEnd','loopStride']
+    kw = 'do'
+
+    @staticmethod
+    def parse(scan,lineNumber):
+        formDoStmt = seq(lit('do'),
+                         id,
+                         lit('='),
+                         Exp,
+                         lit(','),
+                         Exp,
+                         zo1(seq(lit(','),
+                                 Exp)))
+        ((theDoKeyword,loopVar,equals,loopStart,comma1,loopEnd,loopStride),rest) = formDoStmt(scan)
+        if loopStride:
+            return DoStmt(loopVar,loopStart,loopEnd,loopStride[0][1],lineNumber)
+        else:
+            return DoStmt(loopVar,loopStart,loopEnd,None,lineNumber)
+
+    def __init__(self,loopVar,loopStart,loopEnd,loopStride,lineNumber=0,label=False,lead=''):
+        self.loopVar = loopVar
+        self.loopStart = loopStart
+        self.loopEnd = loopEnd
+        self.loopStride = loopStride
+        self.lineNumber = lineNumber
+        self.label = label
+        self.lead = lead
+
+    def __str__(self):
+        if self.loopStride:
+            return 'do %s = %s,%s,%s' % (str(self.loopVar),str(self.loopStart),str(self.loopEnd),str(self.loopStride))
+        else:
+            return 'do %s = %s,%s' % (str(self.loopVar),str(self.loopStart),str(self.loopEnd))
+
+class WhileStmt(Exec):
+    #FIXME: optional construct name, label, and comma are not handled
+    '''
+    [do-construct-name : ] DO [ label ] [ , ] while ( scalar-logical-expression )
+    '''
+    _sons = ['testExpression']
+    kw = 'do while'
+
+    @staticmethod
+    def parse(scan,lineNumber):
+        formWhileStmt = seq(lit('dowhile'),
+                            lit('('),
+                            Exp,
+                            lit(')'))
+        ((theDoWhileKeyword,openPeren,theTestExpression,closePeren),rest) = formWhileStmt(scan)
+        return WhileStmt(theTestExpression,lineNumber)
+
+    def __init__(self,testExpression,lineNumber=0,label=False,lead=''):
+        self.testExpression = testExpression
+        self.lineNumber = lineNumber
+        self.label = label
+        self.lead = lead
+
+    def __str__(self):
+        return 'do while (%s)' % str(self.testExpression)
 
 class EnddoStmt(Leaf):
     kw = 'enddo'
@@ -1110,9 +1178,6 @@ class ContinueStmt(Leaf):
     kw = 'continue'
 
 class SelectStmt(Exec):
-    pass
-
-class WhileStmt(Exec):
     pass
 
 class GotoStmt(Exec):
