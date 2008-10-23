@@ -237,8 +237,6 @@ class GenStmt(_Mappable,_Mutable_T):
         self.label = label
         self.lead = lead
 
-    def __repr__(self):
-        return '%s(args)' % self.__class__.__name__
 
     @classmethod
     def parse(cls,scan,lineNumber):
@@ -274,13 +272,12 @@ def comment_bl(*comlines):
 class NonComment(GenStmt):
 
     def __repr__(self):
-        return '%s(%s)' % (self.__class__.__name__, self.scan[0])
+        return '%s(%s)' % (self.__class__.__name__,
+                           ','.join([repr(aSon) for aSon in self._sons]))
 
     def flow(self):
-        if self.label:
-            init = ' ' + ('%-4d' % self.label) + ' '
-        else:
-            init = ''
+        init = self.label and ' ' + ('%-4d' % self.label) + ' ' \
+                           or ''
         self.rawline = flow.flow_line(init + self.lead + str(self))+'\n'
         return self
 
@@ -356,7 +353,7 @@ class TypeDecl(Decl):
         return '%s(%s,%s,%s)' % (self.__class__.__name__,
                                  repr(self.mod),
                                  repr(self.attrs),
-                                 repr(self.decls),)
+                                 repr(self.decls))
 
     def __str__(self):
         modstr = ''
@@ -432,17 +429,18 @@ class InterfaceStmt(Decl):
 
     def __str__(self):
         if self.name:
-            return 'interface %s' % self.name[0]
+            return 'interface %s' % self.name
         else:
             return 'interface'
 
     @staticmethod
     def parse(scan,lineNumber):
-        p0    = treat(seq(lit('interface'),zo1(id)),
-                      lambda l:InterfaceStmt(l[1],lineNumber))
-
-        (v,r) = p0(scan)
-        return v
+        formInterfaceStmt = seq(lit('interface'),
+                                zo1(id))
+        ((interfaceKeyword,interfaceName),rest) = formInterfaceStmt(scan)
+        name = interfaceName and interfaceName[0] \
+                              or None
+        return InterfaceStmt(name,lineNumber)
 
 class TypePseudoStmt(GenStmt):
     '''
@@ -658,16 +656,15 @@ class ParameterStmt(Decl):
         self.lead = lead
 
     def __repr__(self):
-        return 'ParamterStmt(%s)' % ','.join([repr(aNamedParam) for aNamedParam in self.myNamedParamList])
+        return 'ParamterStmt(%s)' % ','.join([repr(aNamedParam) for aNamedParam in self.namedParamList])
 
     def __str__(self):
-        return 'parameter (%s)' % ','.join([str(aNamedParam) for aNamedParam in self.myNamedParamList])
+        return 'parameter (%s)' % ','.join([str(aNamedParam) for aNamedParam in self.namedParamList])
 
 class SaveStmt(Decl):
     pass
 
 class StmtFnStmt(Decl):
-
     _sons = ['args','body']
 
     def __init__(self,name,args,body,lineNumber=0,label=False,lead=''):
@@ -688,7 +685,29 @@ class StmtFnStmt(Decl):
                                 str(self.body))
 
 class ExternalStmt(Decl):
-    pass
+    _sons = ['procedureNames']
+    kw = 'external'
+    kw_str = kw
+
+    @staticmethod
+    def parse(scan,lineNumber):
+        formExternalStmt = seq(lit('external'),
+                               zo1(lit('::')),
+                               cslist(id))
+        ((externalKeyword,doubleColon,procedureNames),rest) = formExternalStmt(scan)
+        return ExternalStmt(procedureNames,lineNumber)
+
+    def __init__(self,procedureNames,lineNumber=0,label=False,lead=''):
+        self.procedureNames = procedureNames
+        self.lineNumber = lineNumber
+        self.label = label
+        self.lead = lead
+
+    def __repr__(self):
+        return self.__class__.__name__+'('+repr(self.procedureNames)+')'
+
+    def __str__(self):
+        return self.kw+' '+','.join([str(aProcedureName) for aProcedureName in self.procedureNames])
 
 class CharacterStmt(TypeDecl):
     kw = 'character'
@@ -865,7 +884,9 @@ class FunctionStmt(PUstart):
              )
 
         ((ty,dc,name,dc1,args,dc2),rest) = p1(scan)
-        return FunctionStmt(ty,name,args,lineNumber)
+        type = ty and ty[0] \
+                   or None
+        return FunctionStmt(type,name,args,lineNumber)
 
     def __init__(self,ty,name,args,lineNumber=0,label=False,lead=''):
         '''
@@ -876,8 +897,7 @@ class FunctionStmt(PUstart):
             type_class = _name2class(type_name)
             typ        = (type_class,mod)
         '''
-
-        self.ty   = ty or None
+        self.ty = ty
         self.name = name
         self.args = args
         self.lineNumber = lineNumber
@@ -885,13 +905,15 @@ class FunctionStmt(PUstart):
         self.lead = lead
 
     def __repr__(self):
-        return 'FunctionStmt(%s,%s,%s)' % (repr(self.name),
-                                           repr(self.ty),
+        typeRepr = self.ty and '('+self.ty[0].__name__+','+repr(self.ty[1])+')' \
+                            or None
+        return 'FunctionStmt(%s,%s,%s)' % (typeRepr,
+                                           repr(self.name),
                                            repr(self.args))
     def __str__(self):
-        ty = self.ty
-        typeprefix = ty and (typestr(ty[0])+' ') or ''
-        return '%sfunction %s(%s)' % (typeprefix,
+        typePrefix = self.ty and (typestr2(self.ty)+' ') \
+                              or ''
+        return '%sfunction %s(%s)' % (typePrefix,
                                       str(self.name),
                                       ','.join([str(l) for l in self.args]))
 
@@ -950,7 +972,6 @@ class CallStmt(Exec):
     def parse(scan,lineNumber):
         prefix = seq(lit('call'),disj(app,id))
         ((dc,a),rst) = prefix(scan)
-
         if (isinstance(a,App)):
             return CallStmt(a.head,a.args,lineNumber)
         else:
@@ -1043,7 +1064,6 @@ class IfThenStmt(IfStmt):
         return 'if (%s) then' % (str(self.test),)
 
 class IfNonThenStmt(IfStmt):
-
     _sons = ['test','stmt']
 
     def __init__(self,test,stmt,lineNumber=0,label=False,lead=''):
@@ -1290,7 +1310,6 @@ _kw_parse = parse
 #
 # Type helper routines
 #
-
 def kw2type(s): return(kwtbl[s.lower()])
 def lenfn(n): return [_F77Len(str(n))]
 
