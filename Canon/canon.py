@@ -86,7 +86,7 @@ class UnitCanonicalizer(object):
             if self._verbose: print >> sys.stderr,', which is either an intrinsic or array ref with argument(s) "'+str(theExpression.args)+'"'
             replacementArgs = []
             for arg in theExpression.args:
-                replacementArgs.append(self.__canonicalizeExpression(arg,lead))
+                replacementArgs.append(self.__canonicalizeExpression(arg,parentStmt))
             theNewExpression = fe.App(theExpression.head,replacementArgs)
         # Unary operation -> recursively canonicalize the sole subexpression
         elif isinstance(theExpression,fe.Unary):
@@ -127,14 +127,14 @@ class UnitCanonicalizer(object):
             # Array accesses
             elif fe.isArrayAccess(anArg,self.__myUnit.symtab):
                 if self._verbose: print >> sys.stderr,'is an array access expression'
-                replacementArgs.append(self.__canonicalizeExpression(anArg,aSubCallStmt.lead))
+                replacementArgs.append(self.__canonicalizeExpression(anArg,aSubCallStmt))
             # function calls
             elif fe.isNonintrinsicFuncApp(anArg,self.__myUnit.symtab):
                 if self._verbose: print >> sys.stderr,'is a nonintrinsic function call'
-                replacementArgs.append(self.__canonicalizeFuncCall(anArg,aSubCallStmt.lead))
+                replacementArgs.append(self.__canonicalizeFuncCall(anArg,aSubCallStmt))
             # everything else: nontrivial expressions (including constants)
             else:
-                if self._verbose: print >> sys.stderr,'is a nontrivial expression that is to be hoisted.  Creating new temp:',
+                if self._verbose: print >> sys.stderr,'is a nontrivial expression to be hoisted:',
                 # create a new temp and add it to decls
                 (theNewTemp,newTempType) = self.__newTemp(anArg)
                 replacementArgs.append(theNewTemp)
