@@ -48,10 +48,10 @@ class UnitCanonicalizer(object):
         self.__myUnit.symtab.enter_name(theNewTemp,var((varTypeClass,varModifierList),()))
         return (theNewTemp,varTypeClass)
 
-    def __canonicalizeFuncCall(self,theFuncCall,lead):
-        '''turn a function call into a sunroutine call
+    def __canonicalizeFuncCall(self,theFuncCall,parentStmt):
+        '''turn a function call into a subroutine call
         returns the new temp created as return value for the new subroutine call'''
-        if self._verbose: print >> sys.stderr,self.__recursionDepth*'|\t'+'canonicalizing nonintrinsic function call "'+str(theFuncCall)+'"'
+        if self._verbose: print >> sys.stderr,self.__recursionDepth*'|\t'+'converting function call "'+str(theFuncCall)+'" to a subroutine call'
         self.__recursionDepth += 1
         if self._verbose: print >> sys.stderr,(self.__recursionDepth-1)*'|\t'+'|  creating new temp for the result of the subroutine that replaces "'+str(theFuncCall)+'":',
         (theNewTemp,newTempType) = self.__newTemp(theFuncCall)
@@ -60,13 +60,15 @@ class UnitCanonicalizer(object):
             polymorphismSuffix = '_'+newTempType.kw.lower()[0]
         self.__myNewExecs.append(self.__canonicalizeSubCallStmt(fs.CallStmt(self.__call_prefix + theFuncCall.head + polymorphismSuffix,
                                                                             theFuncCall.args + [theNewTemp],
-                                                                            lead=lead
+                                                                            lineNumber=parentStmt.lineNumber,
+                                                                            label=False,
+                                                                            lead=parentStmt.lead
                                                                            ).flow()))
         if self._verbose: print >> sys.stderr,(self.__recursionDepth-1)*'|\t'+'|_'
         self.__recursionDepth -= 1
         return theNewTemp
 
-    def __canonicalizeExpression(self,theExpression,lead):
+    def __canonicalizeExpression(self,theExpression,parentStmt):
         '''Canonicalize an expression tree by recursively replacing function calls with subroutine calls
            returns an expression that replaces theExpression'''
         if self._verbose: print >> sys.stderr,self.__recursionDepth*'|\t'+'canonicalizing expression "'+str(theExpression)+'"',
@@ -78,7 +80,7 @@ class UnitCanonicalizer(object):
         # Nonintrinsic function call -> replace with subroutine call and hoist its arguments
         elif fe.isNonintrinsicFuncApp(theExpression,self.__myUnit.symtab):
             if self._verbose: print >> sys.stderr,', which is a non-intrinsic function app with argument(s) "'+str(theExpression.args)+'"'
-            theNewExpression = self.__canonicalizeFuncCall(theExpression,lead)
+            theNewExpression = self.__canonicalizeFuncCall(theExpression,parentStmt)
         # Intrinsic function call or array ref (any App that's not a nonintrinsic) -> recursively canonicalize args
         elif isinstance(theExpression, fe.App):
             if self._verbose: print >> sys.stderr,', which is either an intrinsic or array ref with argument(s) "'+str(theExpression.args)+'"'
@@ -86,22 +88,15 @@ class UnitCanonicalizer(object):
             for arg in theExpression.args:
                 replacementArgs.append(self.__canonicalizeExpression(arg,lead))
             theNewExpression = fe.App(theExpression.head,replacementArgs)
-        # Unary operation
+        # Unary operation -> recursively canonicalize the sole subexpression
         elif isinstance(theExpression,fe.Unary):
             if self._verbose: print >> sys.stderr,', which is a unary op. with exp: "'+str(theExpression.exp)+'"'
-            if isinstance(theExpression,fe.Umi): # Unary Minus
-                theNewExpression = fe.Umi(self.__canonicalizeExpression(theExpression.exp,lead))
-            elif isinstance(theExpression,fe.Upl): # Unary plus
-                theNewExpression = fe.Upl(self.__canonicalizeExpression(theExpression.exp,lead))
-            elif isinstance(theExpression,fe.Not): # Not expression
-                theNewExpression = fe.Not(self.__canonicalizeExpression(theExpression.exp,lead))
-            elif isinstance(theExpression,fe.ParenExp): # Parenthesized expression
-                theNewExpression = fe.ParenExp(self.__canonicalizeExpression(theExpression.exp,lead))
-        # Binary operation
+            theNewExpression = theExpression.__class__(self.__canonicalizeExpression(theExpression.exp,parentStmt))
+        # Binary operation -> recursively canonicalize both subexpressions
         elif isinstance(theExpression,fe.Ops):
             if self._verbose: print >> sys.stderr,', which is a binary op. with a1="'+str(theExpression.a1)+'", a2="'+str(theExpression.a2)+'"'
-            a1Result = self.__canonicalizeExpression(theExpression.a1,lead)
-            a2result = self.__canonicalizeExpression(theExpression.a2,lead)
+            a1Result = self.__canonicalizeExpression(theExpression.a1,parentStmt)
+            a2result = self.__canonicalizeExpression(theExpression.a2,parentStmt)
             theNewExpression = fe.Ops(theExpression.op,a1Result,a2result)
         # Everything else...
         else:
@@ -112,12 +107,16 @@ class UnitCanonicalizer(object):
         return theNewExpression
 
     def __canonicalizeSubCallStmt(self,aSubCallStmt):
-        '''Canonicalize a subroutine call by hoisting all arguments (except simple variables) to temporaries.'''
+        '''
+        Canonicalize a subroutine call by hoisting all arguments
+        (except simple variables) to temporaries.
+        '''
         if self._verbose: print >> sys.stderr,self.__recursionDepth*'|\t'+'canonicalizing subroutine call statement "'+str(aSubCallStmt)+'"'
         self.__recursionDepth += 1
         # canonicalize each of the the expressions that serve as arguments
         replacementArgs = []
         for anArg in aSubCallStmt.args:
+            #TODO: remove perens when the whole argument is in them??
             if self._verbose: print >> sys.stderr,(self.__recursionDepth - 1)*'|\t'+'|- argument "'+str(anArg)+'" ',
             # string that resides in symbol table: a variable
             if isinstance(anArg,str) and self.__myUnit.symtab.lookup_name(anArg):
@@ -146,6 +145,7 @@ class UnitCanonicalizer(object):
         replacementStatement = fs.CallStmt(aSubCallStmt.head,
                                            replacementArgs,
                                            lineNumber=aSubCallStmt.lineNumber,
+                                           label=aSubCallStmt.label,
                                            lead=aSubCallStmt.lead
                                           ).flow()
         if self._verbose: print >> sys.stderr,(self.__recursionDepth-1)*'|\t'+'|_'
@@ -157,8 +157,8 @@ class UnitCanonicalizer(object):
         if self._verbose: print >> sys.stderr,self.__recursionDepth*'|\t'+'canonicalizing assignment statement "'+str(anAssignStmt)+'"'
         self.__recursionDepth += 1
         replacementStatement = fs.AssignStmt(anAssignStmt.lhs,
-                                             self.__canonicalizeExpression(anAssignStmt.rhs,anAssignStmt.lead),
-                                             lineNumber=anAssignStmt,
+                                             self.__canonicalizeExpression(anAssignStmt.rhs,anAssignStmt),
+                                             lineNumber=anAssignStmt.lineNumber,
                                              label=anAssignStmt.label,
                                              lead=anAssignStmt.lead
                                             ).flow()
@@ -171,8 +171,8 @@ class UnitCanonicalizer(object):
         returns a list of statements that replace anIfNonThenStmt'''
         if self._verbose: print >> sys.stderr,self.__recursionDepth*'|\t'+'canonicalizing if statement (without "then") "'+str(anIfNonThenStmt)+'"'
         self.__recursionDepth += 1
-        replacementStatement = fs.IfNonThenStmt(self.__canonicalizeExpression(anIfNonThenStmt.test,lead=anIfNonThenStmt.lead),
-                                                self.__canonicalizeExpression(anIfNonThenStmt.stmt,lead=anIfNonThenStmt.lead),
+        replacementStatement = fs.IfNonThenStmt(self.__canonicalizeExpression(anIfNonThenStmt.test,anIfNonThenStmt),
+                                                self.__canonicalizeExpression(anIfNonThenStmt.stmt,anIfNonThenStmt),
                                                 lineNumber=anIfNonThenStmt.lineNumber,
                                                 label=anIfNonThenStmt.label,
                                                 lead=anIfNonThenStmt.lead
@@ -186,7 +186,7 @@ class UnitCanonicalizer(object):
         returns a list of statements that replace anIfThenStmt'''
         if self._verbose: print >> sys.stderr,self.__recursionDepth*'|\t'+'canonicalizing if-then statement "'+str(anIfThenStmt)+'"'
         self.__recursionDepth += 1
-        replacementStatement = fs.IfThenStmt(self.__canonicalizeExpression(anIfThenStmt.test,anIfThenStmt.lead),
+        replacementStatement = fs.IfThenStmt(self.__canonicalizeExpression(anIfThenStmt.test,anIfThenStmt),
                                              lineNumber=anIfThenStmt.lineNumber,
                                              label=anIfThenStmt.label,
                                              lead=anIfThenStmt.lead
@@ -200,7 +200,7 @@ class UnitCanonicalizer(object):
         if self._verbose: print >> sys.stderr,self.__recursionDepth*'|\t'+'canonicalizing elseif-then statement "'+str(anElseifStmt)+'"'
         self.__recursionDepth += 1
         newExecsLength = len(self.__myNewExecs)
-        replacementStatement = fs.ElseifStmt(self.__canonicalizeExpression(anElseifStmt.test,anElseifStmt.lead),
+        replacementStatement = fs.ElseifStmt(self.__canonicalizeExpression(anElseifStmt.test,anElseifStmt),
                                              lineNumber=anElseifStmt.lineNumber,
                                              label=anElseifStmt.label,
                                              lead=anElseifStmt.lead
@@ -217,12 +217,12 @@ class UnitCanonicalizer(object):
         '''
         if self._verbose: print >> sys.stderr,self.__recursionDepth*'|\t'+'canonicalizing do statement "'+str(aDoStmt)+'"'
         self.__recursionDepth += 1
-        replacementStart = self.__canonicalizeExpression(aDoStmt.loopStart,aDoStmt.lead)
+        replacementStart = self.__canonicalizeExpression(aDoStmt.loopStart,aDoStmt)
         newExecsLength = len(self.__myNewExecs)
         replacementStatement = fs.DoStmt(aDoStmt.loopVar,
                                          replacementStart,
-                                         self.__canonicalizeExpression(aDoStmt.loopEnd,aDoStmt.lead),
-                                         self.__canonicalizeExpression(aDoStmt.loopStride,aDoStmt.lead),
+                                         self.__canonicalizeExpression(aDoStmt.loopEnd,aDoStmt),
+                                         self.__canonicalizeExpression(aDoStmt.loopStride,aDoStmt),
                                          lineNumber=aDoStmt.lineNumber,
                                          label=aDoStmt.label,
                                          lead=aDoStmt.lead
@@ -240,7 +240,7 @@ class UnitCanonicalizer(object):
         if self._verbose: print >> sys.stderr,self.__recursionDepth*'|\t'+'canonicalizing while statement "'+str(aWhileStmt)+'"'
         self.__recursionDepth += 1
         newExecsLength = len(self.__myNewExecs)
-        replacementStatement = fs.WhileStmt(self.__canonicalizeExpression(aWhileStmt.testExpression,aWhileStmt.lead),
+        replacementStatement = fs.WhileStmt(self.__canonicalizeExpression(aWhileStmt.testExpression,aWhileStmt),
                                             lineNumber=aWhileStmt.lineNumber,
                                             label=aWhileStmt.label,
                                             lead=aWhileStmt.lead
@@ -255,7 +255,7 @@ class UnitCanonicalizer(object):
         '''Recursively canonicalize \p aUnit'''
         if self._verbose: print >>sys.stderr,'+++++++++++++++++++++++++++++++++++++++++++++++++++++', \
                                              'Begin canonicalize unit <',self.__myUnit.uinfo,'>', \
-                                             '+++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n'
+                                             '+++++++++++++++++++++++++++++++++++++++++++++++++++++'
         if (self._verbose and self.__myUnit.ulist): print >> sys.stderr,'subunits (len =',len(self.__myUnit.ulist),'):'
         for subUnit in self.__myUnit.ulist:
             if self._verbose: print >> sys.stderr,subUnit
@@ -263,7 +263,7 @@ class UnitCanonicalizer(object):
 
         if (self._verbose and self.__myUnit.execs): print >> sys.stderr,'canonicalizing executable statements:'
         for anExecStmt in self.__myUnit.execs:
-            if self._verbose: print >> sys.stderr,'Line '+str(anExecStmt.lineNumber)+':'
+            if self._verbose: print >> sys.stderr,'[Line '+str(anExecStmt.lineNumber)+']:'
             newExecsLength = len(self.__myNewExecs) # store the current number of execs (to determine afterwards whether we've added some)
             replacementStatement = anExecStmt
             if isinstance(anExecStmt,fs.CallStmt):
