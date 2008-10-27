@@ -17,10 +17,15 @@ class UnitCanonicalizer(object):
     'class to facilitate canonicalization on a per-unit basis'
 
     _verbose = False
+    _hoistConstantsFlag = False
 
     @staticmethod
     def setVerbose(isVerbose):
         UnitCanonicalizer._verbose = isVerbose
+
+    @staticmethod
+    def setHoistConstantsFlag(hoistConstantsFlag):
+        UnitCanonicalizer._hoistConstantsFlag = hoistConstantsFlag
 
     def __init__(self,aUnit):
         self.__myUnit = aUnit
@@ -118,8 +123,12 @@ class UnitCanonicalizer(object):
         for anArg in aSubCallStmt.args:
             #TODO: remove perens when the whole argument is in them??
             if self._verbose: print >> sys.stderr,(self.__recursionDepth - 1)*'|\t'+'|- argument "'+str(anArg)+'" ',
+            # Constant expressions (when we aren't hoisting them) -> do nothing
+            if (not self._hoistConstantsFlag) and fe.isConstantExpression(anArg):
+                if self._verbose: print >> sys.stderr,'is a constant expression (which we aren\'t hoisting)'
+                replacementArgs.append(anArg)
             # string that resides in symbol table: a variable
-            if isinstance(anArg,str) and self.__myUnit.symtab.lookup_name(anArg):
+            elif isinstance(anArg,str) and self.__myUnit.symtab.lookup_name(anArg):
                 if self._verbose: print >> sys.stderr,'is a variable'+ \
                                                  ' with symbol table entry "'+str(self.__myUnit.symtab.lookup_name(anArg))+ \
                                                  '" and dims "'+str(self.__myUnit.symtab.lookup_dims(anArg))+'"'

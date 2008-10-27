@@ -24,6 +24,12 @@ def main():
                    help="input source is free format",
                    action='store_true',
                    default=False)
+    opt.add_option('-H',
+                   '--hoist-constants',
+                   dest='hoistConstantsFlag',
+                   help='activate the hoisting of constant arguments to subroutine calls (defaults to False)',
+                   action='store_true',
+                   default=False)
     opt.add_option('-o',
                    '--output',
                    dest='outputFile',
@@ -45,6 +51,9 @@ def main():
 
     # set free/fixed format
     free_flow(config.isFreeFormat) 
+
+    # set constant hoisting flag
+    UnitCanonicalizer.setHoistConstantsFlag(config.hoistConstantsFlag)
 
     # set verbosity
     UnitCanonicalizer.setVerbose(config.isVerbose)

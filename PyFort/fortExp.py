@@ -281,6 +281,16 @@ def is_const(t):
     t1 = t.lower()
     return t1[0] in _quote_set or t1 in _logicon_set or _num_re.match(t1)
 
+def isConstantExpression(anExpression):
+    if isinstance(anExpression,str):
+        return is_const(anExpression)
+    elif isinstance(anExpression,Unary):
+        return isConstantExpression(anExpression.exp)
+    elif isinstance(anExpression,Ops):
+        return (isConstantExpression(anExpression.a1) and isConstantExpression(anExpression.a2))
+    else:
+        return False
+
 def _lc_const(t):
     t1 = t.lower()
     if t1 in _logicon_set:
