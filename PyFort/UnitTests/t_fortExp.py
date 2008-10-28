@@ -444,30 +444,6 @@ class C6(TestCase):
         ae(const_type(ep('.true.'),kw2type,lenfn,kindfn),('logical',[]))
         ae(const_type(ep(r"'food'"),kw2type,lenfn,kindfn),('character','Len(4)'))
 
-    def test3(self):
-        'exptype function'
-        ae = self.assertEquals
-        a_ = self.assert_
-        e1 = ep('x * y')
-        t1 = exptype(e1,idchk,kw2type,lenfn,kindfn,nopoly,typemerge)
-        ae(t1,('real',[]))
-
-        e1 = ep('5.11d0 * 4.77d0')
-        t1 = exptype(e1,idchk,kw2type,lenfn,kindfn,nopoly,typemerge)
-        ae(t1,('doubleprecision',[]))
-
-        e1 = ep('i + 4')
-        t1 = exptype(e1,idchk,kw2type,lenfn,kindfn,nopoly,typemerge)
-        ae(t1,('integer',[]))
-
-        e1 = ep('z + 5.11d0 * 4.77d0')
-        t1 = exptype(e1,idchk,kw2type,lenfn,kindfn,nopoly,typemerge)
-        ae(t1,('doubleprecision',[]))
-
-        e1 = ep('x * 5.11d0 + i * 4.77')
-        t1 = exptype(e1,idchk,kw2type,lenfn,kindfn,nopoly,typemerge)
-        ae(t1,('doubleprecision',[]))
-
 def __mkt2(o):
     def __t(self):
         v = ep('xxx %s yyy' % o)

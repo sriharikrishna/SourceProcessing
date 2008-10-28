@@ -10,7 +10,6 @@ import re
 from PyUtil.flatten import flatten
 from op_prec import OpPrec
 from PyIR.mutable_tree import _Mutable_T
-from PyFort.intrinsic import is_intrinsic
 
 _id_re     = re.compile(fs.id_re,re.I | re.X)
 _flonum_re = re.compile(fs.flonum_re,re.I | re.X)
@@ -49,11 +48,6 @@ _unary_ops   = ['-',
                 '.not.',
                 ]
 
-def isPolymorphic(aFunction):
-    return aFunction.head.lower() in ('max',
-                                      'min',
-                                     )
-
 def is_op(op):
     '''
     Check to see if op is in the _optbl
@@ -88,14 +82,6 @@ class App(_Exp):
     def map(self,fn):
         return App(self.head,[fn(a) for a in self.args])
 
-    def typeit(self,exptype,idchk,kw2type,lenfn,kindfn,isPolymorphic,typemerge,aux=None):
-        headtype = exptype(self.head,idchk,kw2type,lenfn,kindfn,isPolymorphic,typemerge)
-        if isPolymorphic(self):
-            return typemerge([exptype(l,idchk,kw2type,lenfn,kindfn,isPolymorphic,typemerge) \
-                              for l in self.args],
-                             headtype)
-        return headtype
-
 class NamedParam(object):
     '''
     Class to implement named paramter expressions i.e. call foo(arg=10)
@@ -112,9 +98,6 @@ class NamedParam(object):
 
     def __str__(self):
         return str(myId)+' = '+str(myRHS)
-
-    def typeit(self,exptype,idchk,kw2type,lenfn,kindfn,isPolymorphic,typemerge,aux=None):
-        return exptype(self.myRHS,idchk,kw2type,lenfn,kindfn,isPolymorphic,typemerge)
 
 class Sel(_Exp):
     'selection expressions like foo(i,j)%k'
@@ -133,15 +116,6 @@ class Sel(_Exp):
 
     def map(self,fn):
         return Sel(fn(self.head),fn(self.proj))
-
-    def typeit(self,exptype,idchk,kw2type,lenfn,kindfn,isPolymorphic,typemerge,aux=None):
-        head     = self.head
-        headtype = exptype(head,idchk,kw2type,lenfn,kindfn,isPolymorphic,typemerge,aux)
-        if isPolymorphic(head):
-            return typemerge([exptype(l,idchk,kw2type,lenfn,kindfn,isPolymorphic,typemerge,aux) \
-                              for l in self.args],
-                             headtype)
-        return headtype
 
 class _AtomH(object):
     'helper class, captures the args of app or selection'
@@ -190,9 +164,6 @@ class Zslice(_Exp):
 class Unary(_Exp):
     _sons = ['exp']
 
-    def typeit(self,exptype,idchk,kw2type,lenfn,kindfn,isPolymorphic,typemerge,aux=None):
-        return exptype(self.exp,idchk,kw2type,lenfn,kindfn,isPolymorphic,typemerge,aux=None)
-    
 class Umi(Unary):
     'unary minus'
     def __init__(self,exp):
@@ -268,11 +239,6 @@ class Ops(_Exp):
                              str(self.a2))
     def map(self,fn):
         return Ops(self.op,fn(self.a1),fn(self.a2))
-
-    def typeit(self,exptype,idchk,kw2type,lenfn,kindfn,isPolymorphic,typemerge,aux=None):
-        return typemerge([ exptype(self.a1,idchk,kw2type,lenfn,kindfn,isPolymorphic,typemerge),
-                           exptype(self.a2,idchk,kw2type,lenfn,kindfn,isPolymorphic,typemerge) ],
-                          '????')
 
 def is_id(t):
     return _id_re.match(t)
@@ -506,23 +472,4 @@ def const_type(e,kw2type,lenfn,kindfn):
         return (kw2type('logical'),[])
     if e[0] in _quote_set:
         return (kw2type('character'),lenfn(len(e)-2))
-
-def exptype(e,idchk,kw2type,lenfn,kindfn,isPolymorphic,typemerge,aux=None):
-    if isinstance(e,str) and is_const(e):
-        return const_type(e,kw2type,lenfn,kindfn)
-    if isinstance(e,str) and _id_re.match(e):
-        return idchk(e)
-    return e.typeit(exptype,idchk,kw2type,lenfn,kindfn,isPolymorphic,typemerge,aux=None)
-
-def isNonintrinsicFuncApp(anExpression,aSymbolTable):
-    return isinstance(anExpression,App) and \
-           not ( aSymbolTable.lookup_dims(anExpression.head) or \
-                 aSymbolTable.lookup_lngth(anExpression.head) or \
-                 is_intrinsic(anExpression.head) )
-
-def isArrayAccess(anExpression,aSymbolTable):
-    return isinstance(anExpression,App) and \
-           not is_intrinsic(anExpression.head) and \
-           (aSymbolTable.lookup_dims(anExpression.head) or \
-            aSymbolTable.lookup_lngth(anExpression.head))
 

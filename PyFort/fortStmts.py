@@ -1318,46 +1318,6 @@ _modhash = { _Prec     : 0,
              _ExplKind : 2,
              }
 
-def modcompare(m1,m2):
-    'compare type modifiers'
-    if not m1: return m2
-    if not m2: return m1
-    mm1 = m1[0]
-    mm2 = m2[0]
-    if (mm1.__class__ == mm2.__class__) and isinstance(mm1,_TypeMod) :
-        if mm1.mod >= mm2.mod: return m1
-        return m2
-    if isinstance(mm2,_FLenMod) and isinstance(mm1,_FLenMod) :
-        if mm1.len >= mm2.len: return m1
-        return m2
-    if _modhash[c1] >= _modhash[c2]: return m1
-    return m2
-
-def typecompare(t1,t2):
-    mergeit = dict(character=0,
-                   logical=1,
-                   integer=2,
-                   real=3,
-                   doubleprecision=4,
-                   complex=5,
-                   doublecomplex=6,
-                   )
-
-    if t1[0] == t2[0]:
-        return(t1[0],modcompare(t1[1],t2[1]))
-
-    if mergeit[t1[0].kw] > mergeit[t2[0].kw]: return t1
-
-    return t2
-
-def typemerge(lst,default):
-    if not lst: return default
-    if len(lst) == 1: return lst[0]
-    t1 = typecompare(lst[0],lst[1])
-    for l in lst[2:]:
-        t1 = typecompare(t1,l)
-    return t1
-
 '''
 if __name__ == '__main__':
     from _Setup.testit import *
