@@ -8,7 +8,8 @@ from optparse import OptionParser
 
 from PyUtil.errors import UserError, ScanError, ParseError
 from PyUtil.assembler import AssemblerException
-from PyUtil.l_assembler import AssemblerException as l_AssemblerException
+from PyUtil.l_assembler import AssemblerException as ListAssemblerException
+from PyUtil.symtab import SymtabError
 
 from PyFort.flow import free_flow
 from PyFort.fortUnit import Unit,fortUnitIterator
@@ -66,7 +67,12 @@ def main():
             UnitCanonicalizer(aUnit).canonicalizeUnit().printit(out)
         if config.outputFile: out.close()
     except CanonError,e:
-        print >>sys.stderr,'Canoncalization Error on line '+str(e.lineNumber)+':\n',e.msg
+        print >>sys.stderr,'\nCanonicalization Error on line '+str(e.lineNumber)+':\n',e.msg
+        return 1
+    except SymtabError,e:
+        debugstr = e.entry and e.entry.debug('unknown') \
+                            or ''
+        print >>sys.stderr,'\nSymtabError on line '+str(e.lineNumber)+':\n',e.msg,'\nfor entry',debugstr
         return 1
     except UserError,e:
         print >>sys.stderr,'UserError:',e.msg
@@ -89,7 +95,7 @@ def main():
     except AssemblerException,e:
         print >>sys.stderr,"AssemblerError: parser failed:",e.msg
         return 1 
-    except l_AssemblerException,e:
+    except ListAssemblerException,e:
         print >>sys.stderr,"ListAssemblerError: parser failed:",e.msg
         return 1 
     return 0
