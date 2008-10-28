@@ -1,10 +1,12 @@
 from Setup import *
+from _Setup import *
 from unittest      import *
+
+from PyUtil.symtab import Symtab
 
 from stmt2unit import *
 from stmt2unit import _implicit
 
-from unit_symtab import Symtab
 from useparse import *
 
 class U(object):
@@ -29,13 +31,13 @@ class C1(TestCase):
         s2 = pps('integer(special) a')
         t = (s2.__class__,s2.mod)
     
-        t1 = v.lookup_type('foo')
+        t1 = v.lookupType('foo')
         ae(repr(t1),repr(t))
         
         s2 = pps('real a')
         t = (s2.__class__,s2.mod)
     
-        t1 = v.lookup_type('zoo')
+        t1 = v.lookupType('zoo')
         ae(repr(t1),repr(t))
 
 s1 = makeSuite(C1)

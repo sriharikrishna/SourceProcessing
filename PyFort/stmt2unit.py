@@ -5,10 +5,11 @@
 
 import _Setup
 
+from PyUtil.symtab import Symtab,SymtabEntry
+
 import fortStmts     as fs
 import fortExp       as fe
 import sym_entries   as SE
-from unit_symtab import Symtab
 
 def typesep(dd,default_dims):
     '''return name and dimensions for a given decl entry

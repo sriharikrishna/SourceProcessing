@@ -1,12 +1,15 @@
 import sys
+
 from _Setup import *
-import fortStmts as fs
-from fortFile import Ffile
-from fortParse import parse_stmt,parse_cmnt
+
 from PyUtil.assembler import *
 from PyUtil.buf_iter import buf_iter
 from PyUtil.flatten import flatten
-from unit_symtab import Symtab
+from PyUtil.symtab import Symtab
+
+import fortStmts as fs
+from fortFile import Ffile
+from fortParse import parse_stmt,parse_cmnt
 from module_handler import ModuleHandler
 
 import stmt2unit

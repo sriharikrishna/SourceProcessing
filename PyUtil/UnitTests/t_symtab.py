@@ -1,6 +1,11 @@
 from Setup import *
 from unittest import *
-from symtab import *
+from symtab import Symtab
+
+from PyFort.fortStmts import RealStmt,IntegerStmt
+
+Symtab._default_real = (RealStmt,[])
+Symtab._default_int  = (IntegerStmt,[])
 
 class C1(TestCase):
     def setUp(self):
