@@ -1,20 +1,26 @@
-'''symtab with specific stuff for units:
-
-    Inheirit from PyUtil.Symtab, but add various entry types, and manipulations
-    to the main symtab methods
+'''Hierachical symbol table objects =
+   Linked list of caselessDicts
 '''
 
-import _Setup
+from _Setup import *
 
-from PyUtil.symtab import Symtab as Base_symtab
 from PyUtil.caselessDict import caselessDict as cDict
 
+class SymtabError(Exception):
+    def __init__(self,msg,aSymtabEntry=None,lineNumber=0):
+        self.msg = msg
+        self.entry = aSymtabEntry
+        self.lineNumber = lineNumber
 
-class Symtab(Base_symtab):
-    def __init__(self,*args,**kws):
-        Base_symtab.__init__(self,*args,**kws)
+class Symtab(object):
+    def __init__(self,parent=None):
+        self.ids    = cDict()
+        self.parent = parent
         self.dbg = False
         self.default_implicit()
+
+    def _set_dbg(self,on=False):
+        self.dbg = on
 
     def default_implicit(self):
         if self.parent:
@@ -31,28 +37,32 @@ class Symtab(Base_symtab):
         for l in '_abcdefghijklmnopqrstuvwxyz':
             self.implicit[l] = None
 
-    def _set_dbg(self,on=False):
-        self.dbg = on
+    def lookup_name_level(self,name):
+        S = self
+        while S:
+            D = S.ids
+            if name in D:
+                return (D[name],S)
+            S = S.parent
+        return (None,None)
+
+    def lookup_name(self,name):
+        (entry,dc) = self.lookup_name_level(name)
+        return entry
 
     def enter_name(self,name,val):
         if self.dbg:
             print "entering %s = %s in %s" % (name,val,self)
-        Base_symtab.enter_name(self,name,val)
+        self.ids[name] = val
 
-    def lookup_dims(self,name):
+    def lookupDimensions(self,name):
         entry = self.lookup_name(name)
-        if entry: return entry.lookup_dims()
+        if entry: return entry.lookupDimensions()
         return None
 
-    def lookup_lngth(self,name):
-        entry = self.lookup_name(name)
-        if entry: return entry.lngth
-        return None
-
-    def lookup_type(self,name):
+    def lookupType(self,name):
         (entry,level) = self.lookup_name_level(name)
-        if entry: return entry.lookup_type(level.implicit[name[0]])
-        
+        if entry: return entry.lookupType(level.implicit[name[0]])
         return self.implicit[name[0]]
 
     def update_w_module(self,unit):
@@ -65,7 +75,80 @@ class Symtab(Base_symtab):
 
         for n in module_ids:
             self.ids[n].origin = origin_label
-        
+
+    def debug(self):
+        outString = 'symbol table '+str(self)+':\n'
+        for aKey in self.ids.keys():
+            outString += '\t'+self.ids[aKey].debug(aKey)+'\n'
+        if self.parent:
+            outString += self.parent.debug()
+        return outString
+
+class SymtabEntry(object):
+    def __init__(self,entryKind,type=None,dimensions=None,length=None,origin=None):
+        self.entryKind = entryKind
+        self.type = type
+        self.dimensions = dimensions
+        self.length = length
+        self.origin = origin
+
+    def enterEntryKind(self,newEntryKind):
+        # the replacement entry kind must be an 'instance' of the existing one.
+        # for example, we can replace a procedureKind with a functionKind,
+        # but we cannot replace a variableKind with a functionKind
+        if not isinstance(newEntryKind(),self.entryKind):
+            raise SymtabError('SymtabEntry.enterEntryKind: replace kind '+str(self.entryKind)+' with '+str(newEntryKind)+' !!!!',self)
+        self.entryKind = newEntryKind
+
+    def enterType(self,newType):
+        if not newType:
+            raise SymtabError('SymtabEntry.enterType: newType is None!')
+        if self.type and (self.type != newType):
+            raise SymtabError('SymtabEntry.enterType: Error -- current type',self.type,'and new type',newType,'conflict!',self)
+        # procedures: entering a type means we know it's a function
+        if self.entryKind == self.ProcedureEntryKind:
+#           print '++++++++SymtabEntry.enterType: entering type',newType,'for procedure (we now know it is a function)'
+            self.entryKind = self.FunctionEntryKind
+        self.type = newType
+
+    def enterDimensions(self,newDimensions):
+        if self.dimensions and (self.dimensions != newDimensions):
+            raise SymtabError('SymtabEntry.enterDimensions: Error -- current dimensions',self.dimensions,'and new dimensions',newDimensions,'conflict!',self)
+        self.dimensions = newDimensions
+
+    def lookupDimensions(self):
+        return self.dimensions
+
+    def debug(self,name):
+        return '[SymtabEntry "'+name+'" -> entryKind = '+str(self.entryKind)+\
+                                         ', type = '+str(self.type)+\
+                                         ', dimensions = '+str(self.dimensions)+\
+                                         ', length = '+str(self.length)+\
+                                         ', origin = '+str(self.origin)+\
+                                         ']'
+
+    class GenericEntryKind(object):
+        keyword = 'unknown'
+
+        def __init__(self):
+            pass
+
+    class ProcedureEntryKind(GenericEntryKind):
+        keyword = 'procedure'
+
+    class FunctionEntryKind(ProcedureEntryKind):
+        keyword = 'function'
+
+    class SubroutineEntryKind(ProcedureEntryKind):
+        keyword = 'function'
+
+    class VariableEntryKind(GenericEntryKind):
+        keyword = 'variable'
+
+    class CharacterEntryKind(VariableEntryKind):
+        keyword = 'variable'
+
+'''
 if __name__ == '__main__':
     def check_it(self):
         return 'I am unit_symtab' + str(self)
@@ -86,3 +169,4 @@ if __name__ == '__main__':
 
     res5 = s.check_it()
     res6 = s1.check_it()
+'''
