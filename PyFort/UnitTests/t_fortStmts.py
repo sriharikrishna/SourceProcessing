@@ -2,9 +2,7 @@ from Setup     import *
 from unittest  import *
 
 from fortStmts import *
-from fortStmts import _Kind
-from fortStmts import _Star
-from fortStmts import _F90ExplLen,_NoInit
+from fortStmts import _F90ExplLen,_Star,_NoInit,_Kind,_ExplKind
 from useparse  import *
 
 class C1(TestCase):
@@ -305,16 +303,14 @@ class C8(TestCase):
 class C9(TestCase):
     'end interface block stuff'
     def test1(self):
-        '''end interface block
-        '''
+        '''end interface block'''
         ae = self.assertEquals
         a_ = self.assert_
         it = pps('end interface')
         a_(isinstance(it,EndInterfaceStmt))
         
     def test2(self):
-        '''end other things
-        '''
+        '''end other things (module, program, function, subroutine, block data)'''
         ae = self.assertEquals
         a_ = self.assert_
         chk = ['module','program','function','subroutine','block data']
@@ -328,8 +324,8 @@ class C10(TestCase):
         s = pps('subroutine foo')
         a_(s.is_decl() and s.is_ustart())
 
-class C11(TestCase):
-    'check implicit statements'
+class TestImplicitStmt(TestCase):
+    '''Implicit statements'''
     def test1(self):
         'implicit character*10'
         s1 = 'implicit character*10 (b,d,f-h,l-n)'
@@ -452,9 +448,8 @@ class C11(TestCase):
 
         ae(kill_blanks(s1),kill_blanks(str(v)))
 
-class C12(TestCase):
-    '''Dimension statements'''
-
+class TestDimensionStmt(TestCase):
+    '''Dimension statement'''
     def test1(self):
         'dimension m(4,4), v(1000)'
         self.assertEquals(repr(pps('dimension m(4,4), v(1000)')),
@@ -476,7 +471,7 @@ class C12(TestCase):
                                                   ['hi',
                                                    Ops('+',Ops('*','hi','3'),'lo')])])))
 
-class C13(TestCase):
+class TestDoStmt(TestCase):
     '''Do statements'''
     def test1(self):
         '''do i = 1,2'''
@@ -509,7 +504,7 @@ class C13(TestCase):
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
-class C14(TestCase):
+class TestWhileStmt(TestCase):
     '''While statements'''
     def test1(self):
         '''do while (1 .lt. 3)'''
@@ -527,7 +522,60 @@ class C14(TestCase):
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
-suite = asuite(C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,C11,C12,C13,C14)
+class TestCallStmt(TestCase):
+    '''Subroutine call statements'''
+    def test1(self):
+        '''Subroutine call with 1/2 named parameter arguments'''
+        s = 'call foo(1,b = bar(x))'
+        r = CallStmt('foo',['1',
+                            NamedParam('b',App('bar','x'))])
+        self.assertEquals(repr(pps(s)),repr(r))
+        self.assertEquals(s,str(r))
+
+    def test2(self):
+        '''Subroutine call with both named parameter arguments'''
+        s = 'call foo(a = 1,b = bar(x))'
+        r = CallStmt('foo',[NamedParam('a','1'),
+                            NamedParam('b',App('bar','x'))])
+        self.assertEquals(repr(pps(s)),repr(r))
+        self.assertEquals(s,str(r))
+
+class TestFunctionStmt(TestCase):
+    '''Function statements'''
+    def test0(self):
+        '''function statement with no arguments'''
+        s = 'function foo()'
+        r = FunctionStmt(None,'foo',[])
+        self.assertEquals(repr(pps(s)),repr(r))
+        self.assertEquals(s,str(r))
+
+    def test1(self):
+        '''function statement with no type'''
+        s = 'function foo(x)'
+        r = FunctionStmt(None,'foo',['x'])
+        self.assertEquals(repr(pps(s)),repr(r))
+        self.assertEquals(s,str(r))
+
+    def test2(self):
+        '''function statement with type real (no modifier)'''
+        s = 'real function foo(x)'
+        r = FunctionStmt((RealStmt,[]),'foo',['x'])
+        self.assertEquals(repr(pps(s)),repr(r))
+        self.assertEquals(s,str(r))
+
+    def test3(self):
+        '''function statement with type real (with modifier)'''
+        s = 'real(kind = 16) function foo(x)'
+        r = FunctionStmt((RealStmt,[_ExplKind('16')]),'foo',['x'])
+        self.assertEquals(repr(pps(s)),repr(r))
+        self.assertEquals(s,str(r))
+
+suite = asuite(C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,TestImplicitStmt,
+                                              TestDimensionStmt,
+                                              TestDoStmt,
+                                              TestWhileStmt,
+                                              TestCallStmt,
+                                              TestFunctionStmt)
 
 if __name__ == '__main__':
     runit(suite)

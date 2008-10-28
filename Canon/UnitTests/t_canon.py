@@ -26,7 +26,7 @@ def compareFiles(assertFunc,originalFileName,RefFileName,free):
         testFileLines = testFile.readlines()
         refFile = open(fname_t(RefFileName),'r')
         refFileLines = refFile.readlines()
-        assertFunc(len(testFileLines),len(refFileLines))
+        assertFunc(len(testFileLines),len(refFileLines),'transformation result and reference file have disparate line counts')
         for testLine,refLine in zip(testFileLines,refFileLines):
             assertFunc(testLine,refLine)
         refFile.close()
@@ -43,17 +43,13 @@ class C1(TestCase):
         compareFiles(self.assertEquals,'empty.f','empty.pre.f',free=False)
 
     def test2(self):
-        'canon of max using int consts w embedded kinds'
-        compareFiles(self.assertEquals,'int-const-w-kind.f90','int-const-w-kind.ok.f90',free=True)
+        'canon of max using real consts w embedded kinds'
+        compareFiles(self.assertEquals,'realConst_withKind.f90','realConst_withKind.pre.f90',free=True)
 
     def test3(self):
         'canon array of derived types'
         compareFiles(self.assertEquals,'derived-type-arr.f90','derived-type-arr.ok.f90',free=True)
 
-#   def test5(self):
-#       'canonicalization of conditional statements'
-#       compareFiles(self.assertEquals,'conditionals.f','conditionals.pre.f',free=False)
-
     def test5(self):
         'preserve inline comments for statements that have been altered during canonicalization'
         compareFiles(self.assertEquals,'inlineComment.f90','inlineComment.pre.f90',free=True)
@@ -61,6 +57,10 @@ class C1(TestCase):
     def test5(self):
         'preserve inline comments for statements that have been altered during canonicalization'
         compareFiles(self.assertEquals,'inlineComment.f90','inlineComment.pre.f90',free=True)
+
+    def test6(self):
+        'canonicalize a subunit (subroutine contained in program)'
+        compareFiles(self.assertEquals,'canonicalizeSubunit.f90','canonicalizeSubunit.pre.f90',free=True)
 
 class C2(TestCase):
     '''Coverage for particular kinds of statements'''
@@ -76,7 +76,17 @@ class C2(TestCase):
         'Hoist function calls from do and do while statements'
         compareFiles(self.assertEquals,'doDoWhile.f','doDoWhile.pre.f',free=False)
 
-suite = asuite(C1,C2)
+class TestCanonicalizeSubroutineCall(TestCase):
+    '''Subroutine call statements'''
+    def test1(self):
+        'Hoist intrinsic function call from subroutine call statement'
+        compareFiles(self.assertEquals,'subCall_hoistIntrinsic.f90','subCall_hoistIntrinsic.pre.f90',free=True)
+
+    def test2(self):
+        'Hoist nonintrinsic function call from subroutine call statement'
+        compareFiles(self.assertEquals,'subCall_hoistNonintrinsic.f90','subCall_hoistNonintrinsic.pre.f90',free=True)
+
+suite = asuite(C1,C2,TestCanonicalizeSubroutineCall)
 
 if __name__ == "__main__":
     runit(suite)
