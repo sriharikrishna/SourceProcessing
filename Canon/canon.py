@@ -3,7 +3,11 @@ canonicalization routines
 '''
 
 from _Setup import *
-from PyFort.sym_entries import var
+
+from PyUtil.symtab import SymtabEntry,SymtabError
+
+from PyFort.intrinsic import is_intrinsic
+from PyFort.typeInference import TypeInferenceError,expressionType,functionType,isArrayReference
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
 
@@ -12,6 +16,11 @@ class CanonError(Exception):
    def __init__(self,msg,lineNumber):
        self.msg  = msg
        self.lineNumber = lineNumber
+
+def _isPolymorphic(aFunction):
+    return aFunction.head.lower() in ('max',
+                                      'min',
+                                     )
 
 class UnitCanonicalizer(object):
     'class to facilitate canonicalization on a per-unit basis'
@@ -36,21 +45,40 @@ class UnitCanonicalizer(object):
         self.__tempCounter = 0
         self.__recursionDepth = 0
 
+    def shouldSubroutinizeFunction(self,theApp,parentStmt):
+        '''
+        A function should be subroutinized if and only if it is either
+        a polymorphic intrinsic that isn't of type integer or a nonintrinsic
+        '''
+        if self._verbose: print 'UnitCanonicalizer.shouldSubroutinizeFunction called on "'+str(theApp)+'"'
+        if not isinstance(theApp,fe.App):
+            raise CanonError('UnitCanonicalizer.shouldSubroutinizeFunction called on non-App object '+str(theApp),parentStmt.lineNumber)
+        theSymtabEntry = self.__myUnit.symtab.lookup_name(theApp.head)
+        if theSymtabEntry and isinstance(theSymtabEntry.entryKind,SymtabEntry.VariableEntryKind):
+            raise CanonError('UnitCanonicalizer.shouldSubroutinizeFunction called on array reference '+str(theApp),parentStmt.lineNumber)
+        try:
+            (funcType,modifier) = functionType(theApp,self.__myUnit.symtab)
+        except TypeInferenceError,errorObj:
+            sys.stdout.flush()
+            raise CanonError('UnitCanonicalizer.shouldSubroutinizeFunction: TypeInferenceError: '+errorObj.msg,parentStmt.lineNumber)
+        if is_intrinsic(theApp.head):
+            if self._verbose: print 'UnitCanonicalizer.shouldSubroutinizeFunction: It\'s an intrinsic of type ',funcType
+            return _isPolymorphic(theApp) and not funcType == fs.IntegerStmt
+        else:
+            return True
+
     def __newTemp(self,anExpression):
         '''The new temporary variable assumes the value of anExpression'''
         theNewTemp = self.__tmp_prefix + str(self.__tempCounter)
         self.__tempCounter += 1
-        (varTypeClass,varModifierList) = fe.exptype(anExpression,
-                                                    self.__myUnit.symtab.lookup_type,
-                                                    fs.kw2type,
-                                                    fs.lenfn,
-                                                    fs._Kind,
-                                                    fe.isPolymorphic,
-                                                    fs.typemerge)
-        if self._verbose: print >> sys.stderr,str(theNewTemp)+': varTypeClass = "'+str(varTypeClass)+'" varModifierList = "'+str(varModifierList)+'"'
+        (varTypeClass,varModifierList) = expressionType(anExpression,self.__myUnit.symtab)
+        if self._verbose: print >>sys.stderr,'replaced with',theNewTemp,'of type '+str(varTypeClass)+'('+str(varModifierList)+')'
         theNewDecl = varTypeClass(varModifierList,[],[theNewTemp])
         self.__myNewDecls.append(theNewDecl)
-        self.__myUnit.symtab.enter_name(theNewTemp,var((varTypeClass,varModifierList),()))
+        self.__myUnit.symtab.enter_name(theNewTemp,
+                                        SymtabEntry(SymtabEntry.VariableEntryKind,
+                                                    type=(varTypeClass,varModifierList),
+                                                    origin='temp'))
         return (theNewTemp,varTypeClass)
 
     def __canonicalizeFuncCall(self,theFuncCall,parentStmt):
@@ -60,9 +88,8 @@ class UnitCanonicalizer(object):
         self.__recursionDepth += 1
         if self._verbose: print >> sys.stderr,(self.__recursionDepth-1)*'|\t'+'|  creating new temp for the result of the subroutine that replaces "'+str(theFuncCall)+'":',
         (theNewTemp,newTempType) = self.__newTemp(theFuncCall)
-        polymorphismSuffix = ''
-        if fs.isPolymorphic(theFuncCall):
-            polymorphismSuffix = '_'+newTempType.kw.lower()[0]
+        polymorphismSuffix = _isPolymorphic(theFuncCall) and '_'+newTempType.kw.lower()[0] \
+                                                          or ''
         self.__myNewExecs.append(self.__canonicalizeSubCallStmt(fs.CallStmt(self.__call_prefix + theFuncCall.head + polymorphismSuffix,
                                                                             theFuncCall.args + [theNewTemp],
                                                                             lineNumber=parentStmt.lineNumber,
@@ -73,43 +100,64 @@ class UnitCanonicalizer(object):
         self.__recursionDepth -= 1
         return theNewTemp
 
+    def __hoistExpression(self,theExpression,parentStmt):
+        # function calls that are to be turned into subroutine calls
+        # -> return the temp that carries the value for the new subcall
+        if isinstance(theExpression,fe.App) and \
+           not isArrayReference(theExpression,self.__myUnit.symtab) and \
+           self.shouldSubroutinizeFunction(theExpression,parentStmt):
+            if self._verbose: print >>sys.stderr,'it is a function call to be subroutinized'
+            return self.__canonicalizeFuncCall(theExpression,parentStmt)
+        # Anything else: create an assignment to a temporary and return that temporary
+        (theNewTemp,newTempType) = self.__newTemp(theExpression)
+        self.__myNewExecs.append(self.__canonicalizeAssignStmt(fs.AssignStmt(theNewTemp,
+                                                                             theExpression,
+                                                                             lineNumber=parentStmt.lineNumber,
+                                                                             label=False,
+                                                                             lead=parentStmt.lead)))
+        return theNewTemp
+
     def __canonicalizeExpression(self,theExpression,parentStmt):
         '''Canonicalize an expression tree by recursively replacing function calls with subroutine calls
            returns an expression that replaces theExpression'''
         if self._verbose: print >> sys.stderr,self.__recursionDepth*'|\t'+'canonicalizing expression "'+str(theExpression)+'"',
         self.__recursionDepth += 1
-        # Variable or constant: do nothing
+        replacementExpression = theExpression
+        # variable or constant -> do nothing
         if isinstance(theExpression, str):
             if self._verbose: print >> sys.stderr,', which is a string (should be a constant or a variable => no canonicalization necessary)'
-            theNewExpression = theExpression
-        # Nonintrinsic function call -> replace with subroutine call and hoist its arguments
-        elif fe.isNonintrinsicFuncApp(theExpression,self.__myUnit.symtab):
-            if self._verbose: print >> sys.stderr,', which is a non-intrinsic function app with argument(s) "'+str(theExpression.args)+'"'
-            theNewExpression = self.__canonicalizeFuncCall(theExpression,parentStmt)
-        # Intrinsic function call or array ref (any App that's not a nonintrinsic) -> recursively canonicalize args
-        elif isinstance(theExpression, fe.App):
-            if self._verbose: print >> sys.stderr,', which is either an intrinsic or array ref with argument(s) "'+str(theExpression.args)+'"'
-            replacementArgs = []
-            for arg in theExpression.args:
-                replacementArgs.append(self.__canonicalizeExpression(arg,parentStmt))
-            theNewExpression = fe.App(theExpression.head,replacementArgs)
+        # application expressions
+        elif isinstance(theExpression,fe.App):
+            # array reference -. do nothing
+            if isArrayReference(theExpression,self.__myUnit.symtab):
+                if self._verbose: print >> sys.stderr,', which is an array reference (no canonicalization necessary)'
+            # function calls to subroutinize -> subroutinize and recursively canonicalize args
+            elif self.shouldSubroutinizeFunction(theExpression,parentStmt):
+                if self._verbose: print >> sys.stderr,', it\'s a function call (subroutinized)'
+                replacementExpression = self.__canonicalizeFuncCall(theExpression,parentStmt)
+            # function calls that won't be subroutinized -> recursively canonicalize args
+            else: 
+                if self._verbose: print >> sys.stderr,', it\'s a function call (non-subroutinized)'
+                replacementArgs = []
+                for arg in theExpression.args:
+                    replacementArgs.append(self.__canonicalizeExpression(arg,parentStmt))
+                replacementExpression = fe.App(theExpression.head,replacementArgs)
         # Unary operation -> recursively canonicalize the sole subexpression
         elif isinstance(theExpression,fe.Unary):
             if self._verbose: print >> sys.stderr,', which is a unary op. with exp: "'+str(theExpression.exp)+'"'
-            theNewExpression = theExpression.__class__(self.__canonicalizeExpression(theExpression.exp,parentStmt))
+            replacementExpression = theExpression.__class__(self.__canonicalizeExpression(theExpression.exp,parentStmt))
         # Binary operation -> recursively canonicalize both subexpressions
         elif isinstance(theExpression,fe.Ops):
             if self._verbose: print >> sys.stderr,', which is a binary op. with a1="'+str(theExpression.a1)+'", a2="'+str(theExpression.a2)+'"'
             a1Result = self.__canonicalizeExpression(theExpression.a1,parentStmt)
             a2result = self.__canonicalizeExpression(theExpression.a2,parentStmt)
-            theNewExpression = fe.Ops(theExpression.op,a1Result,a2result)
+            replacementExpression = fe.Ops(theExpression.op,a1Result,a2result)
         # Everything else...
         else:
             if self._verbose: print >> sys.stderr,', which is some other nontrivial type that is assumed to require no canonicalization'
-            theNewExpression = theExpression
         if self._verbose: print >> sys.stderr,(self.__recursionDepth-1)*'|\t'+'|_'
         self.__recursionDepth -= 1
-        return theNewExpression
+        return replacementExpression
 
     def __canonicalizeSubCallStmt(self,aSubCallStmt):
         '''
@@ -127,29 +175,19 @@ class UnitCanonicalizer(object):
             if (not self._hoistConstantsFlag) and fe.isConstantExpression(anArg):
                 if self._verbose: print >> sys.stderr,'is a constant expression (which we aren\'t hoisting)'
                 replacementArgs.append(anArg)
-            # string that resides in symbol table: a variable
+            # Variables (with VariableEntry in symbol table) -> do nothing
             elif isinstance(anArg,str) and self.__myUnit.symtab.lookup_name(anArg):
-                if self._verbose: print >> sys.stderr,'is a variable'+ \
-                                                 ' with symbol table entry "'+str(self.__myUnit.symtab.lookup_name(anArg))+ \
-                                                 '" and dims "'+str(self.__myUnit.symtab.lookup_dims(anArg))+'"'
+                symtabEntry = self.__myUnit.symtab.lookup_name(anArg)
+                if self._verbose: print >>sys.stderr,'is a string (variable,function,etc.)'
                 replacementArgs.append(anArg)
-            # Array accesses
-            elif fe.isArrayAccess(anArg,self.__myUnit.symtab):
-                if self._verbose: print >> sys.stderr,'is an array access expression'
-                replacementArgs.append(self.__canonicalizeExpression(anArg,aSubCallStmt))
-            # function calls
-            elif fe.isNonintrinsicFuncApp(anArg,self.__myUnit.symtab):
-                if self._verbose: print >> sys.stderr,'is a nonintrinsic function call'
-                replacementArgs.append(self.__canonicalizeFuncCall(anArg,aSubCallStmt))
-            # everything else: nontrivial expressions (including constants)
+            # Array References -> do nothing
+            elif isinstance(anArg,fe.App) and isArrayReference(anArg,self.__myUnit.symtab):
+                if self._verbose: print >>sys.stderr,'is an array reference'
+                replacementArgs.append(anArg)
+            # everything else -> hoist and create an assignment to a temp variable
             else:
                 if self._verbose: print >> sys.stderr,'is a nontrivial expression to be hoisted:',
-                # create a new temp and add it to decls
-                (theNewTemp,newTempType) = self.__newTemp(anArg)
-                replacementArgs.append(theNewTemp)
-                self.__myNewExecs.append(self.__canonicalizeAssignStmt(fs.AssignStmt(theNewTemp,
-                                                                                     anArg,
-                                                                                     lead=aSubCallStmt.lead)))
+                replacementArgs.append(self.__hoistExpression(anArg,aSubCallStmt))
         # replace aCallStmt with the canonicalized version
         replacementStatement = fs.CallStmt(aSubCallStmt.head,
                                            replacementArgs,
@@ -262,9 +300,7 @@ class UnitCanonicalizer(object):
 
     def canonicalizeUnit(self):
         '''Recursively canonicalize \p aUnit'''
-        if self._verbose: print >>sys.stderr,'+++++++++++++++++++++++++++++++++++++++++++++++++++++', \
-                                             'Begin canonicalize unit <',self.__myUnit.uinfo,'>', \
-                                             '+++++++++++++++++++++++++++++++++++++++++++++++++++++'
+        if self._verbose: print ('+'*55)+' Begin canonicalize unit <',self.__myUnit.uinfo,'> '+(55*'+'),'\nlocal',self.__myUnit.symtab.debug()
         if (self._verbose and self.__myUnit.ulist): print >> sys.stderr,'subunits (len =',len(self.__myUnit.ulist),'):'
         for subUnit in self.__myUnit.ulist:
             if self._verbose: print >> sys.stderr,subUnit
@@ -272,33 +308,38 @@ class UnitCanonicalizer(object):
 
         if (self._verbose and self.__myUnit.execs): print >> sys.stderr,'canonicalizing executable statements:'
         for anExecStmt in self.__myUnit.execs:
-            if self._verbose: print >> sys.stderr,'[Line '+str(anExecStmt.lineNumber)+']:'
-            newExecsLength = len(self.__myNewExecs) # store the current number of execs (to determine afterwards whether we've added some)
-            replacementStatement = anExecStmt
-            if isinstance(anExecStmt,fs.CallStmt):
-                replacementStatement = self.__canonicalizeSubCallStmt(anExecStmt)
-            elif isinstance(anExecStmt,fs.AssignStmt):
-                replacementStatement = self.__canonicalizeAssignStmt(anExecStmt)
-            elif isinstance(anExecStmt,fs.IfNonThenStmt):
-                replacementStatement = self.__canonicalizeIfNonThenStmt(anExecStmt)
-            elif isinstance(anExecStmt,fs.IfThenStmt):
-                replacementStatement = self.__canonicalizeIfThenStmt(anExecStmt)
-            elif isinstance(anExecStmt,fs.ElseifStmt):
-                replacementStatement = self.__canonicalizeElseifStmt(anExecStmt)
-            elif isinstance(anExecStmt,fs.DoStmt):
-                replacementStatement = self.__canonicalizeDoStmt(anExecStmt)
-            elif isinstance(anExecStmt,fs.WhileStmt):
-                replacementStatement = self.__canonicalizeWhileStmt(anExecStmt)
-            else:
-                if self._verbose: print >> sys.stderr,'Statement "'+str(anExecStmt)+'" is assumed to require no canonicalization'
-            if self._verbose: print >>sys.stderr,''
-            if self.__recursionDepth != 0:
-                raise CanonError('Recursion depth did not resolve to zero when canonicalizing',anExecStmt,anExecStmt.lineNumber)
-            # determine whether a change was made
-            if len(self.__myNewExecs) > newExecsLength: # some new statements were inserted
-                self.__myNewExecs.append(replacementStatement) # => replace anExecStmt with the canonicalized version
-            else: # no new statements were inserted
-                self.__myNewExecs.append(anExecStmt) # => leave anExecStmt alone
+            try:
+                if self._verbose: print >> sys.stderr,'[Line '+str(anExecStmt.lineNumber)+']:'
+                newExecsLength = len(self.__myNewExecs) # store the current number of execs (to determine afterwards whether we've added some)
+                replacementStatement = anExecStmt
+                if isinstance(anExecStmt,fs.CallStmt):
+                    replacementStatement = self.__canonicalizeSubCallStmt(anExecStmt)
+                elif isinstance(anExecStmt,fs.AssignStmt):
+                    replacementStatement = self.__canonicalizeAssignStmt(anExecStmt)
+                elif isinstance(anExecStmt,fs.IfNonThenStmt):
+                    replacementStatement = self.__canonicalizeIfNonThenStmt(anExecStmt)
+                elif isinstance(anExecStmt,fs.IfThenStmt):
+                    replacementStatement = self.__canonicalizeIfThenStmt(anExecStmt)
+                elif isinstance(anExecStmt,fs.ElseifStmt):
+                    replacementStatement = self.__canonicalizeElseifStmt(anExecStmt)
+                elif isinstance(anExecStmt,fs.DoStmt):
+                    replacementStatement = self.__canonicalizeDoStmt(anExecStmt)
+                elif isinstance(anExecStmt,fs.WhileStmt):
+                    replacementStatement = self.__canonicalizeWhileStmt(anExecStmt)
+                else:
+                    if self._verbose: print >> sys.stderr,'Statement "'+str(anExecStmt)+'" is assumed to require no canonicalization'
+                if self._verbose: print >>sys.stderr,''
+                if self.__recursionDepth != 0:
+                    raise CanonError('Recursion depth did not resolve to zero when canonicalizing',anExecStmt,anExecStmt.lineNumber)
+                # determine whether a change was made
+                if len(self.__myNewExecs) > newExecsLength: # some new statements were inserted
+                    self.__myNewExecs.append(replacementStatement) # => replace anExecStmt with the canonicalized version
+                else: # no new statements were inserted
+                    self.__myNewExecs.append(anExecStmt) # => leave anExecStmt alone
+            except TypeInferenceError,e:
+                raise CanonError('Caught TypeInferenceError: '+e.msg,anExecStmt.lineNumber)
+            except SymtabError,e:
+                raise CanonError('Caught SymtabError: '+e.msg,anExecStmt.lineNumber)
 
         # build rawlines for the new declarations and add them to the unit
         for aDecl in self.__myNewDecls:
@@ -309,8 +350,6 @@ class UnitCanonicalizer(object):
         # replace the executable statements for the unit
         self.__myUnit.execs = self.__myNewExecs
 
-        if self._verbose: print >>sys.stderr,'++++++++++++++++++++++++++++++++++++++++++++++++++++++', \
-                                             'End canonicalize unit <',self.__myUnit.uinfo,'>', \
-                                             '++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n'
+        if self._verbose: print ('+'*54)+' End canonicalize unit <',self.__myUnit.uinfo,'> '+(54*'+')+'\n\n'
         return self.__myUnit
 
