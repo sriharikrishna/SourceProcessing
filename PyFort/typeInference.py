@@ -31,7 +31,7 @@ def modcompare(m1,m2):
     return m2
 
 def typecompare(t1,t2):
-#   print >>sys.stderr,'\t\tfortStmts.typecompare called on t1 = "'+str(t1)+'\tt2 = "'+str(t2)+'"'
+#   print '\t\tfortStmts.typecompare called on t1 = "'+str(t1)+'\tt2 = "'+str(t2)+'"'
     mergeit = dict(character=0,
                    logical=1,
                    integer=2,
@@ -49,13 +49,13 @@ def typecompare(t1,t2):
     return t2
 
 def typemerge(lst,default):
-#   print >>sys.stderr,'\nfortStmts.typemerge called on ',lst,'\n\t',
+#   print '\nfortStmts.typemerge called on ',lst,'\n\t',
     if not lst: return default
     if len(lst) == 1: return lst[0]
     t1 = typecompare(lst[0],lst[1])
     for l in lst[2:]:
         t1 = typecompare(t1,l)
-#   print >>sys.stderr,'...result is',t1
+#   print '...result is',t1
     return t1
 
 def identifierType(anId,localSymtab):
@@ -108,34 +108,34 @@ def functionType(aFunctionApp,localSymtab):
     return returnType
 
 def selectionType(aSelectionExpression,localSymtab):
-    print >>sys.stderr,'\ntypeInference.SelectionType: determining type of selection expression',aSelectionExpression,'using symtab',localSymtab
+    print '\ntypeInference.SelectionType: determining type of selection expression',aSelectionExpression,'using symtab',localSymtab
     # retrieve information for the derived type from the symbol table
     raise TypeInferenceError('typeInference.selectionType: called on "'+str(theApp)+'" (Not yet implemented)')
 
 def expressionType(anExpression,localSymtab):
-#   print >>sys.stderr,'\ntypeInference.expressionType: determining type of expression',anExpression,
+#   print '\ntypeInference.expressionType: determining type of expression',anExpression,
     if isinstance(anExpression,str) and is_const(anExpression):
-#       print >>sys.stderr,'...it\'s a CONSTANT',
-        return const_type(anExpression,fortStmts.kw2type,fortStmts.lenfn,fortStmts._Kind)
+#       print '...it\'s a CONSTANT',
+        return constantType(anExpression)
     elif isinstance(anExpression,str) and _id_re.match(anExpression):
-#       print >>sys.stderr,'...it\'s an IDENTIFIER',
+#       print '...it\'s an IDENTIFIER',
         return identifierType(anExpression,localSymtab)
     elif isinstance(anExpression,Unary):
-#       print >>sys.stderr,'...it\'s an unary expression\n\t',
+#       print '...it\'s an unary expression\n\t',
         return expressionType(anExpression.exp,localSymtab)
     elif isinstance(anExpression,Ops):
-#       print >>sys.stderr,'...it\'s a binary expression\n\t',
+#       print '...it\'s a binary expression\n\t',
         return typemerge([expressionType(anExpression.a1,localSymtab),
                           expressionType(anExpression.a2,localSymtab)],
                                    (None,None))
     elif isinstance(anExpression,App):
-#       print >>sys.stderr,'...it\'s an Application\n\t',
+#       print '...it\'s an Application\n\t',
         return functionType(anExpression,localSymtab)
     elif isinstance(anExpression,NamedParam):
-#       print >>sys.stderr,'...it\'s a named parameter\n\t',
+#       print '...it\'s a named parameter\n\t',
         return expressionType(anExpression.myRHS,localSymtab)
     elif isinstance(anExpression,Sel):
-#       print >>sys.stderr,'...it\'s a selection expression\n\t',
+#       print '...it\'s a selection expression\n\t',
         return selectionType(anExpression.myRHS)
     else:
         raise TypeInferenceError('typeInference.expressionType: No type could be determined for expression "'+str(anExpression)+'"')

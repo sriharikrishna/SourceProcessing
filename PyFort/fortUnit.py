@@ -124,7 +124,7 @@ class Unit(object):
         self._in_iface = False
 
         self.symtab._set_dbg(False)
-        if self._verbose: print >> sys.stderr,'new unit created:',self,',new symtab being created = ',self.symtab
+        if self._verbose: print 'new unit created:',self,', new symtab being created = ',self.symtab
 
     def name(self):
         return self.uinfo.name
