@@ -452,24 +452,3 @@ def subst(a,pat,repl):
         return a
     else:
         return a.map(lambda x:subst(x,pat,repl))
-
-def const_type(e,kw2type,lenfn,kindfn):
-    kind_re = re.compile(r'_(\w+)')
-    if _flonum_re.match(e):
-        sep_re = re.compile(r'([^_]+)(_(\w+))?')
-        v      = sep_re.match(e)
-        ty     = 'd' in v.group(1).lower() and 'doubleprecision' or \
-                 'real'
-        ty     = kw2type(ty)
-        kind   = v.group(2) and [ kindfn(v.group(3))] or []
-        return (ty,kind)
-    if _int_re.match(e):
-        ty   = kw2type('integer')
-        kind = kind_re.search(e)
-        kind = kind and [ kindfn(kind.group(1)) ] or []
-        return (ty,kind)
-    if e.lower() in _logicon_set:
-        return (kw2type('logical'),[])
-    if e[0] in _quote_set:
-        return (kw2type('character'),lenfn(len(e)-2))
-

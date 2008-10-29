@@ -2,12 +2,15 @@
 
     ...
 '''
+
+import re
+
 from _Setup import *
 
 from PyUtil.symtab import SymtabEntry
 
 import fortStmts
-from fortExp import App,NamedParam,Sel,Unary,Ops,const_type,is_const,_id_re
+from fortExp import App,NamedParam,Sel,Unary,Ops,is_const,_id_re,_flonum_re,_int_re,_logicon_set,_quote_set
 from intrinsic import is_intrinsic
 
 class TypeInferenceError(Exception):
@@ -57,6 +60,27 @@ def typemerge(lst,default):
         t1 = typecompare(t1,l)
 #   print '...result is',t1
     return t1
+
+def constantType(e):
+    kind_re = re.compile(r'_(\w+)')
+    if _flonum_re.match(e):
+        sep_re = re.compile(r'([^_]+)(_(\w+))?')
+        v      = sep_re.match(e)
+        ty     = 'd' in v.group(1).lower() and fortStmts.kw2type('doubleprecision') \
+                                            or fortStmts.kw2type('real')
+        kind   = v.group(2) and [fortStmts._Kind(v.group(3))] \
+                             or []
+        return (ty,kind)
+    if _int_re.match(e):
+        ty   = fortStmts.kw2type('integer')
+        kind = kind_re.search(e)
+        kind = kind and [fortStmts._Kind(kind.group(1))] \
+                     or []
+        return (ty,kind)
+    if e.lower() in _logicon_set:
+        return (fortStmts.kw2type('logical'),[])
+    if e[0] in _quote_set:
+        return (fortStmts.kw2type('character'),fortStmts.lenfn(len(e)-2))
 
 def identifierType(anId,localSymtab):
     (symtabEntry,containingSymtab) = localSymtab.lookup_name_level(anId)
