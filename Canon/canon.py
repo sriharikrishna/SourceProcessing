@@ -27,6 +27,7 @@ class UnitCanonicalizer(object):
 
     _verbose = False
     _hoistConstantsFlag = False
+    _hoistStringsFlag = False
 
     @staticmethod
     def setVerbose(isVerbose):
@@ -35,6 +36,10 @@ class UnitCanonicalizer(object):
     @staticmethod
     def setHoistConstantsFlag(hoistConstantsFlag):
         UnitCanonicalizer._hoistConstantsFlag = hoistConstantsFlag
+
+    @staticmethod
+    def setHoistStringsFlag(hoistStringsFlag):
+        UnitCanonicalizer._hoistStringsFlag = hoistStringsFlag
 
     def __init__(self,aUnit):
         self.__myUnit = aUnit
@@ -171,11 +176,24 @@ class UnitCanonicalizer(object):
         for anArg in aSubCallStmt.args:
             #TODO: remove perens when the whole argument is in them??
             if self._verbose: print (self.__recursionDepth - 1)*'|\t'+'|- argument "'+str(anArg)+'" ',
-            # Constant expressions (when we aren't hoisting them) -> do nothing
-            if (not self._hoistConstantsFlag) and fe.isConstantExpression(anArg):
-                if self._verbose: print 'is a constant expression (which we aren\'t hoisting)'
-                replacementArgs.append(anArg)
-            # Variables (with VariableEntry in symbol table) -> do nothing
+            (argType,argTypeMod) = expressionType(anArg,self.__myUnit.symtab)
+            # constant character expressions
+            if argType == fs.CharacterStmt:
+                if not self._hoistStringsFlag:
+                    if self._verbose: print 'is a string expression (which we aren\'t hoisting)'
+                    replacementArgs.append(anArg)
+                else:
+                    if self._verbose: print 'is a string expression to be hoisted:',
+                    replacementArgs.append(self.__hoistExpression(anArg,aSubCallStmt))
+            # other constant expressions
+            elif fe.isConstantExpression(anArg):
+                if not self._hoistConstantsFlag:
+                    if self._verbose: print 'is a constant expression (which we aren\'t hoisting)'
+                    replacementArgs.append(anArg)
+                else:
+                    if self._verbose: print 'is a constant expression to be hoisted:',
+                    replacementArgs.append(self.__hoistExpression(anArg,aSubCallStmt))
+            # variables (with VariableEntry in symbol table) -> do nothing
             elif isinstance(anArg,str) and self.__myUnit.symtab.lookup_name(anArg):
                 symtabEntry = self.__myUnit.symtab.lookup_name(anArg)
                 if self._verbose: print 'is an identifier (variable,function,etc.)'
