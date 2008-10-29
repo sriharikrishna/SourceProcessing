@@ -5,8 +5,47 @@ from useparse import *
 
 from PyUtil.symtab import Symtab
 
-from typeInference import expressionType,typemerge
-from fortStmts import IntegerStmt,RealStmt,DoubleStmt,ComplexStmt,DoubleCplexStmt,_Prec
+from typeInference import expressionType,constantType,typemerge
+from fortStmts import LogicalStmt,CharacterStmt,IntegerStmt,RealStmt,DoubleStmt,ComplexStmt,DoubleCplexStmt
+from fortStmts import _Prec,_Kind,_F77Len
+
+class TypeConstants(TestCase):
+    def test0(self):
+        'constants - numerical values without modifiers'
+        self.assertEquals(constantType(ep('3.787')),
+                          (RealStmt,[]))
+        self.assertEquals(constantType(ep('3.787D00')),
+                          (DoubleStmt,[]))
+        self.assertEquals(constantType(ep('3')),
+                          (IntegerStmt,[]))
+
+    def test1(self):
+        'constants - numerical values with modifiers'
+
+        (type,typeModList) = constantType(ep('3.787_foo'))
+        typeMod = typeModList[0]
+        self.assertEquals(type,RealStmt)
+        self.assert_(isinstance(typeMod,_Kind))
+        self.assertEquals(typeMod.mod,'foo')
+
+        (type,typeModList) = constantType(ep('0_w2f__i8'))
+        typeMod = typeModList[0]
+        self.assertEquals(type,IntegerStmt)
+        self.assert_(isinstance(typeMod,_Kind))
+        self.assertEquals(typeMod.mod,'w2f__i8')
+
+    def test2(self):
+        'constants - logical values'
+        self.assertEquals(constantType(ep('.true.')),
+                          (LogicalStmt,[]))
+
+    def test3(self):
+        'constants - strings'
+        (type,typeModList) = constantType(ep(r"'food'"))
+        typeMod = typeModList[0]
+        self.assertEquals(type,CharacterStmt)
+        self.assert_(isinstance(typeMod,_F77Len))
+        self.assertEquals(typeMod.len,'4')
 
 class TypeOpsExpressions(TestCase):
     'test type inference for simple combinations of binary ops for constants and variables'
@@ -82,7 +121,7 @@ class TypeMerging(TestCase):
         ae(typemerge([t1,t2,t3,t4,t5,t6],t1),t5)
 
 
-suite = asuite(TypeOpsExpressions,TypeMerging)
+suite = asuite(TypeConstants,TypeOpsExpressions,TypeMerging)
 
 if __name__ == '__main__':
     runit(suite)
