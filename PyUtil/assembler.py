@@ -72,10 +72,8 @@ def star(a):
             while(True):
                 v,sloc = a(sloc)
                 rv.append(v)
-
         except AssemblerException,excp:
             return (rv,excp.rest)
-
     return pat(asm)
 
 def seq(*asms):

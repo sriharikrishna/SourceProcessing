@@ -2,14 +2,17 @@
 Expression parser for fortran expressions:
   use rec decent
 '''
-from _Setup import *
-from PyUtil.l_assembler import *
-import fortScan  as fs
-
 import re
-from PyUtil.flatten import flatten
-from op_prec import OpPrec
+
+from _Setup import *
+
 from PyIR.mutable_tree import _Mutable_T
+
+from PyUtil.l_assembler import *
+from PyUtil.flatten import flatten
+
+import fortScan  as fs
+from op_prec import OpPrec
 
 _id_re     = re.compile(fs.id_re,re.I | re.X)
 _flonum_re = re.compile(fs.flonum_re,re.I | re.X)

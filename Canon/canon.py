@@ -12,10 +12,10 @@ import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
 
 class CanonError(Exception):
-   '''exception for errors that occur during canonicalization'''
-   def __init__(self,msg,lineNumber):
-       self.msg  = msg
-       self.lineNumber = lineNumber
+    '''exception for errors that occur during canonicalization'''
+    def __init__(self,msg,lineNumber):
+        self.msg  = msg
+        self.lineNumber = lineNumber
 
 def _isPolymorphic(aFunction):
     return aFunction.head.lower() in ('max',

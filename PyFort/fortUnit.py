@@ -33,10 +33,10 @@ def install_pat(cur):
     def _show(s):
         print 'looking at:',s
         return s
+
     def _dbg(m):
         def pm():
             print m
-
         return pm
 
     def action(cur):
@@ -101,7 +101,7 @@ class Unit(object):
     end        end list (including comments)
     symtab     hierachical symbol table
     fmod       ???? (fmod = cur.module_handler)
-    _in_iface  ????
+    _in_iface  whether or not we are currently in an interface block
     '''
     _verbose = False
 
