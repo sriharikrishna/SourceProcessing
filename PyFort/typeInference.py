@@ -93,15 +93,10 @@ def identifierType(anId,localSymtab):
         symtabEntry.enterType(containingSymtab.implicit[anId[0]])
         returnType = symtabEntry.type
 #       print 'with symtab entry',theSymtabEntry.debug(anId),'(without type).  Implicit type (locally) is',returnType
-        print >>sys.stderr,'\nWARNING - typeInference.identifierType: implicit typing (scope ='+str(containingSymtab)+') used for identifier "'+anId+'" type ="',returnType,'"\n'
-    # no symtab entry -> try local implicit typing
-    else:
-        newSymtabEntry = SymtabEntry(SymtabEntry.GenericEntryKind,
-                                     type=localSymtab.implicit[anId[0]],
-                                     origin='implicit_type')
-        localSymtab.enter_name(anId,newSymtabEntry)
-        returnType = newSymtabEntry.type
-        print >>sys.stderr,'\nWARNING - typeInference.identifierType: local scope implicit typing used for identifier "'+anId+'" type ="',returnType,'"\n'
+        print >>sys.stderr,'WARNING - typeInference.identifierType: implicit typing (scope ='+str(containingSymtab)+') used for identifier "'+anId+'" type ="',returnType,'"'
+    else: # no symtab entry -> try local implicit typing
+        returnType = localSymtab.implicit[anId[0]]
+        print >>sys.stderr,'WARNING - typeInference.identifierType: local scope implicit typing used for identifier "'+anId+'" type ="',returnType,'"'
 #       print 'with Implicit type: New symtab entry',newSymtabEntry
     if not returnType:
         raise TypeInferenceError('typeInference.identifierType: No type could be determined for identifier "'+anId+'"')
@@ -120,6 +115,9 @@ def intrinsicType(anIntrinsicApp,localSymtab):
 
 def functionType(aFunctionApp,localSymtab):
 #   print >>sys.stdout,'typeInference.functionType called on '+str(aFunctionApp),
+    # example: bbb(3)(2:14)
+    if isinstance(aFunctionApp.head,App):
+        return functionType(aFunctionApp.head,localSymtab)
     returnType = None
     # intrinsics: do a type merge
     if is_intrinsic(aFunctionApp.head):

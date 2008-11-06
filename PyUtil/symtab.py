@@ -109,7 +109,7 @@ class SymtabEntry(object):
         if not newType:
             raise SymtabError('SymtabEntry.enterType: newType is None!')
         if self.type and (self.type != newType):
-            raise SymtabError('SymtabEntry.enterType: Error -- current type',self.type,'and new type',newType,'conflict!',self)
+            raise SymtabError('SymtabEntry.enterType: Error -- current type "'+str(self.type)+'" and new type "'+str(newType)+'" conflict!',self)
         # procedures: entering a type means we know it's a function
         if self.entryKind == self.ProcedureEntryKind:
 #           print '++++++++SymtabEntry.enterType: entering type',newType,'for procedure (we now know it is a function)'
@@ -118,7 +118,7 @@ class SymtabEntry(object):
 
     def enterDimensions(self,newDimensions):
         if self.dimensions and (self.dimensions != newDimensions):
-            raise SymtabError('SymtabEntry.enterDimensions: Error -- current dimensions',self.dimensions,'and new dimensions',newDimensions,'conflict!',self)
+            raise SymtabError('SymtabEntry.enterDimensions: Error -- current dimensions "'+str(self.dimensions)+'" and new dimensions "'+str(newDimensions)+'" conflict!',self)
         self.dimensions = newDimensions
 
     def lookupDimensions(self):

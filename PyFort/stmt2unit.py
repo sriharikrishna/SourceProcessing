@@ -68,17 +68,17 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
 
 def _processDimensionStmt(aDimensionStmt,curr):
     localSymtab = curr.val.symtab
-    print 'called _processDimensionStmt on "'+str(aDimensionStmt)+'" with localSymtab',localSymtab
+#   print 'called _processDimensionStmt on "'+str(aDimensionStmt)+'" with localSymtab',localSymtab
     for anApp in aDimensionStmt.lst:
         theSymtabEntry = localSymtab.lookup_name(anApp.head)
         if theSymtabEntry:
-            print '\tvariable "'+anApp.head+'" already present in symbol table as '+theSymtabEntry.debug(anApp.head)
+#           print '\tvariable "'+anApp.head+'" already present in symbol table as '+theSymtabEntry.debug(anApp.head)
             theSymtabEntry.enterDimensions(tuple(anApp.args))
         else:
             newSymtabEntry = SymtabEntry(SymtabEntry.VariableEntryKind,
                                          dimensions=tuple(anApp.args),
                                          origin='local')
-            print '\tvariable "'+anApp.head+'" NOT already present in symbol table -- adding '+newSymtabEntry.debug(anApp.head)
+#           print '\tvariable "'+anApp.head+'" NOT already present in symbol table -- adding '+newSymtabEntry.debug(anApp.head)
             localSymtab.enter_name(anApp.head,newSymtabEntry)
     return aDimensionStmt
 
@@ -92,8 +92,12 @@ def _processExternalStmt(anExternalStmt,curr):
                                          origin='external')
             localSymtab.enter_name(aProcedureName,newSymtabEntry)
 #           print '\tprocedure NOT already present in symbol table -- adding '+newSymtabEntry.debug(aProcedureName)
-#       else:
+        else:
 #           print '\tprocedure already has SymtabEntry'+theSymtabEntry.debug(aProcedureName)
+            # if the entry has a type, we know it's a function
+            newEntryKind = theSymtabEntry.type and SymtabEntry.FunctionEntryKind \
+                                                or SymtabEntry.ProcedureEntryKind
+            theSymtabEntry.enterEntryKind(newEntryKind)
     return anExternalStmt
 
 def _assign2stmtfn(s,cur):
@@ -104,7 +108,7 @@ def _assign2stmtfn(s,cur):
     rv = fs.StmtFnStmt(lhs.head,lhs.args,s.rhs,s.lineNumber,s.label,s.lead)
     rv.rawline = s.rawline
 
-    entry      = SE.stmtfn(lhs.args,s.rhs)
+    entry = SE.StatementFunctionEntry(lhs.args,s.rhs)
     unit.symtab.enter_name(lhs.head,entry)
 
     return rv
