@@ -6,13 +6,16 @@ Various Fortran statement types and Fortran parsing functions
 '''
 
 from _Setup import *
-from fortExp      import *
-from PyUtil.l_assembler  import *
-from PyUtil.chomp        import chomp
-from fixedfmt     import fixedfmt
+
 from PyIR.mapper       import _Mappable
 from PyIR.mutable_tree import _Mutable_T
+
+from PyUtil.chomp        import chomp
 from PyUtil.errors  import ParseError
+from PyUtil.l_assembler import AssemblerException as ListAssemblerException
+
+from fortExp      import *
+from fixedfmt     import fixedfmt
 import flow
 
 class __FakeUnit(object):
@@ -302,13 +305,14 @@ class NonComment(GenStmt):
 
     def same(self,targ):
         self.same_level(targ)
-        targ.ctxt = self.ctxt
-        return targ
+        targ.lineNumber = self.lineNumber
+        targ.label = self.label
+        targ.lead = self.lead
+        return targ.flow()
 
     def clone_fmt(self,src):
         self.label = False
         self.lead   = src.lead
-#        self.ctxt   = src.ctxt
         self.flow()
         return self
 
@@ -1357,10 +1361,6 @@ for kw in ('if','continue','return','else','print'):
 lhs    = disj(app,id)
 assign = seq(lhs,lit('='),Exp)
 
-def mkassign(a):
-    'make an assignment statement object from a recognized scan'
-    (lhs,dc,rhs) = a
-    return AssignStmt(lhs,rhs)
 
 import kw_multi
 

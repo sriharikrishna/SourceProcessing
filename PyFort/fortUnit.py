@@ -207,8 +207,8 @@ class _curr(object):
         return u
 
 def fortUnitIterator(fileName,free):
-    unit = install_pat(_curr(ModuleHandler()))
-    return vgen(unit,buf_iter(Ffile.file(fileName,free,parse_cmnt,parse_stmt).lines))
+    return vgen(install_pat(_curr(ModuleHandler())),
+                buf_iter(Ffile.file(fileName,free,parse_cmnt,parse_stmt).lines))
 
 if __name__ == '__main__':
     from _Setup.testit import *
@@ -229,4 +229,3 @@ if __name__ == '__main__':
 
     fn  = 'if.f90'
     ii  = fortUnitIterator(fname_t(fn),True)
-

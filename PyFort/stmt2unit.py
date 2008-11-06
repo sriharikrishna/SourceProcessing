@@ -36,11 +36,6 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
     newLength = aTypeDeclStmt.kw_str == 'character' and (aTypeDeclStmt.mod and aTypeDeclStmt.mod[0] \
                                                                             or 1)
     dflt_d  = default_dims(aTypeDeclStmt.attrs)
-#   print '\nstmt2unit._typedecl: [stmt = "'+str(stmt)+'" (line number',stmt.lineNumber,')',\
-#                                  ',\tstmt.decls = "'+str(stmt.decls)+'"',\
-#                                  ',\tunit =',unit,\
-#                                  ',\tvtype =',vtype,\
-#                                  ',\tsymtab in typedecl =',symtab,']'
     for aDecl in aTypeDeclStmt.decls:
         (name,newDimensions) = typesep(aDecl,dflt_d)
         theSymtabEntry = localSymtab.lookup_name(name)
@@ -244,32 +239,3 @@ fs.ImplicitStmt.unit_action   = _implicit
 fs.InterfaceStmt.unit_action  = _beginInterface
 
 fs.EndInterfaceStmt.unit_action = _endInterface
-
-'''
-if __name__ == '__main__':
-    from _Setup.testit import *
-    from unit_symtab import Symtab
-    from _Setup.testit import scan
-
-    def pps(s):
-        return fs.parse(scan(s))
-
-    class U(object):
-        def __init__(self):
-            self.symtab = Symtab()
-
-    class _curr(object):
-        def __init__(self):
-            self.val = U()
-
-    Symtab._default_real = (fs.RealStmt,[])
-    Symtab._default_int  = (fs.IntegerStmt,[])
-
-    cur = _curr()
-
-    s1 = pps('implicit integer(special) (a-f)')
-    sr = _implicit(s1,cur)
-    v = cur.val.symtab
-    print 'lookup foo in implicit symtab = %s' % (v.lookup_type('foo'),)
-    print 'lookup zoo in implicit symtab = %s' % (v.lookup_type('zoo'),)
-'''

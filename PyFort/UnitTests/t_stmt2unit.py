@@ -1,6 +1,6 @@
 from Setup import *
 from _Setup import *
-from unittest      import *
+from unittest import *
 
 from PyUtil.symtab import Symtab
 
