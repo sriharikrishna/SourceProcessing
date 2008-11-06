@@ -13,6 +13,11 @@ class SymtabError(Exception):
         self.lineNumber = lineNumber
 
 class Symtab(object):
+    @staticmethod
+    def setTypeDefaults(defaultReal=None,defaultInt=None):
+        Symtab._default_real = defaultReal
+        Symtab._default_int = defaultInt
+
     def __init__(self,parent=None):
         self.ids    = cDict()
         self.parent = parent
@@ -154,9 +159,8 @@ if __name__ == '__main__':
         return 'I am symtab' + str(self)
 
     Symtab.check_it = check_it
-    
-    Symtab._default_real = 'real'
-    Symtab._default_int  = 'int'
+
+    Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[])) 
     s = Symtab()
     s.enter_name('foo','top level foo')
     s1 = Symtab(s)

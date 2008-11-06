@@ -9,6 +9,8 @@ from stmt2unit import _implicit
 
 from useparse import *
 
+Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
+
 class U(object):
     def __init__(self):
         self.symtab = Symtab()
@@ -20,8 +22,6 @@ class _curr(object):
 class C1(TestCase):
     def test1(self):
         'implicit action'
-        Symtab._default_real = (fs.RealStmt,[])
-        Symtab._default_int  = (fs.IntegerStmt,[])
 
         cur = _curr()
 

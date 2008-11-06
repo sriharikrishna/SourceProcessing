@@ -4,8 +4,7 @@ from symtab import Symtab
 
 from PyFort.fortStmts import RealStmt,IntegerStmt
 
-Symtab._default_real = (RealStmt,[])
-Symtab._default_int  = (IntegerStmt,[])
+Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
 
 class C1(TestCase):
     def setUp(self):

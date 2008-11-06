@@ -6,12 +6,14 @@ from _Setup import *
 from unittest import *
 from PyUtil.errors import UserError
 from PyFort.fortUnit import fortUnitIterator
-from canon import UnitCanonicalizer
+from canon import UnitCanonicalizer,CanonError
 
 '''
 Unit tests for canonicalizer
 
 '''
+
+Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
 
 def compareFiles(assertFunc,originalFileName,RefFileName,free):
     UnitCanonicalizer.setVerbose(False) 
@@ -32,6 +34,9 @@ def compareFiles(assertFunc,originalFileName,RefFileName,free):
         refFile.close()
         testFile.close()
         os.remove(testFileName)
+    except CanonError,e:
+        print >>sys.stderr,'\nCanonicalization Error on line '+str(e.lineNumber)+':\n',e.msg
+        return 1
     except UserError,e:
         print >>sys.stderr,"Error: ",e.msg
         return 1

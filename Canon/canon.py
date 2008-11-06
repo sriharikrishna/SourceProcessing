@@ -77,6 +77,10 @@ class UnitCanonicalizer(object):
         theNewTemp = self.__tmp_prefix + str(self.__tempCounter)
         self.__tempCounter += 1
         (varTypeClass,varModifierList) = expressionType(anExpression,self.__myUnit.symtab)
+        if varTypeClass == fs.RealStmt and varModifierList == []:
+            varTypeClass = Symtab._default_real[0]
+            if varTypeClass == fs.DoubleStmt:
+                print >>sys.stderr,'WARNING: Temp variable forced to 8-byte float (real -> double)'
         if self._verbose: print 'replaced with',theNewTemp,'of type '+str(varTypeClass)+'('+str(varModifierList)+')'
         theNewDecl = varTypeClass(varModifierList,[],[theNewTemp])
         self.__myNewDecls.append(theNewDecl)

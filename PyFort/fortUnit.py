@@ -14,9 +14,6 @@ from module_handler import ModuleHandler
 
 import stmt2unit
 
-Symtab._default_real = (fs.RealStmt,[])
-Symtab._default_int  = (fs.IntegerStmt,[])
-
 def instance_pred(*class_list):
     '''define a predicate that checks if argument is an instance of 1 of the
     classes listed in class_list

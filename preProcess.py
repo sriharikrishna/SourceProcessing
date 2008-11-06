@@ -9,7 +9,7 @@ from optparse import OptionParser
 from PyUtil.errors import UserError, ScanError, ParseError
 from PyUtil.assembler import AssemblerException
 from PyUtil.l_assembler import AssemblerException as ListAssemblerException
-from PyUtil.symtab import SymtabError
+from PyUtil.symtab import Symtab,SymtabError
 
 from PyFort.flow import free_flow
 from PyFort.fortUnit import Unit,fortUnitIterator
@@ -31,6 +31,12 @@ def main():
                    help='set default options for forward and reverse mode (this currently includes hoisting of constant expressions).  Additional specific settings will override those set here.',
                    metavar='<f|r>',
                    default=None)
+    opt.add_option('',
+                   '--r8',
+                   dest='r8',
+                   help="set default size of REAL to 8 bytes",
+                   action='store_true',
+                   default=False)
     opt.add_option('-H',
                    '--hoist-constants',
                    dest='hoistConstantsFlag',
@@ -71,6 +77,11 @@ def main():
             UnitCanonicalizer.setHoistConstantsFlag(True)
             UnitCanonicalizer.setHoistStringsFlag(False)
 
+    # set symtab type defaults
+    if config.r8:
+        Symtab.setTypeDefaults((fs.DoubleStmt,[]),(fs.IntegerStmt,[]))
+    else:
+        Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
 
     # set free/fixed format
     free_flow(config.isFreeFormat) 

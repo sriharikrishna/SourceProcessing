@@ -54,8 +54,7 @@ class TypeOpsExpressions(TestCase):
         'Typing of various binary operation expressions over constants and implicitly types variables'
         ae = self.assertEquals
 
-        Symtab._default_int = (IntegerStmt,[])
-        Symtab._default_real = (RealStmt,[])
+        Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
         theSymtab = Symtab()
 
         e1 = ep('x * y')
