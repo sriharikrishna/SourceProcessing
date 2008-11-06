@@ -25,6 +25,12 @@ def main():
                    help="input source is free format",
                    action='store_true',
                    default=False)
+    opt.add_option('-m',
+                   '--mode',
+                   dest='mode',
+                   help='set default options for forward and reverse mode (this currently includes hoisting of constant expressions).  Additional specific settings will override those set here.',
+                   metavar='<f|r>',
+                   default=None)
     opt.add_option('-H',
                    '--hoist-constants',
                    dest='hoistConstantsFlag',
@@ -56,12 +62,25 @@ def main():
         opt.error("expect input file argument")
     inputFile = args[0]
 
+    # configure forward/reverse mode
+    if config.mode:
+        if config.mode[0] == 'f':
+            UnitCanonicalizer.setHoistConstantsFlag(False)
+            UnitCanonicalizer.setHoistStringsFlag(False)
+        elif config.mode[0] == 'r':
+            UnitCanonicalizer.setHoistConstantsFlag(True)
+            UnitCanonicalizer.setHoistStringsFlag(False)
+
+
     # set free/fixed format
     free_flow(config.isFreeFormat) 
 
-    # set constants/strings hoisting flag
-    UnitCanonicalizer.setHoistConstantsFlag(config.hoistConstantsFlag)
-    UnitCanonicalizer.setHoistStringsFlag(config.hoistStringsFlag)
+    # configure constant expression hoisting
+    if config.hoistConstantsFlag:
+        UnitCanonicalizer.setHoistConstantsFlag(config.hoistConstantsFlag)
+    # configure string hoisting
+    if config.hoistStringsFlag:
+        UnitCanonicalizer.setHoistStringsFlag(config.hoistStringsFlag)
 
     # set verbosity
     UnitCanonicalizer.setVerbose(config.isVerbose)
