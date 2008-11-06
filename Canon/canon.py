@@ -316,6 +316,21 @@ class UnitCanonicalizer(object):
         self.__recursionDepth -= 1
         return replacementStatement
 
+    def __canonicalizeSelectCaseStmt(self,aSelectCaseStmt):
+        '''
+        Canonicalize aSelectCaseStmt by canonicalizing the case expression.  Returns a canonicalized select case statement that replaces aSelectCaseStmt.
+        '''
+        if self._verbose: print self.__recursionDepth*'|\t'+'canonicalizing select case statement "'+str(aSelectCaseStmt)+'"'
+        self.__recursionDepth += 1
+        replacementStatement = fs.SelectCaseStmt(self.__canonicalizeExpression(aSelectCaseStmt.caseExpression,aSelectCaseStmt),
+                                                 lineNumber=aSelectCaseStmt.lineNumber,
+                                                 label=aSelectCaseStmt.label,
+                                                 lead=aSelectCaseStmt.lead
+                                                ).flow()
+        if self._verbose: print (self.__recursionDepth-1)*'|\t'+'|_'
+        self.__recursionDepth -= 1
+        return replacementStatement
+
     def canonicalizeUnit(self):
         '''Recursively canonicalize \p aUnit'''
         if self._verbose: print ('+'*55)+' Begin canonicalize unit <',self.__myUnit.uinfo,'> '+(55*'+'),'\nlocal',self.__myUnit.symtab.debug()
@@ -344,6 +359,8 @@ class UnitCanonicalizer(object):
                     replacementStatement = self.__canonicalizeDoStmt(anExecStmt)
                 elif isinstance(anExecStmt,fs.WhileStmt):
                     replacementStatement = self.__canonicalizeWhileStmt(anExecStmt)
+                elif isinstance(anExecStmt,fs.SelectCaseStmt):
+                    replacementStatement = self.__canonicalizeSelectCaseStmt(anExecStmt)
                 else:
                     if self._verbose: print 'Statement "'+str(anExecStmt)+'" is assumed to require no canonicalization'
                 if self._verbose: print ''

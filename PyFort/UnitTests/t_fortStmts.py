@@ -570,12 +570,53 @@ class TestFunctionStmt(TestCase):
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
+class TestSelectCaseStmt(TestCase):
+    '''select case statements'''
+    def test0(self):
+        '''select case statement with space'''
+        s = 'select case (i)'
+        r = SelectCaseStmt('i')
+        self.assertEquals(repr(pps(s)),repr(r))
+        self.assertEquals(s,str(r))
+
+    def test1(self):
+        '''select case statement without space'''
+        s = 'selectcase (i)'
+        r = SelectCaseStmt('i')
+        self.assertEquals(repr(pps(s)),repr(r))
+#       self.assertEquals(s,str(r))
+
+class TestCaseStmts(TestCase):
+    '''case statements'''
+    def test0(self):
+        '''case default statement'''
+        s = 'case default'
+        r = CaseDefaultStmt()
+        self.assertEquals(repr(pps(s)),repr(r))
+        self.assertEquals(s,str(r))
+
+    def test1(self):
+        '''case with single range'''
+        s = 'case (1:3)'
+        r = CaseRangeListStmt(['1:3'])
+        self.assertEquals(repr(pps(s)),repr(r))
+        self.assertEquals(s,str(r))
+
+    def test2(self):
+        '''case with multiple ranges'''
+        s = 'case (1:3,8:9)'
+        r = CaseRangeListStmt(['1:3','8:9'])
+        self.assertEquals(repr(pps(s)),repr(r))
+        self.assertEquals(s,str(r))
+
 suite = asuite(C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,TestImplicitStmt,
                                               TestDimensionStmt,
                                               TestDoStmt,
                                               TestWhileStmt,
                                               TestCallStmt,
-                                              TestFunctionStmt)
+                                              TestFunctionStmt,
+                                              TestSelectCaseStmt,
+                                              TestCaseStmts)
 
 if __name__ == '__main__':
     runit(suite)
