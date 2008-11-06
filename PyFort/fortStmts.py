@@ -1197,8 +1197,100 @@ class EnddoStmt(Leaf):
 class ContinueStmt(Leaf):
     kw = 'continue'
 
-class SelectStmt(Exec):
-    pass
+class SelectCaseStmt(Exec):
+    #FIXME: optional case construct name 
+    '''
+    [case-construct-name :] select case (case-expression)
+    '''
+    _sons = ['caseExpression']
+    kw = 'selectcase'
+    kw_str = 'select case'
+
+    @staticmethod
+    def parse(scan,lineNumber):
+        formSelectCaseStmt = seq(lit('selectcase'),
+#                                 lit('case'),
+                                 lit('('),
+                                 Exp,
+                                 lit(')'))
+        try:
+            ((selectCaseKeyword,openPeren,caseExpression,closePeren),rest) = formSelectCaseStmt(scan)
+        except ListAssemblerException,e:
+            raise ParseError(lineNumber,scan,'Select Case statement')
+        return SelectCaseStmt(caseExpression,lineNumber)
+
+    def __init__(self,caseExpression,lineNumber=0,label=False,lead=''):
+        self.caseExpression = caseExpression
+        self.lineNumber = lineNumber
+        self.label = label
+        self.lead = lead
+
+    def __str__(self):
+        return 'select case ('+str(self.caseExpression)+')'
+
+class EndSelectCaseStmt(Leaf):
+    #FIXME: optional case construct name 
+    '''
+    end select [case-construct-name]
+    '''
+    kw = 'endselect'
+    kw_str = 'end select'
+
+class CaseDefaultStmt(Exec):
+    #FIXME: optional case construct name 
+    '''
+    case default [case-construct-name]
+    '''
+    _sons = []
+    kw = 'casedefault'
+    kw_str = 'case default'
+
+    @staticmethod
+    def parse(scan,lineNumber):
+        formCaseDefaultStmt = seq(lit('casedefault'))
+        try:
+            ((caseDefaultKeyword),rest) = formCaseDefaultStmt(scan)
+        except ListAssemblerException,e:
+            raise ParseError(lineNumber,scan,'case default statement')
+        return CaseDefaultStmt(lineNumber)
+
+    def __init__(self,lineNumber=0,label=False,lead=''):
+        self.lineNumber = lineNumber
+        self.label = label
+        self.lead = lead
+
+    def __str__(self):
+        return 'case default'
+
+class CaseRangeListStmt(Exec):
+    #FIXME: optional case construct name 
+    '''
+    case (case-value-range-list) [case-construct-name]
+    '''
+    _sons = ['caseRangeList']
+    kw = 'case'
+    kw_str = 'case'
+
+    @staticmethod
+    def parse(scan,lineNumber):
+        formCaseRangeListStmt = seq(lit('case'),
+                                    lit('('),
+                                    cslist(Exp),
+                                    lit(')'))
+        try:
+            ((caseKeyword,openPeren,caseRangeList,closePeren),rest) = formCaseRangeListStmt(scan)
+        except ListAssemblerException,e:
+            raise ParseError(lineNumber,scan,'case range list statement')
+        return CaseRangeListStmt(caseRangeList,lineNumber)
+
+    def __init__(self,caseRangeList,lineNumber=0,label=False,lead=''):
+        self.caseRangeList = caseRangeList
+        self.lineNumber = lineNumber
+        self.label = label
+        self.lead = lead
+
+    def __str__(self):
+        return 'case (%s)' % ','.join([str(range) for range in self.caseRangeList])
 
 class GotoStmt(Exec):
     pass
@@ -1252,8 +1344,11 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              endblockdata    = EndStmt,
              do              = DoStmt,
              enddo           = EnddoStmt,
-             select          = SelectStmt,
              dowhile         = WhileStmt,
+             selectcase      = SelectCaseStmt,
+             endselect       = EndSelectCaseStmt,
+             casedefault     = CaseDefaultStmt,
+             case            = CaseRangeListStmt,
              )
 
 for kw in ('if','continue','return','else','print'):

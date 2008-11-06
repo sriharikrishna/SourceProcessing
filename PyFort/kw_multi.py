@@ -26,6 +26,7 @@ _kw2 = (('block','data'),
         ('go','to'),
         ('in','out'),
         ('select','case'),
+        ('case','default'),
         )
 _kw3 = (('end','block','data'),
         )
