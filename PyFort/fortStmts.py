@@ -1130,7 +1130,7 @@ class EndifStmt(Leaf):
     kw = 'endif'
 
 class DoStmt(Exec):
-    #FIXME: optional construct name, label, and comma are not handled
+    #FIXME: optional construct name and comma are not handled
     '''
     [do-construct-name :] do [label] [,] &
       scalar-integer-variable-name = scalar-integer-expression , scalar-integer-expression [, scalar-integer-expression]
@@ -1141,6 +1141,7 @@ class DoStmt(Exec):
     @staticmethod
     def parse(scan,lineNumber):
         formDoStmt = seq(lit('do'),
+                         zo1(int),
                          id,
                          lit('='),
                          Exp,
@@ -1148,13 +1149,18 @@ class DoStmt(Exec):
                          Exp,
                          zo1(seq(lit(','),
                                  Exp)))
-        ((theDoKeyword,loopVar,equals,loopStart,comma1,loopEnd,loopStride),rest) = formDoStmt(scan)
-        if loopStride:
-            return DoStmt(loopVar,loopStart,loopEnd,loopStride[0][1],lineNumber)
-        else:
-            return DoStmt(loopVar,loopStart,loopEnd,None,lineNumber)
+        try:
+            ((theDoKeyword,doLabel,loopVar,equals,loopStart,comma1,loopEnd,loopStride),rest) = formDoStmt(scan)
+        except ListAssemblerException,e:
+            raise ParseError(lineNumber,scan,'Do statement')
+        loopStride = loopStride and loopStride[0][1] \
+                                 or None
+        doLabel = doLabel and doLabel[0] \
+                           or None,
+        return DoStmt(loopVar,loopStart,loopEnd,loopStride,lineNumber)
 
-    def __init__(self,loopVar,loopStart,loopEnd,loopStride,lineNumber=0,label=False,lead=''):
+    def __init__(self,doLabel,loopVar,loopStart,loopEnd,loopStride,lineNumber=0,label=False,lead=''):
+        self.doLabel = doLabel
         self.loopVar = loopVar
         self.loopStart = loopStart
         self.loopEnd = loopEnd
@@ -1164,10 +1170,11 @@ class DoStmt(Exec):
         self.lead = lead
 
     def __str__(self):
-        if self.loopStride:
-            return 'do %s = %s,%s,%s' % (str(self.loopVar),str(self.loopStart),str(self.loopEnd),str(self.loopStride))
-        else:
-            return 'do %s = %s,%s' % (str(self.loopVar),str(self.loopStart),str(self.loopEnd))
+        loopStrideString = self.loopStride and ','+str(self.loopStride) \
+                                            or ''
+        doLabelString = self.doLabel and str(self.doLabel)+' ' \
+                                      or ''
+        return 'do %s%s = %s,%s%s' % (doLabelString,str(self.loopVar),str(self.loopStart),str(self.loopEnd),loopStrideString)
 
 class WhileStmt(Exec):
     #FIXME: optional construct name, label, and comma are not handled

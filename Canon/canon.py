@@ -4,7 +4,7 @@ canonicalization routines
 
 from _Setup import *
 
-from PyUtil.symtab import SymtabEntry,SymtabError
+from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
 
 from PyFort.intrinsic import is_intrinsic
 from PyFort.typeInference import TypeInferenceError,expressionType,functionType,isArrayReference
@@ -288,7 +288,8 @@ class UnitCanonicalizer(object):
         self.__recursionDepth += 1
         replacementStart = self.__canonicalizeExpression(aDoStmt.loopStart,aDoStmt)
         newExecsLength = len(self.__myNewExecs)
-        replacementStatement = fs.DoStmt(aDoStmt.loopVar,
+        replacementStatement = fs.DoStmt(aDoStmt.doLabel,
+                                         aDoStmt.loopVar,
                                          replacementStart,
                                          self.__canonicalizeExpression(aDoStmt.loopEnd,aDoStmt),
                                          self.__canonicalizeExpression(aDoStmt.loopStride,aDoStmt),

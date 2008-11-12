@@ -246,6 +246,9 @@ class Ops(_Exp):
 def is_id(t):
     return _id_re.match(t)
 
+def is_int(t):
+    return _int_re.match(t)
+
 def is_const(t):
     t1 = t.lower()
     return t1[0] in _quote_set or t1 in _logicon_set or _num_re.match(t1)
@@ -353,6 +356,7 @@ def _mkexp(e):
         a = Ops(op,a,_mkexp(a2))
     return a
 
+int     = pred(is_int)
 id      = pred(is_id)
 const   = pred(is_const)
 const   = treat(const,_lc_const)
