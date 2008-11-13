@@ -560,28 +560,42 @@ class TestFunctionStmt(TestCase):
     def test0(self):
         '''function statement with no arguments'''
         s = 'function foo()'
-        r = FunctionStmt(None,'foo',[])
+        r = FunctionStmt(None,'foo',[],None)
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
     def test1(self):
         '''function statement with no type'''
         s = 'function foo(x)'
-        r = FunctionStmt(None,'foo',['x'])
+        r = FunctionStmt(None,'foo',['x'],None)
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
     def test2(self):
         '''function statement with type real (no modifier)'''
         s = 'real function foo(x)'
-        r = FunctionStmt((RealStmt,[]),'foo',['x'])
+        r = FunctionStmt((RealStmt,[]),'foo',['x'],None)
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
     def test3(self):
         '''function statement with type real (with modifier)'''
         s = 'real(kind = 16) function foo(x)'
-        r = FunctionStmt((RealStmt,[_ExplKind('16')]),'foo',['x'])
+        r = FunctionStmt((RealStmt,[_ExplKind('16')]),'foo',['x'],None)
+        self.assertEquals(repr(pps(s)),repr(r))
+        self.assertEquals(s,str(r))
+
+    def test4(self):
+        '''function statement with result'''
+        s = 'function foo(x) result(y)'
+        r = FunctionStmt(None,'foo',['x'],'y')
+        self.assertEquals(repr(pps(s)),repr(r))
+        self.assertEquals(s,str(r))
+        
+    def test5(self):
+        '''function statement with type real (with modifier) and result specifier'''
+        s = 'real(kind = 16) function foo(x) result(y)'
+        r = FunctionStmt((RealStmt,[_ExplKind('16')]),'foo',['x'],'y')
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
