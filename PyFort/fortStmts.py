@@ -884,15 +884,21 @@ class FunctionStmt(PUstart):
         p1 = seq(zo1(type_pat_sem),
                  lit('function'),
                  id,
-                 lit('('),cslist(id),lit(')'),
-             )
-
-        ((ty,dc,name,dc1,args,dc2),rest) = p1(scan)
+                 lit('('),
+                 cslist(id),
+                 lit(')'),
+                 zo1(seq(lit('result'),
+                         lit('('),
+                         id,
+                         lit(')'))))
+        ((ty,dc,name,dc1,args,dc2,resultstuff),rest) = p1(scan)
         type = ty and ty[0] \
                    or None
-        return FunctionStmt(type,name,args,lineNumber)
+        result = resultstuff and resultstuff[0][2] \
+                              or None
+        return FunctionStmt(type,name,args,result,lineNumber)
 
-    def __init__(self,ty,name,args,lineNumber=0,label=False,lead=''):
+    def __init__(self,ty,name,args,result,lineNumber=0,label=False,lead=''):
         '''
         typ = None
 
@@ -904,6 +910,7 @@ class FunctionStmt(PUstart):
         self.ty = ty
         self.name = name
         self.args = args
+        self.result = result
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
@@ -911,15 +918,21 @@ class FunctionStmt(PUstart):
     def __repr__(self):
         typeRepr = self.ty and '('+self.ty[0].__name__+','+repr(self.ty[1])+')' \
                             or None
-        return 'FunctionStmt(%s,%s,%s)' % (typeRepr,
-                                           repr(self.name),
-                                           repr(self.args))
+        resultRepr = self.result and repr(self.result) \
+                                  or None
+        return 'FunctionStmt(%s,%s,%s,%s)' % (typeRepr,
+                                              repr(self.name),
+                                              repr(self.args),
+                                              resultRepr)
     def __str__(self):
         typePrefix = self.ty and (typestr2(self.ty)+' ') \
                               or ''
-        return '%sfunction %s(%s)' % (typePrefix,
-                                      str(self.name),
-                                      ','.join([str(l) for l in self.args]))
+        resultStr = self.result and ' result('+str(self.result)+')' \
+                                 or ''
+        return '%sfunction %s(%s)%s' % (typePrefix,
+                                        str(self.name),
+                                        ','.join([str(l) for l in self.args]),
+                                        resultStr)
 
 class ModuleStmt(PUstart):
     utype_name = 'module'
