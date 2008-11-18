@@ -3,7 +3,6 @@
 canonicalization
 '''
 import sys
-import cPickle as cp
 from optparse import OptionParser
 
 from PyUtil.errors import UserError, ScanError, ParseError
