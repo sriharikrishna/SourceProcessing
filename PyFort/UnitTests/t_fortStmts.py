@@ -208,24 +208,6 @@ class C6(TestCase):
         vv = DoubleStmt([],[App('intent',['in']),'allocatable'],['x','y',])
         ae(str(vv),'double precision,intent(in),allocatable :: x,y')
 
-class C7(TestCase):
-    '''Typing, and misc xform utilities
-    '''
-    def test1(self):
-        'kw2type'
-        ae = self.assertEquals
-        a_ = self.assert_
-        ae(kw2type('real'),RealStmt)
-        ae(kw2type('doubleprecision'),DoubleStmt)
-        ae(kw2type('integer'),IntegerStmt)
-        ae(kw2type('logical'),LogicalStmt)
-
-    def test2(self):
-        'lenfn'
-        ae = self.assertEquals
-        a_ = self.assert_
-        ae(str(lenfn(15)[0]),'*15')
-
 class C8(TestCase):
     'more declarations, esp character statements'
     def test1(self):
@@ -638,14 +620,14 @@ class TestCaseStmts(TestCase):
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
-suite = asuite(C1,C2,C3,C4,C5,C6,C7,C8,C9,C10,TestImplicitStmt,
-                                              TestDimensionStmt,
-                                              TestDoStmt,
-                                              TestWhileStmt,
-                                              TestCallStmt,
-                                              TestFunctionStmt,
-                                              TestSelectCaseStmt,
-                                              TestCaseStmts)
+suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,C10,TestImplicitStmt,
+                                           TestDimensionStmt,
+                                           TestDoStmt,
+                                           TestWhileStmt,
+                                           TestCallStmt,
+                                           TestFunctionStmt,
+                                           TestSelectCaseStmt,
+                                           TestCaseStmts)
 
 if __name__ == '__main__':
     runit(suite)

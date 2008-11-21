@@ -18,6 +18,14 @@ class TypeInferenceError(Exception):
    def __init__(self,msg):
        self.msg  = msg
 
+def kw2type(s): return(fortStmts.kwtbl[s.lower()])
+def lenfn(n): return [fortStmts._F77Len(str(n))]
+
+_modhash = { fortStmts._Prec     : 0,
+             fortStmts._Kind     : 1,
+             fortStmts._ExplKind : 2,
+             }
+
 def modcompare(m1,m2):
     'compare type modifiers'
     if not m1: return m2
@@ -30,7 +38,7 @@ def modcompare(m1,m2):
     if isinstance(mm2,fortStmts._FLenMod) and isinstance(mm1,fortStmts._FLenMod) :
         if mm1.len >= mm2.len: return m1
         return m2
-    if fortStmts._modhash[c1] >= fortStmts._modhash[c2]: return m1
+    if _modhash[c1] >= _modhash[c2]: return m1
     return m2
 
 def typecompare(t1,t2):
@@ -66,21 +74,21 @@ def constantType(e):
     if _flonum_re.match(e):
         sep_re = re.compile(r'([^_]+)(_(\w+))?')
         v      = sep_re.match(e)
-        ty     = 'd' in v.group(1).lower() and fortStmts.kw2type('doubleprecision') \
-                                            or fortStmts.kw2type('real')
+        ty     = 'd' in v.group(1).lower() and kw2type('doubleprecision') \
+                                            or kw2type('real')
         kind   = v.group(2) and [fortStmts._Kind(v.group(3))] \
                              or []
         return (ty,kind)
     if _int_re.match(e):
-        ty   = fortStmts.kw2type('integer')
+        ty   = kw2type('integer')
         kind = kind_re.search(e)
         kind = kind and [fortStmts._Kind(kind.group(1))] \
                      or []
         return (ty,kind)
     if e.lower() in _logicon_set:
-        return (fortStmts.kw2type('logical'),[])
+        return (kw2type('logical'),[])
     if e[0] in _quote_set:
-        return (fortStmts.kw2type('character'),fortStmts.lenfn(len(e)-2))
+        return (kw2type('character'),lenfn(len(e)-2))
 
 def identifierType(anId,localSymtab):
     (symtabEntry,containingSymtab) = localSymtab.lookup_name_level(anId)

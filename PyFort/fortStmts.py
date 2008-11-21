@@ -1422,17 +1422,6 @@ def parse(scan,lineNumber):
 #
 _kw_parse = parse
 
-#
-# Type helper routines
-#
-def kw2type(s): return(kwtbl[s.lower()])
-def lenfn(n): return [_F77Len(str(n))]
-
-_modhash = { _Prec     : 0,
-             _Kind     : 1,
-             _ExplKind : 2,
-             }
-
 '''
 if __name__ == '__main__':
     from _Setup.testit import *

@@ -5,9 +5,23 @@ from useparse import *
 
 from PyUtil.symtab import Symtab
 
-from typeInference import expressionType,constantType,typemerge
+from typeInference import expressionType,constantType,typemerge,kw2type,lenfn
 from fortStmts import LogicalStmt,CharacterStmt,IntegerStmt,RealStmt,DoubleStmt,ComplexStmt,DoubleCplexStmt
 from fortStmts import _Prec,_Kind,_F77Len
+
+class TypeUtils(TestCase):
+    '''Typing, and misc xform utilities
+    '''
+    def test1(self):
+        'kw2type'
+        self.assertEquals(kw2type('real'),RealStmt)
+        self.assertEquals(kw2type('doubleprecision'),DoubleStmt)
+        self.assertEquals(kw2type('integer'),IntegerStmt)
+        self.assertEquals(kw2type('logical'),LogicalStmt)
+
+    def test2(self):
+        'lenfn'
+        self.assertEquals(str(lenfn(15)[0]),'*15')
 
 class TypeConstants(TestCase):
     def test0(self):
@@ -54,7 +68,7 @@ class TypeOpsExpressions(TestCase):
         'Typing of various binary operation expressions over constants and implicitly types variables'
         ae = self.assertEquals
 
-        Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
+        Symtab.setTypeDefaults((RealStmt,[]),(IntegerStmt,[]))
         theSymtab = Symtab()
 
         e1 = ep('x * y')
@@ -98,7 +112,6 @@ class TypeMerging(TestCase):
                                     t),
                           t)
 
-
     def test1(self):
         'Merging of types in order to yield the correct supremum'
         ae = self.assertEquals
@@ -120,7 +133,7 @@ class TypeMerging(TestCase):
         ae(typemerge([t1,t2,t3,t4,t5,t6],t1),t5)
 
 
-suite = asuite(TypeConstants,TypeOpsExpressions,TypeMerging)
+suite = asuite(TypeUtils,TypeConstants,TypeOpsExpressions,TypeMerging)
 
 if __name__ == '__main__':
     runit(suite)
