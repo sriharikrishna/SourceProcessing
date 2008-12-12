@@ -5,7 +5,9 @@ from Setup import *
 from _Setup import *
 from unittest import *
 from PyUtil.errors import UserError
+from PyUtil.symtab import Symtab
 from PyFort.fortUnit import fortUnitIterator
+from PyFort.fortStmts import RealStmt,IntegerStmt
 from canon import UnitCanonicalizer,CanonError
 
 '''
@@ -13,7 +15,7 @@ Unit tests for canonicalizer
 
 '''
 
-Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
+Symtab.setTypeDefaults((RealStmt,[]),(IntegerStmt,[]))
 
 def compareFiles(assertFunc,originalFileName,RefFileName,free):
     UnitCanonicalizer.setVerbose(False) 
