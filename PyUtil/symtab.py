@@ -138,6 +138,12 @@ class SymtabEntry(object):
         def __init__(self):
             pass
 
+    class InterfaceEntryKind(GenericEntryKind):
+        keyword = 'interface'
+
+    class StatementFunctionEntryKind(GenericEntryKind):
+        keyword = 'statement function'
+
     class ProcedureEntryKind(GenericEntryKind):
         keyword = 'procedure'
 
@@ -145,6 +151,9 @@ class SymtabEntry(object):
         keyword = 'function'
 
     class SubroutineEntryKind(ProcedureEntryKind):
+        keyword = 'function'
+
+    class ProgramEntryKind(ProcedureEntryKind):
         keyword = 'function'
 
     class VariableEntryKind(GenericEntryKind):

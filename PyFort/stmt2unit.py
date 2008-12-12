@@ -95,13 +95,20 @@ def _processExternalStmt(anExternalStmt,curr):
             theSymtabEntry.enterEntryKind(newEntryKind)
     return anExternalStmt
 
-def _assign2stmtfn(s,cur):
+def _assign2stmtfn(anAssignmentStmt,curr):
     'convert assign stmt s to stmtfn, and enter in unit symtab'
 #    print 'converting ',s,' to stmt fn'
-    unit = cur.val
-    lhs = s.lhs
-    rv = fs.StmtFnStmt(lhs.head,lhs.args,s.rhs,s.lineNumber,s.label,s.lead)
-    rv.rawline = s.rawline
+    newStmtFn = fs.StmtFnStmt(anAssignmentStmt.lhs.head,
+                              anAssignmentStmt.lhs.args,
+                              anAssignmentStmt.rhs,
+                              anAssignmentStmt.lineNumber,
+                              anAssignmentStmt.label,
+                              anAssignmentStmt.lead)
+    newStmtFn.rawline = anAssignmentStmt.rawline
+    newSymtabEntry = SymtabEntry(SymtabEntry.StatementFunctionEntryKind,
+                                 origin='local')
+    curr.val.symtab.enter_name(lhs.head,newSymtabEntry)
+    return newSymtabEntry
 
     entry = SE.StatementFunctionEntry(lhs.args,s.rhs)
     unit.symtab.enter_name(lhs.head,entry)
@@ -187,27 +194,28 @@ def _end_unit_iface_action(self,cur):
     return self
 
 def _beginInterface(self,cur):
-    print 'called _beginInterface on ',self
-    currentUnit = cur.val
-    currentUnit._in_iface = True
+#   print 'called _beginInterface on ',self
+    cur.val._in_iface = True
+    localSymtab = cur.val.symtab
     # make a symbol table local to the interface
-    interfaceSymtab = Symtab(currentUnit.symtab)
+    interfaceSymtab = Symtab(localSymtab)
     # for named interfaces, add a symbol table entry to its symtab AND the enclosing unit
     if self.name:
-        entry = SE.InterfaceEntry(self.name,interfaceSymtab)
-        currentUnit.symtab.enter_name(self.name,entry)
-        interfaceSymtab.enter_name(self.name,entry)
+        newSymtabEntry = SymtabEntry(SymtabEntry.InterfaceEntryKind,
+                                     origin='local')
+        localSymtab.enter_name(self.name,newSymtabEntry)
+        interfaceSymtab.enter_name(self.name,newSymtabEntry)
     # switch to the interface's symbol table for the duration of the interface
-    currentUnit.symtab = interfaceSymtab
-    print '\tEntering interface "'+str(self.name)+'", with symbol table "'+str(interfaceSymtab)+'"'
+    cur.val.symtab = interfaceSymtab
+#   print '\tEntering interface "'+str(self.name)+'", with symbol table "'+str(interfaceSymtab)+'"'
     return self
 
 def _endInterface(self,cur):
     currentUnit = cur.val
     currentUnit._in_iface = False
-    # swtch back to the symbol table for the unit
+    # switch back to the symbol table for the unit
     currentUnit.symtab = currentUnit.symtab.parent
-    print '\tLeaving interface and restoring unit symbol table "'+str(currentUnit.symtab)+'"\n'
+#   print '\tLeaving interface and restoring unit symbol table "'+str(currentUnit.symtab)+'"\n'
     return self
 
 fs.GenStmt.unit_action        = lambda s,*rest,**kw: s
