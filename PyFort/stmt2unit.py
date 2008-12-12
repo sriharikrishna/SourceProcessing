@@ -110,11 +110,6 @@ def _assign2stmtfn(anAssignmentStmt,curr):
     curr.val.symtab.enter_name(lhs.head,newSymtabEntry)
     return newSymtabEntry
 
-    entry = SE.StatementFunctionEntry(lhs.args,s.rhs)
-    unit.symtab.enter_name(lhs.head,entry)
-
-    return rv
-
 def _is_stmt_fn(s,cur):
     'determine if assignment s is a statement function, based on "unit" symtab'
 #    print 'checking assignment ',s,' for stmt fn'
