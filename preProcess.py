@@ -37,15 +37,15 @@ def main():
                    action='store_true',
                    default=False)
     opt.add_option('-H',
-                   '--hoist-constants',
+                   '--hoist-non-string-constants',
                    dest='hoistConstantsFlag',
-                   help='activate the hoisting of constant arguments to subroutine calls (defaults to False)',
+                   help='enable the hoisting of non-string constant arguments to subroutine calls (defaults to False)',
                    action='store_true',
                    default=False)
     opt.add_option('-S',
-                   '--hoist-strings',
+                   '--hoist-string-constants',
                    dest='hoistStringsFlag',
-                   help='activate the hoisting of string arguments to subroutine calls (defaults to False)',
+                   help='enable the hoisting of string constant arguments to subroutine calls (defaults to False)',
                    action='store_true',
                    default=False)
     opt.add_option('-o',
@@ -103,12 +103,12 @@ def main():
             UnitCanonicalizer(aUnit).canonicalizeUnit().printit(out)
         if config.outputFile: out.close()
     except CanonError,e:
-        print >>sys.stderr,'\nCanonicalization Error on line '+str(e.lineNumber)+':\n',e.msg
+        print >>sys.stderr,'\nCanonicalization Error on line '+str(e.lineNumber)+': ',e.msg
         return 1
     except SymtabError,e:
         debugstr = e.entry and e.entry.debug('unknown') \
                             or ''
-        print >>sys.stderr,'\nSymtabError on line '+str(e.lineNumber)+':\n',e.msg,'\nfor entry',debugstr
+        print >>sys.stderr,'\nSymtabError on line '+str(e.lineNumber)+':',e.msg,' for entry',debugstr
         return 1
     except UserError,e:
         print >>sys.stderr,'UserError:',e.msg
