@@ -15,21 +15,40 @@ from PyFort.fortUnit import Unit,fortUnitIterator
 import PyFort.fortStmts as fs
 
 from Canon.canon import UnitCanonicalizer,CanonError
+
+def cleanup(config):
+    from os.path import isfile 
+    from os import remove 
+    if ((not config.noCleanup) and (not config.outFileName is None) and  os.path.isfile(outFileName)):
+        try: 
+            os.remove(outFileName)
+        except:
+            print >>sys.stderr,'Cannot remove output file '+outFileName
  
 def main():
     usage = '%prog [options] <input_file>'
+    modes={'f':'forward','r':'reverse'}
+    modeChoices=modes.keys()
+    modeChoicesHelp=""
+    for k,v in modes.items():
+        modeChoicesHelp+=k+" = "+v+"; "
     opt = OptionParser(usage=usage)
-    opt.add_option('--free',
+    opt.add_option('',
+                   '--free',
                    dest='isFreeFormat',
                    help="input source is free format",
                    action='store_true',
                    default=False)
-    opt.add_option('-m',
-                   '--mode',
-                   dest='mode',
-                   help='set default options for forward and reverse mode (this currently includes hoisting of constant expressions).  Additional specific settings will override those set here.',
-                   metavar='<f|r>',
+    opt.add_option('-m','--mode',dest='mode',
+                   type='choice', choices=modeChoices,
+                   help='set default options for transformation mode with MODE being one of: '+ modeChoicesHelp+ '  reverse mode  implies -H but not -S; specific settings override the mode defaults.',
                    default=None)
+    opt.add_option('-n',
+                   '--noCleanup',
+                   dest='noCleanup',
+                   help='do not remove the output file if an error was encountered (defaults to False)',
+                   action='store_true',
+                   default=False)
     opt.add_option('',
                    '--r8',
                    dest='r8',
@@ -37,13 +56,13 @@ def main():
                    action='store_true',
                    default=False)
     opt.add_option('-H',
-                   '--hoist-non-string-constants',
+                   '--hoistNonStringConstants',
                    dest='hoistConstantsFlag',
                    help='enable the hoisting of non-string constant arguments to subroutine calls (defaults to False)',
                    action='store_true',
                    default=False)
     opt.add_option('-S',
-                   '--hoist-string-constants',
+                   '--hoistStringConstants',
                    dest='hoistStringsFlag',
                    help='enable the hoisting of string constant arguments to subroutine calls (defaults to False)',
                    action='store_true',
@@ -104,14 +123,17 @@ def main():
         if config.outputFile: out.close()
     except CanonError,e:
         print >>sys.stderr,'\nCanonicalization Error on line '+str(e.lineNumber)+': ',e.msg
+        cleanup(config)
         return 1
     except SymtabError,e:
         debugstr = e.entry and e.entry.debug('unknown') \
                             or ''
         print >>sys.stderr,'\nSymtabError on line '+str(e.lineNumber)+':',e.msg,' for entry',debugstr
+        cleanup(config)
         return 1
     except UserError,e:
         print >>sys.stderr,'UserError:',e.msg
+        cleanup(config)
         return 1 
     except ScanError,e: 
         print >>sys.stderr,'ScanError: scanner fails at line '+str(e.lineNumber)+':'
@@ -122,17 +144,21 @@ def main():
         print >>sys.stderr,''
         print >>sys.stderr,"This failure is likely due to possibly legal but unconventional Fortran,"
         print >>sys.stderr,"such as unusual spacing. Please consider modifying your source code."
+        cleanup(config)
         return 1 
     except ParseError,e: 
         print >>sys.stderr,'ParseError: parser fails to assemble tokens in scanned line '+str(e.lineNumber)+':'
         print >>sys.stderr,e.scannedLine
         print >>sys.stderr,"as",e.target
+        cleanup(config)
         return 1 
     except AssemblerException,e:
         print >>sys.stderr,"AssemblerError: parser failed:",e.msg
+        cleanup(config)
         return 1 
     except ListAssemblerException,e:
         print >>sys.stderr,"ListAssemblerError: parser failed:",e.msg
+        cleanup(config)
         return 1 
     return 0
 
