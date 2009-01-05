@@ -191,6 +191,9 @@ class UnitCanonicalizer(object):
                 elif isinstance(anArg,str) and self.__myUnit.symtab.lookup_name(anArg):
                     if self._verbose: print 'is a string variable (which we aren\'t hoisting)'
                     replacementArgs.append(anArg)
+                elif isinstance(anArg,fe.App) and isArrayReference(anArg,self.__myUnit.symtab):
+                    if self._verbose: print 'is a character array reference (which we aren\'t hoisting)'
+                    replacementArgs.append(anArg)
                 else:
                     if self._verbose: print 'is a string expression to be hoisted:',
                     replacementArgs.append(self.__hoistExpression(anArg,aSubCallStmt))
