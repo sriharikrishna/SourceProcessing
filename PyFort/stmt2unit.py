@@ -96,8 +96,8 @@ def _processExternalStmt(anExternalStmt,curr):
     return anExternalStmt
 
 def _assign2stmtfn(anAssignmentStmt,curr):
-    'convert assign stmt s to stmtfn, and enter in unit symtab'
-#    print 'converting ',s,' to stmt fn'
+    'convert assign stmt to stmtfn, and enter in unit symtab'
+#    print 'converting ',anAssignmentStmt,' to stmt fn'
     newStmtFn = fs.StmtFnStmt(anAssignmentStmt.lhs.head,
                               anAssignmentStmt.lhs.args,
                               anAssignmentStmt.rhs,
@@ -107,8 +107,8 @@ def _assign2stmtfn(anAssignmentStmt,curr):
     newStmtFn.rawline = anAssignmentStmt.rawline
     newSymtabEntry = SymtabEntry(SymtabEntry.StatementFunctionEntryKind,
                                  origin='local')
-    curr.val.symtab.enter_name(lhs.head,newSymtabEntry)
-    return newSymtabEntry
+    curr.val.symtab.enter_name(anAssignmentStmt.lhs.head,newSymtabEntry)
+    return newStmtFn
 
 def _is_stmt_fn(s,cur):
     'determine if assignment s is a statement function, based on "unit" symtab'
