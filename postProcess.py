@@ -3,6 +3,7 @@
 Postprocessing
 '''
 import sys
+import os
 from optparse import OptionParser
 
 from PyUtil.errors import UserError, ScanError, ParseError
@@ -10,11 +11,14 @@ from PyUtil.assembler import AssemblerException
 from PyUtil.l_assembler import AssemblerException as ListAssemblerException
 from PyUtil.symtab import Symtab,SymtabError
 
+from PyIR.prog1 import Prog1
+
 from PyFort.flow import free_flow
 from PyFort.fortUnit import Unit,fortUnitIterator
+import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
 
-from Canon.canon import UnitCanonicalizer,CanonError
+from PP.unitPostProcess import UnitPostProcessor
  
 def main():
     usage = '%prog [options] <input_file>'
@@ -56,22 +60,23 @@ def main():
     free_flow(config.isFreeFormat) 
 
     # set verbosity
-# the stuff in between here will obviously change **************************************************
-    UnitCanonicalizer.setVerbose(config.isVerbose)
-    Unit.setVerbose(config.isVerbose)
-#***************************************************************************************************
+    UnitPostProcessor.setVerbose(config.isVerbose)
 
     try: 
-        if config.outputFile: out = open(config.outputFile,'w')
-        else: out = sys.stdout
+        if config.outputFile: 
+            out = config.outputFile
+        else: 
+            (base,ext) = os.path.splitext(inputFile)
+            outfile = base + ".post" + ext
+            out = open(outfile, 'w')
         for aUnit in fortUnitIterator(inputFile,config.isFreeFormat):
-# the stuff in between here will obviously change ##################################################
-            UnitCanonicalizer(aUnit).canonicalizeUnit().printit(out)
+            UnitPostProcessor(aUnit).processUnit().printit(out)
+
         if config.outputFile: out.close()
-    except CanonError,e:
-        print >>sys.stderr,'\nCanonicalization Error on line '+str(e.lineNumber)+':\n',e.msg
+    except PPError,e:
+        print >>sys.stderr,'\nPostprocessing Error on line '+str(e.lineNumber)+':\n',e.msg
         return 1
-####################################################################################################
+
     except SymtabError,e:
         debugstr = e.entry and e.entry.debug('unknown') \
                             or ''
