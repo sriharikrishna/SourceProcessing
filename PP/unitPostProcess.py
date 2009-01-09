@@ -16,7 +16,7 @@ import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
 import re
 
-class PPError(Exception):
+class PostProcessError(Exception):
     '''Exception for errors that occur during postprocessing'''
     def __init__(self,msg,linenumber):
         self.msg = msg
@@ -93,7 +93,8 @@ class UnitPostProcessor(object):
 
         deriv = re.compile('__deriv__')
         iterator = deriv.finditer(value_str)
-        decl_str = self.__inline(iterator,value_str,'%d')
+        #decl_str = self.__inline(iterator,value_str,'%d')
+        decl_str = self.__inline(iterator,value_str,'')
 
         newDecl = fs._NoInit(decl_str)
         return newDecl
@@ -114,8 +115,7 @@ class UnitPostProcessor(object):
                 nv = theExpression.args[0]
                 replacementExpression = fe.Sel(nv,"v")
             elif theExpression.head == '__deriv__':
-                nv = theExpression.args[0]
-                replacementExpression = fe.Sel(nv,"d")
+                replacementExpression = theExpression.args[0]
             else:
                 replacementExpression = theExpression
 
@@ -124,17 +124,8 @@ class UnitPostProcessor(object):
 #            replacementExpression = self.__inlinableExpression(theExpression.head)
 
         elif isinstance(theExpression, fe.Unary):
-            if isinstance(theExpression, fe.Umi):
-                replacementExpression = fe.Umi(self.__inlinableExpression(theExpression.exp))
-            elif isinstance(theExpression, fe.Upl):
-                replacementExpression = fe.Upl(self.__inlinableExpression(theExpression.exp))
-            elif isinstance(theExpression, fe.Not):
-                replacementExpression = fe.Not(self.__inlinableExpression(theExpression.exp))
-            elif isinstance(theExpression, fe.ParenExp):
-                replacementExpression = fe.ParenExp(self.__inlinableExpression(theExpression.exp))
-            else:
-                replacementExpression = theExpression
-
+            theExpression.exp = self.__inlinableExpression(theExpression.exp)
+            replacementExpression = theExpression
         elif isinstance(theExpression, fe.Ops):
             replacementExpression = fe.Ops(theExpression.op,
                    self.__inlinableExpression(theExpression.a1),
@@ -202,6 +193,15 @@ class UnitPostProcessor(object):
             replacementStatement = newStatement
         return replacementStatement
 
+    def __processExecStmt(self,anExecStmt):
+        '''Does inlining on general executable statements'''
+        if self._verbose: print 'unitPostProcessor.__processExecStmt called on: "'+str(anExecStmt)+"'"
+        for aSon in anExecStmt._sons:
+          theSon = getattr(anExecStmt,aSon)
+          theSon = self.__inlinableExpression(theSon)
+        self.__myNewExecs.append(anExecStmt)
+        return
+
     # Processes all statements in the unit
     def processUnit(self):
         ''' post-process a unit '''
@@ -223,8 +223,7 @@ class UnitPostProcessor(object):
                 elif isinstance(anExecStmt,fs.AssignStmt):
                     self.__processAssignStmt(anExecStmt)
                 else:
-                    if self._verbose: print 'Statement "'+str(anExecStmt)+'" is assumed to require no post-processing'
-                    self.__myNewExecs.append(anExecStmt)
+                    self.__processExecStmt(anExecStmt)
                     
             except TypeInferenceError,e:
                 raise PPError('Caught TypeInferenceError: '+e.msg,anExecStmt.lineNumber)

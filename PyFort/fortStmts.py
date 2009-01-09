@@ -465,7 +465,7 @@ class Exec(NonComment):
 
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__,
-                           ','.join([repr(aSon) for aSon in self._sons]))
+                           ','.join([repr(getattr(self,aSon)) for aSon in self._sons]))
 
 class Leaf(Exec):
     "special Exec that doesn't have components"
@@ -819,6 +819,9 @@ class DimensionStmt(Decl):
     def __str__(self):
         return 'dimension %s' % ','.join([str(l) for l in self.lst])
 
+class IntentStmt(Decl):
+    pass
+
 class NamelistStmt(Decl):
     pass
 
@@ -1148,7 +1151,7 @@ class DoStmt(Exec):
     [do-construct-name :] do [label] [,] &
       scalar-integer-variable-name = scalar-integer-expression , scalar-integer-expression [, scalar-integer-expression]
     '''
-    _sons = ['loopVar','loopStart','loopEnd','loopStride']
+    _sons = ['doLabel','loopVar','loopStart','loopEnd','loopStride']
     kw = 'do'
 
     @staticmethod
@@ -1169,8 +1172,8 @@ class DoStmt(Exec):
         loopStride = loopStride and loopStride[0][1] \
                                  or None
         doLabel = doLabel and doLabel[0] \
-                           or None,
-        return DoStmt(loopVar,loopStart,loopEnd,loopStride,lineNumber)
+                           or None
+        return DoStmt(doLabel,loopVar,loopStart,loopEnd,loopStride,lineNumber)
 
     def __init__(self,doLabel,loopVar,loopStart,loopEnd,loopStride,lineNumber=0,label=False,lead=''):
         self.doLabel = doLabel
@@ -1373,6 +1376,7 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              endselect       = EndSelectCaseStmt,
              casedefault     = CaseDefaultStmt,
              case            = CaseRangeListStmt,
+             intent          = IntentStmt,
              )
 
 for kw in ('if','continue','return','else','print'):
@@ -1414,9 +1418,10 @@ def parse(scan,lineNumber):
         if kw in _types and 'function' in lscan:
             kw = 'function'
 
-#        cls = kwtbl.get(kw) or GenStmt
-        cls = kwtbl.get(kw) or NonComment
-        return cls.parse(scan,lineNumber)
+        if not kwtbl.get(kw):
+            raise ParseError(lineNumber,scan,None)
+        return kwtbl.get(kw).parse(scan,lineNumber)
+
 #
 # alias so that stmts like if, etc can call the above routine
 #
