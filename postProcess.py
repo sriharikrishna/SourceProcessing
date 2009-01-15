@@ -18,7 +18,7 @@ from PyFort.fortUnit import Unit,fortUnitIterator
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
 
-from PP.unitPostProcess import UnitPostProcessor
+from PP.unitPostProcess import UnitPostProcessor, PostProcessError
  
 def main():
     usage = '%prog [options] <input_file>'
@@ -64,7 +64,7 @@ def main():
 
     try: 
         if config.outputFile: 
-            out = config.outputFile
+            out = open(config.outputFile,'w')
         else: 
             (base,ext) = os.path.splitext(inputFile)
             outfile = base + ".post" + ext
@@ -72,8 +72,8 @@ def main():
         for aUnit in fortUnitIterator(inputFile,config.isFreeFormat):
             UnitPostProcessor(aUnit).processUnit().printit(out)
 
-        if config.outputFile: out.close()
-    except PPError,e:
+        out.close()
+    except PostProcessError,e:
         print >>sys.stderr,'\nPostprocessing Error on line '+str(e.lineNumber)+':\n',e.msg
         return 1
 
