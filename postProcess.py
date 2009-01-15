@@ -64,7 +64,7 @@ def main():
 
     try: 
         if config.outputFile: 
-            out = config.outputFile
+            out = open(config.outputFile,'w')
         else: 
             (base,ext) = os.path.splitext(inputFile)
             outfile = base + ".post" + ext
@@ -72,7 +72,7 @@ def main():
         for aUnit in fortUnitIterator(inputFile,config.isFreeFormat):
             UnitPostProcessor(aUnit).processUnit().printit(out)
 
-        if config.outputFile: out.close()
+        out.close()
     except PostProcessError,e:
         print >>sys.stderr,'\nPostprocessing Error on line '+str(e.lineNumber)+':\n',e.msg
         return 1

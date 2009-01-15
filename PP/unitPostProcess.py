@@ -226,9 +226,9 @@ class UnitPostProcessor(object):
                     self.__processExecStmt(anExecStmt)
                     
             except TypeInferenceError,e:
-                raise PPError('Caught TypeInferenceError: '+e.msg,anExecStmt.lineNumber)
+                raise PostProcessError('Caught TypeInferenceError: '+e.msg,anExecStmt.lineNumber)
             except SymtabError,e:
-                raise PPError('Caught SymtabError: '+e.msg,anExecStmt.lineNumber)
+                raise PostProcessError('Caught SymtabError: '+e.msg,anExecStmt.lineNumber)
 
 
         # Used for adding the active module 
@@ -266,9 +266,9 @@ class UnitPostProcessor(object):
                 self.__myNewDecls.append(newDecl)                    
 
             except TypeInferenceError,e:
-                raise PPError('Caught TypeInferenceError: '+e.msg,aDecl.lineNumber)
+                raise PostProcessError('Caught TypeInferenceError: '+e.msg,aDecl.lineNumber)
             except SymtabError,e:
-                raise PPError('Caught SymtabError: '+e.msg,aDecl.lineNumber)
+                raise PostProcessError('Caught SymtabError: '+e.msg,aDecl.lineNumber)
 
         self.__myUnit.decls = self.__myNewDecls
 
@@ -280,9 +280,9 @@ class UnitPostProcessor(object):
                 else:
                     anExec.flow()
             except TypeInferenceError,e:
-                raise PPError('Caught TypeInferenceError: '+e.msg,anExec.lineNumber)
+                raise PostProcessError('Caught TypeInferenceError: '+e.msg,anExec.lineNumber)
             except SymtabError,e:
-                raise PPError('Caught SymtabError: '+e.msg,aDecl.lineNumber)
+                raise PostProcessError('Caught SymtabError: '+e.msg,aDecl.lineNumber)
         
         self.__myUnit.execs = self.__myNewExecs
 
