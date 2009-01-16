@@ -72,11 +72,13 @@ class UnitCanonicalizer(object):
         else:
             return True
 
-    def __newTemp(self,anExpression):
+    def __newTemp(self,anExpression,parentStmt):
         '''The new temporary variable assumes the value of anExpression'''
         theNewTemp = self.__tmp_prefix + str(self.__tempCounter)
         self.__tempCounter += 1
         (varTypeClass,varModifierList) = expressionType(anExpression,self.__myUnit.symtab)
+        if (varModifierList!=[] and isinstance(varModifierList[0],fs._FLenMod) and varModifierList[0].len=='*'):
+            raise CanonError('unable to determine length of temporary variable for '+str(anExpression),parentStmt.lineNumber)
         if varTypeClass == fs.RealStmt and varModifierList == []:
             varTypeClass = Symtab._default_real[0]
             if varTypeClass == fs.DoubleStmt:
@@ -96,7 +98,7 @@ class UnitCanonicalizer(object):
         if self._verbose: print self.__recursionDepth*'|\t'+'converting function call "'+str(theFuncCall)+'" to a subroutine call'
         self.__recursionDepth += 1
         if self._verbose: print (self.__recursionDepth-1)*'|\t'+'|  creating new temp for the result of the subroutine that replaces "'+str(theFuncCall)+'":',
-        (theNewTemp,newTempType) = self.__newTemp(theFuncCall)
+        (theNewTemp,newTempType) = self.__newTemp(theFuncCall,parentStmt)
         polymorphismSuffix = _isPolymorphic(theFuncCall) and '_'+newTempType.kw.lower()[0] \
                                                           or ''
         self.__myNewExecs.append(self.__canonicalizeSubCallStmt(fs.CallStmt(self.__call_prefix + theFuncCall.head + polymorphismSuffix,
@@ -118,7 +120,7 @@ class UnitCanonicalizer(object):
             if self._verbose: print 'it is a function call to be subroutinized'
             return self.__canonicalizeFuncCall(theExpression,parentStmt)
         # Anything else: create an assignment to a temporary and return that temporary
-        (theNewTemp,newTempType) = self.__newTemp(theExpression)
+        (theNewTemp,newTempType) = self.__newTemp(theExpression,parentStmt)
         self.__myNewExecs.append(self.__canonicalizeAssignStmt(fs.AssignStmt(theNewTemp,
                                                                              theExpression,
                                                                              lineNumber=parentStmt.lineNumber,
@@ -185,6 +187,12 @@ class UnitCanonicalizer(object):
             if argType == fs.CharacterStmt:
                 if not self._hoistStringsFlag:
                     if self._verbose: print 'is a string expression (which we aren\'t hoisting)'
+                    replacementArgs.append(anArg)
+                elif isinstance(anArg,str) and self.__myUnit.symtab.lookup_name(anArg):
+                    if self._verbose: print 'is a string variable (which we aren\'t hoisting)'
+                    replacementArgs.append(anArg)
+                elif isinstance(anArg,fe.App) and isArrayReference(anArg,self.__myUnit.symtab):
+                    if self._verbose: print 'is a character array reference (which we aren\'t hoisting)'
                     replacementArgs.append(anArg)
                 else:
                     if self._verbose: print 'is a string expression to be hoisted:',

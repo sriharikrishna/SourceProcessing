@@ -36,8 +36,25 @@ def modcompare(m1,m2):
         if mm1.mod >= mm2.mod: return m1
         return m2
     if isinstance(mm2,fortStmts._FLenMod) and isinstance(mm1,fortStmts._FLenMod) :
-        if mm1.len >= mm2.len: return m1
-        return m2
+       # could have different ways of specifying length - easiest case is identical modifiers
+       if mm1.len==mm2.len:
+          return m1
+       # one of them could have a "*" so we have to use that one
+       if (mm1.len=='*'):
+          return m1
+       if (mm2.len=='*'):
+          return m2
+       # they could be integers
+       try :
+          l1=int(mm1.len)
+          l2=int(mm2.len)
+          if l1>l2:
+             return m1
+          else :
+             return m2
+       # if they are not both integers there could be some parameter name etc.
+       except ValueError:
+          raise TypeInferenceError('modcompare: cannot compare length specifiers '+mm1.len+' and '+mm2.len)
     if _modhash[c1] >= _modhash[c2]: return m1
     return m2
 
