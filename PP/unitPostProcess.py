@@ -28,6 +28,12 @@ class UnitPostProcessor(object):
     def setDerivType(inlineDerivType):
         UnitPostProcessor._inline_deriv = inlineDerivType
 
+    _replacement_type = 'active'
+
+    @staticmethod
+    def setReplacementType(replacementType):
+        UnitPostProcessor._replacement_type = replacementType
+
     def __init__(self, aUnit):
         self.__myUnit = aUnit
         self.__myNewDecls = []
@@ -53,7 +59,7 @@ class UnitPostProcessor(object):
         DrvdTypeDecl.decls = newDecls
         if DrvdTypeDecl.mod[0].lower() in set(['(openadty_active)',
                                                '(openad_type)']):
-            DrvdTypeDecl.mod = ['(active)']
+            DrvdTypeDecl.mod = ['('+self._replacement_type+')']
             DrvdTypeDecl.dblc = True
         return DrvdTypeDecl
 
