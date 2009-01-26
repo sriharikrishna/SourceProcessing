@@ -11,6 +11,8 @@ from PyFort.typeInference import TypeInferenceError,expressionType,functionType,
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
 
+import function2subroutine
+
 class CanonError(Exception):
     '''exception for errors that occur during canonicalization'''
     def __init__(self,msg,lineNumber):
@@ -397,6 +399,11 @@ class UnitCanonicalizer(object):
 
         # replace the executable statements for the unit
         self.__myUnit.execs = self.__myNewExecs
+
+#       # for function units, also create a corresponding subroutine
+#       if isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
+#           print 'I know I\'m in a function unit!'
+#           function2subroutine.convertFunction(self.__myUnit)
 
         if self._verbose: print ('+'*54)+' End canonicalize unit <',self.__myUnit.uinfo,'> '+(54*'+')+'\n\n'
         return self.__myUnit
