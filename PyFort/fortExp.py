@@ -229,7 +229,7 @@ class Ops(_Exp):
     _sons = ['a1','a2']
 
     def __init__(self,op,a1,a2):
-        self.op = op.lower()
+        self.op = op
         self.a1 = a1
         self.a2 = a2
     
