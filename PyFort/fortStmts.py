@@ -824,6 +824,9 @@ class DimensionStmt(Decl):
 class IntentStmt(Decl):
     pass
 
+class OptionalStmt(Decl):
+    pass
+
 class NamelistStmt(Decl):
     pass
 
@@ -1337,6 +1340,9 @@ class CaseRangeListStmt(Exec):
 class GotoStmt(Exec):
     pass
 
+class AllocateStmt(Exec):
+    pass
+
 kwtbl = dict(blockdata       = BlockdataStmt,
              common          = CommonStmt,
              logical         = LogicalStmt,
@@ -1392,6 +1398,8 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              casedefault     = CaseDefaultStmt,
              case            = CaseRangeListStmt,
              intent          = IntentStmt,
+             optional        = OptionalStmt,
+             allocate        = AllocateStmt,
              )
 
 for kw in ('if','continue','return','else','print'):
