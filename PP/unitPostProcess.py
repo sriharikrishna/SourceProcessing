@@ -33,6 +33,7 @@ class UnitPostProcessor(object):
         self.__myNewDecls = []
         self.__myNewExecs = []
         self.__recursionDepth = 0
+        self.__expChanged = False
 
     # adds the active module OAD_active
     def __addActiveModule(self,arg):
@@ -114,6 +115,7 @@ class UnitPostProcessor(object):
             replacementExpression = copy.deepcopy(theExpression)
         else:
             replacementExpression = theExpression
+
         if self._verbose: 
             print self.__recursionDepth*'|\t'+'unitPostProcessor.__inlinableExpression called on"'+str(theExpression)+'"'
         self.__recursionDepth += 1
@@ -122,21 +124,29 @@ class UnitPostProcessor(object):
             if replacementExpression.head == '__value__':
                 nv = replacementExpression.args[0]
                 replacementExpression = fe.Sel(nv,"v")
+                # problem with rawlines if flow() is called 
+                # on statements that don't need processing
+                # => only call flow() on statement when the expression is changed
+                self.__expChanged=True
             elif replacementExpression.head == '__deriv__':
                 if self._inline_deriv:
                     nv = replacementExpression.args[0]
                     replacementExpression = fe.Sel(nv,"d")
                 else:
                     replacementExpression = replacementExpression.args[0]
+                self.__expChanged=True
         else:
             if hasattr(replacementExpression, "_sons"):
                 for aSon in replacementExpression._sons:
                     theSon = getattr(replacementExpression,aSon)
-                    theSon = self.__inlinableExpression(theSon)
-                    setattr(replacementExpression,aSon,theSon)
+                    newSon = self.__inlinableExpression(theSon)
+                    setattr(replacementExpression,aSon,newSon)
 
         self.__recursionDepth -= 1
-        return replacementExpression
+        if self.__expChanged is True:
+            return replacementExpression
+        else:
+            return theExpression
 
 
     # does inlining on a SubCallStmt
@@ -185,10 +195,11 @@ class UnitPostProcessor(object):
         '''Does inlining on general executable statements'''
         if self._verbose: print 'unitPostProcessor.__inlineStmt called on: "'+str(aStmt)+"'"
 
-        if not hasattr(aStmt,"_sons"):
+        if not hasattr(aStmt,"_sons") or (aStmt._sons == []):
             return aStmt
+        
+        self.__expChanged=False
 
-        diff = False
         for aSon in aStmt._sons:
             theSon = getattr(aStmt,aSon)
             newSon = self.__inlinableExpression(theSon)    
@@ -196,7 +207,7 @@ class UnitPostProcessor(object):
                 diff = True
                 setattr(aStmt,aSon,newSon)
         # if statement is unchanged, leave it alone
-        if diff is True:
+        if self.__expChanged is True:
             aStmt.flow()
         return aStmt
 
