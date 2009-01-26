@@ -4,6 +4,8 @@ a predicate to test for a function being an intrinsic
 '''
 __intrinsics = (
     'abs',
+    'allocated',
+    'associated',
     'atan',
     'atan2',
     'close',
@@ -21,6 +23,7 @@ __intrinsics = (
     'mod',
     'nint',
     'open',
+    'present',
     'read',
     'real',
     'sign',
