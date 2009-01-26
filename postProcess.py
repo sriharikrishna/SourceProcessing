@@ -4,6 +4,7 @@ Postprocessing
 '''
 import sys
 import os
+import traceback
 from optparse import OptionParser
 
 from PyUtil.errors import UserError, ScanError, ParseError
@@ -22,17 +23,24 @@ from PP.unitPostProcess import UnitPostProcessor,PostProcessError
  
 def main():
     usage = '%prog [options] <input_file>'
+    modes={'f':'forward','r':'reverse'}
+    modeChoices=modes.keys()
+    modeChoicesHelp=""
+    for k,v in modes.items():
+        modeChoicesHelp+=k+" = "+v+"; "
     opt = OptionParser(usage=usage)
+    opt.add_option('-d', '--deriv', dest='inlineDerivType',
+                   help='appends %d to deriv types instead of removing __deriv__',
+                   action='store_true',
+                   default=False)
     opt.add_option('--free',
                    dest='isFreeFormat',
                    help="input source is free format",
                    action='store_true',
                    default=False)
-    opt.add_option('-m',
-                   '--mode',
-                   dest='mode',
-                   help='set default options for forward and reverse mode (this currently includes hoisting of constant expressions).  Additional specific settings will override those set here.',
-                   metavar='<f|r>',
+    opt.add_option('-m','--mode',dest='mode',
+                   type='choice', choices=modeChoices,
+                   help='set default options for transformation mode with MODE being one of: '+ modeChoicesHelp+ '  reverse mode  implies -H but not -S; specific settings override the mode defaults.',
                    default=None)
     opt.add_option('-o',
                    '--output',
@@ -46,6 +54,7 @@ def main():
                    help='turns on verbose debugging output',
                    action='store_true',
                    default=False)
+
     config, args = opt.parse_args()
 
     # Set input file
@@ -61,6 +70,9 @@ def main():
 
     # set verbosity
     UnitPostProcessor.setVerbose(config.isVerbose)
+
+    # set __deriv__ output format(__deriv__(v) -> "(v)%d" if -d option or "v" by default)
+    UnitPostProcessor.setDerivType(config.inlineDerivType)
 
     try: 
         if config.outputFile: 

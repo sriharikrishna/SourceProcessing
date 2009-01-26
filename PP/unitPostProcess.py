@@ -1,13 +1,3 @@
-'''
-   Transformations:
-      1. add the active_module
-      2. convert type(openadty_active)  ... TO
-         type(active) :: ...
-      3. convert __value__($p) --> $p%v
-      4. convert __deriv__($p) --> $p
-'''
-
-
 from _Setup import *
 
 from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
@@ -15,6 +5,7 @@ from PyFort.typeInference import TypeInferenceError,expressionType,functionType,
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
 import re
+import copy
 
 class PostProcessError(Exception):
     '''Exception for errors that occur during postprocessing'''
@@ -31,11 +22,23 @@ class UnitPostProcessor(object):
     def setVerbose(isVerbose):
         UnitPostProcessor._verbose = isVerbose    
 
+    _inline_deriv = False
+
+    @staticmethod
+    def setDerivType(inlineDerivType):
+        UnitPostProcessor._inline_deriv = inlineDerivType
+
     def __init__(self, aUnit):
         self.__myUnit = aUnit
         self.__myNewDecls = []
         self.__myNewExecs = []
         self.__recursionDepth = 0
+
+    # adds the active module OAD_active
+    def __addActiveModule(self,arg):
+        if self._verbose: print 'unitPostProcessor.__addActiveModule called on: "'+str(arg)+"'"
+        new_stmt = fs.UseStmt('OAD_active')
+        return new_stmt
 
     # Rewrites the active type in derived type declarations
     # returns the declaration
@@ -52,6 +55,24 @@ class UnitPostProcessor(object):
             DrvdTypeDecl.mod = ['(active)']
             DrvdTypeDecl.dblc = True
         return DrvdTypeDecl
+
+    # Executes inlining for a declaration by iterating over it
+    # (replaces instances of __value__ and __deriv__)
+    def __inlinableDeclaration(self,aDecl):
+        if self._verbose: print 'unitPostProcessor.__inlinableDeclaration called on: "'+str(aDecl)+'"'
+        value = re.compile('__value__')
+        iterator = value.finditer(str(aDecl))
+        value_str = self.__inline(iterator,str(aDecl),'%v')
+
+        deriv = re.compile('__deriv__')
+        iterator = deriv.finditer(value_str)
+        if self._inline_deriv:
+            decl_str = self.__inline(iterator,value_str,'%d')
+        else:
+            decl_str = self.__inline(iterator,value_str,'')
+
+        newDecl = fs._NoInit(decl_str)
+        return newDecl
 
     # Manages inlining on an iterator over a declaration
     # "add_str" is the string to replace the matches in the iterator
@@ -83,66 +104,40 @@ class UnitPostProcessor(object):
         decl_str += DeclString[last:]
         return decl_str
 
-    # Executes inlining for a declaration by iterating over it
-    # (replaces instances of __value__ and __deriv__)
-    def __inlinableDeclaration(self,aDecl):
-        if self._verbose: print 'unitPostProcessor.__inlinableDeclaration called on: "'+str(aDecl)+'"'
-        value = re.compile('__value__')
-        iterator = value.finditer(str(aDecl))
-        value_str = self.__inline(iterator,str(aDecl),'%v')
-
-        deriv = re.compile('__deriv__')
-        iterator = deriv.finditer(value_str)
-        #decl_str = self.__inline(iterator,value_str,'%d')
-        decl_str = self.__inline(iterator,value_str,'')
-
-        newDecl = fs._NoInit(decl_str)
-        return newDecl
 
     # Executes inlining for an expression recursively
     # (replaces instances of __value__ and __deriv__)
     def __inlinableExpression(self,theExpression):
         'mutate __value__ and __deriv__ calls'
+        # deepcopy allows for comparison of return value and input value in calling function
+        if self.__recursionDepth is 0:
+            replacementExpression = copy.deepcopy(theExpression)
+        else:
+            replacementExpression = theExpression
         if self._verbose: 
             print self.__recursionDepth*'|\t'+'unitPostProcessor.__inlinableExpression called on"'+str(theExpression)+'"'
         self.__recursionDepth += 1
-        if isinstance(theExpression, fe.App):
-            if isinstance(theExpression.args[0],fe.App):
-                theExpression.args[0] = self.__inlinableExpression(theExpression.args[0])
-            if len(theExpression.args) > 1:
-                theExpression.args[1:] = self.__inlinableExpression(theExpression.args[1:])
-            if theExpression.head == '__value__':
-                nv = theExpression.args[0]
+        if isinstance(replacementExpression, fe.App):
+            replacementExpression.args = map(self.__inlinableExpression,replacementExpression.args)
+            if replacementExpression.head == '__value__':
+                nv = replacementExpression.args[0]
                 replacementExpression = fe.Sel(nv,"v")
-            elif theExpression.head == '__deriv__':
-                replacementExpression = theExpression.args[0]
-            else:
-                replacementExpression = theExpression
-
-#        elif isinstance(theExpression, fe.Sel):
-#            print "the expression is fe.sel:\n"
-#            replacementExpression = self.__inlinableExpression(theExpression.head)
-
-        elif isinstance(theExpression, fe.Unary):
-            theExpression.exp = self.__inlinableExpression(theExpression.exp)
-            replacementExpression = theExpression
-        elif isinstance(theExpression, fe.Ops):
-            replacementExpression = fe.Ops(theExpression.op,
-                   self.__inlinableExpression(theExpression.a1),
-                   self.__inlinableExpression(theExpression.a2))
+            elif replacementExpression.head == '__deriv__':
+                if self._inline_deriv:
+                    nv = replacementExpression.args[0]
+                    replacementExpression = fe.Sel(nv,"d")
+                else:
+                    replacementExpression = replacementExpression.args[0]
         else:
-            replacementExpression = theExpression
+            if hasattr(replacementExpression, "_sons"):
+                for aSon in replacementExpression._sons:
+                    theSon = getattr(replacementExpression,aSon)
+                    theSon = self.__inlinableExpression(theSon)
+                    setattr(replacementExpression,aSon,theSon)
 
         self.__recursionDepth -= 1
         return replacementExpression
 
-    # adds the active module OAD_active
-    def __addActiveModule(self,arg):
-        if self._verbose: print 'unitPostProcessor.__addActiveModule called on: "'+str(arg)+"'"
-        new_stmt = fs.UseStmt('OAD_active')
-        new_comment = fs.comment_bl('use active module (OAD_active)')
-        self.__myNewDecls.append(new_comment)
-        return new_stmt
 
     # does inlining on a SubCallStmt
     def __processSubCallStmt(self,aSubCallStmt):
@@ -156,28 +151,19 @@ class UnitPostProcessor(object):
                 replacementArgs.append(anArg)
         replacementStatement = fs.CallStmt(aSubCallStmt.head,
                                            replacementArgs,
+                                           aSubCallStmt.stmt_name,
                                            lineNumber=aSubCallStmt.lineNumber,
                                            label=aSubCallStmt.label,
                                            lead=aSubCallStmt.lead).flow()
-        self.__myNewExecs.append(replacementStatement)
-        return
+        return replacementStatement
 
-    # Does inlining on an AssignStmt
-    def __processAssignStmt(self, anAssignStmt):
-        if self._verbose: print 'unitPostProcessor.__processAssignStmt called on: "'+str(anAssignStmt)+"'"
-        replacementStatement = fs.AssignStmt(self.__inlinableExpression(anAssignStmt.lhs),
-                                             self.__inlinableExpression(anAssignStmt.rhs),
-                                             lineNumber=anAssignStmt.lineNumber,
-                                             label=anAssignStmt.label,
-                                             lead=anAssignStmt.lead).flow()
-        self.__myNewExecs.append(replacementStatement)
-        return
-
-    # Does inlining on a StmtFnStmt; reconstructs it as an AssignStmt
+    # Does inlining on a StmtFnStmt; reconstructs it as an AssignStmt if StmtFnStmt.name is "__value__"
     def __processStmtFnStmt(self, StmtFnStmt):
         if self._verbose: print 'unitPostProcessor.__processStmtFnStmt called on: "'+str(StmtFnStmt)+"'"
+
+        new_args = map(self.__inlinableExpression,StmtFnStmt.args)
         newStatement = fs.StmtFnStmt(name=self.__inlinableExpression(StmtFnStmt.name),
-                                             args=StmtFnStmt.args,
+                                             args=new_args,
                                              body=self.__inlinableExpression(StmtFnStmt.body),
                                              lineNumber=StmtFnStmt.lineNumber,
                                              label=StmtFnStmt.label,
@@ -189,18 +175,30 @@ class UnitPostProcessor(object):
                                                  newStatement.lineNumber,
                                                  label=newStatement.label,
                                                  lead=newStatement.lead).flow()
+
         else:
             replacementStatement = newStatement
         return replacementStatement
 
-    def __processExecStmt(self,anExecStmt):
+
+    def __inlineStmt(self,aStmt):
         '''Does inlining on general executable statements'''
-        if self._verbose: print 'unitPostProcessor.__processExecStmt called on: "'+str(anExecStmt)+"'"
-        for aSon in anExecStmt._sons:
-          theSon = getattr(anExecStmt,aSon)
-          theSon = self.__inlinableExpression(theSon)
-        self.__myNewExecs.append(anExecStmt)
-        return
+        if self._verbose: print 'unitPostProcessor.__inlineStmt called on: "'+str(aStmt)+"'"
+
+        if not hasattr(aStmt,"_sons"):
+            return aStmt
+
+        diff = False
+        for aSon in aStmt._sons:
+            theSon = getattr(aStmt,aSon)
+            newSon = self.__inlinableExpression(theSon)    
+            if newSon is not theSon:
+                diff = True
+                setattr(aStmt,aSon,newSon)
+        # if statement is unchanged, leave it alone
+        if diff is True:
+            aStmt.flow()
+        return aStmt
 
     # Processes all statements in the unit
     def processUnit(self):
@@ -219,17 +217,15 @@ class UnitPostProcessor(object):
                 if self._verbose: 
                     print '[Line '+str(anExecStmt.lineNumber)+']:'
                 if isinstance(anExecStmt,fs.CallStmt):
-                    self.__processSubCallStmt(anExecStmt)
-                elif isinstance(anExecStmt,fs.AssignStmt):
-                    self.__processAssignStmt(anExecStmt)
+                    newStmt = self.__processSubCallStmt(anExecStmt)
                 else:
-                    self.__processExecStmt(anExecStmt)
+                    newStmt = self.__inlineStmt(anExecStmt)
+                self.__myNewExecs.append(newStmt)
                     
             except TypeInferenceError,e:
                 raise PostProcessError('Caught TypeInferenceError: '+e.msg,anExecStmt.lineNumber)
             except SymtabError,e:
                 raise PostProcessError('Caught SymtabError: '+e.msg,anExecStmt.lineNumber)
-
 
         # Used for adding the active module 
         # (active module added after first use statement)
@@ -271,20 +267,10 @@ class UnitPostProcessor(object):
                 raise PostProcessError('Caught SymtabError: '+e.msg,aDecl.lineNumber)
 
         self.__myUnit.decls = self.__myNewDecls
-
-        for anExec in self.__myNewExecs:
-            anExec.lead = self.__myUnit.uinfo.lead+''
-            try:
-                if isinstance(anExec,fs.Comments):
-                    pass
-                else:
-                    anExec.flow()
-            except TypeInferenceError,e:
-                raise PostProcessError('Caught TypeInferenceError: '+e.msg,anExec.lineNumber)
-            except SymtabError,e:
-                raise PostProcessError('Caught SymtabError: '+e.msg,aDecl.lineNumber)
-        
         self.__myUnit.execs = self.__myNewExecs
+        
+        if (self.__recursionDepth is not 0):
+            raise PostProcessError('Recursion errorin unitPostProcess: final recursion depth is not zero')
 
         if self._verbose: print ('+'*54)+' End post-process unit <',self.__myUnit.uinfo,'> '+(54*'+')+'\n\n'
         return self.__myUnit
