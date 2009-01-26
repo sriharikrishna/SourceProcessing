@@ -741,12 +741,13 @@ class CharacterStmt(TypeDecl):
         except AssemblerException,e:
           raise ParseError(lineNumber,scan,'character variable declaration')  
 
-        return CharacterStmt(mod,attrs,decls,lineNumber)
+        return CharacterStmt(mod,attrs,decls,dc,lineNumber)
 
-    def __init__(self,mod,attrs,decls,lineNumber=0,label=False,lead=''):
+    def __init__(self,mod,attrs,decls,stmt_name='character',lineNumber=0,label=False,lead=''):
         self.mod   = mod
         self.decls = decls
         self.attrs = attrs
+        self.stmt_name = stmt_name
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
@@ -763,9 +764,9 @@ class CharacterStmt(TypeDecl):
         if self.attrs:
             attr_str = ','+','.join([str(a) for a in self.attrs])
             
-        return 'character%s%s :: %s' % (modstr,
-                                        attr_str,
-                                        ','.join([str(d) for d in self.decls]))
+        return '%s%s%s :: %s' % (self.stmt_name,modstr,
+                                 attr_str,
+                                 ','.join([str(d) for d in self.decls]))
 
 class IntrinsicStmt(Decl):
     pass
@@ -805,10 +806,11 @@ class DimensionStmt(Decl):
         p1 = seq(lit('dimension'),
                  cslist(app))
         ((dc,lst),rest) = p1(scan)
-        return DimensionStmt(lst,lineNumber)
+        return DimensionStmt(lst,dc,lineNumber)
 
-    def __init__(self,lst,lineNumber=0,label=False,lead=''):
+    def __init__(self,lst,stmt_name='dimension',lineNumber=0,label=False,lead=''):
         self.lst = lst
+        self.stmt_name = stmt_name
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
@@ -817,7 +819,7 @@ class DimensionStmt(Decl):
         return '%s(%s)' % (self.__class__.__name__,repr(self.lst))
 
     def __str__(self):
-        return 'dimension %s' % ','.join([str(l) for l in self.lst])
+        return '%s %s' % (self.stmt_name,','.join([str(l) for l in self.lst]))
 
 class IntentStmt(Decl):
     pass
@@ -839,11 +841,12 @@ class SubroutineStmt(PUstart):
         if args:
             (dc,args,dc1) = args[0]
 
-        return SubroutineStmt(name,args,lineNumber)
+        return SubroutineStmt(name,args,dc,lineNumber)
 
-    def __init__(self,name,args,lineNumber=0,label=False,lead=''):
+    def __init__(self,name,args,stmt_name='subroutine',lineNumber=0,label=False,lead=''):
         self.name = name
         self.args = args
+        self.stmt_name = stmt_name
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
@@ -853,7 +856,7 @@ class SubroutineStmt(PUstart):
                               repr(self.name),
                               repr(self.args))
     def __str__(self):
-        return 'subroutine %s(%s)' % (self.name,
+        return '%s %s(%s)' % (self.stmt_name,self.name,
                                       ','.join([str(d) for d in self.args]))
 
 class ProgramStmt(PUstart):
@@ -864,10 +867,11 @@ class ProgramStmt(PUstart):
         p1 = seq(lit('program'),
                  id)
         ((dc,name),rest) = p1(scan)
-        return ProgramStmt(name,lineNumber)
+        return ProgramStmt(name,dc,lineNumber)
 
-    def __init__(self,name,lineNumber=0,label=False,lead=''):
+    def __init__(self,name,stmt_name='program',lineNumber=0,label=False,lead=''):
         self.name = name
+        self.stmt_name = stmt_name
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
@@ -876,7 +880,7 @@ class ProgramStmt(PUstart):
         return '%s(%s)' % (self.__class__.__name__,repr(self.name))
 
     def __str__(self):
-        return 'program %s' % self.name
+        return '%s %s' % (self.stmt_name,self.name)
 
 class FunctionStmt(PUstart):
     utype_name = 'function'
@@ -965,10 +969,11 @@ class UseStmt(Decl):
     def parse(scan,lineNumber):
         p1 = seq(lit('use'),id)
         ((dc,name),rest) = p1(scan)
-        return UseStmt(name,lineNumber)
+        return UseStmt(name,dc,lineNumber)
 
-    def __init__(self,name,lineNumber=0,label=False,lead=''):
+    def __init__(self,name,stmt_name='use',lineNumber=0,label=False,lead=''):
         self.name = name
+        self.stmt_name = stmt_name
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
@@ -977,7 +982,7 @@ class UseStmt(Decl):
         return 'UseStmt(%s)' % repr(self.name)
 
     def __str__(self):
-        return 'use %s' % str(self.name)
+        return '%s %s' % (self.stmt_name,str(self.name))
 
 class FormatStmt(Decl):
     pass
@@ -993,13 +998,14 @@ class CallStmt(Exec):
         prefix = seq(lit('call'),disj(app,id))
         ((dc,a),rst) = prefix(scan)
         if (isinstance(a,App)):
-            return CallStmt(a.head,a.args,lineNumber)
+            return CallStmt(a.head,a.args,dc,lineNumber)
         else:
-            return CallStmt(a,[],lineNumber)
+            return CallStmt(a,[],dc,lineNumber)
 
-    def __init__(self,head,args,lineNumber=0,label=False,lead=''):
+    def __init__(self,head,args,stmt_name='call',lineNumber=0,label=False,lead=''):
         self.head = head
         self.args = args
+        self.stmt_name = stmt_name
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
@@ -1009,7 +1015,7 @@ class CallStmt(Exec):
                                     repr(self.args),)
 
     def __str__(self):
-        return 'call %s(%s)' % (str(self.head),
+        return '%s %s(%s)' % (self.stmt_name,str(self.head),
                                 ','.join([str(l) for l in self.args]))
 
 class AssignStmt(Exec):
@@ -1064,15 +1070,17 @@ class IfStmt(Exec):
         prefix = seq(lit('if'),lit('('),Exp,lit(')'))
         ((dc,dc1,e,dc2),rest) = prefix(scan)
         if [l.lower() for l in rest] == ['then']:
-            return IfThenStmt(e,lineNumber)
+            return IfThenStmt(e,dc,l,lineNumber)
         else:
-            return IfNonThenStmt(e,_kw_parse(rest,lineNumber),lineNumber)
+            return IfNonThenStmt(e,_kw_parse(rest,lineNumber),dc,lineNumber)
 
 class IfThenStmt(IfStmt):
     _sons = ['test']
 
-    def __init__(self,e,lineNumber=0,label=False,lead=''):
+    def __init__(self,e,stmt_name='if',stmt_name2='then',lineNumber=0,label=False,lead=''):
         self.test = e
+        self.stmt_name = stmt_name
+        self.stmt_name2 = stmt_name2
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
@@ -1081,14 +1089,15 @@ class IfThenStmt(IfStmt):
         return 'IfThenStmt(%s)' % (repr(self.test),)
 
     def __str__(self):
-        return 'if (%s) then' % (str(self.test),)
+        return '%s (%s) %s' % (self.stmt_name,str(self.test),self.stmt_name2)
 
 class IfNonThenStmt(IfStmt):
     _sons = ['test','stmt']
 
-    def __init__(self,test,stmt,lineNumber=0,label=False,lead=''):
+    def __init__(self,test,stmt,stmt_name='if',lineNumber=0,label=False,lead=''):
         self.test = test
         self.stmt = stmt
+        self.stmt_name = stmt_name
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
@@ -1098,7 +1107,7 @@ class IfNonThenStmt(IfStmt):
                                          repr(self.stmt))
 
     def __str__(self):
-        return 'if (%s) %s' % (str(self.test),str(self.stmt))
+        return '%s (%s) %s' % (self.stmt_name,str(self.test),str(self.stmt))
 
 class ElseifStmt(Exec):
     _sons = ['test']
@@ -1109,10 +1118,12 @@ class ElseifStmt(Exec):
         prefix = seq(lit('elseif'),lit('('),Exp,lit(')'),lit('then'))
 
         ((dc0,dc1,e,dc2,dc3),rest) = prefix(scan)
-        return ElseifStmt(e,lineNumber)
+        return ElseifStmt(e,dc0,dc3,lineNumber)
 
-    def __init__(self,e,lineNumber=0,label=False,lead=''):
+    def __init__(self,e,stmt_name='elseif',stmt_name2='then',lineNumber=0,label=False,lead=''):
         self.test = e
+        self.stmt_name = stmt_name
+        self.stmt_name2 = stmt_name2
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
@@ -1121,7 +1132,7 @@ class ElseifStmt(Exec):
         return 'ElseifStmt(%s)' % (repr(self.test),)
 
     def __str__(self):
-        return 'elseif (%s) then' % (repr(self.test),)
+        return '%s (%s) %s' % (self.stmt_name,repr(self.test),self.stmt_name2)
     
 class ElseStmt(Leaf):
     kw = 'else'
@@ -1173,14 +1184,15 @@ class DoStmt(Exec):
                                  or None
         doLabel = doLabel and doLabel[0] \
                            or None
-        return DoStmt(doLabel,loopVar,loopStart,loopEnd,loopStride,lineNumber)
+        return DoStmt(doLabel,loopVar,loopStart,loopEnd,loopStride,theDoKeyword,lineNumber)
 
-    def __init__(self,doLabel,loopVar,loopStart,loopEnd,loopStride,lineNumber=0,label=False,lead=''):
+    def __init__(self,doLabel,loopVar,loopStart,loopEnd,loopStride,stmt_name='do',lineNumber=0,label=False,lead=''):
         self.doLabel = doLabel
         self.loopVar = loopVar
         self.loopStart = loopStart
         self.loopEnd = loopEnd
         self.loopStride = loopStride
+        self.stmt_name = stmt_name
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
@@ -1190,7 +1202,7 @@ class DoStmt(Exec):
                                             or ''
         doLabelString = self.doLabel and str(self.doLabel)+' ' \
                                       or ''
-        return 'do %s%s = %s,%s%s' % (doLabelString,str(self.loopVar),str(self.loopStart),str(self.loopEnd),loopStrideString)
+        return '%s %s%s = %s,%s%s' % (self.stmt_name,doLabelString,str(self.loopVar),str(self.loopStart),str(self.loopEnd),loopStrideString)
 
 class WhileStmt(Exec):
     #FIXME: optional construct name, label, and comma are not handled
@@ -1207,16 +1219,17 @@ class WhileStmt(Exec):
                             Exp,
                             lit(')'))
         ((theDoWhileKeyword,openPeren,theTestExpression,closePeren),rest) = formWhileStmt(scan)
-        return WhileStmt(theTestExpression,lineNumber)
+        return WhileStmt(theTestExpression,theDoWhileKeyword,lineNumber)
 
-    def __init__(self,testExpression,lineNumber=0,label=False,lead=''):
+    def __init__(self,testExpression,stmt_name='do while',lineNumber=0,label=False,lead=''):
         self.testExpression = testExpression
+        self.stmt_name = stmt_name
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
 
     def __str__(self):
-        return 'do while (%s)' % str(self.testExpression)
+        return '%s (%s)' % (self.stmt_name,str(self.testExpression))
 
 class EnddoStmt(Leaf):
     kw = 'enddo'
@@ -1244,16 +1257,17 @@ class SelectCaseStmt(Exec):
             ((selectCaseKeyword,openPeren,caseExpression,closePeren),rest) = formSelectCaseStmt(scan)
         except ListAssemblerException,e:
             raise ParseError(lineNumber,scan,'Select Case statement')
-        return SelectCaseStmt(caseExpression,lineNumber)
+        return SelectCaseStmt(caseExpression,selectCaseKeyword,lineNumber)
 
-    def __init__(self,caseExpression,lineNumber=0,label=False,lead=''):
+    def __init__(self,caseExpression,stmt_name='select case',lineNumber=0,label=False,lead=''):
         self.caseExpression = caseExpression
+        self.stmt_name = stmt_name
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
 
     def __str__(self):
-        return 'select case ('+str(self.caseExpression)+')'
+        return '%s (%s)' % (self.stmt_name,str(self.caseExpression))
 
 class EndSelectCaseStmt(Leaf):
     #FIXME: optional case construct name 
@@ -1308,16 +1322,17 @@ class CaseRangeListStmt(Exec):
             ((caseKeyword,openPeren,caseRangeList,closePeren),rest) = formCaseRangeListStmt(scan)
         except ListAssemblerException,e:
             raise ParseError(lineNumber,scan,'case range list statement')
-        return CaseRangeListStmt(caseRangeList,lineNumber)
+        return CaseRangeListStmt(caseRangeList,caseKeyword,lineNumber)
 
-    def __init__(self,caseRangeList,lineNumber=0,label=False,lead=''):
+    def __init__(self,caseRangeList,stmt_name='case',lineNumber=0,label=False,lead=''):
         self.caseRangeList = caseRangeList
+        self.stmt_name = stmt_name
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
 
     def __str__(self):
-        return 'case (%s)' % ','.join([str(range) for range in self.caseRangeList])
+        return '%s (%s)' % (self.stmt_name,','.join([str(range) for range in self.caseRangeList]))
 
 class GotoStmt(Exec):
     pass
