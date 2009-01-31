@@ -228,6 +228,12 @@ class Ops(_Exp):
     'some sequence of binops'
     _sons = ['a1','a2']
 
+    _whitespace = False
+
+    @staticmethod
+    def setWhitespace(useWhitespace):
+        Ops._whitespace = useWhitespace    
+
     def __init__(self,op,a1,a2):
         self.op = op
         self.a1 = a1
@@ -237,9 +243,15 @@ class Ops(_Exp):
         return 'Ops(%s,%s,%s)' % (repr(self.op),repr(self.a1),repr(self.a2),)
 
     def __str__(self):
-        return '%s %s %s' % (str(self.a1),
-                             str(self.op),
-                             str(self.a2))
+        if self._whitespace:
+            return '%s %s %s' % (str(self.a1),
+                                 str(self.op),
+                                 str(self.a2))
+        else:
+            return '%s%s%s' % (str(self.a1),
+                               str(self.op),
+                               str(self.a2))
+
     def map(self,fn):
         return Ops(self.op,fn(self.a1),fn(self.a2))
 

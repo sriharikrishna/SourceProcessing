@@ -36,5 +36,15 @@ __intrinsics = (
     'trim',
     )
 
+__inquiry = (
+    'associated',
+    'allocated',
+    'present',
+    'size',
+    )
+
 def is_intrinsic(op):
     return op.lower() in __intrinsics
+
+def is_inquiry(op):
+    return op.lower() in __inquiry

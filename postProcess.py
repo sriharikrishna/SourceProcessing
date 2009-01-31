@@ -42,18 +42,34 @@ def main():
                    type='choice', choices=modeChoices,
                    help='set default options for transformation mode with MODE being one of: '+ modeChoicesHelp+ '  reverse mode  implies -H but not -S; specific settings override the mode defaults.',
                    default=None)
+    opt.add_option('-n',
+                   dest='width',
+                   help='-n [width] splits units into separate files numbered in compile order with [width] number of ints specifying output file naming scheme for each unit. (e.g. outfile_name.post0000.f for a width of four.)')
     opt.add_option('-o',
                    '--output',
                    dest='outputFile',
                    help='set output file (defaults to stdout)',
                    metavar='<output_file>',
                    default=None)
+    opt.add_option('-t',
+                   '--type',
+                   dest='replacementType',
+                   help='selects replacement type for openadty_active types (defaults to active)',
+                   metavar='<type>',
+                   default=False)
     opt.add_option('-v',
                    '--verbose',
                    dest='isVerbose',
                    help='turns on verbose debugging output',
                    action='store_true',
                    default=False)
+    opt.add_option('-w',
+                   '--whitespace',
+                   dest='useWhitespace',
+                   help='puts whitespace between operations in output',
+                   action='store_true',
+                   default=False)
+
 
     config, args = opt.parse_args()
 
@@ -65,26 +81,50 @@ def main():
     # set symtab type defaults
     Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
 
+    # set __deriv__ output format(__deriv__(v) -> "(v)%d" if -d option or "v" by default)
+    UnitPostProcessor.setDerivType(config.inlineDerivType)
+
     # set free/fixed format
     free_flow(config.isFreeFormat) 
+
+    # set options for splitting compile units
+    if config.width:
+        splitUnits = True
+        unitNameWidth = config.width
+    else:
+        splitUnits = False
+
+    # set replacement type for openadty_active
+    if config.replacementType:
+        UnitPostProcessor.setReplacementType(config.replacementType)
 
     # set verbosity
     UnitPostProcessor.setVerbose(config.isVerbose)
 
-    # set __deriv__ output format(__deriv__(v) -> "(v)%d" if -d option or "v" by default)
-    UnitPostProcessor.setDerivType(config.inlineDerivType)
+    # set whitespace
+    fe.Ops.setWhitespace(config.useWhitespace)
 
     try: 
         if config.outputFile: 
-            out = open(config.outputFile,'w')
+            outfile = config.outputFile
         else: 
             (base,ext) = os.path.splitext(inputFile)
             outfile = base + ".post" + ext
-            out = open(outfile, 'w')
-        for aUnit in fortUnitIterator(inputFile,config.isFreeFormat):
-            UnitPostProcessor(aUnit).processUnit().printit(out)
-
-        out.close()
+        if splitUnits:
+            (base,ext) = os.path.splitext(outfile)
+            unitNumExt = "%0"+str(unitNameWidth)+"d"
+            unit_num = 0
+            for aUnit in fortUnitIterator(inputFile,config.isFreeFormat):
+                output = base + unitNumExt % unit_num + ext
+                out = open(output,'w')
+                UnitPostProcessor(aUnit).processUnit().printit(out)
+                out.close()
+                unit_num += 1
+        else:
+            out = open(outfile, 'w')            
+            for aUnit in fortUnitIterator(inputFile,config.isFreeFormat):
+                UnitPostProcessor(aUnit).processUnit().printit(out)
+            out.close()
     except PostProcessError,e:
         print >>sys.stderr,'\nPostprocessing Error on line '+str(e.lineNumber)+':\n',e.msg
         return 1

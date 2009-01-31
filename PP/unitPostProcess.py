@@ -4,6 +4,7 @@ from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
 from PyFort.typeInference import TypeInferenceError,expressionType,functionType,isArrayReference
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
+import PyFort.intrinsic as intrinsic
 import re
 import copy
 
@@ -40,6 +41,10 @@ class UnitPostProcessor(object):
         self.__myNewExecs = []
         self.__recursionDepth = 0
         self.__expChanged = False
+        # if we're in an inquiry expression
+        self.__inquiryExpression = False
+        # the recursion level at which the inquiry expression occurred
+        self.__inquiryRecursionLevel = 0
 
     # adds the active module OAD_active
     def __addActiveModule(self,arg):
@@ -55,62 +60,13 @@ class UnitPostProcessor(object):
         if self._verbose: print 'unitPostProcessor.__rewriteActiveType called on: "'+str(DrvdTypeDecl)+"'"
         newDecls = []
         for decl in DrvdTypeDecl.decls:
-            newDecls.append(self.__inlinableDeclaration(decl))
+            newDecls.append(self.__inlinableExpression(decl))
         DrvdTypeDecl.decls = newDecls
         if DrvdTypeDecl.mod[0].lower() in set(['(openadty_active)',
                                                '(openad_type)']):
             DrvdTypeDecl.mod = ['('+self._replacement_type+')']
             DrvdTypeDecl.dblc = True
         return DrvdTypeDecl
-
-    # Executes inlining for a declaration by iterating over it
-    # (replaces instances of __value__ and __deriv__)
-    def __inlinableDeclaration(self,aDecl):
-        if self._verbose: print 'unitPostProcessor.__inlinableDeclaration called on: "'+str(aDecl)+'"'
-        value = re.compile('__value__')
-        iterator = value.finditer(str(aDecl))
-        value_str = self.__inline(iterator,str(aDecl),'%v')
-
-        deriv = re.compile('__deriv__')
-        iterator = deriv.finditer(value_str)
-        if self._inline_deriv:
-            decl_str = self.__inline(iterator,value_str,'%d')
-        else:
-            decl_str = self.__inline(iterator,value_str,'')
-
-        newDecl = fs._NoInit(decl_str)
-        return newDecl
-
-    # Manages inlining on an iterator over a declaration
-    # "add_str" is the string to replace the matches in the iterator
-    # __value__(x) -> (x)%v, and __deriv__(x) -> (x)%d 
-    def __inline(self,iterator,DeclString,add_str):
-        decl_str = ''
-        last = 0
-        for match in iterator:
-            (start,end) = match.span()
-            count = 0 # count number of parens to keep them balanced
-            newstr = ''
-            index = end
-            for char in DeclString[end:len(DeclString)]:
-                index +=1
-                if char == '(':
-                    newstr = newstr + char
-                    count += 1
-                elif char == ')':
-                    newstr = newstr + char
-                    count -= 1
-                else:
-                    newstr = newstr + char
-                if count == 0:
-                    break
-            if last == 0:
-                decl_str = DeclString[0:start]
-            last = index
-            decl_str += newstr+add_str
-        decl_str += DeclString[last:]
-        return decl_str
-
 
     # Executes inlining for an expression recursively
     # (replaces instances of __value__ and __deriv__)
@@ -126,13 +82,17 @@ class UnitPostProcessor(object):
             print self.__recursionDepth*'|\t'+'unitPostProcessor.__inlinableExpression called on"'+str(theExpression)+'"'
         self.__recursionDepth += 1
         if isinstance(replacementExpression, fe.App):
+            if intrinsic.is_inquiry(replacementExpression.head):
+                self.__inquiryExpression = True
+                self.__inquiryRecursionLevel = self.__recursionDepth
             replacementExpression.args = map(self.__inlinableExpression,replacementExpression.args)
             if replacementExpression.head == '__value__':
-                nv = replacementExpression.args[0]
-                replacementExpression = fe.Sel(nv,"v")
-                # problem with rawlines if flow() is called 
-                # on statements that don't need processing
-                # => only call flow() on statement when the expression is changed
+                if self.__inquiryExpression:
+                    replacementExpression = replacementExpression.args[0]
+                else:
+                    nv = replacementExpression.args[0]
+                    replacementExpression = fe.Sel(nv,"v")
+
                 self.__expChanged=True
             elif replacementExpression.head == '__deriv__':
                 if self._inline_deriv:
@@ -147,8 +107,14 @@ class UnitPostProcessor(object):
                     theSon = getattr(replacementExpression,aSon)
                     newSon = self.__inlinableExpression(theSon)
                     setattr(replacementExpression,aSon,newSon)
+            elif isinstance(replacementExpression,fs._NoInit):
+                replacementExpression = fs._NoInit(self.__inlinableExpression(replacementExpression.lhs))
+
 
         self.__recursionDepth -= 1
+        if self.__recursionDepth == self.__inquiryRecursionLevel:
+            self.__inquiryExpression = False
+            self.__inquiryRecursionLevel = 0
         if self.__expChanged is True:
             return replacementExpression
         else:
@@ -205,7 +171,6 @@ class UnitPostProcessor(object):
             return aStmt
         
         self.__expChanged=False
-
         for aSon in aStmt._sons:
             theSon = getattr(aStmt,aSon)
             newSon = self.__inlinableExpression(theSon)    
@@ -264,11 +229,11 @@ class UnitPostProcessor(object):
                         newDecl.lead = self.__myUnit.uinfo.lead+''
                         newDecl.flow()
                         UseStmtSeen = 1
-                elif isinstance(aDecl, fs.DrvdTypeDecl):
+                elif isinstance(aDecl,fs.DrvdTypeDecl):
                     newDecl = self.__rewriteActiveType(aDecl)
                     newDecl.flow()
                     UseStmtSeen = 0
-                elif isinstance(aDecl, fs.StmtFnStmt):
+                elif isinstance(aDecl,fs.StmtFnStmt):
                     newDecl = self.__processStmtFnStmt(aDecl)
                     newDecl.flow()
                     UseStmtSeen = 0
