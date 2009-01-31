@@ -44,7 +44,7 @@ def main():
                    default=None)
     opt.add_option('-n',
                    dest='width',
-                   help='-n [width] splits units into separate files numbered in compile order with [width] number of ints specifying output file naming scheme for each unit. (i.e. outfile_name.post0000.f for a width of four.)')
+                   help='-n [width] splits units into separate files numbered in compile order with [width] number of ints specifying output file naming scheme for each unit. (e.g. outfile_name.post0000.f for a width of four.)')
     opt.add_option('-o',
                    '--output',
                    dest='outputFile',
@@ -113,13 +113,13 @@ def main():
         if splitUnits:
             (base,ext) = os.path.splitext(outfile)
             unitNumExt = "%0"+str(unitNameWidth)+"d"
-            n = 0
+            unit_num = 0
             for aUnit in fortUnitIterator(inputFile,config.isFreeFormat):
-                output = base + unitNumExt % n + ext
+                output = base + unitNumExt % unit_num + ext
                 out = open(output,'w')
                 UnitPostProcessor(aUnit).processUnit().printit(out)
                 out.close()
-                n += 1
+                unit_num += 1
         else:
             out = open(outfile, 'w')            
             for aUnit in fortUnitIterator(inputFile,config.isFreeFormat):
