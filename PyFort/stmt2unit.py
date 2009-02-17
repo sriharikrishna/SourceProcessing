@@ -118,15 +118,17 @@ def _is_stmt_fn(s,cur):
 
     return isinstance(lhs,fe.App) and isinstance(lhs.head,str) and not look(lhs.head)
 
+reportedMissingModules=set()
 def _use_module(s,cur):
     'incorporate the used module symbol table into the current unit symbol table'
-
     module_unit = cur.module_handler.get_module(s.name)
     if module_unit:
         cur.val.symtab.update_w_module(module_unit)
     else:
-        print 'WARNING: module %s not found' % s.name
-
+	global reportedMissingModules
+        if not (s.name.lower() in reportedMissingModules) :
+            reportedMissingModules.add(s.name.lower())
+            print >>sys.stderr, 'WARNING: definition for module '+s.name+' (first use statement on line '+str(s.lineNumber)+') not seen in the input '
     return s
 
 def _makeFunctionEntry(self,localSymtab):
