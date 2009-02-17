@@ -19,7 +19,7 @@ def _fixed_flow_line(l,cont='+'):
         rv  += ' ' * 5 + cont + tmp + '\n'
         rem  = rem[66:]
     if len(rem) > 0:
-        rv  += ' ' * 5 + cont + rem + '\n'
+        rv  += ' ' * 5 + cont + rem 
     return rv
 
 _free_line_len = 80
