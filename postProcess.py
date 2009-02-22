@@ -29,7 +29,7 @@ def main():
     for k,v in modes.items():
         modeChoicesHelp+=k+" = "+v+"; "
     opt = OptionParser(usage=usage)
-    opt.add_option('-d', '--deriv', dest='inlineDerivType',
+    opt.add_option('-d', '--deriv', dest='transformDerivType',
                    help='appends %d to deriv types instead of removing __deriv__',
                    action='store_true',
                    default=False)
@@ -51,6 +51,12 @@ def main():
                    help='set output file (defaults to stdout)',
                    metavar='<output_file>',
                    default=None)
+    opt.add_option('-i',
+                   '--input',
+                   dest='inputFile',
+                   help='set input file for reverse mode post processing (defaults to ad_inline.f)',
+                   metavar='<input>',
+                   default='ad_inline.f')
     opt.add_option('-t',
                    '--type',
                    dest='replacementType',
@@ -82,10 +88,21 @@ def main():
     Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
 
     # set __deriv__ output format(__deriv__(v) -> "(v)%d" if -d option or "v" by default)
-    UnitPostProcessor.setDerivType(config.inlineDerivType)
+    UnitPostProcessor.setDerivType(config.transformDerivType)
+
+    # set input file
+    if config.inputFile:
+        UnitPostProcessor.setInputFile(config.inputFile)
 
     # set free/fixed format
     free_flow(config.isFreeFormat) 
+
+    # configure forward/reverse mode
+    if config.mode:
+        if config.mode[0] == 'f':
+            UnitPostProcessor.setMode('forward')
+        elif config.mode[0] == 'r':
+            UnitPostProcessor.setMode('reverse')
 
     # set options for splitting compile units
     if config.width:
