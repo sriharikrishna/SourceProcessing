@@ -60,10 +60,6 @@ class UnitPostProcessor(object):
         self.__inquiryRecursionLevel = 0
         # list of tuples of (ordered function args, fs.AssignStmt)
         self.__inlineFunctionTuples = []
-        # decls from original function to be placed in template
-        self.__replacementDecls = []
-        # execs from original function to be placed in template
-        self.__replacementExecs = []
 
     # adds the active module OAD_active
     def __addActiveModule(self,arg):
@@ -150,12 +146,13 @@ class UnitPostProcessor(object):
                 replacementArgs.append(newArg)
             else:
                 replacementArgs.append(anArg)
-        replacementStatement = fs.CallStmt(aSubCallStmt.head,
-                                           replacementArgs,
-                                           aSubCallStmt.stmt_name,
-                                           lineNumber=aSubCallStmt.lineNumber,
-                                           label=aSubCallStmt.label,
-                                           lead=aSubCallStmt.lead).flow()
+        replacementStatement = \
+            fs.CallStmt(aSubCallStmt.head,
+                        replacementArgs,
+                        aSubCallStmt.stmt_name,
+                        lineNumber=aSubCallStmt.lineNumber,
+                        label=aSubCallStmt.label,
+                        lead=aSubCallStmt.lead).flow()
         return replacementStatement
 
     # Does active type transformations on a StmtFnStmt; reconstructs it as an AssignStmt if StmtFnStmt.name is "__value__"
@@ -163,20 +160,21 @@ class UnitPostProcessor(object):
         if self._verbose: print 'unitPostProcessor.__processStmtFnStmt called on: "'+str(StmtFnStmt)+"'"
 
         new_args = map(self.__transformActiveTypesExpression,StmtFnStmt.args)
-        newStatement = fs.StmtFnStmt(name=self.__transformActiveTypesExpression(StmtFnStmt.name),
-                                             args=new_args,
-                                             body=self.__transformActiveTypesExpression(StmtFnStmt.body),
-                                             lineNumber=StmtFnStmt.lineNumber,
-                                             label=StmtFnStmt.label,
-                                             lead=StmtFnStmt.lead).flow()
+        newStatement = \
+            fs.StmtFnStmt(name=self.__transformActiveTypesExpression(StmtFnStmt.name),
+                          args=new_args,
+                          body=self.__transformActiveTypesExpression(StmtFnStmt.body),
+                          lineNumber=StmtFnStmt.lineNumber,
+                          label=StmtFnStmt.label,
+                          lead=StmtFnStmt.lead).flow()
         if newStatement.name == '__value__':
             newApp = self.__transformActiveTypesExpression(fe.App(newStatement.name,newStatement.args))
-            replacementStatement = fs.AssignStmt(newApp,
-                                                 newStatement.body,
-                                                 newStatement.lineNumber,
-                                                 label=newStatement.label,
-                                                 lead=newStatement.lead).flow()
-
+            replacementStatement = \
+                fs.AssignStmt(newApp,
+                              newStatement.body,
+                              newStatement.lineNumber,
+                              label=newStatement.label,
+                              lead=newStatement.lead).flow()
         else:
             replacementStatement = newStatement
         return replacementStatement
@@ -284,10 +282,9 @@ class UnitPostProcessor(object):
                 or isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
             UseStmtSeen = False
             for aDecl in self.__myUnit.decls:
-                (newDecl,UseStmtSeen) = self.__processDecl(aDecl,UseStmtSeen)
-                self.__myNewDecls.append(newDecl)
+                UseStmtSeen = self.__processDecl(aDecl,UseStmtSeen)
             for anExec in self.__myUnit.execs:
-                (newExec,inline) = self.__processExec(anExec,definitions,inline)
+                inline = self.__processExec(anExec,definitions,inline)
             return
 
         for aUnit in fortUnitIterator("ad_template.f",False):
@@ -298,7 +295,9 @@ class UnitPostProcessor(object):
             replacementNum = 0
             for aDecl in aUnit.decls:
                 if aDecl.is_comment():
-                    pat = re.compile("[ ]*[!][ ]*[$]template[_]pragma[_]declarations",re.IGNORECASE)
+                    pat = re.compile(
+                        "[ ]*[!][ ]*[$]template[_]pragma[_]declarations",
+                        re.IGNORECASE)
                     match = pat.search(aDecl.rawline)
                     if match:
                         newStmt = fs.Comments(aDecl.rawline[:match.start()])
@@ -310,9 +309,7 @@ class UnitPostProcessor(object):
                         self.__myNewDecls.append(newStmt)
                         continue
                 self.__myNewDecls.append(aDecl)
-
             inputExecNum = 0
-            declRepNum = replacementNum
             execRepNum = 0
             for anExecStmt in aUnit.execs:
                 if anExecStmt.is_comment():
@@ -327,7 +324,7 @@ class UnitPostProcessor(object):
                             # return to input
                             print "original input"
                             (inputExecNum,execRepNum) = \
-                                self.__inputFileExecs(inputExecNum,definitions,inline,(execRepNum != 0),True)
+                                self.__inputFileExecs(inputExecNum,definitions,inline,(execRepNum != 0))
                             replacementNum = execRepNum
                             #continue template
                         pat = re.compile("[0-9]+")
@@ -336,10 +333,18 @@ class UnitPostProcessor(object):
                         self.__myNewExecs.append(newStmt)
                         continue
                 self.__myNewExecs.append(anExecStmt)
-            self.__inputFileExecs(inputExecNum,definitions,inline,False,False)
+            for endStmt in aUnit.end:
+                newEndStmts = []
+                if isinstance(endStmt,fs.EndStmt):
+                    match = re.search("template[ ]*",endStmt.rawline,re.IGNORECASE)
+                    if match:
+                        endStmt.rawline = \
+                            endStmt.rawline[:match.start(0)] + \
+                            self.__myUnit.uinfo.name
+                newEndStmts.append(endStmt)
+            self.__myUnit.end = newEndStmts
 
-
-    def __inputFileExecs(self,inputExecNum,definitions,inline,writeComment,insert=False):
+    def __inputFileExecs(self,inputExecNum,definitions,inline,writeComment):
         execNum = inputExecNum
         replacement_num = 0
         for anExec in self.__myUnit.execs[inputExecNum:]:
@@ -347,50 +352,50 @@ class UnitPostProcessor(object):
                 Stmt = anExec
                 while Stmt:
                     end_pat = \
-                        re.compile("[ ]*C[ ]*[$]openad[$][ ]+end[ ]+replacement[ ]*",re.IGNORECASE)
+                        re.compile("[ ]*C[ ]*[$]openad[$][ ]+end[ ]+replacement[ ]*",
+                                   re.IGNORECASE)
                     end_match = end_pat.search(Stmt.rawline)
-                    
                     begin_pat = \
                         re.compile("C[ ]*[$]openad[$][ ]+begin[ ]+replacement",
                                    re.IGNORECASE)
                     begin_match = begin_pat.search(Stmt.rawline)
-                    
                     if end_match:
                         if begin_match and begin_match.start() < end_match.start():
                             pass
                         else:
                             if end_match.start() != 0:
                                 inputStmt =  fs.Comments(Stmt.rawline[:end_match.start()])
-                                (newStmt,inline) = self.__processExec(inputStmt,definitions,inline)
-                                if newStmt is not None and insert is True:
-                                    self.__myNewExecs.append(newStmt)
+                                inline = \
+                                    self.__processExec(inputStmt,definitions,inline)
                             if end_match.end() == len(Stmt.rawline): break
-                            Stmt = fs.Comments(Stmt.rawline[end_match.end():])
+                            if not begin_match:
+                                Stmt = fs.Comments(Stmt.rawline[end_match.end():])
                     if begin_match:
-                        match = re.search("[0-9]+",Stmt.rawline[begin_match.start(0):])
+                        match = re.search("[0-9]+",Stmt.rawline[begin_match.end(0):])
                         if not writeComment:
                             if match:
                                 replacement_num = match.group(0).rstrip()
                             return (execNum,replacement_num)
-                    # get remainder of begin replacement comment block
                         else:
                             if begin_match.start(0) != 0:
-                                inputStmt =  fs.Comments(Stmt.rawline[:begin_match.start()])
-                                (newStmt,inline) = self.__processExec(inputStmt,definitions,inline)
-                                if newStmt is not None and insert is True:
-                                    self.__myNewExecs.append(newStmt)
+                                if end_match:
+                                    if end_match.start(0) == 0 \
+                                            and end_match.end(0)+1 == begin_match.start(0):
+                                        pass
+                                    else:
+                                        inputStmt = \
+                                            fs.Comments(Stmt.rawline[:begin_match.start()])
+
+                                        inline = \
+                                            self.__processExec(inputStmt,definitions,inline)
                             if begin_match.end(0) == len(Stmt.rawline): break
                             Stmt = fs.Comments(Stmt.rawline[begin_match.end()+match.end():])
                             writeComment = False
                     else:
-                        (newStmt,inline) = self.__processExec(Stmt,definitions,inline)
-                        if newStmt is not None and insert is True:
-                            self.__myNewExecs.append(newStmt)
+                        inline = self.__processExec(Stmt,definitions,inline)
                         break
-
-            (newExec,inline) = self.__processExec(anExec,definitions,inline)
-            if newExec is not None and insert is True:
-                self.__myNewExecs.append(newExec)
+            else:
+                inline = self.__processExec(anExec,definitions,inline)
             execNum += 1
         return (execNum,replacement_num)
                 
@@ -406,19 +411,21 @@ class UnitPostProcessor(object):
                                re.IGNORECASE)
                 begin_match = begin_pat.search(aDecl.rawline)
                 if begin_match:
-                    replacement_num = aDecl.rawline[begin_match.end()].rstrip()
+                    match = re.search("[0-9]+",aDecl.rawline[begin_match.end(0):])
+                    if match:
+                        replacement_num = match.group(0).rstrip()
                     newStmt = fs.Comments(aDecl.rawline[:begin_match.start()])
                     self.__myNewDecls.append(newStmt)
-                    return (declNum+1,replacement_num)
+                    return (declNum,replacement_num)
                 else:
                     end_pat = \
                         re.compile("C[ ]*[$]openad[$][ ]+end[ ]+replacement[ ]*",
                                    re.IGNORECASE)
                     end_match = end_pat.search(aDecl.rawline)
                     if end_match:
+                        declNum += 1
                         continue
-            (newDecl,UseStmtSeen) = self.__processDecl(aDecl,UseStmtSeen)
-            self.__myNewDecls.append(newDecl)
+            UseStmtSeen = self.__processDecl(aDecl,UseStmtSeen)
             declNum += 1
         return (declNum,replacement_num)
 
@@ -427,11 +434,13 @@ class UnitPostProcessor(object):
             if self._verbose: 
                 print '[Line '+str(anExecStmt.lineNumber)+']:'
             newStmt = None
-            if self._mode == 'reverse' and anExecStmt.is_comment():
+            if anExecStmt.is_comment() and definitions is not None:
                 function = self.__getInlinedFunction(anExecStmt,definitions)
                 if function is not None:
                     self.__inlineFunctionTuples = self.__getNewExecInfo(function)
                     inline = True
+                else:
+                    newStmt = anExecStmt
             elif isinstance(anExecStmt,fs.CallStmt):
                 if inline is True:
                     self.__createNewExecs(anExecStmt.args,anExecStmt.lead)
@@ -440,7 +449,9 @@ class UnitPostProcessor(object):
                     newStmt = self.__processSubCallStmt(anExecStmt)
             else:
                 newStmt = self.__transformActiveTypes(anExecStmt)
-            return (newStmt,inline)
+            if newStmt is not None:
+                self.__myNewExecs.append(newStmt)
+            return inline
 
         except TypeInferenceError,e:
             raise PostProcessError('Caught TypeInferenceError: '+e.msg,anExecStmt.lineNumber)
@@ -475,7 +486,8 @@ class UnitPostProcessor(object):
                 if self._verbose: print 'Statement "'+str(aDecl)+'" is assumed to require no post-processing'
                 newDecl = aDecl
                 UseStmtSeen = 0
-            return (newDecl,UseStmtSeen)
+            self.__myNewDecls.append(newDecl)
+            return UseStmtSeen
 
         except TypeInferenceError,e:
             raise PostProcessError('Caught TypeInferenceError: '+e.msg,aDecl.lineNumber)
@@ -493,18 +505,14 @@ class UnitPostProcessor(object):
             if self._verbose: print subUnit
             UnitPostProcessor(subUnit).processUnit()
 
-        if (self._verbose and self.__myUnit.execs): print 'post-processing executable statements:'
-
         if self._mode == 'reverse':
             try:
                 fd = open(self._input_file)
                 definitions = fd.read()
             except IOError,e: 
                 raise PostProcessError('Caught IOError: '+e.msg,self._input_file)
-
             inline = False
             self.__templateExpansion(definitions,inline)
-
             try:
                 fd.close()
             except IOError,e:
@@ -512,17 +520,13 @@ class UnitPostProcessor(object):
 
         else:
             for anExecStmt in self.__myUnit.execs:
-                # second value in tuple used for reverse mode
-                (newExec,ignore) = self.__processExec(anExecStmt)
-                self.__myNewExecs.append(newExec)
-
+                self.__processExec(anExecStmt)
             # Used for adding the active module 
             # (active module added after first use statement)
             # 1 if  the last statement seen was a use statement
             UseStmtSeen = 0
             for aDecl in self.__myUnit.decls:
-                (newDecl,UseStmtSeen) = self.__processDecl(aDecl,UseStmtSeen)
-                self.__myNewDecls.append(newDecl)
+                UseStmtSeen = self.__processDecl(aDecl,UseStmtSeen)
 
         self.__myUnit.decls = self.__myNewDecls
         self.__myUnit.execs = self.__myNewExecs
