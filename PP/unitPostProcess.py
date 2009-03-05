@@ -6,6 +6,7 @@ import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
 import PyFort.intrinsic as intrinsic
 from PyFort.fortUnit import fortUnitIterator
+from PyFort.fortParse import parse_stmt,parse_cmnt
 import re, string
 import copy
 
@@ -201,13 +202,14 @@ class UnitPostProcessor(object):
 
     def __getInlinedFunction(self,aComment,definitions):
         funMatch = None
+        units = None
         match = re.search('C[ ]+[$]openad[$][ ]+inline',aComment.rawline,re.IGNORECASE)
         if match:
             p = re.compile(r'\(')
             # get name of inlined function
             inlineFunction = p.split(aComment.rawline[match.end():])[0].lstrip()
-            pattern = 'subroutine([ ]+)'+inlineFunction
-            pattern2 = 'end([ ]+)subroutine'
+            pattern = 'subroutine([ ]+)'+inlineFunction+"[\(]"
+            pattern2 = 'end[ ]+subroutine'
             pat1 = re.compile(pattern,re.IGNORECASE)
             pmatch = pat1.search(definitions)
             if pmatch:
@@ -215,7 +217,10 @@ class UnitPostProcessor(object):
                 p2match = pat2.search(definitions,pmatch.end())
                 if pmatch and p2match:
                     funMatch = definitions[pmatch.start():p2match.end()]
-            return (None,funMatch)
+                aComment = None
+            else:
+                aComment = \
+                    fs.Comments("C!! requested inline of '"+inlineFunction+"' has no defn\n")
         return (aComment,funMatch)
 
     def __getReplacementNum(self,aComment):
@@ -239,6 +244,33 @@ class UnitPostProcessor(object):
         else:
             return False
 
+    def __parseNewStmts(self,newFuncCode,funArgs):
+        newStmtInfo = []
+        if newFuncCode.lstrip().rstrip() != '':
+            p = re.compile(r'[\n]')
+            execStmts = p.split(newFuncCode)            
+            i = 0
+            while i < len(execStmts):
+                stmt = execStmts[i]
+                n = 1
+                while i+n < len(execStmts):
+                    match = re.search("[ ]+[+][\w]",execStmts[i+n])
+                    if match:
+                        stmt = stmt+(execStmts[i+n])[match.end()-1:]
+                        n += 1
+                    else:
+                        break
+                if stmt.lstrip().rstrip() is '':
+                    i += n
+                    continue
+                parsed_stmt = (parse_stmt(stmt,0)).flow()
+                ws = re.search("[ ]*",stmt)
+                parsed_stmt.lead = ws.group(0)
+                stmtInfo = (funArgs,parsed_stmt)
+                newStmtInfo.append(stmtInfo)
+                i += n
+        return newStmtInfo
+
     # returns a list of tuples of (ordered_args,stmt) for processing 
     # when appropriate arguments are known
     def __getNewExecInfo(self,function):
@@ -249,54 +281,87 @@ class UnitPostProcessor(object):
         if not args:
             return newStmtInfo
         pattern = 'C([ ]+)[$]openad[$]([ ]+)end([ ]+)decls'
-        pat = re.compile(pattern,re.IGNORECASE)
-        match = pat.search(function)
+        match = re.search(pattern,function,re.IGNORECASE)
         if match:
-            pat2 = re.compile(r'[ ]+end[ ]+subroutine',re.IGNORECASE)
+            pat2 = re.compile('[ ]+end[ ]+subroutine',re.IGNORECASE)
             endmatch = pat2.search(function)
             newFuncCode = function[match.end():endmatch.start()]
-            contdLine = re.search("[\n][ ]*[+]",newFuncCode,re.IGNORECASE)
-            if contdLine:
-                newFuncCode = newFuncCode[:contdLine.start(0)]+\
-                    newFuncCode[contdLine.end(0):]
-            p = re.compile(r'[\n]')
-            execStmts = p.split(newFuncCode)
-            if len(execStmts) == 0:
-                execStmts = newFuncCode
-            for aStmt in execStmts:
-                aStmt.lstrip().rstrip()
-                if aStmt == '':
-                    continue
-                p2 = re.compile(r'[\(|\)|,]')
-                funArgs = filter(lambda i: i != '',
-                                 (p2.split(args.group(0))))
-
-                call_pat = re.compile("call[ ]+",re.IGNORECASE)
-                call_match = call_pat.search(aStmt)
-                if call_match:
-                    head_pat = re.compile("[a-z|_]+[\(]",re.IGNORECASE)
-                    head_match = head_pat.search(aStmt[call_match.end(0):])
-                    if head_match:
-                        head = aStmt[call_match.end(0)+head_match.start(0):
-                                         call_match.end(0)+head_match.end(0)-1]
-                        call_args = argpat.search(aStmt)
-                        callArgs = filter(lambda i: i != '',
-                                          (p2.split(call_args.group(0))))
-                        newStmt = fs.CallStmt(head,callArgs).flow()
-                        stmtInfo = (funArgs,newStmt)
-                        newStmtInfo.append(stmtInfo)
-                elif re.search("[ ]*C",aStmt,re.IGNORECASE):
-                    newStmt = fs.Comments(aStmt+"\n")
-                    stmtInfo = (funArgs,newStmt)
-                    newStmtInfo.append(stmtInfo)
+            p2 = re.compile(r'[\(|\)|,]')
+            funArgs = filter(lambda i: i != '',
+                             (p2.split(args.group(0))))
+            comments = re.finditer("[ ]*C[ ]+.*[\n]*",newFuncCode,re.IGNORECASE)
+            index = 0
+            for aComment in comments:
+                end = aComment.start()
+                if aComment.start() == index:
+                    index = aComment.end()
                 else:
-                    p = re.compile(r'=')
-                    splitStmt = p.split(aStmt.lstrip())
-                    if len(splitStmt) == 2:
-                        newStmt = fs.AssignStmt(splitStmt[0],splitStmt[1]).flow()
-                        stmtInfo = (funArgs,newStmt)
-                        newStmtInfo.append(stmtInfo)
+                    newStmtInfo.extend(self.__parseNewStmts(newFuncCode[index:end],funArgs))
+                comment = fs.Comments(aComment.group())
+                stmtInfo = (funArgs,comment)
+                newStmtInfo.append(stmtInfo)
+                index = aComment.end()
+            newStmtInfo.extend(self.__parseNewStmts(newFuncCode[index:],funArgs))
         return newStmtInfo
+
+    def __replaceArgs(self,argReps,string,inlineArgs,replacementArgs):
+        while argReps >= 0:
+            p = re.compile("[\w]+"+inlineArgs[argReps]+"[\w]+")
+            p2 = re.compile(inlineArgs[argReps])
+            pats = p.finditer(string,re.IGNORECASE)
+                    # substitute args on left hand side
+            prevEnd = 0; stopRep=len(string)
+            for match in pats:
+                (stopRep,end) = match.span()
+                string = string[:prevEnd]+\
+                    p2.sub(str(replacementArgs[argReps]),string[prevEnd:stopRep])+\
+                    string[stopRep:]
+                prevEnd = end
+                stopRep = len(string)
+            string = string[:prevEnd]+\
+                p2.sub(str(replacementArgs[argReps]),string[prevEnd:stopRep])+\
+                string[stopRep:]
+            argReps -= 1
+        return string
+
+    def __replaceSon(self,arg,inlineArgs,replacementArgs):
+        newSon = arg
+        if isinstance(arg,fe.Sel):
+            try:
+                index = inlineArgs.index(arg.head)
+                head = replacementArgs[index]
+                newSon = fe.Sel(head,arg.proj)
+            except:
+                pass
+        elif isinstance(arg,fe.App):
+            head = arg.head
+            args = arg.args
+            newArgs = []
+            i = 0
+            while i < len(arg.args):
+                anArg = arg.args[i]
+                try:
+                    index = inlineArgs.index(anArg)
+                    newArg = replacementArgs[index]
+                    newArgs.append(newArg)
+                except:
+                    newArgs.append(anArg)
+                i += 1
+            if len(newArgs) != 0:
+                args = newArgs
+            try:
+                index = inlineArgs.index(arg.head)
+                head = replacementArgs[index]
+            except:
+                pass
+            newSon = fe.App(head,newArgs)
+        else:
+            try:
+                index = inlineArgs.index(arg)
+                newSon = replacementArgs[index]
+            except:
+                pass
+        return newSon
 
     # for each tuple (args,stmt) in self.__inlineFunctionTuples,
     # create a new exec stmt by replacing args in the stmt with execStmtArgs
@@ -309,38 +374,39 @@ class UnitPostProcessor(object):
                 replacementArgs.append(newArg)
             else:
                 replacementArgs.append(anArg)
-
         for (inlineArgs,Stmt) in self.__inlineFunctionTuples:
-            argReps = len(inlineArgs)
-            if argReps != len(replacementArgs):
-                return
+            argReps = min(len(inlineArgs),len(replacementArgs))
             argReps -= 1
-            if isinstance(Stmt,fs.AssignStmt):
-                lhs = Stmt.lhs
-                rhs = Stmt.rhs
-                while argReps >= 0:
-                    p = re.compile(inlineArgs[argReps])
-                    lhs = p.sub(str(replacementArgs[argReps]),lhs)
-                    rhs = p.sub(str(replacementArgs[argReps]),rhs)
-                    argReps -= 1
-                newStmt = fs.AssignStmt(lhs,rhs,lead=lead).flow()
-                Execs.append(newStmt)
-            elif isinstance(Stmt,fs.CallStmt):
-                newArgs = []
-                while argReps >= 0:
-                    p = re.compile(inlineArgs[argReps])
-                    for stmtArg in Stmt.args:
-                        newArg = p.sub(str(replacementArgs[argReps]),stmtArg)
-                        newArgs.append(newArg)
-                    argReps -= 1
-                newStmt = fs.CallStmt(Stmt.head,newArgs).flow()
-                Execs.append(newStmt)
-            elif isinstance(Stmt,fs.Comments):
-                while argReps >= 0:
-                    p = re.compile(inlineArgs[argReps])
-                    Stmt.rawline = p.sub(str(replacementArgs[argReps]),Stmt.rawline)
-                    argReps -= 1
+            if isinstance(Stmt,fs.Comments):
+                Stmt.rawline = \
+                    self.__replaceArgs(argReps,Stmt.rawline,inlineArgs,replacementArgs)
                 Execs.append(Stmt)
+            elif isinstance(Stmt,fs.AssignStmt):
+                lhs = self.__replaceArgs(argReps,str(Stmt.lhs),inlineArgs,replacementArgs)
+                rhs = self.__replaceArgs(argReps,str(Stmt.rhs),inlineArgs,replacementArgs)
+                newStmt = fs.AssignStmt(lhs,rhs,lead=lead).flow()
+                ws = re.search("[ ]*",Stmt.rawline)
+                newStmt.lead = ws
+                Execs.append(newStmt)
+            else:
+                if hasattr(Stmt, "_sons"):
+                    for aSon in Stmt._sons:
+                        theSon = getattr(Stmt,aSon)
+                        if theSon is None:
+                            continue
+                        elif isinstance(theSon,list):
+                            index = 0
+                            while index < len(theSon):
+                                arg = theSon[index]
+                                newSon = self.__replaceSon(arg,inlineArgs,replacementArgs)
+                                theSon[index] = newSon
+                                index += 1
+                        else:
+                            newSon = self.__replaceSon(theSon,inlineArgs,replacementArgs)
+                            setattr(Stmt,aSon,newSon)
+                    Stmt.flow()
+                    Execs.append(Stmt)
+
         return Execs
 
 
@@ -407,11 +473,12 @@ class UnitPostProcessor(object):
                     if match:
                         newStmt = fs.Comments(anExecStmt.rawline[:match.start()])
                         self.__myNewExecs.append(newStmt)
-                        pragma = anExecStmt.rawline[match.end()].rstrip()
-                        # return to input
-                        for anInputExec in Execs[int(pragma)]:
-                            if anInputExec is not None:
-                                self.__myNewExecs.append(anInputExec)
+                        pragma = int(anExecStmt.rawline[match.end()].rstrip())
+                        if pragma <= len(Execs):
+                            # return to input
+                            for anInputExec in Execs[int(pragma)]:
+                                if anInputExec is not None:
+                                    self.__myNewExecs.append(anInputExec)
                         # continue template
                         pat = re.compile("[0-9]+")
                         newmatch = pat.search(anExecStmt.rawline[match.end():])
@@ -475,7 +542,8 @@ class UnitPostProcessor(object):
                 if inline is True:
                     newExecs = self.__createNewExecs(anExecStmt.args,anExecStmt.lead)
                     inline = False
-                    Execs.extend(newExecs)
+                    if newExecs is not None:
+                        Execs.extend(newExecs)
                 else:
                     newStmt = self.__processSubCallStmt(anExecStmt)
                     Execs.append(newStmt)
@@ -520,6 +588,7 @@ class UnitPostProcessor(object):
                             execList.append([None])
                         else:
                             execList.append(Execs)
+                            Execs = []
                         replacementNum += 1
                 else:
                     Decls.append(aDecl)
