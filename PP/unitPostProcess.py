@@ -101,9 +101,11 @@ class UnitPostProcessor(object):
             if intrinsic.is_inquiry(replacementExpression.head):
                 self.__inquiryExpression = True
                 self.__inquiryRecursionLevel = self.__recursionDepth
-            replacementExpression.args = map(self.__transformActiveTypesExpression,replacementExpression.args)
+            replacementExpression.args = \
+                map(self.__transformActiveTypesExpression,replacementExpression.args)
             if replacementExpression.head == '__value__':
-                if self.__inquiryExpression:
+                if self.__inquiryExpression and \
+                        self.__inquiryRecursionLevel == self.__recursionDepth - 1:
                     replacementExpression = replacementExpression.args[0]
                 else:
                     nv = replacementExpression.args[0]
@@ -275,7 +277,7 @@ class UnitPostProcessor(object):
     # when appropriate arguments are known
     def __getNewExecInfo(self,function):
         newStmtInfo = []
-        argpattern = '\(.*\)'
+        argpattern = '\((.*([\n][ ]*[+])*)+\)[ ]*[\n]'
         argpat = re.compile(argpattern,re.IGNORECASE)
         args = argpat.search(function)
         if not args:
@@ -286,9 +288,16 @@ class UnitPostProcessor(object):
             pat2 = re.compile('[ ]+end[ ]+subroutine',re.IGNORECASE)
             endmatch = pat2.search(function)
             newFuncCode = function[match.end():endmatch.start()]
-            p2 = re.compile(r'[\(|\)|,]')
+            p2 = re.compile(r'[\(|\)|,|[\n]|[ ]*[+]]')
             funArgs = filter(lambda i: i != '',
                              (p2.split(args.group(0))))
+            i = 0
+            while i < len(funArgs):
+                arg = funArgs[i]
+                linebreak = re.search("[ ]*[+]",arg)
+                if linebreak:
+                    funArgs[i] = arg[linebreak.end():]
+                i += 1
             comments = re.finditer("[ ]*C[ ]+.*[\n]*",newFuncCode,re.IGNORECASE)
             index = 0
             for aComment in comments:
@@ -306,21 +315,28 @@ class UnitPostProcessor(object):
 
     def __replaceArgs(self,argReps,string,inlineArgs,replacementArgs):
         while argReps >= 0:
-            p = re.compile("[\w]+"+inlineArgs[argReps]+"[\w]+")
+            lno_replace = "[\w]"+inlineArgs[argReps]
+            rno_replace = inlineArgs[argReps]+"[\w]"
+            p = re.compile("("+rno_replace+"|"+lno_replace+")")
             p2 = re.compile(inlineArgs[argReps])
             pats = p.finditer(string,re.IGNORECASE)
-                    # substitute args on left hand side
             prevEnd = 0; stopRep=len(string)
             for match in pats:
                 (stopRep,end) = match.span()
+                prevEnd = max(prevEnd,stopRep)
+                newstr = p2.sub(str(replacementArgs[argReps]),string[prevEnd:(stopRep-1)]) 
                 string = string[:prevEnd]+\
-                    p2.sub(str(replacementArgs[argReps]),string[prevEnd:stopRep])+\
-                    string[stopRep:]
+                    newstr+\
+                    string[(stopRep):]
                 prevEnd = end
                 stopRep = len(string)
-            string = string[:prevEnd]+\
-                p2.sub(str(replacementArgs[argReps]),string[prevEnd:stopRep])+\
-                string[stopRep:]
+            match = p.search(string[prevEnd:])
+            if match:
+                string = string[:match.end()]+\
+                    p2.sub(str(replacementArgs[argReps]),string[match.end():])
+            else:
+                string = string[:prevEnd]+\
+                    p2.sub(str(replacementArgs[argReps]),string[prevEnd:])
             argReps -= 1
         return string
 
@@ -340,12 +356,15 @@ class UnitPostProcessor(object):
             i = 0
             while i < len(arg.args):
                 anArg = arg.args[i]
-                try:
-                    index = inlineArgs.index(anArg)
-                    newArg = replacementArgs[index]
-                    newArgs.append(newArg)
-                except:
-                    newArgs.append(anArg)
+                if isinstance(anArg,fe.App) or isinstance(anArg,fe.Sel):
+                    newArgs.append(self.__replaceSon(anArg,inlineArgs,replacementArgs))
+                else:
+                    try:
+                        index = inlineArgs.index(anArg)
+                        newArg = replacementArgs[index]
+                        newArgs.append(newArg)
+                    except:
+                        newArgs.append(anArg)
                 i += 1
             if len(newArgs) != 0:
                 args = newArgs
@@ -382,31 +401,31 @@ class UnitPostProcessor(object):
                     self.__replaceArgs(argReps,Stmt.rawline,inlineArgs,replacementArgs)
                 Execs.append(Stmt)
             elif isinstance(Stmt,fs.AssignStmt):
+                if len(Stmt.lead) > len(lead):
+                    lead = Stmt.lead
                 lhs = self.__replaceArgs(argReps,str(Stmt.lhs),inlineArgs,replacementArgs)
                 rhs = self.__replaceArgs(argReps,str(Stmt.rhs),inlineArgs,replacementArgs)
                 newStmt = fs.AssignStmt(lhs,rhs,lead=lead).flow()
                 ws = re.search("[ ]*",Stmt.rawline)
-                newStmt.lead = ws
                 Execs.append(newStmt)
-            else:
-                if hasattr(Stmt, "_sons"):
-                    for aSon in Stmt._sons:
-                        theSon = getattr(Stmt,aSon)
-                        if theSon is None:
-                            continue
-                        elif isinstance(theSon,list):
-                            index = 0
-                            while index < len(theSon):
-                                arg = theSon[index]
-                                newSon = self.__replaceSon(arg,inlineArgs,replacementArgs)
-                                theSon[index] = newSon
-                                index += 1
-                        else:
-                            newSon = self.__replaceSon(theSon,inlineArgs,replacementArgs)
-                            setattr(Stmt,aSon,newSon)
+            elif hasattr(Stmt, "_sons"):
+                for aSon in Stmt._sons:
+                    theSon = getattr(Stmt,aSon)
+                    if theSon is None:
+                        continue
+                    elif isinstance(theSon,list):
+                        index = 0
+                        while index < len(theSon):
+                            arg = theSon[index]
+                            newSon = self.__replaceSon(arg,inlineArgs,replacementArgs)
+                            theSon[index] = newSon
+                            index += 1
+                    else:
+                        newSon = self.__replaceSon(theSon,inlineArgs,replacementArgs)
+                        setattr(Stmt,aSon,newSon)
                     Stmt.flow()
-                    Execs.append(Stmt)
-
+                Stmt.flow()
+                Execs.append(Stmt)
         return Execs
 
 
@@ -459,9 +478,10 @@ class UnitPostProcessor(object):
                     if aDecl is not None:
                         self.__myNewDecls.append(aDecl)
                 i += 1
-            for anInputExec in Execs[0]:
-                if anInputExec is not None:
-                    self.__myNewExecs.append(anInputExec)
+            if len(Execs) > 0:
+                for anInputExec in Execs[0]:
+                    if anInputExec is not None:
+                        self.__myNewExecs.append(anInputExec)
             execRepNum = 0
             firstIter = True
             for anExecStmt in aUnit.execs:
