@@ -323,8 +323,10 @@ class UnitPostProcessor(object):
             prevEnd = 0; stopRep=len(string)
             for match in pats:
                 (stopRep,end) = match.span()
-                prevEnd = max(prevEnd,stopRep)
-                newstr = p2.sub(str(replacementArgs[argReps]),string[prevEnd:(stopRep-1)]) 
+                m2 = p.search(string[prevEnd:stopRep])
+                if m2:
+                    prevEnd = m2.end()
+                newstr = p2.sub(str(replacementArgs[argReps]),string[prevEnd:stopRep]) 
                 string = string[:prevEnd]+\
                     newstr+\
                     string[(stopRep):]
