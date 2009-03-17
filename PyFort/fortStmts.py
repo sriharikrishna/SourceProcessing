@@ -713,6 +713,31 @@ class ExternalStmt(Decl):
     def __str__(self):
         return self.kw+' '+','.join([str(aProcedureName) for aProcedureName in self.procedureNames])
 
+class AllocatableStmt(Decl):
+    _sons = ['lst']
+    kw = 'allocatable'
+    kw_str = kw
+
+    @staticmethod
+    def parse(scan,lineNumber):
+        formAllocatableStmt = seq(lit('allocatable'),
+                               zo1(lit('::')),
+                               cslist(id))
+        ((allocatableKeyword,doubleColon,lst),rest) = formAllocatableStmt(scan)
+        return AllocatableStmt(lst,lineNumber)
+
+    def __init__(self,lst,lineNumber=0,label=False,lead=''):
+        self.lst = lst
+        self.lineNumber = lineNumber
+        self.label = label
+        self.lead = lead
+
+    def __repr__(self):
+        return self.__class__.__name__+'('+repr(self.lst)+')'
+
+    def __str__(self):
+        return self.kw+' '+','.join([str(aName) for aName in self.lst])
+
 class CharacterStmt(TypeDecl):
     kw = 'character'
     kw_str = kw
@@ -1341,7 +1366,34 @@ class GotoStmt(Exec):
     pass
 
 class AllocateStmt(Exec):
-    pass
+    _sons = ['arg']
+    kw = 'allocate'
+    kw_str = 'allocate'
+
+    @staticmethod
+    def parse(scan,lineNumber):
+        allocStmt = seq(lit('allocate'),
+                        lit('('),
+                        Exp,
+                        lit(')'))
+        try:
+            ((allocKeyword,openParen,allocArg,closeParen),rest) = allocStmt(scan)
+        except ListAssemblerException,e:
+            raise ParseError(lineNumber,scan,'alloc statement')
+        return AllocateStmt(allocArg,allocKeyword,lineNumber)
+
+    def __init__(self,arg,stmt_name='allocate',lineNumber=0,label=False,lead=''):
+        self.arg = arg
+        self.stmt_name = stmt_name
+        self.lineNumber = lineNumber
+        self.label = label
+        self.lead = lead
+
+    def __repr__(self):
+        return 'AllocateStmt(%s)' % (repr(self.arg),)
+
+    def __str__(self):
+        return '%s(%s)' % (self.stmt_name,str(self.arg))
 
 kwtbl = dict(blockdata       = BlockdataStmt,
              common          = CommonStmt,
@@ -1360,6 +1412,7 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              save            = SaveStmt,
              goto            = GotoStmt,
              external        = ExternalStmt,
+             allocatable     = AllocatableStmt,
              character       = CharacterStmt,
              intrinsic       = IntrinsicStmt,
              include         = IncludeStmt,
