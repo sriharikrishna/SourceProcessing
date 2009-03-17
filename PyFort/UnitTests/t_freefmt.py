@@ -5,6 +5,10 @@ from Setup     import *
 from unittest  import *
 from fortFile  import Ffile
 from fortLine  import *
+from fortStmts import *
+from fortStmts import _F90ExplLen,_Star,_NoInit,_Kind,_ExplKind
+from useparse  import *
+
 
 class T1(TestCase):
 
@@ -54,6 +58,16 @@ function foo(x,y) ! test it
         a_(isinstance(ll[0],fline))
         ae(ll[0].line,'function foo(x,y) ')
         ae(ll[0].rawline,l1)
+
+    def test4(self):
+        'decl with ! comment'
+
+        ae = self.assertEquals
+        a_ = self.assert_
+        l1 = 'real :: x(:) ! here comes the comment'
+        f1 = Ffile.here(l1,True)
+        ll = list(f1.lines)
+        ae(repr(pps(ll[0].line)),repr(RealStmt([],[],[_NoInit(App('x',[':']))])))
 
 s1 = asuite(T1)
 suite = asuite(T1)
