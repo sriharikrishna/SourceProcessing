@@ -5,7 +5,7 @@ from fortStmts import parse
 def scan(s):
     (v,rst) = scan1.scan(s)
     if rst:
-        raise "incomplete scan '%s', rst = '%s'" % (s,rst)
+        raise "incomplete scan '%s', v = '%s' rst = '%s'" % (s,v,rst)
     return v
 
 def ep(s):
