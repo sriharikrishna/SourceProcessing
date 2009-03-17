@@ -36,7 +36,7 @@ c This is a comment line that may be a little long, but that should be ok
      +ong string'_foobar // 'one more string just to round things out ..
      +.'
 '''
-        correct = correct[1:]
+        correct = correct[1:-1]
         self.assertEquals(flow_line(s1),correct)
 
     def test2(self):
