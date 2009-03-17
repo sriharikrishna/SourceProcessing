@@ -524,7 +524,7 @@ class TestWhileStmt(TestCase):
 class TestCallStmt(TestCase):
     '''Subroutine call statements'''
     def test1(self):
-        '''Subroutine call with 1/2 named parameter arguments'''
+        '''Subroutine call with 1/2 named parameter arguments - FAILS right now, waiting for fix'''
         s = 'call foo(1,b = bar(x))'
         r = CallStmt('foo',['1',
                             NamedParam('b',App('bar','x'))])
@@ -532,7 +532,7 @@ class TestCallStmt(TestCase):
         self.assertEquals(s,str(r))
 
     def test2(self):
-        '''Subroutine call with both named parameter arguments'''
+        '''Subroutine call with both named parameter arguments - FAILS right now, waiting for fix'''
         s = 'call foo(a = 1,b = bar(x))'
         r = CallStmt('foo',[NamedParam('a','1'),
                             NamedParam('b',App('bar','x'))])
