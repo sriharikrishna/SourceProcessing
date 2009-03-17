@@ -16,7 +16,9 @@ class C1(TestCase):
         a_ = self.assert_
 
         s  = 'real  x(10),y,z'
-        a_(isinstance(pps(s),RealStmt))
+        ae(repr(pps(s)),repr(RealStmt([],[],[_NoInit(App('x',['10'])), _NoInit('y'), _NoInit('z')])))
+        s  = 'real :: x(:)'
+        ae(repr(pps(s)),repr(RealStmt([],[],[_NoInit(App('x',[':']))])))
 
     def test2(self):
         'simple if stmt'
@@ -477,8 +479,8 @@ class TestDoStmt(TestCase):
         self.assertEquals(s,str(r))
 
     def test4(self):
-        '''do i = floor(x) + 10,2,abs(y + 2)'''
-        s = 'do i = floor(x) + 10,2,abs(y + 2)'
+        '''do i = floor(x)+10,2,abs(y+2)'''
+        s = 'do i = floor(x)+10,2,abs(y+2)'
         r = DoStmt(None,
                    'i',
                    Ops('+',App('floor',['x']),'10'),
@@ -504,15 +506,15 @@ class TestDoStmt(TestCase):
 class TestWhileStmt(TestCase):
     '''While statements'''
     def test1(self):
-        '''do while (1 .lt. 3)'''
-        s = 'do while (1 .lt. 3)'
+        '''do while (1.lt.3)'''
+        s = 'do while (1.lt.3)'
         r = WhileStmt(Ops('.lt.','1','3'))
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
     def test2(self):
-        '''do while (foo(x) .and. p .eq. q)'''
-        s = 'do while (foo(x) .and. p .eq. q)'
+        '''do while (foo(x).and.p.eq.q)'''
+        s = 'do while (foo(x).and.p.eq.q)'
         r = WhileStmt(Ops('.and.',
                           App('foo',['x']),
                           Ops('.eq.','p','q')))
@@ -609,14 +611,14 @@ class TestCaseStmts(TestCase):
     def test1(self):
         '''case with single range'''
         s = 'case (1:3)'
-        r = CaseRangeListStmt(['1:3'])
+        r = CaseRangeListStmt([Ops(':','1','3')])
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
     def test2(self):
         '''case with multiple ranges'''
         s = 'case (1:3,8:9)'
-        r = CaseRangeListStmt(['1:3','8:9'])
+        r = CaseRangeListStmt([Ops(':','1','3'), Ops(':','8','9')])
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
