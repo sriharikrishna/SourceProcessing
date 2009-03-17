@@ -330,7 +330,9 @@ class TypeDecl(Decl):
     '''
     The double colon "::" is optional when parsing, but we have chosen to always include it when printing
     '''
+    ## This is the first appearance of the kw and kw_str members; the kw is a string with no spaces (like 'doubleprecision').
     kw = '__unknown__'
+    ## the kw_str may have spaces (like with 'double precision').
     kw_str = kw
     mod = None
     decls = []
