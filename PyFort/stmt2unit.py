@@ -4,6 +4,7 @@
 from _Setup import *
 
 from PyUtil.symtab import Symtab,SymtabEntry
+from PyUtil.debugManager import DebugManager
 
 import fortStmts     as fs
 import fortExp       as fe
@@ -30,20 +31,17 @@ def default_dims(attrs_list):
 
 def _processTypedeclStmt(aTypeDeclStmt,curr):
     'type declaration -- record type in symbol table'
-#   print 'stmt2unit._processTypedeclStmt: called for',aTypeDeclStmt 
     localSymtab = curr.val.symtab
+    DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: stmt2unit._processTypedeclStmt('+str(aTypeDeclStmt)+') with symboltable '+str(localSymtab))
     newType = (aTypeDeclStmt.__class__,aTypeDeclStmt.mod)
     newLength = aTypeDeclStmt.kw_str == 'character' and (aTypeDeclStmt.mod and aTypeDeclStmt.mod[0] \
                                                                             or 1)
     dflt_d  = default_dims(aTypeDeclStmt.attrs)
     for aDecl in aTypeDeclStmt.decls:
         (name,newDimensions) = typesep(aDecl,dflt_d)
-        theSymtabEntry = localSymtab.lookup_name(name)
-        # already in symtab -> check for conflicts, then add new information
-        if theSymtabEntry:
-#           print '\tdecl "'+str(aDecl)+'" already has SymtabEntry '+str(theSymtabEntry.debug(name))
-            #FIXME: at what LEVEL should this new information be added?
-            # choices are 1-local level, or 2-level in which the entry resides
+        theSymtabEntry = localSymtab.lookup_name_local(name)
+        if theSymtabEntry: # already in symtab -> enter new information (taking exception to any conflicts)
+            DebugManager.debug('\tTypeDecl "'+str(aDecl)+'" already present in local symbol table as '+str(theSymtabEntry.debug(name)))
             theSymtabEntry.enterType(newType)
             theSymtabEntry.enterDimensions(newDimensions,aTypeDeclStmt.lineNumber)
         else: # no symtab entry -> create one
@@ -52,7 +50,7 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                                          dimensions=newDimensions,
                                          length=newLength,
                                          origin='local')
-#           print '\tdecl "'+str(aDecl)+'" NOT already present in symbol table -- adding '+str(newSymtabEntry.debug(name))
+            DebugManager.debug('\tdecl "'+str(aDecl)+'" NOT already present in symbol table -- adding '+str(newSymtabEntry.debug(name)))
             localSymtab.enter_name(name,newSymtabEntry)
     return aTypeDeclStmt
 
@@ -62,32 +60,32 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
 
 def _processDimensionStmt(aDimensionStmt,curr):
     localSymtab = curr.val.symtab
-#   print 'called _processDimensionStmt on "'+str(aDimensionStmt)+'" with localSymtab',localSymtab
+    DebugManager.debug('[Line '+str(aDimensionStmt.lineNumber)+']: stmt2unit._processDimensionStmt('+str(aDimensionStmt)+') with symbol table '+str(localSymtab))
     for anApp in aDimensionStmt.lst:
-        theSymtabEntry = localSymtab.lookup_name(anApp.head)
+        theSymtabEntry = localSymtab.lookup_name_local(anApp.head)
         if theSymtabEntry:
-#           print '\tvariable "'+anApp.head+'" already present in symbol table as '+theSymtabEntry.debug(anApp.head)
+            DebugManager.debug('\tvariable "'+anApp.head+'" already present in local symbol table as '+theSymtabEntry.debug(anApp.head))
             theSymtabEntry.enterDimensions(tuple(anApp.args))
         else:
             newSymtabEntry = SymtabEntry(SymtabEntry.VariableEntryKind,
                                          dimensions=tuple(anApp.args),
                                          origin='local')
-#           print '\tvariable "'+anApp.head+'" NOT already present in symbol table -- adding '+newSymtabEntry.debug(anApp.head)
+            DebugManager.debug('\tvariable "'+anApp.head+'" NOT already present in symbol table -- adding '+newSymtabEntry.debug(anApp.head))
             localSymtab.enter_name(anApp.head,newSymtabEntry)
     return aDimensionStmt
 
 def _processExternalStmt(anExternalStmt,curr):
     localSymtab = curr.val.symtab
-#   print 'stmt2unit._processExternalStmt: called on "'+str(anExternalStmt)+'" with localSymtab',localSymtab
+    DebugManager.debug('[Line '+str(anExternalStmt.lineNumber)+']: stmt2unit._processExternalStmt: called on "'+str(anExternalStmt)+'" with localSymtab',localSymtab)
     for aProcedureName in anExternalStmt.procedureNames:
         theSymtabEntry = localSymtab.lookup_name(aProcedureName)
         if not theSymtabEntry:
             newSymtabEntry = SymtabEntry(SymtabEntry.ProcedureEntryKind,
                                          origin='external')
             localSymtab.enter_name(aProcedureName,newSymtabEntry)
-#           print '\tprocedure NOT already present in symbol table -- adding '+newSymtabEntry.debug(aProcedureName)
+            DebugManager.debug('\tprocedure NOT already present in symbol table -- adding '+newSymtabEntry.debug(aProcedureName))
         else:
-#           print '\tprocedure already has SymtabEntry'+theSymtabEntry.debug(aProcedureName)
+            DebugManager.debug('\tprocedure already has SymtabEntry'+theSymtabEntry.debug(aProcedureName))
             # if the entry has a type, we know it's a function
             newEntryKind = theSymtabEntry.type and SymtabEntry.FunctionEntryKind \
                                                 or SymtabEntry.ProcedureEntryKind
@@ -96,7 +94,7 @@ def _processExternalStmt(anExternalStmt,curr):
 
 def _assign2stmtfn(anAssignmentStmt,curr):
     'convert assign stmt to stmtfn, and enter in unit symtab'
-#    print 'converting ',anAssignmentStmt,' to stmt fn'
+    DebugManager.debug('[Line '+str(anAssignmentStmt.lineNumber)+']: converting '+str(anAssignmentStmt)+' to stmt fn')
     newStmtFn = fs.StmtFnStmt(anAssignmentStmt.lhs.head,
                               anAssignmentStmt.lhs.args,
                               anAssignmentStmt.rhs,
@@ -111,7 +109,7 @@ def _assign2stmtfn(anAssignmentStmt,curr):
 
 def _is_stmt_fn(s,cur):
     'determine if assignment s is a statement function, based on "unit" symtab'
-#    print 'checking assignment ',s,' for stmt fn'
+    DebugManager.debug('checking assignment '+str(s)+' for stmt fn')
     lhs  = s.lhs
     look = cur.val.symtab.lookupDimensions
 
@@ -147,6 +145,7 @@ def _unit_entry(self,cur):
     currentSymtab.enter_name(self.name,entry)
     if currentSymtab.parent:
         currentSymtab.parent.enter_name(self.name,entry)
+    DebugManager.debug('[Line '+str(self.lineNumber)+']: stmt2unit._unit_entry() for '+str(self)+': with symtab '+str(currentSymtab)+' with parent symtab '+str(currentSymtab.parent))
     return self
 
 def _implicit(self,cur):
@@ -189,30 +188,31 @@ def _end_unit_iface_action(self,cur):
     unit.symtab = unit.symtab.parent
     return self
 
-def _beginInterface(self,cur):
-#   print 'called _beginInterface on ',self
+def _beginInterface(anInterfaceStmt,cur):
     cur.val._in_iface = True
     localSymtab = cur.val.symtab
     # make a symbol table local to the interface
     interfaceSymtab = Symtab(localSymtab)
+    DebugManager.debug('[Line '+str(anInterfaceStmt.lineNumber)+']: stmt2unit._beginInterface('+str(anInterfaceStmt)+'): creating interface symtab '+str(interfaceSymtab)+' with parent symtab '+str(localSymtab))
+    sys.stderr.flush()
     # for named interfaces, add a symbol table entry to its symtab AND the enclosing unit
-    if self.name:
+    if anInterfaceStmt.name:
         newSymtabEntry = SymtabEntry(SymtabEntry.InterfaceEntryKind,
                                      origin='local')
-        localSymtab.enter_name(self.name,newSymtabEntry)
-        interfaceSymtab.enter_name(self.name,newSymtabEntry)
+        localSymtab.enter_name(anInterfaceStmt.name,newSymtabEntry)
+        interfaceSymtab.enter_name(anInterfaceStmt.name,newSymtabEntry)
     # switch to the interface's symbol table for the duration of the interface
     cur.val.symtab = interfaceSymtab
-#   print '\tEntering interface "'+str(self.name)+'", with symbol table "'+str(interfaceSymtab)+'"'
-    return self
+    DebugManager.debug('\tEntering interface "'+str(anInterfaceStmt.name)+'", with symbol table '+str(interfaceSymtab))
+    return anInterfaceStmt
 
-def _endInterface(self,cur):
+def _endInterface(anEndInterfaceStmt,cur):
     currentUnit = cur.val
+    DebugManager.debug('[Line '+str(anEndInterfaceStmt.lineNumber)+']: stmt2unit._beginInterface('+str(anEndInterfaceStmt)+'): reverting from symtab '+str(currentUnit.symtab)+' to parent symtab '+str(currentUnit.symtab.parent))
     currentUnit._in_iface = False
     # switch back to the symbol table for the unit
     currentUnit.symtab = currentUnit.symtab.parent
-#   print '\tLeaving interface and restoring unit symbol table "'+str(currentUnit.symtab)+'"\n'
-    return self
+    return anEndInterfaceStmt
 
 fs.GenStmt.unit_action        = lambda s,*rest,**kw: s
 fs.GenStmt.unit_entry         = lambda s,*rest,**kw: s
@@ -231,7 +231,6 @@ fs.AssignStmt.unit_action     = _assign2stmtfn
 fs.DimensionStmt.unit_action = _processDimensionStmt
 
 fs.ExternalStmt.unit_action = _processExternalStmt
-
 
 fs.TypeDecl.unit_action       = _processTypedeclStmt
 
