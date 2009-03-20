@@ -11,6 +11,7 @@ from PyUtil.errors import UserError, ScanError, ParseError
 from PyUtil.assembler import AssemblerException
 from PyUtil.l_assembler import AssemblerException as ListAssemblerException
 from PyUtil.symtab import Symtab,SymtabError
+from PyUtil.debugManager import DebugManager
 
 from PyIR.prog1 import Prog1
 
@@ -117,6 +118,7 @@ def main():
 
     # set verbosity
     UnitPostProcessor.setVerbose(config.isVerbose)
+    DebugManager.setVerbose(config.isVerbose)
 
     # set whitespace
     fe.Ops.setWhitespace(config.useWhitespace)
