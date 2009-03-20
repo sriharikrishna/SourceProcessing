@@ -45,9 +45,8 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
             #FIXME: at what LEVEL should this new information be added?
             # choices are 1-local level, or 2-level in which the entry resides
             theSymtabEntry.enterType(newType)
-            theSymtabEntry.enterDimensions(newDimensions)
-        # no symtab entry -> create one
-        else:
+            theSymtabEntry.enterDimensions(newDimensions,aTypeDeclStmt.lineNumber)
+        else: # no symtab entry -> create one
             newSymtabEntry = SymtabEntry(SymtabEntry.GenericEntryKind,
                                          type=newType,
                                          dimensions=newDimensions,

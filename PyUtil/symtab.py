@@ -97,28 +97,28 @@ class SymtabEntry(object):
         self.length = length
         self.origin = origin
 
-    def enterEntryKind(self,newEntryKind):
+    def enterEntryKind(self,newEntryKind,lineNumber=0):
         # the replacement entry kind must be an 'instance' of the existing one.
         # for example, we can replace a procedureKind with a functionKind,
         # but we cannot replace a variableKind with a functionKind
         if not isinstance(newEntryKind(),self.entryKind):
-            raise SymtabError('SymtabEntry.enterEntryKind: replace kind '+str(self.entryKind)+' with '+str(newEntryKind)+' !!!!',self)
+            raise SymtabError('SymtabEntry.enterEntryKind: replace kind '+str(self.entryKind)+' with '+str(newEntryKind)+' !!!!',self,lineNumber)
         self.entryKind = newEntryKind
 
-    def enterType(self,newType):
+    def enterType(self,newType,lineNumber=0):
         if not newType:
-            raise SymtabError('SymtabEntry.enterType: newType is None!')
+            raise SymtabError('SymtabEntry.enterType: newType is None!',self,lineNumber)
         if self.type and (self.type != newType):
-            raise SymtabError('SymtabEntry.enterType: Error -- current type "'+str(self.type)+'" and new type "'+str(newType)+'" conflict!',self)
+            raise SymtabError('SymtabEntry.enterType: Error -- current type "'+str(self.type)+'" and new type "'+str(newType)+'" conflict!',self,lineNumber)
         # procedures: entering a type means we know it's a function
         if self.entryKind == self.ProcedureEntryKind:
 #           print '++++++++SymtabEntry.enterType: entering type',newType,'for procedure (we now know it is a function)'
             self.entryKind = self.FunctionEntryKind
         self.type = newType
 
-    def enterDimensions(self,newDimensions):
+    def enterDimensions(self,newDimensions,lineNumber=0):
         if self.dimensions and (self.dimensions != newDimensions):
-            raise SymtabError('SymtabEntry.enterDimensions: Error -- current dimensions "'+str(self.dimensions)+'" and new dimensions "'+str(newDimensions)+'" conflict!',self)
+            raise SymtabError('SymtabEntry.enterDimensions: Error -- current dimensions "'+str(self.dimensions)+'" and new dimensions "'+str(newDimensions)+'" conflict!',self,lineNumber)
         self.dimensions = newDimensions
 
     def lookupDimensions(self):
@@ -151,16 +151,16 @@ class SymtabEntry(object):
         keyword = 'function'
 
     class SubroutineEntryKind(ProcedureEntryKind):
-        keyword = 'function'
+        keyword = 'subroutine'
 
     class ProgramEntryKind(ProcedureEntryKind):
-        keyword = 'function'
+        keyword = 'program'
 
     class VariableEntryKind(GenericEntryKind):
         keyword = 'variable'
 
     class CharacterEntryKind(VariableEntryKind):
-        keyword = 'variable'
+        keyword = 'character'
 
 '''
 if __name__ == '__main__':
