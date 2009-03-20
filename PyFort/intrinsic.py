@@ -4,6 +4,7 @@ a predicate to test for a function being an intrinsic
 '''
 __intrinsics = (
     'abs',
+    'allocate',
     'allocated',
     'associated',
     'atan',
@@ -11,6 +12,7 @@ __intrinsics = (
     'close',
     'cos',
     'dble',
+    'deallocate',
     'dsign',
     'exp',
     'float',
