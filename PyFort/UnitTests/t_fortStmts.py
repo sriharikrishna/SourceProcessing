@@ -52,6 +52,17 @@ class C1(TestCase):
         s  = 'subroutine foo(x,y,z)'
         a_(isinstance(pps(s),SubroutineStmt))
 
+    def test6(self):
+        'allocate/deallocate stmt'
+        ae = self.assertEquals
+        a_ = self.assert_
+
+        s  = 'allocate(a(2))'
+        ae(repr(pps(s)),repr(AllocateStmt(App('a',['2']))))
+        s  = 'deallocate(a)'
+        ae(repr(pps(s)),repr(DeallocateStmt('a')))
+
+
 class C2(TestCase):
     '''assignment statement'''
 
