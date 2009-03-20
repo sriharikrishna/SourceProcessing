@@ -1370,21 +1370,21 @@ class GotoStmt(Exec):
 class AllocateStmt(Exec):
     _sons = ['arg']
     kw = 'allocate'
-    kw_str = 'allocate'
+    kw_str = kw
 
     @staticmethod
     def parse(scan,lineNumber):
-        allocStmt = seq(lit('allocate'),
+        allocStmt = seq(lit(AllocateStmt.kw),
                         lit('('),
                         Exp,
                         lit(')'))
         try:
             ((allocKeyword,openParen,allocArg,closeParen),rest) = allocStmt(scan)
         except ListAssemblerException,e:
-            raise ParseError(lineNumber,scan,'alloc statement')
+            raise ParseError(lineNumber,scan,AllocateStmt.kw+' statement')
         return AllocateStmt(allocArg,allocKeyword,lineNumber)
 
-    def __init__(self,arg,stmt_name='allocate',lineNumber=0,label=False,lead=''):
+    def __init__(self,arg,stmt_name=kw,lineNumber=0,label=False,lead=''):
         self.arg = arg
         self.stmt_name = stmt_name
         self.lineNumber = lineNumber
@@ -1392,7 +1392,37 @@ class AllocateStmt(Exec):
         self.lead = lead
 
     def __repr__(self):
-        return 'AllocateStmt(%s)' % (repr(self.arg),)
+        return self.__class__.__name__+'('+repr(self.arg)+')'
+
+    def __str__(self):
+        return '%s(%s)' % (self.stmt_name,str(self.arg))
+
+class DeallocateStmt(Exec):
+    _sons = ['arg']
+    kw = 'deallocate'
+    kw_str = kw
+
+    @staticmethod
+    def parse(scan,lineNumber):
+        allocStmt = seq(lit(DeallocateStmt.kw),
+                        lit('('),
+                        Exp,
+                        lit(')'))
+        try:
+            ((allocKeyword,openParen,allocArg,closeParen),rest) = allocStmt(scan)
+        except ListAssemblerException,e:
+            raise ParseError(lineNumber,scan,DeallocateStmt.kw+' statement')
+        return DeallocateStmt(allocArg,allocKeyword,lineNumber)
+
+    def __init__(self,arg,stmt_name=kw,lineNumber=0,label=False,lead=''):
+        self.arg = arg
+        self.stmt_name = stmt_name
+        self.lineNumber = lineNumber
+        self.label = label
+        self.lead = lead
+
+    def __repr__(self):
+        return self.__class__.__name__+'('+repr(self.arg)+')'
 
     def __str__(self):
         return '%s(%s)' % (self.stmt_name,str(self.arg))
@@ -1455,6 +1485,7 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              intent          = IntentStmt,
              optional        = OptionalStmt,
              allocate        = AllocateStmt,
+             deallocate      = DeallocateStmt
              )
 
 for kw in ('if','continue','return','else','print'):
