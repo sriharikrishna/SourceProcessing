@@ -42,7 +42,7 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
         theSymtabEntry = localSymtab.lookup_name_local(name)
         if theSymtabEntry: # already in symtab -> enter new information (taking exception to any conflicts)
             DebugManager.debug('\tTypeDecl "'+str(aDecl)+'" already present in local symbol table as '+str(theSymtabEntry.debug(name)))
-            theSymtabEntry.enterType(newType)
+            theSymtabEntry.enterType(newType,aTypeDeclStmt.lineNumber)
             theSymtabEntry.enterDimensions(newDimensions,aTypeDeclStmt.lineNumber)
         else: # no symtab entry -> create one
             newSymtabEntry = SymtabEntry(SymtabEntry.GenericEntryKind,
@@ -65,7 +65,7 @@ def _processDimensionStmt(aDimensionStmt,curr):
         theSymtabEntry = localSymtab.lookup_name_local(anApp.head)
         if theSymtabEntry:
             DebugManager.debug('\tvariable "'+anApp.head+'" already present in local symbol table as '+theSymtabEntry.debug(anApp.head))
-            theSymtabEntry.enterDimensions(tuple(anApp.args))
+            theSymtabEntry.enterDimensions(tuple(anApp.args),aDimensionStmt.lineNumber)
         else:
             newSymtabEntry = SymtabEntry(SymtabEntry.VariableEntryKind,
                                          dimensions=tuple(anApp.args),
@@ -89,7 +89,7 @@ def _processExternalStmt(anExternalStmt,curr):
             # if the entry has a type, we know it's a function
             newEntryKind = theSymtabEntry.type and SymtabEntry.FunctionEntryKind \
                                                 or SymtabEntry.ProcedureEntryKind
-            theSymtabEntry.enterEntryKind(newEntryKind)
+            theSymtabEntry.enterEntryKind(newEntryKind,anExternalStmt.lineNumber)
     return anExternalStmt
 
 def _assign2stmtfn(anAssignmentStmt,curr):
