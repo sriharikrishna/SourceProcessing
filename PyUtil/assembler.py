@@ -52,8 +52,11 @@ def pred(p):
             v = s.next()
         except StopIteration:
             raise AssemblerException('Empty Assembly',buf_iter(iter([])))
-        if p(v):
-            return (v,s)
+        try:
+            if p(v):
+                return (v,s)
+        except:
+            pass
         raise AssemblerException('Predicate Failure',s.putback([v]))
 
     return pat(asm)
