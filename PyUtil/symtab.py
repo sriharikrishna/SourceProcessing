@@ -45,7 +45,7 @@ class Symtab(object):
     def lookup_name_local(self,name):
         '''check for name in the local symbol table exclusively (do not go up to the parent symbol table)'''
         if name in self.ids:
-            return D[name]
+            return self.ids[name]
         else:
             return None
 
