@@ -30,12 +30,12 @@ def main():
     for k,v in modes.items():
         modeChoicesHelp+=k+" = "+v+"; "
     opt = OptionParser(usage=usage)
-    opt.add_option('-d', '--deriv', dest='transformDerivType',
+    opt.add_option('-d', '--deriv', dest='deriv',
                    help='appends %d to deriv types instead of removing __deriv__',
                    action='store_true',
                    default=False)
     opt.add_option('--free',
-                   dest='isFreeFormat',
+                   dest='free',
                    help="input source is free format",
                    action='store_true',
                    default=False)
@@ -45,35 +45,35 @@ def main():
                    default=None)
     opt.add_option('-n',
                    dest='width',
-                   help='-n [width] splits units into separate files numbered in compile order with [width] number of ints specifying output file naming scheme for each unit. (e.g. outfile_name.post0000.f for a width of four.)')
+                   help='splits units into separate files numbered in the order in which they occur in <input_file> with WIDTH being the number of digits in the output file naming scheme. (e.g. for -n 2 and three compile units in input a.f we create a.00.post.f, a.01.post.f, a.02.post.f)')
     opt.add_option('-o',
                    '--output',
-                   dest='outputFile',
-                   help='set output file (defaults to stdout)',
+                   dest='output',
+                   help='set output file (otherwise output is written to stdout)',
                    metavar='<output_file>',
                    default=None)
     opt.add_option('-i',
-                   '--input',
-                   dest='inputFile',
-                   help='set input file for reverse mode post processing (defaults to ad_inline.f)',
+                   '--inline',
+                   dest='inline',
+                   help='file with definitions for inlinable routines for reverse mode post processing (defaults to ad_inline.f)',
                    metavar='<input>',
                    default='ad_inline.f')
     opt.add_option('-t',
                    '--type',
-                   dest='replacementType',
-                   help='selects replacement type for openadty_active types (defaults to active)',
+                   dest='type',
+                   help='active type name to replace string \'openadty_active\'  (defaults to \'active\')',
                    metavar='<type>',
                    default=False)
     opt.add_option('-v',
                    '--verbose',
-                   dest='isVerbose',
-                   help='turns on verbose debugging output',
+                   dest='verbose',
+                   help='verbose output to stdout',
                    action='store_true',
                    default=False)
     opt.add_option('-w',
                    '--whitespace',
-                   dest='useWhitespace',
-                   help='puts whitespace between operations in output',
+                   dest='whitespace',
+                   help='inserts whitespaces between tokens',
                    action='store_true',
                    default=False)
 
@@ -89,14 +89,14 @@ def main():
     Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
 
     # set __deriv__ output format(__deriv__(v) -> "(v)%d" if -d option or "v" by default)
-    UnitPostProcessor.setDerivType(config.transformDerivType)
+    UnitPostProcessor.setDerivType(config.deriv)
 
     # set input file
-    if config.inputFile:
-        UnitPostProcessor.setInputFile(config.inputFile)
+    if config.inline:
+        UnitPostProcessor.setInlineFile(config.inline)
 
     # set free/fixed format
-    free_flow(config.isFreeFormat) 
+    free_flow(config.free) 
 
     # configure forward/reverse mode
     if config.mode:
@@ -113,19 +113,19 @@ def main():
         splitUnits = False
 
     # set replacement type for openadty_active
-    if config.replacementType:
-        UnitPostProcessor.setReplacementType(config.replacementType)
+    if config.type:
+        UnitPostProcessor.setReplacementType(config.type)
 
     # set verbosity
-    UnitPostProcessor.setVerbose(config.isVerbose)
-    DebugManager.setVerbose(config.isVerbose)
+    UnitPostProcessor.setVerbose(config.verbose)
+    DebugManager.setVerbose(config.verbose)
 
     # set whitespace
-    fe.Ops.setWhitespace(config.useWhitespace)
+    fe.Ops.setWhitespace(config.whitespace)
 
     try: 
-        if config.outputFile: 
-            outfile = config.outputFile
+        if config.output: 
+            outfile = config.output
         else: 
             (base,ext) = os.path.splitext(inputFile)
             outfile = base + ".post" + ext
@@ -133,7 +133,7 @@ def main():
             (base,ext) = os.path.splitext(outfile)
             unitNumExt = "%0"+str(unitNameWidth)+"d"
             unit_num = 0
-            for aUnit in fortUnitIterator(inputFile,config.isFreeFormat):
+            for aUnit in fortUnitIterator(inputFile,config.free):
                 output = base + unitNumExt % unit_num + ext
                 out = open(output,'w')
                 UnitPostProcessor(aUnit).processUnit().printit(out)
@@ -141,7 +141,7 @@ def main():
                 unit_num += 1
         else:
             out = open(outfile, 'w')            
-            for aUnit in fortUnitIterator(inputFile,config.isFreeFormat):
+            for aUnit in fortUnitIterator(inputFile,config.free):
                 UnitPostProcessor(aUnit).processUnit().printit(out)
             out.close()
     except PostProcessError,e:
