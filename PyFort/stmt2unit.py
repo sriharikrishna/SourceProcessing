@@ -76,7 +76,7 @@ def _processDimensionStmt(aDimensionStmt,curr):
 
 def _processExternalStmt(anExternalStmt,curr):
     localSymtab = curr.val.symtab
-    DebugManager.debug('[Line '+str(anExternalStmt.lineNumber)+']: stmt2unit._processExternalStmt: called on "'+str(anExternalStmt)+'" with localSymtab',localSymtab)
+    DebugManager.debug('[Line '+str(anExternalStmt.lineNumber)+']: stmt2unit._processExternalStmt: called on "'+str(anExternalStmt)+'" with localSymtab '+str(localSymtab))
     for aProcedureName in anExternalStmt.procedureNames:
         theSymtabEntry = localSymtab.lookup_name(aProcedureName)
         if not theSymtabEntry:
