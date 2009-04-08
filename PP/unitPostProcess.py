@@ -12,9 +12,9 @@ import copy
 
 class PostProcessError(Exception):
     '''Exception for errors that occur during postprocessing'''
-    def __init__(self,msg,linenumber):
+    def __init__(self,msg,lineNumber):
         self.msg = msg
-        self.linenumber = linenumber
+        self.lineNumber = lineNumber
 
 class UnitPostProcessor(object):
     'class to facilitate post-processing on a per-unit basis'
@@ -692,7 +692,7 @@ class UnitPostProcessor(object):
                 fd = open(self._inlineFile)
                 definitions = fd.read()
             except IOError,e: 
-                raise PostProcessError('Caught IOError: '+e.msg,self._inlineFile)
+                raise PostProcessError('IOError opening inline file: '+str(e),0)
             inline = False
             self.__templateExpansion(definitions,inline)
             self.__myUnit.decls = self.__myNewDecls

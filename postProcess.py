@@ -82,7 +82,7 @@ def main():
 
     # Set input file
     if len(args) != 1:
-        opt.error("expect input file argument")
+        opt.error("expect exactly one argument <input_file>, given are "+str(len(args))+" which are:"+str(args)+" and the following options: "+str(config))
     inputFile = args[0]
 
     # set symtab type defaults
@@ -119,6 +119,7 @@ def main():
     # set verbosity
     UnitPostProcessor.setVerbose(config.verbose)
     DebugManager.setVerbose(config.verbose)
+    DebugManager.debug("running for <input_file>:"+args[0]+" and the following options: "+str(config))
 
     # set whitespace
     fe.Ops.setWhitespace(config.whitespace)
@@ -145,7 +146,7 @@ def main():
                 UnitPostProcessor(aUnit).processUnit().printit(out)
             out.close()
     except PostProcessError,e:
-        print >>sys.stderr,'\nPostprocessing Error on line '+str(e.lineNumber)+':\n',e.msg
+        print >>sys.stderr,'\nPostprocessing Error on line '+str(e.lineNumber)+': ',e.msg
         return 1
 
     except SymtabError,e:
