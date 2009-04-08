@@ -31,11 +31,11 @@ class UnitPostProcessor(object):
     def setDerivType(transformDerivType):
         UnitPostProcessor._transform_deriv = transformDerivType
 
-    _input_file = 'ad_inline.f'
+    _inlineFile = 'ad_inline.f'
 
     @staticmethod
-    def setInputFile(inputFile):
-        UnitPostProcessor._input_file = inputFile
+    def setInlineFile(inlineFile):
+        UnitPostProcessor._inlineFile = inlineFile
 
     _replacement_type = 'active'
 
@@ -689,10 +689,10 @@ class UnitPostProcessor(object):
 
         if self._mode == 'reverse':
             try:
-                fd = open(self._input_file)
+                fd = open(self._inlineFile)
                 definitions = fd.read()
             except IOError,e: 
-                raise PostProcessError('Caught IOError: '+e.msg,self._input_file)
+                raise PostProcessError('Caught IOError: '+e.msg,self._inlineFile)
             inline = False
             self.__templateExpansion(definitions,inline)
             self.__myUnit.decls = self.__myNewDecls
