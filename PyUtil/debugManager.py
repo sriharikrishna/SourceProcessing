@@ -13,6 +13,6 @@ class DebugManager(object):
         DebugManager._verbose = isVerbose
 
     @staticmethod
-    def debug(debugMessage,outStream=sys.stderr):
+    def debug(debugMessage,outStream=sys.stdout):
         if (DebugManager._verbose):
             print >>outStream,debugMessage
