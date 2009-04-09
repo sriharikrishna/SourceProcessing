@@ -36,33 +36,30 @@ def main():
                    default=False)
     opt.add_option('--free',
                    dest='free',
-                   help="input source is free format",
+                   help="<input_file> is in free format",
                    action='store_true',
                    default=False)
     opt.add_option('-m','--mode',dest='mode',
                    type='choice', choices=modeChoices,
-                   help='set default options for transformation mode with MODE being one of: '+ modeChoicesHelp+ '  reverse mode  implies -H but not -S; specific settings override the mode defaults.',
-                   default=None)
+                   help='set default options for transformation mode with MODE being one of: '+ modeChoicesHelp+ ' (default is \'f\')',
+                   default='f')
     opt.add_option('-n',
                    dest='width',
-                   help='splits units into separate files numbered in the order in which they occur in <input_file> with WIDTH being the number of digits in the output file naming scheme. (e.g. for -n 2 and three compile units in input a.f we create a.00.post.f, a.01.post.f, a.02.post.f)')
+                   help='write one compile unit per output file with WIDTH digits prepended to the extension of <input_file>, e.g. for -n 2 and three compile units in an input file named \'a.f\' we create \'a.00.f\', a.01.f\', \'a.02.f\'; cannot be specified together with -o')
     opt.add_option('-o',
                    '--output',
                    dest='output',
-                   help='set output file (otherwise output is written to stdout)',
-                   metavar='<output_file>',
+                   help='redirect output to  file OUTPUT (default output is stdout); cannot be specified together with -n',
                    default=None)
     opt.add_option('-i',
                    '--inline',
                    dest='inline',
-                   help='file with definitions for inlinable routines for reverse mode post processing (defaults to ad_inline.f)',
-                   metavar='<input>',
+                   help='file with definitions for inlinable routines for reverse mode post processing (defaults to ad_inline.f); requires reverse mode ( -m r )',
                    default='ad_inline.f')
     opt.add_option('-t',
                    '--type',
                    dest='type',
-                   help='active type name to replace string \'openadty_active\'  (defaults to \'active\')',
-                   metavar='<type>',
+                   help='replace string \'openadty_active\'  with TYPE (defaults to \'active\')',
                    default=False)
     opt.add_option('-v',
                    '--verbose',
@@ -85,6 +82,9 @@ def main():
         opt.error("expect exactly one argument <input_file>, given are "+str(len(args))+" which are:"+str(args)+" and the following options: "+str(config))
     inputFile = args[0]
 
+    if (config.width and config.output):
+        opt.error("cannot specify both -n and -o.")
+
     # set symtab type defaults
     Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
 
@@ -99,12 +99,13 @@ def main():
     free_flow(config.free) 
 
     # configure forward/reverse mode
-    if config.mode:
-        if config.mode[0] == 'f':
-            UnitPostProcessor.setMode('forward')
-        elif config.mode[0] == 'r':
-            UnitPostProcessor.setMode('reverse')
-
+    if config.mode == 'f':
+        UnitPostProcessor.setMode('forward')
+    if config.mode == 'r':
+        UnitPostProcessor.setMode('reverse')
+    if (config.mode != 'r' and
+        (config.inline)):
+        opt.error("option -i requires reverse mode ( -m r )")
     # set options for splitting compile units
     if config.width:
         splitUnits = True
@@ -124,12 +125,7 @@ def main():
     # set whitespace
     fe.Ops.setWhitespace(config.whitespace)
 
-    try: 
-        if config.output: 
-            outfile = config.output
-        else: 
-            (base,ext) = os.path.splitext(inputFile)
-            outfile = base + ".post" + ext
+    try:
         if splitUnits:
             (base,ext) = os.path.splitext(outfile)
             unitNumExt = "%0"+str(unitNameWidth)+"d"
@@ -140,11 +136,16 @@ def main():
                 UnitPostProcessor(aUnit).processUnit().printit(out)
                 out.close()
                 unit_num += 1
-        else:
-            out = open(outfile, 'w')            
+        else: 
+            out=None
+            if config.output: 
+                out = open(config.output,'w')
+            else:
+                out=sys.stdout
             for aUnit in fortUnitIterator(inputFile,config.free):
                 UnitPostProcessor(aUnit).processUnit().printit(out)
-            out.close()
+            if config.output: 
+                out.close()
     except PostProcessError,e:
         print >>sys.stderr,'\nPostprocessing Error on line '+str(e.lineNumber)+': ',e.msg
         return 1
