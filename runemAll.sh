@@ -1,6 +1,6 @@
 #! /bin/bash
 
-for i in PyUtil PyIR PyFort Canon; do
+for i in PyUtil PyIR PyFort Canon PP; do
     echo ================================= Running $i unit tests =================================
     echo ============================================================================================
     pushd $i/UnitTests

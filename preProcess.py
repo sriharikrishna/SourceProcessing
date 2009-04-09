@@ -18,13 +18,12 @@ import PyFort.fortStmts as fs
 from Canon.canon import UnitCanonicalizer,CanonError
 
 def cleanup(config):
-    from os.path import isfile 
-    from os import remove 
-    if ((not config.noCleanup) and (not config.outFileName is None) and  os.path.isfile(outFileName)):
+    import os 
+    if ((not config.noCleanup) and (not config.outputFile is None) and  os.path.exists(config.outputFile)):
         try: 
-            os.remove(outFileName)
+            os.remove(config.outputFile)
         except:
-            print >>sys.stderr,'Cannot remove output file '+outFileName
+            print >>sys.stderr,'Cannot remove output file '+config.outputFile
  
 def main():
     usage = '%prog [options] <input_file>'

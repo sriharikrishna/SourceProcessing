@@ -701,7 +701,7 @@ class UnitPostProcessor(object):
 
 
         if (self.__recursionDepth is not 0):
-            raise PostProcessError('Recursion errorin unitPostProcess: final recursion depth is not zero')
+            raise PostProcessError('Recursion error in unitPostProcess: final recursion depth is not zero')
         DebugManager.debug(('+'*54)+' End post-process unit <'+str(self.__myUnit.uinfo)+'> '+(54*'+')+'\n\n')
 
         return self.__myUnit
