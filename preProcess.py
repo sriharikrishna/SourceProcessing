@@ -113,7 +113,6 @@ def main():
         UnitCanonicalizer.setHoistStringsFlag(config.hoistStringsFlag)
 
     # set verbosity
-    UnitCanonicalizer.setVerbose(config.isVerbose)
     DebugManager.setVerbose(config.isVerbose)
 
     try: 

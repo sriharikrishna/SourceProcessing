@@ -18,7 +18,6 @@ Unit tests for canonicalizer
 Symtab.setTypeDefaults((RealStmt,[]),(IntegerStmt,[]))
 
 def compareFiles(assertFunc,originalFileName,RefFileName,free):
-    UnitCanonicalizer.setVerbose(False) 
     try:
         (fd,testFileName) = tempfile.mkstemp()
         testFile  = open(testFileName,'w')
