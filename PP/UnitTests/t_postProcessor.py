@@ -18,7 +18,6 @@ Unit tests for post-processor
 Symtab.setTypeDefaults((RealStmt,[]),(IntegerStmt,[]))
 
 def compareFiles(assertFunc,originalFileName,RefFileName,free):
-    UnitPostProcessor.setVerbose(False) 
     try:
         (fd,testFileName) = tempfile.mkstemp()
         testFile  = open(testFileName,'w')

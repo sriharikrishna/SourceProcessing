@@ -15,8 +15,7 @@ class DebugManager(object):
     @staticmethod
     def debug(debugMessage,outStream=sys.stdout,newLine=True):
         if (DebugManager._verbose):
-            if (newLine):
-                outStream.write(debugMessage+'\n')
-            else:
-                outStream.write(debugMessage)
+            newLineStr = newLine and '\n' \
+                                  or ''
+            outStream.write(debugMessage+newLineStr)
             outStream.flush()

@@ -117,7 +117,6 @@ def main():
         UnitPostProcessor.setReplacementType(config.type)
 
     # set verbosity
-    UnitPostProcessor.setVerbose(config.verbose)
     DebugManager.setVerbose(config.verbose)
     DebugManager.debug("running for <input_file>:"+args[0]+" and the following options: "+str(config))
 

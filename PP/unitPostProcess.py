@@ -19,12 +19,6 @@ class PostProcessError(Exception):
 class UnitPostProcessor(object):
     'class to facilitate post-processing on a per-unit basis'
 
-    _verbose = False
-
-    @staticmethod
-    def setVerbose(isVerbose):
-        UnitPostProcessor._verbose = isVerbose    
-
     _transform_deriv = False
 
     @staticmethod
@@ -64,7 +58,7 @@ class UnitPostProcessor(object):
 
     # adds the active module OAD_active
     def __addActiveModule(self,arg):
-        if self._verbose: print 'unitPostProcessor.__addActiveModule called on: "'+str(arg)+"'"
+        DebugManager.debug('unitPostProcessor.__addActiveModule called on: "'+str(arg)+"'")
         new_stmt = fs.UseStmt('OAD_active')
         return new_stmt
 
@@ -73,7 +67,7 @@ class UnitPostProcessor(object):
     def __rewriteActiveType(self, DrvdTypeDecl):
         ''' convert type (OpenAD_type) to type(active)
         only applied to type declaration statements '''
-        if self._verbose: print 'unitPostProcessor.__rewriteActiveType called on: "'+str(DrvdTypeDecl)+"'"
+        DebugManager.debug('unitPostProcessor.__rewriteActiveType called on: "'+str(DrvdTypeDecl)+"'")
         newDecls = []
         for decl in DrvdTypeDecl.decls:
             newDecls.append(self.__transformActiveTypesExpression(decl))
@@ -94,8 +88,7 @@ class UnitPostProcessor(object):
         else:
             replacementExpression = theExpression
 
-        if self._verbose: 
-            print self.__recursionDepth*'|\t'+'unitPostProcessor.__transformActiveTypesExpression called on"'+str(theExpression)+'"'
+        DebugManager.debug(self.__recursionDepth*'|\t'+'unitPostProcessor.__transformActiveTypesExpression called on"'+str(theExpression)+'"')
         self.__recursionDepth += 1
         if isinstance(replacementExpression, fe.App):
             if intrinsic.is_inquiry(replacementExpression.head):
@@ -141,7 +134,7 @@ class UnitPostProcessor(object):
 
     # transforms active types in a SubCallStmt
     def __processSubCallStmt(self,aSubCallStmt):
-        if self._verbose: print 'unitPostProcessor.__processSubCallStmt called on: "'+str(aSubCallStmt)+"'"
+        DebugManager.debug('unitPostProcessor.__processSubCallStmt called on: "'+str(aSubCallStmt)+"'")
         replacementArgs = []
         for anArg in aSubCallStmt.args:
             if isinstance(anArg,fe.App):
@@ -160,7 +153,7 @@ class UnitPostProcessor(object):
 
     # Does active type transformations on a StmtFnStmt; reconstructs it as an AssignStmt if StmtFnStmt.name is "__value__"
     def __processStmtFnStmt(self, StmtFnStmt):
-        if self._verbose: print 'unitPostProcessor.__processStmtFnStmt called on: "'+str(StmtFnStmt)+"'"
+        DebugManager.debug('unitPostProcessor.__processStmtFnStmt called on: "'+str(StmtFnStmt)+"'")
 
         new_args = map(self.__transformActiveTypesExpression,StmtFnStmt.args)
         newStatement = \
@@ -185,7 +178,7 @@ class UnitPostProcessor(object):
 
     def __transformActiveTypes(self,aStmt):
         '''Transforms active types on general executable statements'''
-        if self._verbose: print 'unitPostProcessor.__transformActiveTypes called on: "'+str(aStmt)+"'"
+        DebugManager.debug('unitPostProcessor.__transformActiveTypes called on: "'+str(aStmt)+"'")
 
         if not hasattr(aStmt,"_sons") or (aStmt._sons == []):
             return aStmt
@@ -548,8 +541,7 @@ class UnitPostProcessor(object):
     def __processExec(self,anExecStmt,Execs,execList=[],
                       definitions=None,inline=False,replacementNum=0): 
         try:
-            if self._verbose: 
-                print '[Line '+str(anExecStmt.lineNumber)+']:'
+            DebugManager.debug('[Line '+str(anExecStmt.lineNumber)+']:')
             newStmt = None
             if anExecStmt.is_comment() and definitions is not None:
                 if self._mode == 'reverse':
@@ -586,8 +578,7 @@ class UnitPostProcessor(object):
     def __processDecl(self,aDecl,Decls,Execs,UseStmtSeen,declList=[],
                       execList=[],replacementNum=0):
         try:
-            if self._verbose: 
-                print '[Line '+str(aDecl.lineNumber)+']:'
+            DebugManager.debug('[Line '+str(aDecl.lineNumber)+']:')
             if isinstance(aDecl, fs.UseStmt):
                 # add old use stmt
                 Decls.append(aDecl)
@@ -628,7 +619,7 @@ class UnitPostProcessor(object):
                 else:
                     Execs.append(newDecl)
             else:
-                if self._verbose: print 'Statement "'+str(aDecl)+'" is assumed to require no post-processing'
+                DebugManager.debug('Statement "'+str(aDecl)+'" is assumed to require no post-processing')
 
                 Decls.append(aDecl)
                 UseStmtSeen = False
@@ -680,11 +671,12 @@ class UnitPostProcessor(object):
     # Processes all statements in the unit
     def processUnit(self):
         ''' post-process a unit '''
-        if self._verbose: print ('+'*55)+' Begin post-processing unit <',self.__myUnit.uinfo,'> '+(55*'+'),'\nlocal',self.__myUnit.symtab.debug()
-        if (self._verbose and self.__myUnit.ulist): print 'subunits (len =',len(self.__myUnit.ulist),'):'
+        DebugManager.debug(('+'*55)+' Begin post-processing unit <'+str(self.__myUnit.uinfo)+'> '+(55*'+'))
+        DebugManager.debug('local '+self.__myUnit.symtab.debug())
+        DebugManager.debug('subunits (len =',len(self.__myUnit.ulist),'):')
 
         for subUnit in self.__myUnit.ulist:
-            if self._verbose: print subUnit
+            DebugManager.debug(str(subUnit))
             UnitPostProcessor(subUnit).processUnit()
 
         if self._mode == 'reverse':
@@ -710,7 +702,7 @@ class UnitPostProcessor(object):
 
         if (self.__recursionDepth is not 0):
             raise PostProcessError('Recursion errorin unitPostProcess: final recursion depth is not zero')
-        if self._verbose: print ('+'*54)+' End post-process unit <',self.__myUnit.uinfo,'> '+(54*'+')+'\n\n'
+        DebugManager.debug(('+'*54)+' End post-process unit <'+str(self.__myUnit.uinfo)+'> '+(54*'+')+'\n\n')
 
         return self.__myUnit
 
