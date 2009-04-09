@@ -13,6 +13,9 @@ class DebugManager(object):
         DebugManager._verbose = isVerbose
 
     @staticmethod
-    def debug(debugMessage,outStream=sys.stdout):
+    def debug(debugMessage,outStream=sys.stdout,newLine=True):
         if (DebugManager._verbose):
-            print >>outStream,debugMessage
+            newLineStr = newLine and '\n' \
+                                  or ''
+            outStream.write(debugMessage+newLineStr)
+            outStream.flush()

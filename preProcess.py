@@ -8,6 +8,7 @@ from optparse import OptionParser
 from PyUtil.errors import UserError, ScanError, ParseError
 from PyUtil.assembler import AssemblerException
 from PyUtil.l_assembler import AssemblerException as ListAssemblerException
+from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabError
 
 from PyFort.flow import free_flow
@@ -112,8 +113,7 @@ def main():
         UnitCanonicalizer.setHoistStringsFlag(config.hoistStringsFlag)
 
     # set verbosity
-    UnitCanonicalizer.setVerbose(config.isVerbose)
-    Unit.setVerbose(config.isVerbose)
+    DebugManager.setVerbose(config.isVerbose)
 
     try: 
         if config.outputFile: out = open(config.outputFile,'w')

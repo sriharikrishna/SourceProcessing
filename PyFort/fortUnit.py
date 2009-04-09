@@ -4,6 +4,7 @@ from _Setup import *
 
 from PyUtil.assembler import *
 from PyUtil.buf_iter import buf_iter
+from PyUtil.debugManager import DebugManager
 from PyUtil.flatten import flatten
 from PyUtil.symtab import Symtab
 
@@ -100,11 +101,6 @@ class Unit(object):
     fmod       ???? (fmod = cur.module_handler)
     _in_iface  whether or not we are currently in an interface block
     '''
-    _verbose = False
-
-    @staticmethod
-    def setVerbose(isVerbose):
-        Unit._verbose = isVerbose
 
     def __init__(self,parent=None,fmod=None):
         'create a unit'
@@ -121,7 +117,7 @@ class Unit(object):
         self._in_iface = False
 
         self.symtab._set_dbg(False)
-        if self._verbose: print 'new unit created:',self,', new symtab being created = ',self.symtab
+        DebugManager.debug('new unit created: '+str(self)+', new symtab being created = '+str(self.symtab))
 
     def name(self):
         return self.uinfo.name
