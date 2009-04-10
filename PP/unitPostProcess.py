@@ -3,7 +3,7 @@ from _Setup import *
 from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
 
-from PyFort.typeInference import TypeInferenceError
+from PyFort.typeInference import TypeInferenceError,expressionType,functionType,isArrayReference
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
 import PyFort.intrinsic as intrinsic
@@ -613,7 +613,7 @@ class UnitPostProcessor(object):
             newStmt = None
             if anExecStmt.is_comment() and definitions is not None:
                 if self._mode == 'reverse':
-                    p = re.compile(r'[\n]|[;]')
+                    p = re.compile(r'[\n]')
                     comments = p.split(anExecStmt.rawline)
                     (execList,Execs,inline,replacementNum) = \
                         self.__processComments(comments,replacementNum,
