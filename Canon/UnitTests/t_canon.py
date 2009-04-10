@@ -61,7 +61,7 @@ class C1(TestCase):
         compareFiles(self.assertEquals,'inlineComment.f90','inlineComment.pre.f90',free=True)
 
     def test5(self):
-        'preserve inline comments for statements that have been altered during canonicalization'
+        'preserve inline comments for statements that have been altered during canonicalization -- KNOWN TO FAIL'
         compareFiles(self.assertEquals,'inlineComment.f90','inlineComment.pre.f90',free=True)
 
     def test6(self):

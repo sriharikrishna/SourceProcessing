@@ -3,6 +3,6 @@
           external foo
           real :: oad_ctmp0
           call oad_s_foo(y,oad_ctmp0)
-          if (oad_ctmp0 .eq. 0) y = 0
+          if (oad_ctmp0.eq.0) y = 0
         end subroutine
 

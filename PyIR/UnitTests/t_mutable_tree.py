@@ -147,14 +147,10 @@ class C3(TestCase):
 
     def test2(self):
         'change both __value__ and __deriv__ nodes'
-        ae = self.assertEquals
-        a_ = self.assert_
-
         mu = LexiMutator([(fe.App,xa)])
         ss = pps('__value__(x%kk(3,i+j)%l) = 4 * __deriv__(y%l%mm)')
         mutate(ss,mu)
-
-        ae(str(ss),'x%kk(3,i + j)%l%v = 4 * y%l%mm')
+        self.assertEquals(str(ss),'x%kk(3,i+j)%l%v = 4*y%l%mm')
 
 s1 = makeSuite(C3)
 suite = asuite(C1,C2,C3)

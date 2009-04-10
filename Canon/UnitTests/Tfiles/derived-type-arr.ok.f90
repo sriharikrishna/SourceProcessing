@@ -8,6 +8,6 @@ subroutine bar(a)
 
    it(1)%f1 = 3
    call oad_s_ff(it(2),oad_ctmp0)
-   it(1)%f1 = 6 + oad_ctmp0
+   it(1)%f1 = 6+oad_ctmp0
 end
 
