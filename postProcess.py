@@ -55,7 +55,7 @@ def main():
                    '--inline',
                    dest='inline',
                    help='file with definitions for inlinable routines for reverse mode post processing (defaults to ad_inline.f); requires reverse mode ( -m r )',
-                   default='ad_inline.f')
+                   default=None)
     opt.add_option('-t',
                    '--type',
                    dest='type',
@@ -91,21 +91,19 @@ def main():
     # set __deriv__ output format(__deriv__(v) -> "(v)%d" if -d option or "v" by default)
     UnitPostProcessor.setDerivType(config.deriv)
 
-    # set input file
-    if config.inline:
-        UnitPostProcessor.setInlineFile(config.inline)
-
     # set free/fixed format
     free_flow(config.free) 
 
-    # configure forward/reverse mode
+    # configure forward/reverse mode (including inline file for reverse mode)
+    if (config.mode != 'r' and config.inline):
+        opt.error("option -i requires reverse mode ( -m r )")
     if config.mode == 'f':
         UnitPostProcessor.setMode('forward')
     if config.mode == 'r':
         UnitPostProcessor.setMode('reverse')
-    if (config.mode != 'r' and
-        (config.inline)):
-        opt.error("option -i requires reverse mode ( -m r )")
+        inlineFile = config.inline or 'ad_inline.f'
+        UnitPostProcessor.setInlineFile(inlineFile)
+
     # set options for splitting compile units
     if config.width:
         splitUnits = True
