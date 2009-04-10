@@ -1,8 +1,6 @@
 from _Setup import *
 
-from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
-
 from PyFort.typeInference import TypeInferenceError,expressionType,functionType,isArrayReference
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
@@ -21,17 +19,23 @@ class PostProcessError(Exception):
 class UnitPostProcessor(object):
     'class to facilitate post-processing on a per-unit basis'
 
+    _verbose = False
+
+    @staticmethod
+    def setVerbose(isVerbose):
+        UnitPostProcessor._verbose = isVerbose    
+
     _transform_deriv = False
 
     @staticmethod
     def setDerivType(transformDerivType):
         UnitPostProcessor._transform_deriv = transformDerivType
 
-    _inlineFile = 'ad_inline.f'
+    _input_file = 'ad_inline.f'
 
     @staticmethod
-    def setInlineFile(inlineFile):
-        UnitPostProcessor._inlineFile = inlineFile
+    def setInputFile(inputFile):
+        UnitPostProcessor._input_file = inputFile
 
     _replacement_type = 'active'
 
@@ -57,10 +61,12 @@ class UnitPostProcessor(object):
         self.__inquiryRecursionLevel = 0
         # list of tuples of (ordered function args, fs.AssignStmt)
         self.__inlineFunctionTuples = []
+        self.__active_file = None
+        self.__write_subroutine=True
 
     # adds the active module OAD_active
     def __addActiveModule(self,arg):
-        DebugManager.debug('unitPostProcessor.__addActiveModule called on: "'+str(arg)+"'")
+        if self._verbose: print 'unitPostProcessor.__addActiveModule called on: "'+str(arg)+"'"
         new_stmt = fs.UseStmt('OAD_active')
         return new_stmt
 
@@ -69,7 +75,7 @@ class UnitPostProcessor(object):
     def __rewriteActiveType(self, DrvdTypeDecl):
         ''' convert type (OpenAD_type) to type(active)
         only applied to type declaration statements '''
-        DebugManager.debug('unitPostProcessor.__rewriteActiveType called on: "'+str(DrvdTypeDecl)+"'")
+        if self._verbose: print 'unitPostProcessor.__rewriteActiveType called on: "'+str(DrvdTypeDecl)+"'"
         newDecls = []
         for decl in DrvdTypeDecl.decls:
             newDecls.append(self.__transformActiveTypesExpression(decl))
@@ -78,6 +84,8 @@ class UnitPostProcessor(object):
                                                '(openad_type)']):
             DrvdTypeDecl.mod = ['('+self._replacement_type+')']
             DrvdTypeDecl.dblc = True
+        else:
+            DrvdTypeDecl.dblc = False
         return DrvdTypeDecl
 
     # Transforms active types for an expression recursively
@@ -90,7 +98,8 @@ class UnitPostProcessor(object):
         else:
             replacementExpression = theExpression
 
-        DebugManager.debug(self.__recursionDepth*'|\t'+'unitPostProcessor.__transformActiveTypesExpression called on"'+str(theExpression)+'"')
+        if self._verbose: 
+            print self.__recursionDepth*'|\t'+'unitPostProcessor.__transformActiveTypesExpression called on"'+str(theExpression)+'"'
         self.__recursionDepth += 1
         if isinstance(replacementExpression, fe.App):
             if intrinsic.is_inquiry(replacementExpression.head):
@@ -105,7 +114,6 @@ class UnitPostProcessor(object):
                 else:
                     nv = replacementExpression.args[0]
                     replacementExpression = fe.Sel(nv,"v")
-
                 self.__expChanged=True
             elif replacementExpression.head == '__deriv__':
                 if self._transform_deriv:
@@ -136,7 +144,7 @@ class UnitPostProcessor(object):
 
     # transforms active types in a SubCallStmt
     def __processSubCallStmt(self,aSubCallStmt):
-        DebugManager.debug('unitPostProcessor.__processSubCallStmt called on: "'+str(aSubCallStmt)+"'")
+        if self._verbose: print 'unitPostProcessor.__processSubCallStmt called on: "'+str(aSubCallStmt)+"'"
         replacementArgs = []
         for anArg in aSubCallStmt.args:
             if isinstance(anArg,fe.App):
@@ -155,7 +163,7 @@ class UnitPostProcessor(object):
 
     # Does active type transformations on a StmtFnStmt; reconstructs it as an AssignStmt if StmtFnStmt.name is "__value__"
     def __processStmtFnStmt(self, StmtFnStmt):
-        DebugManager.debug('unitPostProcessor.__processStmtFnStmt called on: "'+str(StmtFnStmt)+"'")
+        if self._verbose: print 'unitPostProcessor.__processStmtFnStmt called on: "'+str(StmtFnStmt)+"'"
 
         new_args = map(self.__transformActiveTypesExpression,StmtFnStmt.args)
         newStatement = \
@@ -180,7 +188,7 @@ class UnitPostProcessor(object):
 
     def __transformActiveTypes(self,aStmt):
         '''Transforms active types on general executable statements'''
-        DebugManager.debug('unitPostProcessor.__transformActiveTypes called on: "'+str(aStmt)+"'")
+        if self._verbose: print 'unitPostProcessor.__transformActiveTypes called on: "'+str(aStmt)+"'"
 
         if not hasattr(aStmt,"_sons") or (aStmt._sons == []):
             return aStmt
@@ -243,7 +251,7 @@ class UnitPostProcessor(object):
 
     def __parseNewStmts(self,newFuncCode,funArgs):
         newStmtInfo = []
-        if newFuncCode.lstrip().rstrip() != '':
+        if newFuncCode.strip() != '':
             p = re.compile(r'[\n]')
             execStmts = p.split(newFuncCode)            
             i = 0
@@ -257,7 +265,7 @@ class UnitPostProcessor(object):
                         n += 1
                     else:
                         break
-                if stmt.lstrip().rstrip() is '':
+                if stmt.strip() is '':
                     i += n
                     continue
                 parsed_stmt = (parse_stmt(stmt,0)).flow()
@@ -426,28 +434,13 @@ class UnitPostProcessor(object):
         return Execs
 
 
-    def __templateExpansion(self,definitions,inline):
-        (Decls,Execs) = self.__reverseProcessDeclsAndExecs(definitions,inline)
-        if isinstance(self.__myUnit.uinfo,fs.ModuleStmt) \
-                or isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
-            i = 0
-            while i < len(Decls):
-                for aDecl in Decls[0]:
-                    if aDecl is not None:
-                        self.__myNewDecls.append(aDecl)
-                i += 1
-            i = 0
-            while i < len(Execs):
-                for anExec in Execs[0]:
-                    if anExec is not None:
-                        self.__myNewExecs.append(anExec)
-                i += 1
-            return
+    def __expandTemplate(self,template,Decls,Execs,template_comment=True):
         inputDeclNum = 0
         inputExecNum = 0
         pragma = 0
-        for aUnit in fortUnitIterator("ad_template.f",False):
-            self.__myUnit.cmnt.rawline = aUnit.cmnt.rawline+self.__myUnit.cmnt.rawline
+        for aUnit in fortUnitIterator(template,False):
+            if template_comment:
+                self.__myUnit.cmnt.rawline = aUnit.cmnt.rawline+self.__myUnit.cmnt.rawline
             if isinstance(aUnit.uinfo,fs.SubroutineStmt):
                 aUnit.uinfo.name = self.__myUnit.uinfo.name
             replacementNum = 0
@@ -461,24 +454,37 @@ class UnitPostProcessor(object):
                         newStmt = fs.Comments(aDecl.rawline[:match.start()])
                         self.__myNewDecls.append(newStmt)
                         # return to input
-                        for decl in Decls[0]:
-                            if decl is not None:
-                                self.__myNewDecls.append(decl)
+                        if len(Decls) > 0:
+                            for decl in Decls[0]:
+                                if decl is not None:
+                                    self.__myNewDecls.append(decl)
+                                Decls[0] = None
                         # continue template
                         newStmt = fs.Comments(aDecl.rawline[match.end():])
                         self.__myNewDecls.append(newStmt)
                         continue
                 self.__myNewDecls.append(aDecl)
-            i = 1
+            i = 1; j = 0
             while i < len(Decls):
                 for aDecl in Decls[i]:
                     if aDecl is not None:
+                        if aDecl.is_comment():
+                            template_name = self.__getTemplate(aDecl)
+                            if template_name is not None and template_name != template:
+                                return (template_name,Decls[i:],Execs)
                         self.__myNewDecls.append(aDecl)
+                    j += 1
+                j = 0
                 i += 1
             if len(Execs) > 0:
                 for anInputExec in Execs[0]:
                     if anInputExec is not None:
+                        if anInputExec.is_comment():
+                            template_name = self.__getTemplate(anInputExec)
+                            if template_name is not None and template_name != template:
+                                return (template_name,[],Execs)
                         self.__myNewExecs.append(anInputExec)
+                    j += 1
             execRepNum = 0
             firstIter = True
             for anExecStmt in aUnit.execs:
@@ -495,6 +501,11 @@ class UnitPostProcessor(object):
                             # return to input
                             for anInputExec in Execs[int(pragma)]:
                                 if anInputExec is not None:
+                                    if anInputExec.is_comment():
+                                        template_name = self.__getTemplate(anInputExec)
+                                        if template_name is not None and \
+                                                template_name != template:
+                                            return (template_name,[],Execs)
                                     self.__myNewExecs.append(anInputExec)
                         # continue template
                         pat = re.compile("[0-9]+")
@@ -513,8 +524,64 @@ class UnitPostProcessor(object):
                             self.__myUnit.uinfo.name + \
                             endStmt.rawline[match.end(0):]
                     newEndStmts.append(endStmt)
-            self.__myUnit.end = newEndStmts
+            self.__myUnit.end = newEndStmts    
+        return (None,[],[])
 
+    def __templateExpansion(self,definitions,inline):
+        (Decls,Execs) = self.__reverseProcessDeclsAndExecs(definitions,inline)
+        if isinstance(self.__myUnit.uinfo,fs.ModuleStmt) \
+                or isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
+            i = 0
+            while i < len(Decls):
+                for aDecl in Decls[0]:
+                    if aDecl is not None:
+                        self.__myNewDecls.append(aDecl)
+                i += 1
+            i = 0
+            while i < len(Execs):
+                for anExec in Execs[0]:
+                    if anExec is not None:
+                        self.__myNewExecs.append(anExec)
+                i += 1
+            return
+
+        template = self.__getTemplateName()
+        insert_template_comment = True
+        while template is not None:
+            (template,Decls,Execs) = \
+                self.__expandTemplate(template,Decls,Execs,insert_template_comment)
+            insert_template_comment = False
+
+    # gets the name of the first template used
+    def __getTemplateName(self):
+        if self.__myUnit.cmnt is not None:
+            template = self.__getTemplate(self.__myUnit.cmnt)
+            if template is not None:
+                return template
+        for aDecl in self.__myUnit.decls:
+            if aDecl.is_comment():
+                template = self.__getTemplate(aDecl)
+                if template is not None:
+                    return template
+        for anExec in self.__myUnit.execs:
+            if anExec.is_comment():
+                template = self.__getTemplate(anExec)
+                if template is not None:
+                    return template
+        return template
+
+    # extracts the template name from a comment
+    def __getTemplate(self,comment):
+        name = None
+        p = re.compile('c[ ]*[$]openad[ ]+xxx[ ]+template[ ]+',re.IGNORECASE)
+        match = p.search(comment.rawline)
+        if match:
+            end_name = re.search('[\n]|[ ]',comment.rawline[match.end():])
+            if end_name:
+                name = (comment.rawline[match.end():(match.end()+end_name.start())]).strip()
+            else:
+                name = (comment.rawline[match.end():]).strip()
+        return name
 
     def __processComments(self,Comments,replacementNum,commentList,
                           currentComments,definitions=None,inline=False):
@@ -543,7 +610,8 @@ class UnitPostProcessor(object):
     def __processExec(self,anExecStmt,Execs,execList=[],
                       definitions=None,inline=False,replacementNum=0): 
         try:
-            DebugManager.debug('[Line '+str(anExecStmt.lineNumber)+']:')
+            if self._verbose: 
+                print '[Line '+str(anExecStmt.lineNumber)+']:'
             newStmt = None
             if anExecStmt.is_comment() and definitions is not None:
                 if self._mode == 'reverse':
@@ -580,7 +648,8 @@ class UnitPostProcessor(object):
     def __processDecl(self,aDecl,Decls,Execs,UseStmtSeen,declList=[],
                       execList=[],replacementNum=0):
         try:
-            DebugManager.debug('[Line '+str(aDecl.lineNumber)+']:')
+            if self._verbose: 
+                print '[Line '+str(aDecl.lineNumber)+']:'
             if isinstance(aDecl, fs.UseStmt):
                 # add old use stmt
                 Decls.append(aDecl)
@@ -610,6 +679,11 @@ class UnitPostProcessor(object):
             elif isinstance(aDecl,fs.DrvdTypeDecl):
                 newDecl = self.__rewriteActiveType(aDecl)
                 newDecl.flow()
+                if newDecl.dblc is True:
+                    if self.__write_subroutine is True:
+                        self.__active_file.write(self.__myUnit.uinfo.rawline)
+                        self.__write_subroutine = False
+                    self.__active_file.write(newDecl.rawline)
                 UseStmtSeen = False
                 Decls.append(newDecl)
             elif isinstance(aDecl,fs.StmtFnStmt):
@@ -621,7 +695,7 @@ class UnitPostProcessor(object):
                 else:
                     Execs.append(newDecl)
             else:
-                DebugManager.debug('Statement "'+str(aDecl)+'" is assumed to require no post-processing')
+                if self._verbose: print 'Statement "'+str(aDecl)+'" is assumed to require no post-processing'
 
                 Decls.append(aDecl)
                 UseStmtSeen = False
@@ -673,38 +747,52 @@ class UnitPostProcessor(object):
     # Processes all statements in the unit
     def processUnit(self):
         ''' post-process a unit '''
-        DebugManager.debug(('+'*55)+' Begin post-processing unit <'+str(self.__myUnit.uinfo)+'> '+(55*'+'))
-        DebugManager.debug('local '+self.__myUnit.symtab.debug())
-        DebugManager.debug('subunits (len =',len(self.__myUnit.ulist),'):')
+        if self._verbose: print ('+'*55)+' Begin post-processing unit <',self.__myUnit.uinfo,'> '+(55*'+'),'\nlocal',self.__myUnit.symtab.debug()
+        if (self._verbose and self.__myUnit.ulist): print 'subunits (len =',len(self.__myUnit.ulist),'):'
 
         for subUnit in self.__myUnit.ulist:
-            DebugManager.debug(str(subUnit))
+            if self._verbose: print subUnit
             UnitPostProcessor(subUnit).processUnit()
+
+        self.__active_file = open('active_variables.f','a')
 
         if self._mode == 'reverse':
             try:
-                fd = open(self._inlineFile)
+                fd = open(self._input_file)
+            except IOError: 
+                errstr = "IOError: Error cannot open file named "+self._input_file
+                raise PostProcessError(errstr,0)
+            try:
                 definitions = fd.read()
-            except IOError,e: 
-                raise PostProcessError('IOError opening inline file: '+str(e),0)
+            except IOError:
+                errstr = "IOError: Error cannot read file named "+self._input_file
+                raise PostProcessError(errstr,0)
             inline = False
             self.__templateExpansion(definitions,inline)
             self.__myUnit.decls = self.__myNewDecls
             self.__myUnit.execs = self.__myNewExecs
+
             try:
                 fd.close()
-            except IOError,e:
-                raise PostProcessError('Caught IOError '+e.msg)
+            except IOError:
+                errstr = "IOError: Error cannot close file named "+self._input_file
+                raise PostProcessError(errstr,0)
 
         else:
             (Decls,Execs) = self.__forwardProcessDeclsAndExecs()
             self.__myUnit.decls = Decls
             self.__myUnit.execs = Execs
 
+        if self.__write_subroutine is False:
+            if self.__myUnit.end:
+                for anEndListEntry in self.__myUnit.end:
+                    self.__active_file.write(anEndListEntry.rawline,)
+            self.__write_subroutine = True
+        self.__active_file.close()
 
         if (self.__recursionDepth is not 0):
-            raise PostProcessError('Recursion error in unitPostProcess: final recursion depth is not zero')
-        DebugManager.debug(('+'*54)+' End post-process unit <'+str(self.__myUnit.uinfo)+'> '+(54*'+')+'\n\n')
+            raise PostProcessError('Recursion errorin unitPostProcess: final recursion depth is not zero')
+        if self._verbose: print ('+'*54)+' End post-process unit <',self.__myUnit.uinfo,'> '+(54*'+')+'\n\n'
 
         return self.__myUnit
 
