@@ -26,23 +26,23 @@ class TypeUtils(TestCase):
 class TypeConstants(TestCase):
     def test0(self):
         'constants - numerical values without modifiers'
-        self.assertEquals(constantType(ep('3.787')),
+        self.assertEquals(constantType(ep('3.787'),lineNumber=0),
                           (RealStmt,[]))
-        self.assertEquals(constantType(ep('3.787D00')),
+        self.assertEquals(constantType(ep('3.787D00'),lineNumber=0),
                           (DoubleStmt,[]))
-        self.assertEquals(constantType(ep('3')),
+        self.assertEquals(constantType(ep('3'),lineNumber=0),
                           (IntegerStmt,[]))
 
     def test1(self):
         'constants - numerical values with modifiers'
 
-        (type,typeModList) = constantType(ep('3.787_foo'))
+        (type,typeModList) = constantType(ep('3.787_foo'),lineNumber=0)
         typeMod = typeModList[0]
         self.assertEquals(type,RealStmt)
         self.assert_(isinstance(typeMod,_Kind))
         self.assertEquals(typeMod.mod,'foo')
 
-        (type,typeModList) = constantType(ep('0_w2f__i8'))
+        (type,typeModList) = constantType(ep('0_w2f__i8'),lineNumber=0)
         typeMod = typeModList[0]
         self.assertEquals(type,IntegerStmt)
         self.assert_(isinstance(typeMod,_Kind))
@@ -50,12 +50,12 @@ class TypeConstants(TestCase):
 
     def test2(self):
         'constants - logical values'
-        self.assertEquals(constantType(ep('.true.')),
+        self.assertEquals(constantType(ep('.true.'),lineNumber=0),
                           (LogicalStmt,[]))
 
     def test3(self):
         'constants - strings'
-        (type,typeModList) = constantType(ep(r"'food'"))
+        (type,typeModList) = constantType(ep(r"'food'"),lineNumber=0)
         typeMod = typeModList[0]
         self.assertEquals(type,CharacterStmt)
         self.assert_(isinstance(typeMod,_F77Len))
@@ -72,23 +72,23 @@ class TypeOpsExpressions(TestCase):
         theSymtab = Symtab()
 
         e1 = ep('x * y')
-        ae(expressionType(e1,theSymtab),
+        ae(expressionType(e1,theSymtab,lineNumber=0),
            (RealStmt,[]))
 
         e1 = ep('5.11d0 * 4.77d0')
-        ae(expressionType(e1,theSymtab),
+        ae(expressionType(e1,theSymtab,lineNumber=0),
            (DoubleStmt,[]))
 
         e1 = ep('i + 4')
-        ae(expressionType(e1,theSymtab),
+        ae(expressionType(e1,theSymtab,lineNumber=0),
            (IntegerStmt,[]))
 
         e1 = ep('z + 5.11d0 * 4.77d0')
-        ae(expressionType(e1,theSymtab),
+        ae(expressionType(e1,theSymtab,lineNumber=0),
            (DoubleStmt,[]))
 
         e1 = ep('x * 5.11d0 + i * 4.77')
-        ae(expressionType(e1,theSymtab),
+        ae(expressionType(e1,theSymtab,lineNumber=0),
            (DoubleStmt,[]))
 
 def _gt(decl):

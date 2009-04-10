@@ -8,7 +8,7 @@ from PyUtil.errors import UserError
 from PyUtil.symtab import Symtab
 from PyFort.fortUnit import fortUnitIterator
 from PyFort.fortStmts import RealStmt,IntegerStmt
-from unitPostProcess import UnitPostProcessor,PPError
+from unitPostProcess import UnitPostProcessor,PostProcessError
 
 '''
 Unit tests for post-processor
@@ -34,7 +34,7 @@ def compareFiles(assertFunc,originalFileName,RefFileName,free):
         refFile.close()
         testFile.close()
         os.remove(testFileName)
-    except PPError,e:
+    except PostProcessError,e:
         print >>sys.stderr,'\nPost-processing Error on line '+str(e.lineNumber)+':\n',e.msg
         return 1
     except UserError,e:
