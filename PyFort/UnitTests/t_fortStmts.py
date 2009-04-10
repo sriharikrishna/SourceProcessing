@@ -166,22 +166,11 @@ class C5(TestCase):
         ae(len(ps.decls),3,'decls check')
 
     def test4(self):
-        'empty interface definition'
-        ae = self.assertEquals
-        a_ = self.assert_
-        s = 'interface'
-        ps = pps(s)
-        a_(isinstance(ps,InterfaceStmt),'instance check')
-        ae(str(ps),s)
-
-    def test5(self):
-        'nonempty interface definition'
-        ae = self.assertEquals
-        a_ = self.assert_
-        s = 'interface foo'
-        ps = pps(s)
-        a_(isinstance(ps,InterfaceStmt),'instance check')
-        ae(str(ps),s)
+        '''derived type declaration with empty array bounds'''
+        s = 'type(OpenADTy_active) :: X(:)'
+        r = DrvdTypeDecl(['(OpenADTy_active)'],[],[_NoInit(App('X',[':']))])
+        self.assertEquals(repr(pps(s)),repr(r))
+        self.assertEquals(s,str(r))
 
 class C6(TestCase):
     '''F90 style types
@@ -632,6 +621,27 @@ class TestCaseStmts(TestCase):
         r = CaseRangeListStmt([Ops(':','1','3'), Ops(':','8','9')])
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
+
+class TestInterfaces(TestCase):
+    '''stuff to do with interfaces'''
+
+    def test1(self):
+        'empty interface definition'
+        ae = self.assertEquals
+        a_ = self.assert_
+        s = 'interface'
+        ps = pps(s)
+        a_(isinstance(ps,InterfaceStmt),'instance check')
+        ae(str(ps),s)
+
+    def test2(self):
+        'nonempty interface definition'
+        ae = self.assertEquals
+        a_ = self.assert_
+        s = 'interface foo'
+        ps = pps(s)
+        a_(isinstance(ps,InterfaceStmt),'instance check')
+        ae(str(ps),s)
 
 suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,C10,TestImplicitStmt,
                                            TestDimensionStmt,
