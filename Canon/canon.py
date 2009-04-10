@@ -60,7 +60,7 @@ class UnitCanonicalizer(object):
         if theSymtabEntry and isinstance(theSymtabEntry.entryKind,SymtabEntry.VariableEntryKind):
             raise CanonError('UnitCanonicalizer.shouldSubroutinizeFunction called on array reference '+str(theApp),parentStmt.lineNumber)
         try:
-            (funcType,modifier) = functionType(theApp,self.__myUnit.symtab)
+            (funcType,modifier) = functionType(theApp,self.__myUnit.symtab,parentStmt.lineNumber)
         except TypeInferenceError,errorObj:
             sys.stdout.flush()
             raise CanonError('UnitCanonicalizer.shouldSubroutinizeFunction: TypeInferenceError: '+errorObj.msg,parentStmt.lineNumber)
@@ -74,7 +74,7 @@ class UnitCanonicalizer(object):
         '''The new temporary variable assumes the value of anExpression'''
         theNewTemp = self.__tmp_prefix + str(self.__tempCounter)
         self.__tempCounter += 1
-        (varTypeClass,varModifierList) = expressionType(anExpression,self.__myUnit.symtab)
+        (varTypeClass,varModifierList) = expressionType(anExpression,self.__myUnit.symtab,parentStmt.lineNumber)
         if (varModifierList!=[] and isinstance(varModifierList[0],fs._FLenMod) and varModifierList[0].len=='*'):
             raise CanonError('unable to determine length of temporary variable for '+str(anExpression),parentStmt.lineNumber)
         if varTypeClass == fs.RealStmt and varModifierList == []:
@@ -113,7 +113,7 @@ class UnitCanonicalizer(object):
         # function calls that are to be turned into subroutine calls
         # -> return the temp that carries the value for the new subcall
         if isinstance(theExpression,fe.App) and \
-           not isArrayReference(theExpression,self.__myUnit.symtab) and \
+           not isArrayReference(theExpression,self.__myUnit.symtab,parentStmt.lineNumber) and \
            self.shouldSubroutinizeFunction(theExpression,parentStmt):
             DebugManager.debug('it is a function call to be subroutinized')
             return self.__canonicalizeFuncCall(theExpression,parentStmt)
@@ -138,7 +138,7 @@ class UnitCanonicalizer(object):
         # application expressions
         elif isinstance(theExpression,fe.App):
             # array reference -. do nothing
-            if isArrayReference(theExpression,self.__myUnit.symtab):
+            if isArrayReference(theExpression,self.__myUnit.symtab,parentStmt.lineNumber):
                 DebugManager.debug(', which is an array reference (no canonicalization necessary)')
             # function calls to subroutinize -> subroutinize and recursively canonicalize args
             elif self.shouldSubroutinizeFunction(theExpression,parentStmt):
@@ -180,7 +180,7 @@ class UnitCanonicalizer(object):
         for anArg in aSubCallStmt.args:
             #TODO: remove perens when the whole argument is in them??
             DebugManager.debug((self.__recursionDepth - 1)*'|\t'+'|- argument "'+str(anArg)+'" ',newLine=False)
-            (argType,argTypeMod) = expressionType(anArg,self.__myUnit.symtab)
+            (argType,argTypeMod) = expressionType(anArg,self.__myUnit.symtab,aSubCallStmt.lineNumber)
             # constant character expressions
             if argType == fs.CharacterStmt:
                 if not self._hoistStringsFlag:
@@ -189,7 +189,7 @@ class UnitCanonicalizer(object):
                 elif isinstance(anArg,str) and self.__myUnit.symtab.lookup_name(anArg):
                     DebugManager.debug('is a string variable (which we aren\'t hoisting)')
                     replacementArgs.append(anArg)
-                elif isinstance(anArg,fe.App) and isArrayReference(anArg,self.__myUnit.symtab):
+                elif isinstance(anArg,fe.App) and isArrayReference(anArg,self.__myUnit.symtab,aSubCallStmt.lineNumber):
                     DebugManager.debug('is a character array reference (which we aren\'t hoisting)')
                     replacementArgs.append(anArg)
                 else:
@@ -209,7 +209,7 @@ class UnitCanonicalizer(object):
                 DebugManager.debug('is an identifier (variable,function,etc.)')
                 replacementArgs.append(anArg)
             # Array References -> do nothing
-            elif isinstance(anArg,fe.App) and isArrayReference(anArg,self.__myUnit.symtab):
+            elif isinstance(anArg,fe.App) and isArrayReference(anArg,self.__myUnit.symtab,aSubCallStmt.lineNumber):
                 DebugManager.debug('is an array reference')
                 replacementArgs.append(anArg)
             # everything else -> hoist and create an assignment to a temp variable
