@@ -1,7 +1,6 @@
 
       MODULE all_globals_mod
       use w2f__types
-c use active module (OAD_active)
       use OAD_active
       IMPLICIT NONE
       SAVE
@@ -12,7 +11,6 @@ C
 
       MODULE globals
       use w2f__types
-c use active module (OAD_active)
       use OAD_active
       IMPLICIT NONE
       SAVE
@@ -27,7 +25,6 @@ C
 
       SUBROUTINE head(X, Y)
       use w2f__types
-c use active module (OAD_active)
       use OAD_active
       use globals
       IMPLICIT NONE
@@ -39,8 +36,8 @@ C
 C
 C     **** Parameters and Result ****
 C
-      type(active) :: X(1 : 2)
-      type(active) :: Y(1 : 1)
+      type(active) :: X(1:2)
+      type(active) :: Y(1:1)
 C
 C     **** Top Level Pragmas ****
 C
@@ -50,8 +47,8 @@ C
 C     **** Statements ****
 C
 C$OPENAD XXX Template ad_template.f
-      call sax(OpenAD_Symbol_0,X(1)%d,AGLOBAL%d)
-      call saxpy(OpenAD_Symbol_1,X(2)%d,AGLOBAL%d)
-      call sax(OpenAD_Symbol_0,X(1)%d,Y(1)%d)
-      call saxpy(OpenAD_Symbol_1,X(2)%d,Y(1)%d)
+      CALL sax(OpenAD_Symbol_0,X(1),AGLOBAL)
+      CALL saxpy(OpenAD_Symbol_1,X(2),AGLOBAL)
+      CALL sax(OpenAD_Symbol_0,X(1),Y(1))
+      CALL saxpy(OpenAD_Symbol_1,X(2),Y(1))
       END SUBROUTINE

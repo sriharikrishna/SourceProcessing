@@ -1,6 +1,5 @@
       MODULE all_globals_mod
       use w2f__types
-c use active module (OAD_active)
       use OAD_active
       IMPLICIT NONE
       SAVE
@@ -11,7 +10,6 @@ C
 
       MODULE globals
       use w2f__types
-c use active module (OAD_active)
       use OAD_active
       IMPLICIT NONE
       SAVE
@@ -24,6 +22,6 @@ C
 
       SUBROUTINE head(X, Y)
       type(active) :: AGLOBAL
-      type(active) :: X(1 : 2)
-      type(active) :: Y(1 : 1)
+      type(active) :: X(1:2)
+      type(active) :: Y(1:1)
       END SUBROUTINE

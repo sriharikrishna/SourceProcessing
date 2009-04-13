@@ -1,15 +1,17 @@
       MODULE globals
       use w2f__types
+      use OAD_active
       IMPLICIT NONE
       SAVE
 C
 C     **** Global Variables & Derived Type Definitions ****
 C
-      TYPE (oadactive) AGLOBAL
+      type(active) :: AGLOBAL
       END MODULE
 
       SUBROUTINE head(X, Y)
       use w2f__types
+      use OAD_active
       use globals
       IMPLICIT NONE
 C
@@ -27,8 +29,8 @@ C
 C     **** Statements ****
 C
 C$OPENAD XXX Template ad_template.f
-      __value__(AGLOBAL) = (__value__(X(1)) * __value__(X(2)))
-      OpenAD_Symbol_0 = __value__(X(2))
-      OpenAD_Symbol_1 = __value__(X(1))
-      __value__(Y(1)) = __value__(AGLOBAL)
+      AGLOBAL%v = (X(1)%v*X(2)%v)
+      OpenAD_Symbol_0 = X(2)%v
+      OpenAD_Symbol_1 = X(1)%v
+      Y(1)%v = AGLOBAL%v
       END SUBROUTINE

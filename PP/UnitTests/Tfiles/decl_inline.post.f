@@ -1,6 +1,6 @@
       MODULE globals
       use w2f__types
-c use active module (OAD_active)
+      use OAD_active
       use OAD_active
       IMPLICIT NONE
       SAVE
@@ -12,7 +12,7 @@ C
 
       SUBROUTINE head(X, Y)
       use w2f__types
-c use active module (OAD_active)
+      use OAD_active
       use OAD_active
       use globals
       IMPLICIT NONE
@@ -31,7 +31,7 @@ C
 C     **** Statements ****
 C
 C$OPENAD XXX Template ad_template.f
-      AGLOBAL%v = (X(1)%v * X(2)%v)
+      AGLOBAL%v = (X(1)%v*X(2)%v)
       OpenAD_Symbol_0 = X(2)%v
       OpenAD_Symbol_1 = X(1)%v
       Y(1)%v = AGLOBAL%v
