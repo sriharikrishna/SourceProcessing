@@ -14,14 +14,14 @@ C
 C
 C     **** Parameters and Result ****
 C
-      TYPE (OpenADTy_active) X(1 : 2)
-      TYPE (OpenADTy_active) Y(1 : 2)
+      TYPE (oadactive) X(1 : 2)
+      TYPE (oadactive) Y(1 : 2)
 C
 C     **** Local Variables and Functions ****
 C
       INTEGER(w2f__i4) N
       SAVE N
-      TYPE (OpenADTy_active) Z(1 : INT(SIZE(__value__(X))))
+      TYPE (oadactive) Z(1 : INT(SIZE(__value__(X))))
 C
 C     **** Initializers ****
 C

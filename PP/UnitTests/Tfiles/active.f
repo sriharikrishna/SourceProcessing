@@ -19,7 +19,7 @@ C
       END MODULE
 
       SUBROUTINE head(X, Y)
-      type (OpenADTy_active) AGLOBAL
-      type (OpenADTy_active) :: X(1 : 2)
-      type (OpenADTy_active) :: Y(1 : 1)
+      type (oadactive) AGLOBAL
+      type (oadactive) :: X(1 : 2)
+      type (oadactive) :: Y(1 : 1)
       END SUBROUTINE

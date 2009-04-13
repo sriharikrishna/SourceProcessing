@@ -56,11 +56,14 @@ def main():
                    dest='inline',
                    help='file with definitions for inlinable routines for reverse mode post processing (defaults to ad_inline.f); requires reverse mode ( -m r )',
                    default=None)
-    opt.add_option('-t',
-                   '--type',
-                   dest='type',
-                   help='replace string \'openadty_active\'  with TYPE (defaults to \'active\')',
-                   default=False)
+    opt.add_option('--abstractType',
+                   dest='abstractType',
+                   help='change the abstract active type name to be replaced  (see also --concreteType ) to ABSTRACTTYPE; defaults to \'oadactive\')',
+                   default='oadactive')
+    opt.add_option('--concreteType',
+                   dest='concreteType',
+                   help='replace abstract active string (see also --abstractType ) with concrete active type CONCRETETYPE; defaults to \'active\'',
+                   default='active')
     opt.add_option('-v',
                    '--verbose',
                    dest='verbose',
@@ -111,9 +114,10 @@ def main():
     else:
         splitUnits = False
 
-    # set replacement type for openadty_active
-    if config.type:
-        UnitPostProcessor.setReplacementType(config.type)
+    # set replacement type 
+    UnitPostProcessor.setReplacementType(config.concreteType)
+    # set abstract type 
+    UnitPostProcessor.setAbstractType(config.abstractType)
 
     # set verbosity
     DebugManager.setVerbose(config.verbose)

@@ -33,11 +33,19 @@ class UnitPostProcessor(object):
     def setInlineFile(inlineFile):
         UnitPostProcessor._inlineFile = inlineFile
 
-    _replacement_type = 'active'
+    # set something here for the unit tests
+    _replacement_type = 'active' 
 
     @staticmethod
     def setReplacementType(replacementType):
         UnitPostProcessor._replacement_type = replacementType
+
+    # set something here for the unit tests
+    _abstract_type = 'oadactive'
+
+    @staticmethod
+    def setAbstractType(abstractType):
+        UnitPostProcessor._abstract_type = abstractType.lower()
 
     _mode = 'forward'
 
@@ -69,15 +77,14 @@ class UnitPostProcessor(object):
     # Rewrites the active type in derived type declarations
     # returns the declaration
     def __rewriteActiveType(self, DrvdTypeDecl):
-        ''' convert type (OpenAD_type) to type(active)
+        ''' convert abstract to concrete active type 
         only applied to type declaration statements '''
         DebugManager.debug('unitPostProcessor.__rewriteActiveType called on: "'+str(DrvdTypeDecl)+"'")
         newDecls = []
         for decl in DrvdTypeDecl.decls:
             newDecls.append(self.__transformActiveTypesExpression(decl))
         DrvdTypeDecl.decls = newDecls
-        if DrvdTypeDecl.mod[0].lower() in set(['(openadty_active)',
-                                               '(openad_type)']):
+        if DrvdTypeDecl.mod[0].lower() == '('+self._abstract_type+')':
             DrvdTypeDecl.mod = ['('+self._replacement_type+')']
             DrvdTypeDecl.dblc = True
         else:
@@ -746,7 +753,7 @@ class UnitPostProcessor(object):
         ''' post-process a unit '''
         DebugManager.debug(('+'*55)+' Begin post-processing unit <'+str(self.__myUnit.uinfo)+'> '+(55*'+'))
         DebugManager.debug('local '+self.__myUnit.symtab.debug())
-        DebugManager.debug('subunits (len =',len(self.__myUnit.ulist),'):')
+        DebugManager.debug('subunits (len = '+str(len(self.__myUnit.ulist))+'):')
 
         for subUnit in self.__myUnit.ulist:
             DebugManager.debug(str(subUnit))

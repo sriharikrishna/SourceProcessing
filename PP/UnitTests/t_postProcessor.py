@@ -58,7 +58,7 @@ class C1(TestCase):
         compareFiles(self.assertEquals, 'modules.f','modules.post.f',free=False)
 
     def test3(self):
-        'test type transformations from OpenADTy_active to active'
+        'test type replacements'
         compareFiles(self.assertEquals,'active.f','active.post.f',free=False)
 
     def test4(self):

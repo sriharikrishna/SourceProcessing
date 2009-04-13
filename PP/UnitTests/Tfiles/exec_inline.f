@@ -15,7 +15,7 @@ C
 C
 C     **** Global Variables & Derived Type Definitions ****
 C
-      TYPE (OpenADTy_active) AGLOBAL
+      TYPE (oadactive) AGLOBAL
 C
 C     **** Statements ****
 C
@@ -33,8 +33,8 @@ C
 C
 C     **** Parameters and Result ****
 C
-      TYPE (OpenADTy_active) X(1 : 2)
-      TYPE (OpenADTy_active) Y(1 : 1)
+      TYPE (oadactive) X(1 : 2)
+      TYPE (oadactive) Y(1 : 1)
 C
 C     **** Top Level Pragmas ****
 C

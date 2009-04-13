@@ -5,7 +5,7 @@
 C
 C     **** Global Variables & Derived Type Definitions ****
 C
-      TYPE (OpenADTy_active) AGLOBAL
+      TYPE (oadactive) AGLOBAL
       END MODULE
 
       SUBROUTINE head(X, Y)
