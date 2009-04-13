@@ -444,18 +444,17 @@ class UnitPostProcessor(object):
                 anExecStmt.rawline[match.end():]
         return anExecStmt
 
-    def __expandTemplate(self,template,Decls,Execs,template_comment=True):
+    def __expandTemplate(self,template,Decls,Execs):
         inputDeclNum = 0
         inputExecNum = 0
         pragma = 0
         for aUnit in fortUnitIterator(template,False):
-            if template_comment:
-                if aUnit.cmnt is not None:
-                    if self.__myUnit.cmnt is not None:
-                        self.__myUnit.cmnt.rawline = \
-                            aUnit.cmnt.rawline+self.__myUnit.cmnt.rawline
-                    else:
-                        self.__myUnit.cmnt = aUnit.cmnt
+            if aUnit.cmnt is not None:
+                if self.__myUnit.cmnt is not None:
+                    self.__myUnit.cmnt.rawline = \
+                        aUnit.cmnt.rawline+self.__myUnit.cmnt.rawline
+                else:
+                    self.__myUnit.cmnt = aUnit.cmnt
             if isinstance(aUnit.uinfo,fs.SubroutineStmt):
                 aUnit.uinfo.name = self.__myUnit.uinfo.name
             replacementNum = 0
@@ -552,11 +551,9 @@ class UnitPostProcessor(object):
                 i += 1
             return
         template = self.__getTemplateName()
-        insert_template_comment = True
         while template is not None:
             (template,Decls,Execs) = \
-                self.__expandTemplate(template,Decls,Execs,insert_template_comment)
-            insert_template_comment = False
+                self.__expandTemplate(template,Decls,Execs)
 
     # gets the name of the first template used
     def __getTemplateName(self):
@@ -574,7 +571,7 @@ class UnitPostProcessor(object):
                 template = self.__getTemplate(anExec)
                 if template is not None:
                     return template
-        return template
+        return 'ad_template.f' #default template file
 
     # extracts the template name from a comment
     def __getTemplate(self,comment):
