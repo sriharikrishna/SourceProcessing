@@ -320,6 +320,10 @@ class UnitPostProcessor(object):
 
     def __replaceArgs(self,argReps,string,inlineArgs,replacementArgs):
         while argReps >= 0:
+            if isinstance(inlineArgs[argReps],fe.App):
+                inline_arg = inlineArgs[argReps].head
+            else:
+                inline_arg = inlineArgs[argReps]
             lno_replace = "[\w]"+inlineArgs[argReps]
             rno_replace = inlineArgs[argReps]+"[\w]"
             p = re.compile("("+rno_replace+"|"+lno_replace+")")
