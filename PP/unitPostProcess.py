@@ -27,11 +27,19 @@ class UnitPostProcessor(object):
     def setDerivType(transformDerivType):
         UnitPostProcessor._transform_deriv = transformDerivType
 
+    # set something here for the unit tests
     _inlineFile = 'ad_inline.f'
 
     @staticmethod
     def setInlineFile(inlineFile):
         UnitPostProcessor._inlineFile = inlineFile
+
+    # set something here for the unit tests
+    _templateFile = 'ad_template.f'
+
+    @staticmethod
+    def setTemplateFile(templateFile):
+        UnitPostProcessor._templateFile = templateFile
 
     # set something here for the unit tests
     _replacement_type = 'active' 
@@ -575,7 +583,7 @@ class UnitPostProcessor(object):
                 template = self.__getTemplate(anExec)
                 if template is not None:
                     return template
-        return 'ad_template.f' #default template file
+        return self._templateFile #default template file
 
     # extracts the template name from a comment
     def __getTemplate(self,comment):

@@ -55,7 +55,12 @@ def main():
                    '--inline',
                    dest='inline',
                    help='file with definitions for inlinable routines for reverse mode post processing (defaults to ad_inline.f); requires reverse mode ( -m r )',
-                   default=None)
+                   default=None) # cannot set default here because of required reverse mode
+    opt.add_option('-t',
+                   '--template',
+                   dest='template',
+                   help='file with subroutine template for reverse mode post processing (defaults to ad_template.f) for subroutines that do not have a template file specified via the template pragma; requires reverse mode ( -m r )',
+                   default=None) # cannot set default here because of required reverse mode
     opt.add_option('--abstractType',
                    dest='abstractType',
                    help='change the abstract active type name to be replaced  (see also --concreteType ) to ABSTRACTTYPE; defaults to \'oadactive\')',
@@ -98,14 +103,19 @@ def main():
     free_flow(config.free) 
 
     # configure forward/reverse mode (including inline file for reverse mode)
-    if (config.mode != 'r' and config.inline):
-        opt.error("option -i requires reverse mode ( -m r )")
+    if (config.mode != 'r'):
+        if (config.inline):
+            opt.error("option -i requires reverse mode ( -m r )")
+        if (config.template):
+            opt.error("option -t requires reverse mode ( -m r )")
     if config.mode == 'f':
         UnitPostProcessor.setMode('forward')
     if config.mode == 'r':
         UnitPostProcessor.setMode('reverse')
         inlineFile = config.inline or 'ad_inline.f'
         UnitPostProcessor.setInlineFile(inlineFile)
+        templateFile = config.template or 'ad_template.f'
+        UnitPostProcessor.setTemplateFile(templateFile)
 
     # set options for splitting compile units
     if config.width:
@@ -148,19 +158,24 @@ def main():
             if config.output: 
                 out.close()
     except PostProcessError,e:
-        print >>sys.stderr,'\nPostprocessing Error on line '+str(e.lineNumber)+': ',e.msg
+        sys.stderr.write('\nERROR: PostProcessError')
+        if (e.lineNumber>0) :
+            sys.stderr.write(' on line '+str(e.lineNumber))
+        sys.stderr.write(': '+e.msg+'\n')
+        if config.output: 
+            os.remove(config.output)
         return 1
 
     except SymtabError,e:
         debugstr = e.entry and e.entry.debug('unknown') \
                             or ''
-        print >>sys.stderr,'\nSymtabError on line '+str(e.lineNumber)+':\n',e.msg,'\nfor entry',debugstr
+        print >>sys.stderr,'\nERROR: SymtabError on line '+str(e.lineNumber)+':\n',e.msg,'\nfor entry',debugstr
         return 1
     except UserError,e:
-        print >>sys.stderr,'UserError:',e.msg
+        print >>sys.stderr,'\nERROR: UserError:',e.msg
         return 1 
     except ScanError,e: 
-        print >>sys.stderr,'ScanError: scanner fails at line '+str(e.lineNumber)+':'
+        print >>sys.stderr,'\nERROR: ScanError: scanner fails at line '+str(e.lineNumber)+':'
         print >>sys.stderr,e.aFortLine
         print >>sys.stderr,(len(e.aFortLine)-len(e.rest))*' '+'^'
         print >>sys.stderr,''
@@ -170,15 +185,15 @@ def main():
         print >>sys.stderr,"such as unusual spacing. Please consider modifying your source code."
         return 1 
     except ParseError,e: 
-        print >>sys.stderr,'ParseError: parser fails to assemble tokens in scanned line '+str(e.lineNumber)+':'
+        print >>sys.stderr,'\nERROR: ParseError: parser fails to assemble tokens in scanned line '+str(e.lineNumber)+':'
         print >>sys.stderr,e.scannedLine
         print >>sys.stderr,"as",e.target
         return 1 
     except AssemblerException,e:
-        print >>sys.stderr,"AssemblerError: parser failed:",e.msg
+        print >>sys.stderr,"\nERROR: AssemblerError: parser failed:",e.msg
         return 1 
     except ListAssemblerException,e:
-        print >>sys.stderr,"ListAssemblerError: parser failed:",e.msg
+        print >>sys.stderr,"\nERROR: ListAssemblerError: parser failed:",e.msg
         return 1 
     return 0
 
