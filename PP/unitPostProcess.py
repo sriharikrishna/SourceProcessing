@@ -61,6 +61,11 @@ class UnitPostProcessor(object):
     def setMode(mode):
         UnitPostProcessor._mode = mode
 
+    _free = False
+    @staticmethod
+    def setFreeFlow(free):
+        UnitPostProcessor._free = free
+
     def __init__(self, aUnit):
         self.__myUnit = aUnit
         self.__myNewDecls = []
@@ -454,6 +459,17 @@ class UnitPostProcessor(object):
                 anExecStmt.rawline[:match.start()]+ \
                 Unit.uinfo.name +\
                 anExecStmt.rawline[match.end():]
+            if isinstance(anExecStmt,fs.WriteStmt):
+                ws = re.search("[\w]",anExecStmt.rawline)
+                lead = anExecStmt.rawline[:ws.start()]
+                # remove line breaks
+                lb = re.search("[\n][ ]+[+]",anExecStmt.rawline)
+                while lb:
+                    anExecStmt.rawline = anExecStmt.rawline[:lb.start()]+ \
+                        anExecStmt.rawline[lb.end():]
+                    lb = re.search("[\n][ ]+[+]",anExecStmt.rawline)
+                newExecStmt = fs.WriteStmt(anExecStmt.rawline[ws.end()-1:],lead=lead).flow()
+                return newExecStmt
         return anExecStmt
 
     def __expandTemplate(self,template,Decls,Execs):

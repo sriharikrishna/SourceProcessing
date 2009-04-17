@@ -1083,7 +1083,20 @@ class ReadStmt(Exec):
     pass
 
 class WriteStmt(Exec):
-    pass
+    def __init__(self,str_list,lineNumber=0,label=False,lead=''):
+        self.str_list = str_list
+        self.lineNumber = lineNumber
+        self.label = label
+        self.lead = lead
+
+    def __str__(self):
+        return ''.join([str(sub) for sub in self.str_list])
+
+    def flow(self):
+        init = self.label and ' ' + ('%-4d' % self.label) + ' ' \
+                           or ''
+        self.rawline = flow.flow_line(init + self.lead + str(self))+'\n'
+        return self
 
 class PrintStmt(Exec):
     pass
