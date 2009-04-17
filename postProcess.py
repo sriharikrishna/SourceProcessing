@@ -100,7 +100,7 @@ def main():
     UnitPostProcessor.setDerivType(config.deriv)
 
     # set free/fixed format
-    free_flow(config.free) 
+    free_flow(config.free)
 
     # configure forward/reverse mode (including inline file for reverse mode)
     if (config.mode != 'r'):
@@ -112,6 +112,7 @@ def main():
         UnitPostProcessor.setMode('forward')
     if config.mode == 'r':
         UnitPostProcessor.setMode('reverse')
+        UnitPostProcessor.setFreeFlow(config.free)
         inlineFile = config.inline or 'ad_inline.f'
         UnitPostProcessor.setInlineFile(inlineFile)
         templateFile = config.template or 'ad_template.f'

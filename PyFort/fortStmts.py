@@ -1080,26 +1080,57 @@ class CloseStmt(Exec):
     pass
 
 class ReadStmt(Exec):
-    pass
+    @staticmethod
+    def parse(scan,lineNumber):
+        read_stmt = seq(lit('read'))
+        ([dc],s) = read_stmt(scan)
+        return ReadStmt(dc,s,lineNumber)
 
-class WriteStmt(Exec):
-    def __init__(self,str_list,lineNumber=0,label=False,lead=''):
-        self.str_list = str_list
+    def __init__(self,stmt_name='read',substr_list=[],lineNumber=0,label=False,lead=''):
+        self.stmt_name = stmt_name
+        self.substr_list = substr_list
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
-
+    
     def __str__(self):
-        return ''.join([str(sub) for sub in self.str_list])
+        return '%s %s' % (self.stmt_name,''.join([str(sub) for sub in self.substr_list]))
 
-    def flow(self):
-        init = self.label and ' ' + ('%-4d' % self.label) + ' ' \
-                           or ''
-        self.rawline = flow.flow_line(init + self.lead + str(self))+'\n'
-        return self
+class WriteStmt(Exec):
+
+    @staticmethod
+    def parse(scan,lineNumber):
+        write_stmt = seq(lit('write'))
+        ([dc],s) = write_stmt(scan)
+        return WriteStmt(dc,s,lineNumber)
+
+    def __init__(self,stmt_name='write',substr_list=[],lineNumber=0,label=False,lead=''):
+        self.stmt_name = stmt_name
+        self.substr_list = substr_list
+        self.lineNumber = lineNumber
+        self.label = label
+        self.lead = lead
+    
+    def __str__(self):
+        return '%s %s' % (self.stmt_name,''.join([str(sub) for sub in self.substr_list]))
 
 class PrintStmt(Exec):
-    pass
+
+    @staticmethod
+    def parse(scan,lineNumber):
+        print_stmt = seq(lit('print'))
+        ([dc],s) = print_stmt(scan)
+        return PrintStmt(dc,s,lineNumber)
+
+    def __init__(self,stmt_name='print',substr_list=[],lineNumber=0,label=False,lead=''):
+        self.stmt_name = stmt_name
+        self.substr_list = substr_list
+        self.lineNumber = lineNumber
+        self.label = label
+        self.lead = lead
+    
+    def __str__(self):
+        return '%s %s' % (self.stmt_name,''.join([str(sub) for sub in self.substr_list]))
 
 class StopStmt(Exec):
     pass

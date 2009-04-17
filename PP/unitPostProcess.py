@@ -432,6 +432,22 @@ class UnitPostProcessor(object):
                 newStmt = fs.AssignStmt(lhs,rhs,lead=lead).flow()
                 ws = re.search("[ ]*",Stmt.rawline)
                 Execs.append(newStmt)
+            elif isinstance(Stmt,fs.WriteStmt) or \
+                    isinstance(Stmt,fs.PrintStmt) or \
+                    isinstance(Stmt,fs.ReadStmt):
+                new_subs = []
+                for sub in Stmt.substr_list:
+                    i = 0
+                    while i < len(inlineArgs):
+                        if sub.lower() == inlineArgs[i]:
+                            new_subs.append(replacementArgs[i])
+                            break;
+                        else:
+                            new_subs.append(sub)
+                        i += 1
+                Stmt.substr_list = new_subs
+                Stmt.flow()
+                Execs.append(Stmt)
             elif hasattr(Stmt, "_sons"):
                 for aSon in Stmt._sons:
                     theSon = getattr(Stmt,aSon)
