@@ -117,7 +117,10 @@ def _is_stmt_fn(s,cur):
 
 reportedMissingModules=set()
 def _use_module(s,cur):
-    'incorporate the used module symbol table into the current unit symbol table'
+    '''
+    incorporate the used module symbol table into the current unit symbol table
+    issue a warning if the module has not been seen yet
+    '''
     module_unit = cur.module_handler.get_module(s.name)
     if module_unit:
         cur.val.symtab.update_w_module(module_unit)
@@ -125,7 +128,7 @@ def _use_module(s,cur):
 	global reportedMissingModules
         if not (s.name.lower() in reportedMissingModules) :
             reportedMissingModules.add(s.name.lower())
-            print >>sys.stderr, 'WARNING: definition for module '+s.name+' (first use statement on line '+str(s.lineNumber)+') not seen in the input '
+            DebugManager.warning('definition for module '+s.name+' not seen in the input.',s.lineNumber)
     return s
 
 def _makeFunctionEntry(self,localSymtab):
