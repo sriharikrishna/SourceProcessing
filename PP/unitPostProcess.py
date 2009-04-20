@@ -280,7 +280,7 @@ class UnitPostProcessor(object):
     # also adapts for failure to parse multiple statements on one line in parsing
     # TODO: remove split over ';' once that is fixed
     def __getInlineSubroutine(self,function):
-        pattern = 'C([ ]+)[$]openad[$]([ ]+)end([ ]+)decls[\n]'
+        pattern = 'C([ ]+)[$]openad[$]([ ]+)end([ ]+)decls'
         newDecls = []
         newExecs = []
 
@@ -295,7 +295,7 @@ class UnitPostProcessor(object):
                 match=re.search(pattern,anExec.rawline,re.IGNORECASE)
                 if match:
                     cmnt = anExec.rawline[:match.start()]+anExec.rawline[match.end():]
-                    newExecs.append(fs.Comments(cmnt))
+                    newExecs.append(fs.Comments(cmnt.strip()))
                 else:
                     newExecs.append(anExec)
             elif len(stmts) > 1:
