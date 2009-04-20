@@ -29,6 +29,7 @@ class UnitPostProcessor(object):
 
     # set something here for the unit tests
     _inlineFile = 'ad_inline.f'
+    _inlineFileUnits = []
 
     @staticmethod
     def setInlineFile(inlineFile):
@@ -77,7 +78,7 @@ class UnitPostProcessor(object):
         # the recursion level at which the inquiry expression occurred
         self.__inquiryRecursionLevel = 0
         # list of tuples of (ordered function args, fs.AssignStmt)
-        self.__inlineFunctionTuples = []
+        self.__inlineUnit = None
         self.__active_file = None
         self.__write_subroutine=True
 
@@ -220,28 +221,23 @@ class UnitPostProcessor(object):
             aStmt.flow()
         return aStmt
 
-    def __getInlinedFunction(self,aComment,definitions):
-        funMatch = None
-        units = None
+    def __getInlinedFunction(self,aComment):
+        function = None
+        inline = False
         match = re.search('C[ ]+[$]openad[$][ ]+inline',aComment.rawline,re.IGNORECASE)
         if match:
             p = re.compile(r'\(')
             # get name of inlined function
             inlineFunction = p.split(aComment.rawline[match.end():])[0].lstrip()
-            pattern = 'subroutine([ ]+)'+inlineFunction+"[\(]"
-            pattern2 = 'end[ ]+subroutine'
-            pat1 = re.compile(pattern,re.IGNORECASE)
-            pmatch = pat1.search(definitions)
-            if pmatch:
-                pat2 = re.compile(pattern2,re.IGNORECASE)
-                p2match = pat2.search(definitions,pmatch.end())
-                if pmatch and p2match:
-                    funMatch = definitions[pmatch.start():p2match.end()]
-                aComment = None
-            else:
-                aComment = \
-                    fs.Comments("C!! requested inline of '"+inlineFunction+"' has no defn\n")
-        return (aComment,funMatch)
+            aComment =\
+                fs.Comments("C!! requested inline of '"+inlineFunction+"' has no defn\n")
+            for aUnit in self._inlineFileUnits:
+                if (aUnit.uinfo.name).lower() == (inlineFunction).lower():
+                    self.__inlineUnit = aUnit
+                    aComment = None
+                    inline = True
+                    break
+        return (aComment,inline)
 
     def __getReplacementNum(self,aComment):
         begin_match = \
@@ -264,72 +260,37 @@ class UnitPostProcessor(object):
         else:
             return False
 
-    def __parseNewStmts(self,newFuncCode,funArgs):
-        newStmtInfo = []
-        if newFuncCode.strip() != '':
-            p = re.compile(r'[\n]|[;]')
-            execStmts = p.split(newFuncCode)            
-            i = 0
-            while i < len(execStmts):
-                stmt = execStmts[i]
-                n = 1
-                while i+n < len(execStmts):
-                    match = re.search("[ ]+[+][\w]",execStmts[i+n])
-                    if match:
-                        stmt = stmt+(execStmts[i+n])[match.end()-1:]
-                        n += 1
-                    else:
-                        break
-                if stmt.strip() is '':
-                    i += n
-                    continue
-                parsed_stmt = (parse_stmt(stmt,0)).flow()
-                ws = re.search("[ ]*",stmt)
-                parsed_stmt.lead = ws.group(0)
-                stmtInfo = (funArgs,parsed_stmt)
-                newStmtInfo.append(stmtInfo)
-                i += n
-        return newStmtInfo
-
     # returns a list of tuples of (ordered_args,stmt) for processing 
     # when appropriate arguments are known
-    def __getNewExecInfo(self,function):
-        newStmtInfo = []
-        argpattern = '\((.*([\n][ ]*[+])*)+\)[ ]*[\n]'
-        argpat = re.compile(argpattern,re.IGNORECASE)
-        args = argpat.search(function)
-        if not args:
-            return newStmtInfo
-        pattern = 'C([ ]+)[$]openad[$]([ ]+)end([ ]+)decls'
-        match = re.search(pattern,function,re.IGNORECASE)
-        if match:
-            pat2 = re.compile('[ ]+end[ ]+subroutine',re.IGNORECASE)
-            endmatch = pat2.search(function)
-            newFuncCode = function[match.end():endmatch.start()]
-            p2 = re.compile(r'[\(|\)|,|[\n]|[ ]*[+]]')
-            funArgs = filter(lambda i: i != '',
-                             (p2.split(args.group(0))))
-            i = 0
-            while i < len(funArgs):
-                arg = funArgs[i]
-                linebreak = re.search("[ ]*[+]",arg)
-                if linebreak:
-                    funArgs[i] = arg[linebreak.end():]
-                i += 1
-            comments = re.finditer("[ ]*C[ ]+.*[\n]*",newFuncCode,re.IGNORECASE)
-            index = 0
-            for aComment in comments:
-                end = aComment.start()
-                if aComment.start() == index:
-                    index = aComment.end()
+    def __getInlineSubroutine(self,function):
+        pattern = 'C([ ]+)[$]openad[$]([ ]+)end([ ]+)decls[\n]'
+        newDecls = []
+        newExecs = []
+
+        for aDecl in function.decls:
+            if isinstance(aDecl,fs.StmtFnStmt):
+                newDecls.append(aDecl)
+
+        for anExec in function.execs:
+            p = re.compile(r'[;]')
+            stmts = p.split(anExec.rawline)
+            if anExec.is_comment():
+                match=re.search(pattern,anExec.rawline,re.IGNORECASE)
+                if match:
+                    cmnt = anExec.rawline[:match.start()]+anExec.rawline[match.end():]
+                    newExecs.append(fs.Comments(cmnt))
                 else:
-                    newStmtInfo.extend(self.__parseNewStmts(newFuncCode[index:end],funArgs))
-                comment = fs.Comments(aComment.group())
-                stmtInfo = (funArgs,comment)
-                newStmtInfo.append(stmtInfo)
-                index = aComment.end()
-            newStmtInfo.extend(self.__parseNewStmts(newFuncCode[index:],funArgs))
-        return newStmtInfo
+                    newExecs.append(anExec)
+            elif len(stmts) > 1:
+                for aStmt in stmts:
+                    newStmt = parse_stmt(aStmt,anExec.lineNumber)
+                    newExecs.append(newStmt)
+            else:
+                newExecs.append(anExec)            
+
+        function.decls = newDecls
+        function.execs = newExecs
+        return function        
 
     def __replaceArgs(self,argReps,string,inlineArgs,replacementArgs):
         while argReps >= 0:
@@ -337,10 +298,10 @@ class UnitPostProcessor(object):
                 inline_arg = inlineArgs[argReps].head
             else:
                 inline_arg = inlineArgs[argReps]
-            lno_replace = "[\w]"+inlineArgs[argReps]
-            rno_replace = inlineArgs[argReps]+"[\w]"
+            lno_replace = "[\w]"+inline_arg
+            rno_replace = inline_arg+"[\w]"
             p = re.compile("("+rno_replace+"|"+lno_replace+")")
-            p2 = re.compile(inlineArgs[argReps])
+            p2 = re.compile(inline_arg)
             pats = p.finditer(string,re.IGNORECASE)
             prevEnd = 0; stopRep=len(string)
             for match in pats:
@@ -362,6 +323,9 @@ class UnitPostProcessor(object):
                 string = string[:prevEnd]+\
                     p2.sub(str(replacementArgs[argReps]),string[prevEnd:])
             argReps -= 1
+            if (string).strip() == replacementArgs[argReps]:
+                string = ' '+string
+                break
         return string
 
     def __replaceSon(self,arg,inlineArgs,replacementArgs):
@@ -406,18 +370,25 @@ class UnitPostProcessor(object):
                 pass
         return newSon
 
-    # for each tuple (args,stmt) in self.__inlineFunctionTuples,
+    # for each tuple (args,stmt) in 
     # create a new exec stmt by replacing args in the stmt with execStmtArgs
-    def __createNewExecs(self,execStmtArgs,lead):
+    def __createNewExecs(self,execStmtArgs,stmt_lead):
         replacementArgs = []
-        Execs = []
+        Execs = []; Stmts = []
         for anArg in execStmtArgs:
             if isinstance(anArg,fe.App):
                 newArg = self.__transformActiveTypesExpression(anArg)
                 replacementArgs.append(newArg)
             else:
                 replacementArgs.append(anArg)
-        for (inlineArgs,Stmt) in self.__inlineFunctionTuples:
+        inlineArgs = self.__inlineUnit.uinfo.args
+        for decl in self.__inlineUnit.decls:
+            Stmts.append(copy.deepcopy(decl))
+        for Exec in self.__inlineUnit.execs:
+            Stmts.append(copy.deepcopy(Exec))
+        self.__inlineUnit = None
+
+        for Stmt in Stmts:
             argReps = min(len(inlineArgs),len(replacementArgs))
             argReps -= 1
             if isinstance(Stmt,fs.Comments):
@@ -425,12 +396,9 @@ class UnitPostProcessor(object):
                     self.__replaceArgs(argReps,Stmt.rawline,inlineArgs,replacementArgs)
                 Execs.append(Stmt)
             elif isinstance(Stmt,fs.AssignStmt):
-                if len(Stmt.lead) > len(lead):
-                    lead = Stmt.lead
                 lhs = self.__replaceArgs(argReps,str(Stmt.lhs),inlineArgs,replacementArgs)
                 rhs = self.__replaceArgs(argReps,str(Stmt.rhs),inlineArgs,replacementArgs)
-                newStmt = fs.AssignStmt(lhs,rhs,lead=lead).flow()
-                ws = re.search("[ ]*",Stmt.rawline)
+                newStmt = (fs.AssignStmt(lhs,rhs,lead=stmt_lead)).flow()
                 Execs.append(newStmt)
             elif isinstance(Stmt,fs.WriteStmt) or \
                     isinstance(Stmt,fs.PrintStmt) or \
@@ -464,6 +432,7 @@ class UnitPostProcessor(object):
                         newSon = self.__replaceSon(theSon,inlineArgs,replacementArgs)
                         setattr(Stmt,aSon,newSon)
                     Stmt.flow()
+                Stmt.lead = stmt_lead
                 Stmt.flow()
                 Execs.append(Stmt)
         return Execs
@@ -577,8 +546,8 @@ class UnitPostProcessor(object):
             self.__myUnit.end = newEndStmts    
         return (None,[],[])
 
-    def __templateExpansion(self,definitions,inline):
-        (Decls,Execs) = self.__reverseProcessDeclsAndExecs(definitions,inline)
+    def __templateExpansion(self,inline):
+        (Decls,Execs) = self.__reverseProcessDeclsAndExecs(inline)
         if isinstance(self.__myUnit.uinfo,fs.ModuleStmt) \
                 or isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
             i = 0
@@ -615,7 +584,7 @@ class UnitPostProcessor(object):
                 template = self.__getTemplate(anExec)
                 if template is not None:
                     return template
-        return self._templateFile #default template file
+        return 'ad_template.f' #default template file
 
     # extracts the template name from a comment
     def __getTemplate(self,comment):
@@ -631,7 +600,7 @@ class UnitPostProcessor(object):
         return name
 
     def __processComments(self,Comments,replacementNum,commentList,
-                          currentComments,definitions=None,inline=False):
+                          currentComments,inline=False):
         for aComment in Comments:
             if aComment == '' or aComment.strip() == '':
                 continue
@@ -646,26 +615,23 @@ class UnitPostProcessor(object):
                 commentList.append(currentComments)
                 currentComments = []
             else:
-                (Comment,function) = self.__getInlinedFunction(newComment,definitions)
+                (Comment,inline) = self.__getInlinedFunction(newComment)
                 if Comment is not None:
                     currentComments.append(Comment)
-                if function is not None:
-                    self.__inlineFunctionTuples = self.__getNewExecInfo(function)
-                    inline = True
         return (commentList,currentComments,inline,replacementNum)
                     
     def __processExec(self,anExecStmt,Execs,execList=[],
-                      definitions=None,inline=False,replacementNum=0): 
+                      inline=False,replacementNum=0): 
         try:
             DebugManager.debug('[Line '+str(anExecStmt.lineNumber)+']:')
             newStmt = None
-            if anExecStmt.is_comment() and definitions is not None:
+            if anExecStmt.is_comment():
                 if self._mode == 'reverse':
                     p = re.compile(r'[\n]')
                     comments = p.split(anExecStmt.rawline)
                     (execList,Execs,inline,replacementNum) = \
                         self.__processComments(comments,replacementNum,
-                                               execList,Execs,definitions,inline)
+                                               execList,Execs,inline)
                 else:
                     Execs.append(anExecStmt)
             elif isinstance(anExecStmt,fs.CallStmt):
@@ -770,7 +736,7 @@ class UnitPostProcessor(object):
 
     # process all decls and execs, adding all decls which are transformed 
     # to assign stmts by post processing to new execs
-    def __reverseProcessDeclsAndExecs(self,definitions=None,inline=False):
+    def __reverseProcessDeclsAndExecs(self,inline=False):
         UseStmtSeen = False
         replacementNum = 0 
         currentExecs = []; currentDecls = []
@@ -784,7 +750,7 @@ class UnitPostProcessor(object):
         for anExec in self.__myUnit.execs:
             (Execs,currentExecs,inline,replacementNum) = \
                 self.__processExec(anExec,currentExecs,Execs,
-                                   definitions,inline,replacementNum)
+                                   inline,replacementNum)
         if len(currentExecs) != 0:
             Execs.append(currentExecs)
         return (Decls,Execs)
@@ -803,26 +769,14 @@ class UnitPostProcessor(object):
         self.__active_file = open('active_variables.f','a')
 
         if self._mode == 'reverse':
-            try:
-                fd = open(self._inlineFile)
-            except IOError: 
-                errstr = "IOError: Error cannot open file named "+self._inlineFile
-                raise PostProcessError(errstr,0)
-            try:
-                definitions = fd.read()
-            except IOError:
-                errstr = "IOError: Error cannot read file named "+self._inlineFile
-                raise PostProcessError(errstr,0)
+            for aUnit in fortUnitIterator(self._inlineFile,False):
+                newUnit = self.__getInlineSubroutine(aUnit)
+                self._inlineFileUnits.append(newUnit)
             inline = False
-            self.__templateExpansion(definitions,inline)
+            self.__templateExpansion(inline)
             self.__myUnit.decls = self.__myNewDecls
             self.__myUnit.execs = self.__myNewExecs
-
-            try:
-                fd.close()
-            except IOError:
-                errstr = "IOError: Error cannot close file named "+self._inlineFile
-                raise PostProcessError(errstr,0)
+            self._inlineFileUnits = []
 
         else:
             (Decls,Execs) = self.__forwardProcessDeclsAndExecs()

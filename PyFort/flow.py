@@ -9,15 +9,15 @@ def _fixed_flow_line(l,cont='+'):
     '''given a long line, write it out as a series of continued lines'''
     comment_p = fixedfmt.comment_p
     l1 = chomp(l)
-    if comment_p(l) or (len(l1) <= 72):
+    if comment_p(l) or (len(l1) < 72):
         return l
 
-    rv = l1[0:72] + '\n'
-    rem = l1[72:]
-    while len(rem) > 66:
-        tmp  = rem[0:66]
+    rv = l1[0:71] + '\n'
+    rem = l1[71:]
+    while len(rem) >= 66:
+        tmp  = rem[0:65]
         rv  += ' ' * 5 + cont + tmp + '\n'
-        rem  = rem[66:]
+        rem  = rem[65:]
     if len(rem) > 0:
         rv  += ' ' * 5 + cont + rem 
     return rv
