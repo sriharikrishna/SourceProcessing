@@ -595,8 +595,7 @@ class UnitPostProcessor(object):
                 i += 1
             return
         template = self.__getTemplateName()
-        while template is not None:
-                self.__expandTemplate(template,Decls,Execs)
+        self.__expandTemplate(template,Decls,Execs)
 
     # gets the name of the template used
     def __getTemplateName(self):
