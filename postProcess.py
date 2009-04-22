@@ -200,5 +200,7 @@ def main():
     return 0
 
 if __name__ == "__main__":
+    # import cProfile
+    # cProfile.runctx( 'main()', globals(), locals(), filename="postProcess.profile" )
     sys.exit(main())
 
