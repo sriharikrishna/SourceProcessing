@@ -183,6 +183,45 @@ class UnitPostProcessor(object):
                         lead=aSubCallStmt.lead).flow()
         return replacementStatement
 
+    def __processWriteStmt(self,aWriteStmt,active):
+        DebugManager.debug('unitPostProcessor.__processWriteStmt called on: "'+str(aWriteStmt)+"'")        
+        process = ""; newSubs = []
+        accumulate = False
+        for sub in aWriteStmt.substr_list:
+            if sub == active:
+                accumulate = True
+            elif accumulate is True:
+                if sub[0] == "'" or sub[0] == '"':
+                    if process[0] == "(":
+                        if process[len(process)-1] != ")":
+                            process = process[1:]
+                        else:
+                            process = process[1:len(process)-1]
+                    if active == "__value__":
+                        process = process+"%v"
+                    else:
+                        process = process+"%d"
+                    newSubs.append(process)
+                    accumulate = False
+                    newSubs.append(sub)
+                else:
+                    process = process + sub
+            else:
+                newSubs.append(sub)
+        if accumulate is True:
+            if process[0] == "(":
+                if process[len(process)-1] != ")":
+                    process=process[1:]
+                else:
+                    process = process[1:len(process)-1]
+            if active == "__value__":
+                process = process+"%v"
+            else:
+                process = process+"%d"
+            newSubs.append(process)
+        aWriteStmt.substr_list = newSubs
+        return aWriteStmt.flow()
+
     # Does active type transformations on a StmtFnStmt; 
     # reconstructs it as an AssignStmt if StmtFnStmt.name is "__value__"
     def __processStmtFnStmt(self, StmtFnStmt):
@@ -482,6 +521,87 @@ class UnitPostProcessor(object):
                 return newExecStmt
         return anExecStmt
 
+    # aUnit: a unit from the template file
+    # Decls: Declaration statements from the original input file
+    #  -- grouped by pragma number
+    # (all decls in pragma 1 -- specified by Begin Replacement & 
+    #  End Replacement comments --  in Decls[1])
+    # This function inserts the exec statements into self.__myNewExecs
+    # in the order determined by the template file
+    def __expandTemplateDecls(self,aUnit,Decls):
+        for aDecl in aUnit.decls:
+            if aDecl.is_comment():
+                pat = re.compile(
+                    "[ ]*[!][ ]*[$]template[_]pragma[_]declarations",
+                    re.IGNORECASE)
+                match = pat.search(aDecl.rawline)
+                if match:
+                    newStmt = fs.Comments(aDecl.rawline[:match.start()])
+                    self.__myNewDecls.append(newStmt)
+                    # return to input
+                    if len(Decls) > 0:
+                        for decl in Decls[0]:
+                            if decl is not None:
+                                self.__myNewDecls.append(decl)
+                    # continue template
+                    newStmt = fs.Comments(aDecl.rawline[match.end():])
+                    self.__myNewDecls.append(newStmt)
+                    continue
+            self.__myNewDecls.append(aDecl)
+        i = 1; j = 0
+        while i < len(Decls):
+            for aDecl in Decls[i]:
+                if aDecl is not None:
+                    self.__myNewDecls.append(aDecl)
+                j += 1
+            j = 0
+            i += 1        
+
+    # aUnit: a unit from the template file
+    # Execs: Exec statements from the original input file
+    #  -- grouped by pragma number 
+    # (all execs in pragma 1 -- specified by Begin Replacement & 
+    #  End Replacement comments --  in Execs[1])
+    # This function inserts the exec statements into self.__myNewExecs
+    # in the order determined by the template file
+    def __expandTemplateExecs(self, aUnit, Execs):
+        j = 0
+        if len(Execs) > 0:
+            for anInputExec in Execs[0]:
+                if anInputExec is not None:
+                    self.__myNewExecs.append(anInputExec)
+                j += 1
+        execRepNum = 0
+        firstIter = True
+        for anExecStmt in aUnit.execs:
+            if anExecStmt.is_comment():
+                pat = re.compile(
+                    "[!][ ]*[$]placeholder[_]pragma[$][ ]+id[=]",
+                    re.IGNORECASE)
+                match = pat.search(anExecStmt.rawline)
+                if match:
+                    newStmt = fs.Comments(anExecStmt.rawline[:match.start()])
+                    self.__myNewExecs.append(newStmt)
+                    endline = re.search('[\n]',anExecStmt.rawline[match.end():])
+                    if endline:
+                        end = match.end()+endline.start()
+                        pragma = int(anExecStmt.rawline[match.end():end].strip())
+                    else:
+                        pragma = int(anExecStmt.rawline[match.end()].strip())
+                    if pragma < len(Execs):
+                        # return to input
+                        for anInputExec in Execs[pragma]:
+                            if anInputExec is not None:
+                                self.__myNewExecs.append(anInputExec)
+                    # continue template
+                    pat = re.compile("[0-9]+")
+                    newmatch = pat.search(anExecStmt.rawline[match.end():])
+                    newStmt = fs.Comments(anExecStmt.rawline[match.end()+newmatch.end():])
+                    self.__myNewExecs.append(newStmt)
+                    continue
+            anExecStmt = self.__insertSubroutineName(aUnit,anExecStmt)
+            self.__myNewExecs.append(anExecStmt)
+
     # Given a template file 'template' and the Decls and Execs from the file
     # being post-processed in reverse mode, insert all appropriate Decls, Execs, 
     # and inlined statements from template, inline, and original files in the unit
@@ -496,71 +616,14 @@ class UnitPostProcessor(object):
                         aUnit.cmnt.rawline+self.__myUnit.cmnt.rawline
                 else:
                     self.__myUnit.cmnt = aUnit.cmnt
+
             if isinstance(aUnit.uinfo,fs.SubroutineStmt):
                 aUnit.uinfo.name = self.__myUnit.uinfo.name
-            replacementNum = 0
-            for aDecl in aUnit.decls:
-                if aDecl.is_comment():
-                    pat = re.compile(
-                        "[ ]*[!][ ]*[$]template[_]pragma[_]declarations",
-                        re.IGNORECASE)
-                    match = pat.search(aDecl.rawline)
-                    if match:
-                        newStmt = fs.Comments(aDecl.rawline[:match.start()])
-                        self.__myNewDecls.append(newStmt)
-                        # return to input
-                        if len(Decls) > 0:
-                            for decl in Decls[0]:
-                                if decl is not None:
-                                    self.__myNewDecls.append(decl)
-                        # continue template
-                        newStmt = fs.Comments(aDecl.rawline[match.end():])
-                        self.__myNewDecls.append(newStmt)
-                        continue
-                self.__myNewDecls.append(aDecl)
-            i = 1; j = 0
-            while i < len(Decls):
-                for aDecl in Decls[i]:
-                    if aDecl is not None:
-                        self.__myNewDecls.append(aDecl)
-                    j += 1
-                j = 0
-                i += 1
-            if len(Execs) > 0:
-                for anInputExec in Execs[0]:
-                    if anInputExec is not None:
-                        self.__myNewExecs.append(anInputExec)
-                    j += 1
-            execRepNum = 0
-            firstIter = True
-            for anExecStmt in aUnit.execs:
-                if anExecStmt.is_comment():
-                    pat = re.compile(
-                        "[!][ ]*[$]placeholder[_]pragma[$][ ]+id[=]",
-                        re.IGNORECASE)
-                    match = pat.search(anExecStmt.rawline)
-                    if match:
-                        newStmt = fs.Comments(anExecStmt.rawline[:match.start()])
-                        self.__myNewExecs.append(newStmt)
-                        endline = re.search('[\n]',anExecStmt.rawline[match.end():])
-                        if endline:
-                            end = match.end()+endline.start()
-                            pragma = int(anExecStmt.rawline[match.end():end].strip())
-                        else:
-                            pragma = int(anExecStmt.rawline[match.end()].strip())
-                        if pragma < len(Execs):
-                            # return to input
-                            for anInputExec in Execs[pragma]:
-                                if anInputExec is not None:
-                                    self.__myNewExecs.append(anInputExec)
-                        # continue template
-                        pat = re.compile("[0-9]+")
-                        newmatch = pat.search(anExecStmt.rawline[match.end():])
-                        newStmt = fs.Comments(anExecStmt.rawline[match.end()+newmatch.end():])
-                        self.__myNewExecs.append(newStmt)
-                        continue
-                anExecStmt = self.__insertSubroutineName(aUnit,anExecStmt)
-                self.__myNewExecs.append(anExecStmt)
+
+            self.__expandTemplateDecls(aUnit, Decls)
+
+            self.__expandTemplateExecs(aUnit, Execs)
+
             for endStmt in aUnit.end:
                 newEndStmts = []
                 if isinstance(endStmt,fs.EndStmt):
@@ -594,6 +657,7 @@ class UnitPostProcessor(object):
                         self.__myNewExecs.append(anExec)
                 i += 1
             return
+
         template = self.__getTemplateName()
         self.__expandTemplate(template,Decls,Execs)
 
@@ -677,6 +741,11 @@ class UnitPostProcessor(object):
                 else:
                     newStmt = self.__processSubCallStmt(anExecStmt)
                     Execs.append(newStmt)
+            elif isinstance(anExecStmt,fs.WriteStmt):
+                newStmt = self.__processWriteStmt(anExecStmt,"__value__")
+                if self._transform_deriv:
+                    newStmt = self.__processWriteStmt(anExecStmt,"__deriv__")
+                Execs.append(newStmt)
             else:
                 newStmt = self.__transformActiveTypes(anExecStmt)
                 Execs.append(newStmt)
