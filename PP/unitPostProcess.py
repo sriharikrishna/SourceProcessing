@@ -39,13 +39,6 @@ class UnitPostProcessor(object):
         UnitPostProcessor._inlineFile = inlineFile
 
     # set something here for the unit tests
-    _templateFile = 'ad_template.f'
-
-    @staticmethod
-    def setTemplateFile(templateFile):
-        UnitPostProcessor._templateFile = templateFile
-
-    # set something here for the unit tests
     _replacement_type = 'active' 
 
     @staticmethod
@@ -657,8 +650,7 @@ class UnitPostProcessor(object):
                 i += 1
             return
 
-        template = templateExpansion(self.__myUnit)
-        template.setTemplateFile(self._templateFile)
+        template = TemplateExpansion(self.__myUnit)
         newUnit = template.expandTemplate(Decls,Execs)
         self.__myUnit.uinfo.name = newUnit.uinfo.name
         self.__myUnit.cmnt = newUnit.cmnt

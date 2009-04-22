@@ -21,6 +21,7 @@ import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
 
 from PP.unitPostProcess import UnitPostProcessor,PostProcessError
+from PP.templateExpansion import TemplateExpansion
  
 def main():
     usage = '%prog [options] <input_file>'
@@ -116,7 +117,7 @@ def main():
         inlineFile = config.inline or 'ad_inline.f'
         UnitPostProcessor.setInlineFile(inlineFile)
         templateFile = config.template or 'ad_template.f'
-        UnitPostProcessor.setTemplateFile(templateFile)
+        TemplateExpansion.setTemplateFile(templateFile)
 
     # set options for splitting compile units
     if config.width:
