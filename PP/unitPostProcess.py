@@ -377,7 +377,7 @@ class UnitPostProcessor(object):
                 string = string[:prevEnd]+\
                     p2.sub(str(replacementArgs[argReps]),string[prevEnd:])
             argReps -= 1
-        return string.strip()
+        return string
 
     # Replaces inline args with the given args (as determined from a comment)
     # During inlining of a subroutine function in reverse mode
