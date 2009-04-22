@@ -3,7 +3,7 @@ from _Setup import *
 from PyUtil.debugManager import DebugManager
 import PyFort.fortStmts as fs
 from PyFort.fortUnit import fortUnitIterator
-import re
+import re,string
 
 class TemplateExpansion(object):
 
@@ -42,7 +42,7 @@ class TemplateExpansion(object):
                     # return to input
                     if len(Decls) > 0:
                         for decl in Decls[0]:
-                            if decl is not None:
+                            if decl is not None and len(decl.rawline.strip()) != 0:
                                 self.__myNewDecls.append(decl)
                     # continue template
                     newStmt = fs.Comments(aDecl.rawline[match.end():])
@@ -52,7 +52,7 @@ class TemplateExpansion(object):
         i = 1; j = 0
         while i < len(Decls):
             for aDecl in Decls[i]:
-                if aDecl is not None:
+                if decl is not None and len(decl.rawline.strip()) != 0:
                     self.__myNewDecls.append(aDecl)
                 j += 1
             j = 0
@@ -70,7 +70,9 @@ class TemplateExpansion(object):
         if len(Execs) > 0:
             for anInputExec in Execs[0]:
                 if anInputExec is not None:
-                    self.__myNewExecs.append(anInputExec)
+                    if anInputExec is not None and \
+                            len(anInputExec.rawline.strip()) != 0:
+                        self.__myNewExecs.append(anInputExec)
                 j += 1
         execRepNum = 0
         firstIter = True
@@ -92,7 +94,8 @@ class TemplateExpansion(object):
                     if pragma < len(Execs):
                         # return to input
                         for anInputExec in Execs[pragma]:
-                            if anInputExec is not None:
+                            if anInputExec is not None and \
+                                    len(anInputExec.rawline.strip()) != 0:
                                 self.__myNewExecs.append(anInputExec)
                     # continue template
                     pat = re.compile("[0-9]+")
@@ -109,7 +112,7 @@ class TemplateExpansion(object):
         if self.__myUnit.cmnt is not None:
             template = \
                 self.__getTemplateFromComment(self.__myUnit.cmnt)
-            if template is not None:                                
+            if template is not None:
                 return template
         for aDecl in self.__myUnit.decls:
             if aDecl.is_comment():

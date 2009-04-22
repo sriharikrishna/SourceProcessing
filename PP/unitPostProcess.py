@@ -488,6 +488,7 @@ class UnitPostProcessor(object):
                         newSon = self.__replaceSon(theSon,inlineArgs,replacementArgs)
                         setattr(Stmt,aSon,newSon)
                     Stmt.flow()
+                Stmt.rawline.strip()
                 Stmt.lead = stmt_lead
                 Stmt.flow()
                 Execs.append(Stmt)
