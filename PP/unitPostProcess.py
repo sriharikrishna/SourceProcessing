@@ -384,10 +384,7 @@ class UnitPostProcessor(object):
                 string = string[:prevEnd]+\
                     p2.sub(str(replacementArgs[argReps]),string[prevEnd:])
             argReps -= 1
-            if (string).strip() == replacementArgs[argReps]:
-                string = ' '+string
-                break
-        return string
+        return string.strip()
 
     # Replaces inline args with the given args (as determined from a comment)
     # During inlining of a subroutine function in reverse mode
@@ -463,7 +460,8 @@ class UnitPostProcessor(object):
             elif isinstance(Stmt,fs.AssignStmt):
                 lhs = self.__replaceArgs(argReps,str(Stmt.lhs),inlineArgs,replacementArgs)
                 rhs = self.__replaceArgs(argReps,str(Stmt.rhs),inlineArgs,replacementArgs)
-                newStmt = (fs.AssignStmt(lhs,rhs,lead=stmt_lead)).flow()
+                newStmt = fs.AssignStmt(lhs,rhs,lead=stmt_lead)
+                newStmt.flow()
                 Execs.append(newStmt)
             elif isinstance(Stmt,fs.WriteStmt) or \
                     isinstance(Stmt,fs.PrintStmt) or \

@@ -105,22 +105,29 @@ class templateExpansion(object):
 
 
     # gets the name of the template used
-    def __getTemplateName(self):
+    def __getTemplateName(self,Decls,Execs):
         if self.__myUnit.cmnt is not None:
-            template = self.__getTemplateFromComment(self.__myUnit.cmnt)
-            if template is not None:
-                return template
-        for aDecl in self.__myUnit.decls:
+            (template,self.__myUnit.cmnt) = \
+                self.__getTemplateFromComment(self.__myUnit.cmnt)
+            if template is not None:                                
+                return (template,Decls,Execs)
+        i = 0
+        while i < len(Decls):
+            for aDecl in Decls[i]:
                 if aDecl.is_comment():
-                    template = self.__getTemplateFromComment(aDecl)
-                if template is not None:
-                    return template
-        for anExec in self.__myUnit.execs:
-            if anExec.is_comment():
-                template = self.__getTemplateFromComment(anExec)
-                if template is not None:
-                    return template
-        return 'ad_template.f' #default template file
+                    (template,new_rawline) = self.__getTemplateFromComment(aDecl)
+                    if template is not None:
+                        return (template,Decls,Execs)
+            i += 1
+        i = 0
+        while i < len(Execs):
+            for anExec in self.__myUnit.execs:
+                if anExec.is_comment():
+                    (template,new_rawline) = self.__getTemplateFromComment(anExec)
+                    if template is not None:
+                        return (template,Decls,Execs)
+            i += 1
+        return ('ad_template.f',Decls,Execs) #default template file
 
     # extracts the template name from a comment
     def __getTemplateFromComment(self,comment):
@@ -133,7 +140,9 @@ class templateExpansion(object):
                 name = (comment.rawline[match.end():(match.end()+end_name.start())]).strip()
             else:
                 name = (comment.rawline[match.end():]).strip()
-        return name
+            comment.rawline = (comment.rawline[:match.start()]+\
+                comment.rawline[match.end()+end_name.start():]).strip()
+        return name,comment
 
     # replace '__SRNAME__' with the name of the subroutine being inlined
     def __insertSubroutineName(self,Unit,anExecStmt):
@@ -160,7 +169,7 @@ class templateExpansion(object):
     # being post-processed in reverse mode, insert all appropriate Decls, Execs, 
     # and inlined statements from template, inline, and original files in the unit
     def expandTemplate(self,Decls,Execs):
-        template = self.__getTemplateName()
+        (template,Decls,Execs) = self.__getTemplateName(Decls,Execs)
         inputDeclNum = 0
         inputExecNum = 0
         pragma = 0
