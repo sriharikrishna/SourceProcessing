@@ -9,7 +9,7 @@ c  1st statement!
 c
 c not embedded continuation lines
 c
-      x = 5.0
+      x = 5.0; y = 6.2
       x =  13.2
       open(15,file='Thisone')
  10   format(10x,3f6.4)

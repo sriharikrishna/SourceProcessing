@@ -18,6 +18,7 @@ class C1(TestCase):
                 fs.Comments,
                 fs.AssignStmt,
                 fs.AssignStmt,
+                fs.AssignStmt,
                 fs.OpenStmt,
                 fs.FormatStmt,
                 fs.Comments,
