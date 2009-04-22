@@ -34,11 +34,13 @@ class Ffile(object):
 
     @staticmethod
     def file(name,free=False,c_action=cline,s_action=fline):
+        import PyUtil.debugManager
         try:
           f=open(name)
         except IOError:
           msg="Error cannot open file named: "+name
           raise UserError(msg)
+        PyUtil.debugManager.DebugManager.setProcessedFile(name)
         return Ffile(f,free,c_action,s_action)
 
     @staticmethod
