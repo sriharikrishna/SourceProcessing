@@ -121,21 +121,21 @@ def main():
             UnitCanonicalizer(aUnit).canonicalizeUnit().printit(out)
         if config.outputFile: out.close()
     except CanonError,e:
-        print >>sys.stderr,'\nCanonicalization Error on line '+str(e.lineNumber)+': ',e.msg
+        print >>sys.stderr,'\nERROR: CanonError on line '+str(e.lineNumber)+': ',e.msg
         cleanup(config)
         return 1
     except SymtabError,e:
         debugstr = e.entry and e.entry.debug('unknown') \
                             or ''
-        print >>sys.stderr,'\nSymtabError on line '+str(e.lineNumber)+':',e.msg,' for entry',debugstr
+        print >>sys.stderr,'\nERROR: SymtabError on line '+str(e.lineNumber)+':',e.msg,' for entry',debugstr
         cleanup(config)
         return 1
     except UserError,e:
-        print >>sys.stderr,'UserError:',e.msg
+        print >>sys.stderr,'\nERROR: UserError:',e.msg
         cleanup(config)
         return 1 
     except ScanError,e: 
-        print >>sys.stderr,'ScanError: scanner fails at line '+str(e.lineNumber)+':'
+        print >>sys.stderr,'\nERROR: ScanError: scanner fails at line '+str(e.lineNumber)+':'
         print >>sys.stderr,e.aFortLine
         print >>sys.stderr,(len(e.aFortLine)-len(e.rest))*' '+'^'
         print >>sys.stderr,''
@@ -146,17 +146,17 @@ def main():
         cleanup(config)
         return 1 
     except ParseError,e: 
-        print >>sys.stderr,'ParseError: parser fails to assemble tokens in scanned line '+str(e.lineNumber)+':'
+        print >>sys.stderr,'\nERROR: ParseError: parser fails to assemble tokens in scanned line '+str(e.lineNumber)+':'
         print >>sys.stderr,e.scannedLine
         print >>sys.stderr,"as",e.target
         cleanup(config)
         return 1 
     except AssemblerException,e:
-        print >>sys.stderr,"AssemblerError: parser failed:",e.msg
+        print >>sys.stderr,"\nERROR: AssemblerError: parser failed:",e.msg
         cleanup(config)
         return 1 
     except ListAssemblerException,e:
-        print >>sys.stderr,"ListAssemblerError: parser failed:",e.msg
+        print >>sys.stderr,"\nERROR: ListAssemblerError: parser failed:",e.msg
         cleanup(config)
         return 1 
     return 0
