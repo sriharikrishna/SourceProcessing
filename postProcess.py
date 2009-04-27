@@ -88,7 +88,7 @@ def main():
                    default=False)
     opt.add_option('--width',
                    dest='width',
-                   help='write one compile unit per output file with WIDTH digits prepended to the extension of <input_file>, e.g. for -n 2 and three compile units in an input file named \'a.f\' we create \'a.00.f\', a.01.f\', \'a.02.f\'; cannot be specified together with -o')
+                   help='write one compile unit per output file with WIDTH digits prepended to the extension of <input_file>, e.g. for -n 2 and three compile units in an input file named \'a.f\' we create \'a.00.f\', a.01.f\', \'a.02.f\'; also creates a file named \'postProcess.make\' for reference within a makefile; cannot be specified together with -o')
     opt.add_option('--whitespace',
                    dest='whitespace',
                    help='inserts whitespaces between tokens',
@@ -162,6 +162,12 @@ def main():
                 UnitPostProcessor(aUnit).processUnit().printit(out)
                 out.close()
                 unit_num += 1
+            makeOut = open('postProcess.make','w')
+            makeOut.write("POSTPROCESSEDFILES=")
+            for outFileName in outFileNameList:
+                makeOut.write(" \\\n"+outFileName)
+            makeOut.write("\n")
+            makeOut.close()
         else: 
             out=None
             if config.output: 
