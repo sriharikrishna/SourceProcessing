@@ -44,15 +44,21 @@ class TemplateExpansion(object):
                         for decl in Decls[0]:
                             if decl is not None and len(decl.rawline.strip()) != 0:
                                 self.__myNewDecls.append(decl)
+                        Decls[0] = None
                     # continue template
                     newStmt = fs.Comments(aDecl.rawline[match.end():])
                     self.__myNewDecls.append(newStmt)
                     continue
             self.__myNewDecls.append(aDecl)
+
+        if Decls[0] != None:
+            for decl in Decls[0]:
+                if decl is not None and len(decl.rawline.strip()) != 0:
+                    self.__myNewDecls.append(decl)            
         i = 1; j = 0
         while i < len(Decls):
             for aDecl in Decls[i]:
-                if decl is not None and len(decl.rawline.strip()) != 0:
+                if aDecl is not None and len(aDecl.rawline.strip()) != 0:
                     self.__myNewDecls.append(aDecl)
                 j += 1
             j = 0
