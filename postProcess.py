@@ -133,7 +133,7 @@ def main():
         if (config.inline):
             if (config.noInline):
                 opt.error("option --noInline conflicts with option -i")
-            UnitPostProcessor.setInlineFile(inlineFile)
+            UnitPostProcessor.setInlineFile(config.inline)
         if (config.noInline):
             UnitPostProcessor.setInlineFile(None)
         templateFile = config.template or 'ad_template.f'
