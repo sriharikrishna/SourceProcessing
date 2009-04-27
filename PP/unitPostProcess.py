@@ -30,7 +30,7 @@ class UnitPostProcessor(object):
     def setDerivType(transformDerivType):
         UnitPostProcessor._transform_deriv = transformDerivType
 
-    # set something here for the unit tests
+    # set the default here
     _inlineFile = 'ad_inline.f'
     _inlineFileUnits = []
 
@@ -708,9 +708,10 @@ class UnitPostProcessor(object):
         self.__active_file = open('activeVariableDefinitions.f','a')
 
         if self._mode == 'reverse':
-            for aUnit in fortUnitIterator(self._inlineFile,False):
-                newUnit = self.__getInlineSubroutine(aUnit)
-                self._inlineFileUnits.append(newUnit)
+            if self._inlineFile : # may be None if so set in postProcess.py
+                for aUnit in fortUnitIterator(self._inlineFile,False):
+                    newUnit = self.__getInlineSubroutine(aUnit)
+                    self._inlineFileUnits.append(newUnit)
             inline = False
             self.__templateExpansion(inline)
             self.__myUnit.decls = self.__myNewDecls

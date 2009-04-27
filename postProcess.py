@@ -86,6 +86,11 @@ def main():
                    help='do not remove the output file(s) if an error was encountered (defaults to False)',
                    action='store_true',
                    default=False)
+    opt.add_option('--noInline',
+                   dest='noInline',
+                   help='no inlining; overrides the defaults of the reverse mode settings; (defaults to False)',
+                   action='store_true',
+                   default=False)
     opt.add_option('--width',
                    dest='width',
                    help='write one compile unit per output file with WIDTH digits prepended to the extension of <input_file>, e.g. for -n 2 and three compile units in an input file named \'a.f\' we create \'a.00.f\', a.01.f\', \'a.02.f\'; also creates a file named \'postProcess.make\' for reference within a makefile; cannot be specified together with -o')
@@ -125,8 +130,12 @@ def main():
     if config.mode == 'r':
         UnitPostProcessor.setMode('reverse')
         UnitPostProcessor.setFreeFlow(config.free)
-        inlineFile = config.inline or 'ad_inline.f'
-        UnitPostProcessor.setInlineFile(inlineFile)
+        if (config.inline):
+            if (config.noInline):
+                opt.error("option --noInline conflicts with option -i")
+            UnitPostProcessor.setInlineFile(inlineFile)
+        if (config.noInline):
+            UnitPostProcessor.setInlineFile(None)
         templateFile = config.template or 'ad_template.f'
         TemplateExpansion.setTemplateFile(templateFile)
 
