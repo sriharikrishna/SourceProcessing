@@ -5,3 +5,5 @@ Regression
 *~
 doc/*
 CVS
+.project
+.pydevproject
