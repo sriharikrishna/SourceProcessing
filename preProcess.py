@@ -141,14 +141,18 @@ def main():
         print >>sys.stderr,''
         print >>sys.stderr,"Tokens scanned ok: ", e.scanned,'\tUnable to scan: "'+e.rest+'"'
         print >>sys.stderr,''
-        print >>sys.stderr,"This failure is likely due to possibly legal but unconventional Fortran,"
-        print >>sys.stderr,"such as unusual spacing. Please consider modifying your source code."
+        if (e.rest == '&' and not config.isFreeFormat):
+            print >>sys.stderr,"This failure is likely due to running this script on free-formatted code without specifying the --free flag."
+        else:
+            print >>sys.stderr,"This failure is likely due to possibly legal but unconventional Fortran,"
+            print >>sys.stderr,"such as unusual spacing. Please consider modifying your source code."
         cleanup(config)
         return 1 
     except ParseError,e: 
         print >>sys.stderr,'\nERROR: ParseError: parser fails to assemble tokens in scanned line '+str(e.lineNumber)+':'
         print >>sys.stderr,e.scannedLine
-        print >>sys.stderr,"as",e.target
+        if e.target:
+            print >>sys.stderr,"tried to parse as",e.target
         cleanup(config)
         return 1 
     except AssemblerException,e:
@@ -157,6 +161,7 @@ def main():
         return 1 
     except ListAssemblerException,e:
         print >>sys.stderr,"\nERROR: ListAssemblerError: parser failed:",e.msg
+        print >>sys.stderr,'rest =', e.rest
         cleanup(config)
         return 1 
     return 0

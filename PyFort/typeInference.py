@@ -7,6 +7,7 @@ import re
 
 from _Setup import *
 
+from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import SymtabEntry
 
 import fortStmts
@@ -60,7 +61,7 @@ def modcompare(m1,m2):
     return m2
 
 def typecompare(t1,t2):
-#   print '\t\tfortStmts.typecompare called on t1 = "'+str(t1)+'\tt2 = "'+str(t2)+'"'
+    DebugManager.debug('typeInference.typecompare called on t1 = "'+str(t1)+'\tt2 = "'+str(t2)+'"')
     mergeit = dict(character=0,
                    logical=1,
                    integer=2,
@@ -78,13 +79,13 @@ def typecompare(t1,t2):
     return t2
 
 def typemerge(lst,default):
-#   print '\nfortStmts.typemerge called on ',lst,'\n\t',
+    DebugManager.debug('typeInference.typemerge called on '+str(lst)+'...',newLine=False)
     if not lst: return default
     if len(lst) == 1: return lst[0]
     t1 = typecompare(lst[0],lst[1])
     for l in lst[2:]:
         t1 = typecompare(t1,l)
-#   print '...result is',t1
+    DebugManager.debug(' result is '+str(t1))
     return t1
 
 def constantType(e,lineNumber):
@@ -113,17 +114,17 @@ def identifierType(anId,localSymtab,lineNumber):
     # a type is known -> return it
     if symtabEntry and symtabEntry.type:
         returnType = symtabEntry.type
-#       print 'with symtab entry',theSymtabEntry.debug(anId),'-> returning type',returnType
+        DebugManager.debug('with symtab entry '+symtabEntry.debug(anId)+' -> returning type '+str(returnType))
     # an entry exists with no type -> try to type implicitly
     elif symtabEntry:
         symtabEntry.enterType(containingSymtab.implicit[anId[0]])
         returnType = symtabEntry.type
-#       print 'with symtab entry',theSymtabEntry.debug(anId),'(without type).  Implicit type (locally) is',returnType
+        DebugManager.debug('with symtab entry'+symtabEntry.debug(anId)+' (without type).  Implicit type (locally) is '+str(returnType))
         print >>sys.stderr,'WARNING - typeInference.identifierType: [line '+str(lineNumber)+'] implicit typing (scope ='+str(containingSymtab)+') used for identifier "'+anId+'" type ="',returnType,'"'
     else: # no symtab entry -> try local implicit typing
         returnType = localSymtab.implicit[anId[0]]
         print >>sys.stderr,'WARNING - typeInference.identifierType: [line '+str(lineNumber)+'] local scope implicit typing used for identifier "'+anId+'" type ="',returnType,'"'
-#       print 'with Implicit type: New symtab entry',newSymtabEntry
+        DebugManager.debug('with implicit type '+str(returnType))
     if not returnType:
         raise TypeInferenceError('typeInference.identifierType: No type could be determined for identifier "'+anId+'"',lineNumber)
     return returnType
@@ -133,14 +134,14 @@ def intrinsicType(anIntrinsicApp,localSymtab,lineNumber):
         return (fortStmts.RealStmt, [])
     elif anIntrinsicApp.head.lower() == 'int':
         return (fortStmts.IntegerStmt, [])
-    elif anIntrinsicApp.head.lower() == 'dble':
+    elif anIntrinsicApp.head.lower() in ['dble','dabs','dsqrt']:
         return (fortStmts.DoubleStmt, [])
     else:
         return typemerge([expressionType(anArg,localSymtab,lineNumber) for anArg in anIntrinsicApp.args],
                          (None,None))
 
 def functionType(aFunctionApp,localSymtab,lineNumber):
-#   print >>sys.stdout,'typeInference.functionType called on '+str(aFunctionApp),
+    DebugManager.debug('typeInference.functionType called on '+str(aFunctionApp)+'...',newLine=False)
     # example: bbb(3)(2:14)
     if isinstance(aFunctionApp.head,App):
         return functionType(aFunctionApp.head,localSymtab,lineNumber)
@@ -148,42 +149,42 @@ def functionType(aFunctionApp,localSymtab,lineNumber):
     # intrinsics: do a type merge
     if is_intrinsic(aFunctionApp.head):
         returnType = intrinsicType(aFunctionApp,localSymtab,lineNumber)
-#       print '...It is an INTRINSIC of type',returnType
+        DebugManager.debug(' It is an INTRINSIC of type '+str(returnType))
     # nonintrinsics: Look for it in the symbol table or for implicit type
     else:
         returnType = identifierType(aFunctionApp.head,localSymtab,lineNumber)
-#       print '...It is an NONINTRINSIC of type',returnType
+        DebugManager.debug(' It is an NONINTRINSIC of type '+str(returnType))
     return returnType
 
 def selectionType(aSelectionExpression,localSymtab,lineNumber):
-    print '\ntypeInference.SelectionType: determining type of selection expression',aSelectionExpression,'using symtab',localSymtab
+    DebugManager.debug('typeInference.SelectionType: determining type of selection expression '+str(aSelectionExpression)+' using symtab '+str(localSymtab))
     # retrieve information for the derived type from the symbol table
     raise TypeInferenceError('typeInference.selectionType: called on "'+str(theApp)+'" (Not yet implemented)',lineNumber)
 
 def expressionType(anExpression,localSymtab,lineNumber):
-#   print '\ntypeInference.expressionType: determining type of expression',anExpression,
+    DebugManager.debug('typeInference.expressionType: determining type of expression '+str(anExpression)+'...',newLine=False)
     if isinstance(anExpression,str) and is_const(anExpression):
-#       print '...it\'s a CONSTANT',
+        DebugManager.debug(' it\'s a CONSTANT')
         return constantType(anExpression,lineNumber)
     elif isinstance(anExpression,str) and _id_re.match(anExpression):
-#       print '...it\'s an IDENTIFIER',
+        DebugManager.debug(' it\'s an IDENTIFIER')
         return identifierType(anExpression,localSymtab,lineNumber)
     elif isinstance(anExpression,Unary):
-#       print '...it\'s an unary expression\n\t',
+        DebugManager.debug(' it\'s a UNARY EXPRESSION')
         return expressionType(anExpression.exp,localSymtab,lineNumber)
     elif isinstance(anExpression,Ops):
-#       print '...it\'s a binary expression\n\t',
+        DebugManager.debug(' it\'s a BINARY EXPRESSION')
         return typemerge([expressionType(anExpression.a1,localSymtab,lineNumber),
                           expressionType(anExpression.a2,localSymtab,lineNumber)],
                                    (None,None))
     elif isinstance(anExpression,App):
-#       print '...it\'s an Application\n\t',
+        DebugManager.debug(' it\'s an APPLICATION')
         return functionType(anExpression,localSymtab,lineNumber)
     elif isinstance(anExpression,NamedParam):
-#       print '...it\'s a named parameter\n\t',
+        DebugManager.debug(' it\'s a NAMED PARAMETER')
         return expressionType(anExpression.myRHS,localSymtab,lineNumber)
     elif isinstance(anExpression,Sel):
-#       print '...it\'s a selection expression\n\t',
+        DebugManager.debug(' it\'s a SELECTION EXPRESSION')
         return selectionType(anExpression.myRHS,lineNumber)
     else:
         raise TypeInferenceError('typeInference.expressionType: No type could be determined for expression "'+str(anExpression)+'"',lineNumber)
@@ -195,7 +196,7 @@ def isArrayReference(theApp,localSymtab,lineNumber):
     if not theSymtabEntry:
         return False
     # there has to be a symbol table entry for a variable
-#   print 'typeInference.isArrayReference: comparing',theSymtabEntry.entryKind,'to',SymtabEntry.ProcedureEntryKind
+    DebugManager.debug('typeInference.isArrayReference: comparing '+str(theSymtabEntry.entryKind)+' to '+str(SymtabEntry.ProcedureEntryKind))
     if isinstance(theSymtabEntry.entryKind(),SymtabEntry.ProcedureEntryKind):
         return False
     if (not theSymtabEntry.dimensions or theSymtabEntry.dimensions == ()) and \

@@ -213,8 +213,11 @@ def main():
         print >>sys.stderr,''
         print >>sys.stderr,"Tokens scanned ok: ", e.scanned,'\tUnable to scan: "'+e.rest+'"'
         print >>sys.stderr,''
-        print >>sys.stderr,"This failure is likely due to possibly legal but unconventional Fortran,"
-        print >>sys.stderr,"such as unusual spacing. Please consider modifying your source code."
+        if (e.rest == '&' and not config.isFreeFormat):
+            print >>sys.stderr,"This failure is likely due to running this script on free-formatted code without specifying the --free flag."
+        else:
+            print >>sys.stderr,"This failure is likely due to possibly legal but unconventional Fortran,"
+            print >>sys.stderr,"such as unusual spacing. Please consider modifying your source code."
         cleanup(outFileNameList)
         return 1 
     except ParseError,e: 
