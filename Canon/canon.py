@@ -7,7 +7,7 @@ from _Setup import *
 from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
 
-from PyFort.intrinsic import is_intrinsic
+import PyFort.intrinsic as intrinsic
 from PyFort.typeInference import TypeInferenceError,expressionType,functionType,isArrayReference
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
@@ -20,10 +20,8 @@ class CanonError(Exception):
         self.msg  = msg
         self.lineNumber = lineNumber
 
-def _isPolymorphic(aFunction):
-    return aFunction.head.lower() in ('max',
-                                      'min',
-                                     )
+def _subroutinizeIntrinsic(aFunction):
+    return intrinsic.getGenericName(aFunction.head) in ('max','min')
 
 class UnitCanonicalizer(object):
     'class to facilitate canonicalization on a per-unit basis'
@@ -50,8 +48,8 @@ class UnitCanonicalizer(object):
 
     def shouldSubroutinizeFunction(self,theApp,parentStmt):
         '''
-        A function should be subroutinized if and only if it is either
-        a polymorphic intrinsic that isn't of type integer or a nonintrinsic
+        A function should be subroutinized if it is an intrinsic and _subroutinizeIntrinsic
+        returns true or if is not an intrinsic
         '''
         DebugManager.debug('UnitCanonicalizer.shouldSubroutinizeFunction called on "'+str(theApp)+'"')
         if not isinstance(theApp,fe.App):
@@ -64,9 +62,9 @@ class UnitCanonicalizer(object):
         except TypeInferenceError,errorObj:
             sys.stdout.flush()
             raise CanonError('UnitCanonicalizer.shouldSubroutinizeFunction: TypeInferenceError: '+errorObj.msg,parentStmt.lineNumber)
-        if is_intrinsic(theApp.head):
+        if intrinsic.is_intrinsic(theApp.head):
             DebugManager.debug('UnitCanonicalizer.shouldSubroutinizeFunction: It\'s an intrinsic of type '+str(funcType))
-            return _isPolymorphic(theApp) and not funcType == fs.IntegerStmt
+            return _subroutinizeIntrinsic(theApp) and not funcType == fs.IntegerStmt
         else:
             return True
 
@@ -97,9 +95,9 @@ class UnitCanonicalizer(object):
         self.__recursionDepth += 1
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|  creating new temp for the result of the subroutine that replaces "'+str(theFuncCall)+'":',newLine=False)
         (theNewTemp,newTempType) = self.__newTemp(theFuncCall,parentStmt)
-        polymorphismSuffix = _isPolymorphic(theFuncCall) and '_'+newTempType.kw.lower()[0] \
-                                                          or ''
-        self.__myNewExecs.append(self.__canonicalizeSubCallStmt(fs.CallStmt(self.__call_prefix + theFuncCall.head + polymorphismSuffix,
+        funcName=intrinsic.getGenericName(theFuncCall.head)
+        polymorphismSuffix = intrinsic.isPolymorphic(funcName) and '_'+newTempType.kw.lower()[0] or ''
+        self.__myNewExecs.append(self.__canonicalizeSubCallStmt(fs.CallStmt(self.__call_prefix + funcName + polymorphismSuffix,
                                                                             theFuncCall.args + [theNewTemp],
                                                                             lineNumber=parentStmt.lineNumber,
                                                                             label=False,
