@@ -18,6 +18,7 @@ __intrinsics = (
     'len',
     'log',
     'max',
+    'maxval',
     'min',
     'minval',
     'mod',
@@ -34,6 +35,7 @@ __intrinsics = (
     'tan',
     'tanh',
     'trim',
+    'ubound',
     )
 
 __inquiry = (
