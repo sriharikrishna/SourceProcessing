@@ -95,8 +95,12 @@ class UnitCanonicalizer(object):
         self.__recursionDepth += 1
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|  creating new temp for the result of the subroutine that replaces "'+str(theFuncCall)+'":',newLine=False)
         (theNewTemp,newTempType) = self.__newTemp(theFuncCall,parentStmt)
-        funcName=intrinsic.getGenericName(theFuncCall.head)
-        polymorphismSuffix = intrinsic.isPolymorphic(funcName) and '_'+newTempType.kw.lower()[0] or ''
+        if intrinsic.is_intrinsic(theFuncCall.head):
+            funcName = intrinsic.getGenericName(theFuncCall.head)
+            polymorphismSuffix = intrinsic.isPolymorphic(funcName) and '_'+newTempType.kw.lower()[0] or ''
+        else:
+            funcName = theFuncCall.head
+            polymorphismSuffix = ''
         self.__myNewExecs.append(self.__canonicalizeSubCallStmt(fs.CallStmt(self.__call_prefix + funcName + polymorphismSuffix,
                                                                             theFuncCall.args + [theNewTemp],
                                                                             lineNumber=parentStmt.lineNumber,

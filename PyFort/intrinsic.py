@@ -14,10 +14,12 @@ __intrinsics = (
     'atan2',
     'close',
     'cos',
+    'dabs',
     'dble',
     'dmax1',
     'dmin1',
     'dsign',
+    'dsqrt',
     'exp',
     'float',
     'int',
@@ -66,7 +68,7 @@ def getGenericName(op):
         return archaicName[1:-1]
     elif (archaicName[0] == 'd' and archaicName[-1] == '1' and archaicName[1:-1] in ('max','min') ):
         return archaicName[1:-1]
-    elif (archaicName[0] == 'd' and archaicName[1:] in ('sign') ):
+    elif (archaicName[0] == 'd' and archaicName[1:] in ('sign','abs','sqrt') ):
         return archaicName[1:]
     else :
         return archaicName
