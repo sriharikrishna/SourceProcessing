@@ -15,7 +15,7 @@ from PyFort.flow import free_flow
 from PyFort.fortUnit import Unit,fortUnitIterator
 import PyFort.fortStmts as fs
 
-from Canon.canon import UnitCanonicalizer,CanonError
+from Canon.canon import UnitCanonicalizer,CanonError,makeSubroutinizedIntrinsics
 
 def cleanup(config):
     import os 
@@ -119,6 +119,8 @@ def main():
         else: out = sys.stdout
         for aUnit in fortUnitIterator(inputFile,config.isFreeFormat):
             UnitCanonicalizer(aUnit).canonicalizeUnit().printit(out)
+        for aUnit in makeSubroutinizedIntrinsics():
+            aUnit.printit(out)
         if config.outputFile: out.close()
     except CanonError,e:
         print >>sys.stderr,'\nERROR: CanonError on line '+str(e.lineNumber)+': ',e.msg
