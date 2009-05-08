@@ -34,16 +34,27 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
     localSymtab = curr.val.symtab
     DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: stmt2unit._processTypedeclStmt('+str(aTypeDeclStmt)+') with symboltable '+str(localSymtab))
     newType = (aTypeDeclStmt.__class__,aTypeDeclStmt.mod)
-    newLength = aTypeDeclStmt.kw_str == 'character' and (aTypeDeclStmt.mod and aTypeDeclStmt.mod[0] \
-                                                                            or 1)
+    newLength = None
     dflt_d  = default_dims(aTypeDeclStmt.attrs)
     for aDecl in aTypeDeclStmt.decls:
+        DebugManager.debug('Processing decl '+repr(aDecl)+'... with aDecl[0] = ')
         (name,newDimensions) = typesep(aDecl,dflt_d)
+        # set the length for character statements
+        if (aTypeDeclStmt.kw_str == 'character'):
+            newLength = aTypeDeclStmt.mod and aTypeDeclStmt.mod[0] \
+                                           or 1
+            # extract the name and length for character declarations such as "character foo*7"
+            if (isinstance(aDecl,fs._NoInit) or isinstance(aDecl,fs._AssignInit)):
+                if (isinstance(aDecl.lhs,fe.Ops) and aDecl.lhs.op == '*'):
+                    DebugManager.debug('    -> recognized as being a _NoInit or _AssignInit whose lhs is an Ops with op==*')
+                    name = aDecl.lhs.a1
+                    newLength = aDecl.lhs.a2
         theSymtabEntry = localSymtab.lookup_name_local(name)
         if theSymtabEntry: # already in symtab -> enter new information (taking exception to any conflicts)
             DebugManager.debug('\tTypeDecl "'+str(aDecl)+'" already present in local symbol table as '+str(theSymtabEntry.debug(name)))
             theSymtabEntry.enterType(newType,aTypeDeclStmt.lineNumber)
             theSymtabEntry.enterDimensions(newDimensions,aTypeDeclStmt.lineNumber)
+            theSymtabEntry.enterLength(newLength,aTypeDeclStmt.lineNumber)
         else: # no symtab entry -> create one
             newSymtabEntry = SymtabEntry(SymtabEntry.GenericEntryKind,
                                          type=newType,
@@ -116,20 +127,23 @@ def _is_stmt_fn(s,cur):
     return isinstance(lhs,fe.App) and isinstance(lhs.head,str) and not look(lhs.head)
 
 reportedMissingModules=set()
-def _use_module(s,cur):
+def _use_module(aUseStmt,cur):
     '''
     incorporate the used module symbol table into the current unit symbol table
     issue a warning if the module has not been seen yet
     '''
-    module_unit = cur.module_handler.get_module(s.name)
+    module_unit = cur.module_handler.get_module(aUseStmt.name)
     if module_unit:
-        cur.val.symtab.update_w_module(module_unit)
+        if isinstance(aUseStmt,fs.UseAllStmt):
+            cur.val.symtab.update_w_module_all(module_unit,aUseStmt.renameList)
+        elif isinstance(aUseStmt,fs.UseOnlyStmt):
+            cur.val.symtab.update_w_module_only(module_unit,aUseStmt.onlyList)
     else:
 	global reportedMissingModules
-        if not (s.name.lower() in reportedMissingModules) :
-            reportedMissingModules.add(s.name.lower())
-            DebugManager.warning('definition for module '+s.name+' not seen in the input.',s.lineNumber)
-    return s
+        if not (aUseStmt.name.lower() in reportedMissingModules) :
+            reportedMissingModules.add(aUseStmt.name.lower())
+            DebugManager.warning('definition for module '+aUseStmt.name+' not seen in the input.',aUseStmt.lineNumber)
+    return aUseStmt
 
 def _makeFunctionEntry(self,localSymtab):
     return SymtabEntry(SymtabEntry.FunctionEntryKind)

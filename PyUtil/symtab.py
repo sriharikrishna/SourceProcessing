@@ -5,6 +5,9 @@
 from _Setup import *
 
 from PyUtil.caselessDict import caselessDict as cDict
+from PyUtil.debugManager import DebugManager
+
+from PyFort.fortStmts import _PointerInit
 
 class SymtabError(Exception):
     def __init__(self,msg,aSymtabEntry=None,lineNumber=0):
@@ -21,11 +24,7 @@ class Symtab(object):
     def __init__(self,parent=None):
         self.ids    = cDict()
         self.parent = parent
-        self.dbg = False
         self.default_implicit()
-
-    def _set_dbg(self,on=False):
-        self.dbg = on
 
     def default_implicit(self):
         if self.parent:
@@ -63,11 +62,11 @@ class Symtab(object):
         return entry
 
     def enter_name(self,name,val):
-        if self.dbg:
-            print "entering %s = %s in %s" % (name,val,self)
+        DebugManager.debug('Symtab.enter_name: entering '+str(name)+' = '+str(val)+' in '+str(self))
         self.ids[name] = val
 
     def lookupDimensions(self,name):
+        DebugManager.debug('Symtab.lookupDimensions: called on '+str(name))
         entry = self.lookup_name(name)
         if entry: return entry.lookupDimensions()
         return None
@@ -77,16 +76,30 @@ class Symtab(object):
         if entry: return entry.lookupType(level.implicit[name[0]])
         return self.implicit[name[0]]
 
-    def update_w_module(self,unit):
-        'update self with ids from module "unit" symtab. module name = "name"'
-        module_ids = unit.symtab.ids
+    def update_w_module_all(self,aModuleUnit,renameList):
+        'update self with all ids from module "unit" symtab, making sure to enter local names whenever there are renames. module name = "name"'
+        # go through everything in the module and add it to the local symbol table, being sure to check for it in the rename list
+        for aKey in aModuleUnit.symtab.ids.keys():
+            noRename = True
+            if renameList:
+                for aRenameItem in renameList:
+                    if aRenameItem == aKey:
+                        # add the local name to the symbol table
+                        self.ids[aRenameItem] = aModuleUnit.symtab.ids[aKey]
+                        noRename = False
+            if noRename:
+                self.ids[aKey] = aModuleUnit.symtab.ids[aKey]
+            self.ids[aKey].origin = 'module:'+aModuleUnit.name()
 
-        origin_label = 'module:'+unit.name()
-
-        self.ids.update(module_ids)
-
-        for n in module_ids:
-            self.ids[n].origin = origin_label
+    def update_w_module_only(self,aModuleUnit,onlyList):
+        'update self with the subset of ids from module "unit" symtab specified in onlyList. module name = "name"'
+        for anOnlyItem in onlyList:
+            if isinstance(anOnlyItem,_PointerInit):
+                self.ids[anOnlyItem.lhs] = aModuleUnit.symtab.ids[anOnlyItem.rhs]
+                self.ids[anOnlyItem.lhs].origin = 'module:'+aModuleUnit.name()
+            else:
+                self.ids[anOnlyItem] = aModuleUnit.symtab.ids[anOnlyItem]
+                self.ids[anOnlyItem].origin = 'module:'+aModuleUnit.name()
 
     def debug(self):
         outString = 'symbol table '+str(self)+':\n'
@@ -119,16 +132,23 @@ class SymtabEntry(object):
             raise SymtabError('SymtabEntry.enterType: Error -- current type "'+str(self.type)+'" and new type "'+str(newType)+'" conflict!',self,lineNumber)
         # procedures: entering a type means we know it's a function
         if self.entryKind == self.ProcedureEntryKind:
-#           print '++++++++SymtabEntry.enterType: entering type',newType,'for procedure (we now know it is a function)'
+            DebugManager.debug('SymtabEntry.enterType: entering type '+str(newType)+' for procedure (we now know it is a function)')
             self.entryKind = self.FunctionEntryKind
         self.type = newType
 
     def enterDimensions(self,newDimensions,lineNumber=0):
+        DebugManager.debug('Symtab.enterDimensions: called on '+str(self))
         if self.dimensions and (self.dimensions != newDimensions):
             raise SymtabError('SymtabEntry.enterDimensions: Error -- current dimensions "'+str(self.dimensions)+'" and new dimensions "'+str(newDimensions)+'" conflict!',self,lineNumber)
         self.dimensions = newDimensions
 
+    def enterLength(self,newLength,lineNumber=0):
+        if self.length and (self.length != newLength):
+            raise SymtabError('SymtabEntry.enterLength: Error -- current length "'+str(self.length)+'" and new length "'+str(newLength)+'" conflict!',self,lineNumber)
+        self.length = newLength
+
     def lookupDimensions(self):
+        DebugManager.debug('SymtabEntry.lookupDimensions: returning '+str(self.dimensions))
         return self.dimensions
 
     def debug(self,name):
