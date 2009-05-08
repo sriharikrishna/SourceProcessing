@@ -1614,7 +1614,6 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              program         = ProgramStmt,
              function        = FunctionStmt,
              module          = ModuleStmt,
-             use             = UseStmt,
              format          = FormatStmt,
              entry           = EntryStmt,
              call            = CallStmt,
@@ -1673,7 +1672,6 @@ _types = ('real',
 
 def parse(scan,lineNumber):
     try:
-
         if '=>' in scan:
             return PointerAssignStmt.parse(scan,lineNumber)
         else:
