@@ -1,8 +1,10 @@
+#!/usr/bin/env python
+
 from Setup     import *
 from unittest  import *
 
 from fortStmts import *
-from fortStmts import _F90ExplLen,_Star,_NoInit,_Kind,_ExplKind
+from fortStmts import _F90ExplLen,_Star,_NoInit,_Kind,_ExplKind,_PointerInit
 from useparse  import *
 
 class C1(TestCase):
@@ -211,55 +213,7 @@ class C6(TestCase):
         ae(str(vv),'double precision,intent(in),allocatable :: x,y')
 
 class C8(TestCase):
-    'more declarations, esp character statements'
-    def test1(self):
-        '''f77 style character decls
-        '''
-        ae = self.assertEquals
-        a_ = self.assert_
-
-        v = pps('character*5  foo,bar,baz(10)')
-        a_(isinstance(v,CharacterStmt))
-        a_(v.mod)
-        ae(v.mod[0].len,'5')
-        a_(not v.attrs)
-        a_(v.decls)
-        vars = [repr(i.lhs) for i in v.decls]
-        for vv in ['foo','bar']: a_(repr(vv) in vars)
-        a_(repr(App('baz',['10'])) in vars)
-
-    def test2(self):
-        '''f77 style character decls, w *(*) len
-        '''
-        ae = self.assertEquals
-        a_ = self.assert_
-
-        v = pps('character*(*)  foo,bar,baz(10)')
-        a_(isinstance(v,CharacterStmt))
-        a_(isinstance(v.mod[0].len,_Star))
-        a_(not v.attrs)
-        a_(v.decls)
-        vars = [repr(i.lhs) for i in v.decls]
-        for vv in ['foo','bar']: a_(repr(vv) in vars)
-        a_(repr(App('baz',['10'])) in vars)
-
-    def test3(self):
-        '''f90 style decls, w len modifiers & attribs
-        '''
-        ae = self.assertEquals
-        a_ = self.assert_
-
-        ss = 'character(len=AAA+9),dimension(3) :: gack(*,*)*5,floob,foo*2,bar(2)'
-        v = pps(ss)
-        ae(repr(v).lower(),
-           repr(CharacterStmt(
-            [_F90ExplLen(Ops('+','aaa','9'))],
-            [App('dimension',['3'])],
-            [_NoInit(Ops('*',App('gack',['*', '*']),'5')),
-             _NoInit('floob'),
-             _NoInit(Ops('*','foo','2')),
-             _NoInit(App('bar',['2']))])).lower())
-
+    'Arrays with attributes and asterisk dimension specifications'
     def test4(self):
         '''double precision w attributes, and '*' dimensions
         '''
@@ -431,6 +385,63 @@ class TestImplicitStmt(TestCase):
         ae(repr(impl_typ[1]),repr(proto.mod))
 
         ae(kill_blanks(s1),kill_blanks(str(v)))
+
+class TestCharacterDecls(TestCase):
+    'test character declaration statements'
+    def test1(self):
+        '''f77 style character decls
+        '''
+        ae = self.assertEquals
+        a_ = self.assert_
+
+        v = pps('character*5  foo,bar,baz(10)')
+        a_(isinstance(v,CharacterStmt))
+        a_(v.mod)
+        ae(v.mod[0].len,'5')
+        a_(not v.attrs)
+        a_(v.decls)
+        vars = [repr(i.lhs) for i in v.decls]
+        for vv in ['foo','bar']: a_(repr(vv) in vars)
+        a_(repr(App('baz',['10'])) in vars)
+
+    def test2(self):
+        '''f77 style character decls, w *(*) len
+        '''
+        ae = self.assertEquals
+        a_ = self.assert_
+
+        v = pps('character*(*)  foo,bar,baz(10)')
+        a_(isinstance(v,CharacterStmt))
+        a_(isinstance(v.mod[0].len,_Star))
+        a_(not v.attrs)
+        a_(v.decls)
+        vars = [repr(i.lhs) for i in v.decls]
+        for vv in ['foo','bar']: a_(repr(vv) in vars)
+        a_(repr(App('baz',['10'])) in vars)
+
+    def test3(self):
+        '''f90 style decls, w len modifiers & attribs
+        '''
+        ae = self.assertEquals
+        a_ = self.assert_
+
+        ss = 'character(len=AAA+9),dimension(3) :: gack(*,*)*5,floob,foo*2,bar(2)'
+        v = pps(ss)
+        ae(repr(v).lower(),
+           repr(CharacterStmt(
+            [_F90ExplLen(Ops('+','aaa','9'))],
+            [App('dimension',['3'])],
+            [_NoInit(Ops('*',App('gack',['*', '*']),'5')),
+             _NoInit('floob'),
+             _NoInit(Ops('*','foo','2')),
+             _NoInit(App('bar',['2']))])).lower())
+
+    def test4(self):
+        '''character type declaration with asterisk length specification'''
+        s = 'character :: temp*16'
+        r = CharacterStmt([],[],[_NoInit(Ops('*','temp','16'))])
+        self.assertEquals(repr(pps(s)),repr(r))
+        self.assertEquals(s,str(r))
 
 class TestDimensionStmt(TestCase):
     '''Dimension statement'''
@@ -643,14 +654,89 @@ class TestInterfaces(TestCase):
         a_(isinstance(ps,InterfaceStmt),'instance check')
         ae(str(ps),s)
 
-suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,C10,TestImplicitStmt,
+class TestModules(TestCase):
+    '''stuff to do with modules'''
+
+    def test1(self):
+        'plain use statement'
+        theString = 'use s_lib'
+        theRepr = UseAllStmt('s_lib',None)
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test2(self):
+        'use statement with renames'
+        theString = 'use s_lib, pressure=>x_pres,altiude=>x_alt'
+        theRepr = UseAllStmt('s_lib',[_PointerInit('pressure','x_pres'), _PointerInit('altiude','x_alt')])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test3(self):
+        'use statement with only list'
+        theString = 'use data_C, only: xn,xj,nthr,eb_grp,art'
+        theRepr = UseOnlyStmt('data_C',['xn', 'xj', 'nthr', 'eb_grp', 'art'])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test4(self):
+        'use statement with only list including renames'
+        theString = 'use months, only: january=>jan,may,june=>jun'
+        theRepr = UseOnlyStmt('months',[_PointerInit('january','jan'), 'may', _PointerInit('june','jun')])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+class TestPointerAssignStmt(TestCase):
+    '''pointer assignment statements'''
+
+    def test0(self):
+        '''simple pointer assignment'''
+        theString = 'a => b'
+        theRepr = PointerAssignStmt('a','b')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test1(self):
+        '''more complicated pointer assignment'''
+        theString = 'xjtn => xj(:,:,iftg:)'
+        theRepr = PointerAssignStmt('xjtn',App('xj',[Zslice(), Zslice(), Lslice('iftg')]))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+class TestWhereStmt(TestCase):
+    '''where statements'''
+
+    def test0(self):
+        '''simple where statement'''
+        theString = 'where (1.0<=0.0) a(1:2) = b(1:2)'
+        theRepr = WhereStmt(Ops('<=','1.0','0.0'),
+                            App('a',[Ops(':','1','2')]),
+                            App('b',[Ops(':','1','2')]))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test1(self):
+        '''complicated where statement from SCALE'''
+        theString = 'where (wd<=0.0) btn(:mm,ig) = (xntn(1,ig)/xnto(1,ig))*bto(:mm,ig)'
+        theRepr = WhereStmt(Ops('<=','wd','0.0'),
+                            App('btn',[Rslice('mm'), 'ig']),
+                            Ops('*',
+                                ParenExp(Ops('/',App('xntn',['1', 'ig']),App('xnto',['1', 'ig']))),
+                                App('bto',[Rslice('mm'), 'ig'])))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,C10,TestCharacterDecls,
+                                           TestImplicitStmt,
                                            TestDimensionStmt,
                                            TestDoStmt,
                                            TestWhileStmt,
                                            TestCallStmt,
                                            TestFunctionStmt,
                                            TestSelectCaseStmt,
-                                           TestCaseStmts)
+                                           TestCaseStmts,
+                                           TestModules,
+                                           TestPointerAssignStmt,
+                                           TestWhereStmt)
 
 if __name__ == '__main__':
     runit(suite)

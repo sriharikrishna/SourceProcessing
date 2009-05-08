@@ -33,6 +33,8 @@ qq_re    = __closed_q('"')
 ro_q_re  = __ro_q("'")
 ro_qq_re = __ro_q('"')
 
+pointerAssignSymbol_re = r'=>'
+
 id_re    = r'(?i)[_a-zA-Z$][\w$]*'
 int_re   = r'(?x)\d+ (?:_ \w+)?'
 dcoln_re = r'::'
@@ -96,6 +98,7 @@ def s_ident(self,s):
     return s
 
 scan1 = myscan.Scanner([
+    (pointerAssignSymbol_re, s_ident),
     (id_re,      s_ident),
     (conc_re,    s_ident),
     (dcoln_re,   s_ident),

@@ -995,29 +995,85 @@ class ModuleStmt(PUstart):
     pass
 
 class UseStmt(Decl):
+    kw     = 'use'
+    kw_str = kw
+
     @staticmethod
     def parse(scan,lineNumber):
-        p1 = seq(lit('use'),id)
-        ((dc,name),rest) = p1(scan)
-        return UseStmt(name,dc,lineNumber)
+        # forms of renameItem: (we will only cover the first one)
+        # [ local-name => ] module-entity-name
+        # [ OPERATOR ( local-defined-operator ) => ] OPERATOR ( module-defined-operator )
+        formRenameItem = seq(id,
+                             lit('=>'),
+                             id)
+        formRenameItem = treat(formRenameItem, lambda x: _PointerInit(x[0],x[2]))
 
-    def __init__(self,name,stmt_name='use',lineNumber=0,label=False,lead=''):
+        # use statement with NO ONLY: (we currently don't support module nature)
+        # USE [[ , module-nature ] :: ] module-name [ , rename-list ]
+        formUseAllStmt = seq(lit('use'),
+                             id,
+                             zo1(seq(lit(','),
+                                     cslist(formRenameItem))))
+        formUseAllStmt = treat(formUseAllStmt, lambda x: UseAllStmt(x[1],x[2] and x[2][0][1] or None,lineNumber))
+
+        # forms of onlyItem:
+        # generic-name
+        # OPERATOR ( module-defined-operator )
+        # ASSIGNMENT ( = )
+        # dtio-generic-spec
+        # module-entity-name
+        # rename
+        formOnlyItem = disj(formRenameItem,
+                            id)
+
+        # use statement WITH ONLY: (we currently don't support module nature)
+        # USE [[ , module-nature ] :: ] module-name , ONLY : [ only-list ]
+        formUseOnlyStmt = seq(lit('use'),
+                              id,
+                              lit(','),
+                              lit('only'),
+                              lit(':'),
+                              cslist(formOnlyItem))
+        formUseOnlyStmt = treat(formUseOnlyStmt, lambda x: UseOnlyStmt(x[1],x[5],lineNumber))
+
+        (theParsedStmt,rest) = disj(formUseOnlyStmt,formUseAllStmt)(scan)
+        return theParsedStmt
+
+class UseAllStmt(UseStmt):
+    _sons  = ['renameList']
+
+    def __init__(self,name,renameList,lineNumber=0,label=False,lead=''):
         self.name = name
-        self.stmt_name = stmt_name
+        self.renameList = renameList
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
 
-    def __repr__(self):
-        return 'UseStmt(%s)' % repr(self.name)
+    def __str__(self):
+        renameListStr = self.renameList and ', '+','.join([str(aRenameItem) for aRenameItem in self.renameList]) \
+                                         or ''
+        return self.kw+' '+str(self.name)+renameListStr
+
+class UseOnlyStmt(UseStmt):
+    _sons  = ['onlyList']
+
+    def __init__(self,name,onlyList,lineNumber=0,label=False,lead=''):
+        self.name = name
+        self.onlyList = onlyList
+        self.lineNumber = lineNumber
+        self.label = label
+        self.lead = lead
 
     def __str__(self):
-        return '%s %s' % (self.stmt_name,str(self.name))
+        return self.kw+' '+str(self.name)+', only: '+','.join([str(anOnlyItem) for anOnlyItem in self.onlyList])
 
 class FormatStmt(Decl):
     pass
 
 class EntryStmt(Decl):
+    pass
+
+class CycleStmt(Exec):
     pass
 
 class CallStmt(Exec):
@@ -1072,6 +1128,30 @@ class AssignStmt(Exec):
 
     def __str__(self):
         return '%s = %s' % (str(self.lhs),str(self.rhs))
+
+class PointerAssignStmt(Exec):
+    _sons = ['lhs','rhs']
+
+    @staticmethod
+    def parse(scan,lineNumber):
+        formPointerAssignStmt = seq(id,
+                                    lit('=>'),
+                                    Exp)
+        ((lhs,assignSymbol,rhs),rst) = formPointerAssignStmt(scan)
+        return PointerAssignStmt(lhs,rhs,lineNumber)
+
+    def __init__(self,lhs,rhs,lineNumber=0,label=False,lead=''):
+        self.lhs  = lhs
+        self.rhs  = rhs
+        self.lineNumber = lineNumber
+        self.label = label
+        self.lead = lead
+
+    def __repr__(self):
+        return 'PointerAssignStmt(%s,%s)' % (repr(self.lhs),repr(self.rhs))
+
+    def __str__(self):
+        return '%s => %s' % (str(self.lhs),str(self.rhs))
 
 class OpenStmt(Exec):
     pass
@@ -1210,6 +1290,40 @@ class ElseifStmt(Exec):
     
 class ElseStmt(Leaf):
     kw = 'else'
+
+class WhereStmt(Exec):
+    ''' WHERE ( logical-expression ) array-assignment-statement'''
+    kw = 'where'
+    kw_str = kw
+    _sons = ['conditional','assignLHS','assignRHS']
+
+    @staticmethod
+    def parse(scan,lineNumber):
+        lhs = lv_exp
+        formWhereStmt = seq(lit('where'),
+                            lit('('),
+                            Exp,
+                            lit(')'),
+                            lv_exp,
+                            lit('='),
+                            Exp)
+
+        ((whereKW,oPeren,conditional,cPeren,assignLHS,equals,assignRHS),rest) = formWhereStmt(scan)
+        return WhereStmt(conditional,assignLHS,assignRHS,lineNumber)
+
+    def __init__(self,conditional,assignLHS,assignRHS,lineNumber=0,label=False,lead=''):
+        self.conditional = conditional
+        self.assignLHS = assignLHS
+        self.assignRHS = assignRHS
+        self.lineNumber = lineNumber
+        self.label = label
+        self.lead = lead
+
+    def __str__(self):
+        return '%s (%s) %s = %s' % (self.kw,
+                                    str(self.conditional),
+                                    str(self.assignLHS),
+                                    str(self.assignRHS))
 
 class EndStmt(PUend):
     kw =  'end'
@@ -1532,7 +1646,7 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              deallocate      = DeallocateStmt
              )
 
-for kw in ('if','continue','return','else','print'):
+for kw in ('if','continue','return','else','print','use','cycle','where'):
     kwtbl[kw] = globals()[kw.capitalize() + 'Stmt']
     
 lhs    = disj(app,id)
@@ -1559,7 +1673,11 @@ _types = ('real',
 
 def parse(scan,lineNumber):
     try:
-        return AssignStmt.parse(scan,lineNumber)
+
+        if '=>' in scan:
+            return PointerAssignStmt.parse(scan,lineNumber)
+        else:
+            return AssignStmt.parse(scan,lineNumber)
 
     except AssemblerException:
         lscan = tuple([ l.lower() for l in scan ])
