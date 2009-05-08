@@ -32,11 +32,6 @@ def install_pat(cur):
         print 'looking at:',s
         return s
 
-    def _dbg(m):
-        def pm():
-            print m
-        return pm
-
     def action(cur):
         def _action(self):
             return self.unit_action(cur)
@@ -116,7 +111,6 @@ class Unit(object):
         self.fmod      = fmod
         self._in_iface = False
 
-        self.symtab._set_dbg(False)
         DebugManager.debug('new unit created: '+str(self)+', new symtab being created = '+str(self.symtab))
 
     def name(self):
