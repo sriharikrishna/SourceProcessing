@@ -5,9 +5,11 @@ import PyFort.fortStmts as fs
 from PyFort.fortUnit import fortUnitIterator
 import re,string
 
+# Handles template expansion
 class TemplateExpansion(object):
 
     # set something here for the unit tests
+    # set default template file here
     _templateFile = 'ad_template.f'
 
     @staticmethod
@@ -22,13 +24,14 @@ class TemplateExpansion(object):
         self.__inlineUnit = None
         
 
+    # This function inserts the exec statements into self.__myNewExecs
+    # in the order determined by the template file
+    # PARAMS:
     # aUnit: a unit from the template file
     # Decls: Declaration statements from the original input file
     #  -- grouped by pragma number
     # (all decls in pragma 1 -- specified by Begin Replacement & 
     #  End Replacement comments --  in Decls[1])
-    # This function inserts the exec statements into self.__myNewExecs
-    # in the order determined by the template file
     def __expandTemplateDecls(self,aUnit,Decls):
         for aDecl in aUnit.decls:
             if aDecl.is_comment():
@@ -64,13 +67,14 @@ class TemplateExpansion(object):
             j = 0
             i += 1        
 
+    # This function inserts the exec statements into self.__myNewExecs
+    # in the order determined by the template file
+    # PARAMS:
     # aUnit: a unit from the template file
     # Execs: Exec statements from the original input file
     #  -- grouped by pragma number 
     # (all execs in pragma 1 -- specified by Begin Replacement & 
     #  End Replacement comments --  in Execs[1])
-    # This function inserts the exec statements into self.__myNewExecs
-    # in the order determined by the template file
     def __expandTemplateExecs(self, aUnit, Execs):
         j = 0
         if len(Execs) > 0:
@@ -114,6 +118,7 @@ class TemplateExpansion(object):
 
 
     # gets the name of the template used
+    # RETURNS: the name of the template file (default, if none specified)
     def __getTemplateName(self):
         if self.__myUnit.cmnt is not None:
             template = \
@@ -133,6 +138,9 @@ class TemplateExpansion(object):
         return TemplateExpansion._templateFile #default template file
 
     # extracts the template name from a comment
+    # PARAMS:
+    # comment -- the input comment to be searched for a template name
+    # RETURNS: the name specified by the comment or None
     def __getTemplateFromComment(self,comment):
         name = None
         p = re.compile('c[ ]*[$]openad[ ]+xxx[ ]+template[ ]+',re.IGNORECASE)
@@ -146,6 +154,10 @@ class TemplateExpansion(object):
         return name
 
     # replace '__SRNAME__' with the name of the subroutine being inlined
+    # PARAMS:
+    # Unit: the subroutine being processed (the one to replace __SRNAME__ with)
+    # anExecStmt: an executive statement in which to replace all instances of
+    # '__SRNAME__'
     def __insertSubroutineName(self,Unit,anExecStmt):
         match = re.search('__SRNAME__',anExecStmt.rawline,re.IGNORECASE)
         if match:
@@ -169,6 +181,12 @@ class TemplateExpansion(object):
     # Given a template file 'template' and the Decls and Execs from the file
     # being post-processed in reverse mode, insert all appropriate Decls, Execs, 
     # and inlined statements from template, inline, and original files in the unit
+    # PARAMS:
+    # Decls: a list of lists of processed declaration statements from the input
+    # file, indexed by replacement pragma number
+    # Execs: a list of lists of processed executive statements from the input
+    # file, indexed by replacement pragma number
+    # RETURNS: a processed unit after template expansion
     def expandTemplate(self,Decls,Execs):
         template = self.__getTemplateName()
         inputDeclNum = 0

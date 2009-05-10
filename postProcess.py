@@ -134,6 +134,7 @@ def main():
             if (config.noInline):
                 opt.error("option --noInline conflicts with option -i")
             UnitPostProcessor.setInlineFile(config.inline)
+            UnitPostProcessor.processInlineFile()
         if (config.noInline):
             UnitPostProcessor.setInlineFile(None)
         templateFile = config.template or 'ad_template.f'
