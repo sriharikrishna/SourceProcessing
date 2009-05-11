@@ -1304,35 +1304,38 @@ class WhereStmt(Exec):
     ''' WHERE ( logical-expression ) array-assignment-statement'''
     kw = 'where'
     kw_str = kw
-    _sons = ['conditional','assignLHS','assignRHS']
+    _sons = ['conditional','assignment']
 
     @staticmethod
     def parse(scan,lineNumber):
         lhs = lv_exp
+
+        formAssign = seq(lv_exp,lit('='),Exp)
+        formAssign = treat(formAssign,lambda x:AssignStmt(x[0],x[2],lineNumber))
+
         formWhereStmt = seq(lit('where'),
                             lit('('),
                             Exp,
                             lit(')'),
-                            lv_exp,
-                            lit('='),
-                            Exp)
+                            zo1(formAssign))
+        ((whereKW,oPeren,conditional,cPeren,assignment),rest) = formWhereStmt(scan)
+        assignment = assignment and assignment[0] \
+                                 or None
+        return WhereStmt(conditional,assignment,lineNumber)
 
-        ((whereKW,oPeren,conditional,cPeren,assignLHS,equals,assignRHS),rest) = formWhereStmt(scan)
-        return WhereStmt(conditional,assignLHS,assignRHS,lineNumber)
-
-    def __init__(self,conditional,assignLHS,assignRHS,lineNumber=0,label=False,lead=''):
+    def __init__(self,conditional,assignment,lineNumber=0,label=False,lead=''):
         self.conditional = conditional
-        self.assignLHS = assignLHS
-        self.assignRHS = assignRHS
+        self.assignment = assignment
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
 
     def __str__(self):
-        return '%s (%s) %s = %s' % (self.kw,
-                                    str(self.conditional),
-                                    str(self.assignLHS),
-                                    str(self.assignRHS))
+        assignStr = self.assignment and ' '+str(self.assignment) \
+                                     or ''
+        return '%s (%s)%s' % (self.kw,
+                               str(self.conditional),
+                               assignStr)
 
 class ElsewhereStmt(Leaf):
     kw = 'elsewhere'

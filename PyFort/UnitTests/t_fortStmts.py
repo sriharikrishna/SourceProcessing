@@ -717,8 +717,8 @@ class TestWhereStmt(TestCase):
         '''simple where statement'''
         theString = 'where (1.0<=0.0) a(1:2) = b(1:2)'
         theRepr = WhereStmt(Ops('<=','1.0','0.0'),
-                            App('a',[Ops(':','1','2')]),
-                            App('b',[Ops(':','1','2')]))
+                            AssignStmt(App('a',[Ops(':','1','2')]),
+                                       App('b',[Ops(':','1','2')])))
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
@@ -726,10 +726,12 @@ class TestWhereStmt(TestCase):
         '''complicated where statement from SCALE'''
         theString = 'where (wd<=0.0) btn(:mm,ig) = (xntn(1,ig)/xnto(1,ig))*bto(:mm,ig)'
         theRepr = WhereStmt(Ops('<=','wd','0.0'),
-                            App('btn',[Rslice('mm'), 'ig']),
+                            AssignStmt(App('btn',[Rslice('mm'), 'ig']),
                             Ops('*',
-                                ParenExp(Ops('/',App('xntn',['1', 'ig']),App('xnto',['1', 'ig']))),
-                                App('bto',[Rslice('mm'), 'ig'])))
+                                ParenExp(Ops('/',
+                                         App('xntn',['1', 'ig']),
+                                         App('xnto',['1', 'ig']))),
+                                App('bto',[Rslice('mm'), 'ig']))))
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
