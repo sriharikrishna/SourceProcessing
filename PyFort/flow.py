@@ -5,7 +5,7 @@ from fixedfmt     import fixedfmt
 from freefmt      import freefmt
 from PyUtil.chomp import chomp
 
-_fixedFormatStart=' ' * 5
+_fixedFormatStart=' ' * 6
 _freeFormatStart=''
 
 def _fixed_flow_line(l,cont='+'):
@@ -19,10 +19,10 @@ def _fixed_flow_line(l,cont='+'):
     rem = l1[72:]
     while len(rem) > 66:
         tmp  = rem[0:66]
-        rv  += _fixedFormatStart + cont + tmp + '\n'
+        rv  += ' ' * 5 + cont + tmp + '\n'
         rem  = rem[66:]
     if len(rem) > 0:
-        rv  += _fixedFormatStart + cont + rem 
+        rv  += ' ' * 5 + cont + rem 
     return rv
 
 _free_line_len = 80
@@ -41,10 +41,10 @@ def _free_flow_line(l):
     rem = l1[fll:]
     while len(rem) > fl2:
         tmp  = rem[0:fl2]
-        rv  += _fixedFormatStart + cont + tmp + '\n'
+        rv  += ' ' * 5  + cont + tmp + '\n'
         rem  = rem[fl2:]
     if len(rem) > 0:
-        rv  += _fixedFormatStart + cont + rem + '\n'
+        rv  += ' ' * 5  + cont + rem + '\n'
     return rv
 
 flow_line = _fixed_flow_line
