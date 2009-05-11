@@ -138,7 +138,7 @@ class UnitCanonicalizer(object):
                                                       newTempType)
             requireSubroutinezedIntrinsic(funcName,newTempType)
         else:
-            newSubName=self.__call_prefix + theFuncCall.head
+            newSubName=_call_prefix + theFuncCall.head
         self.__myNewExecs.append(self.__canonicalizeSubCallStmt(fs.CallStmt(newSubName,
                                                                             theFuncCall.args + [theNewTemp],
                                                                             lineNumber=parentStmt.lineNumber,
