@@ -12,6 +12,7 @@ from PyFort.typeInference import TypeInferenceError,expressionType,functionType,
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
 import PyFort.fortUnit as fu
+import PyFort.flow as fl
 
 import function2subroutine
 
@@ -37,27 +38,27 @@ def makeSubroutinezedIntrinsicName(intrName,typeClass):
     return _call_prefix + intrName + (intrinsic.isPolymorphic(intrName) and '_'+typeClass.kw.lower()[0] or '')    
 
 def makeSubroutinizedIntrinsics():
-    ''' this is just a starter and currently works only for max/min ''' 
+    ''' this is just a starter and currently works only for max/min '''
     subroutinizedIntrsincis=[]
     for (key,typeClass) in _requiredSubroutinizedIntrinsics:
         newUnit=fu.Unit()
         subroutinizedIntrsincis.append(newUnit)
         newUnit.uinfo=fs.SubroutineStmt(makeSubroutinezedIntrinsicName(key,typeClass),
-                                        ["a","b","r"]).flow()
-        newUnit.decls.append(typeClass(None,None,'a',lead='  ').flow())
-        newUnit.decls.append(typeClass(None,None,'b',lead='  ').flow())
-        newUnit.decls.append(typeClass(None,None,'r',lead='  ').flow())
+                                        ["a","b","r"],lead=fl.formatStart).flow()
+        newUnit.decls.append(typeClass(None,None,'a',lead=fl.formatStart+'  ').flow())
+        newUnit.decls.append(typeClass(None,None,'b',lead=fl.formatStart+'  ').flow())
+        newUnit.decls.append(typeClass(None,None,'r',lead=fl.formatStart+'  ').flow())
         testExpr=None
         if key=='max':
             testExpr=fe.Ops('>','a','b')
         else:
             testExpr=fe.Ops('<','a','b')
-        newUnit.execs.append(fs.IfThenStmt(testExpr,lead='  ').flow())
-        newUnit.execs.append(fs.AssignStmt('r','a',lead='    ').flow())
-        newUnit.execs.append(fs.ElseStmt(lead='  ').flow())
-        newUnit.execs.append(fs.AssignStmt('r','b',lead='    ').flow())
-        newUnit.execs.append(fs.EndifStmt(lead='  ').flow())
-        newUnit.end.append(fs.EndStmt().flow())
+        newUnit.execs.append(fs.IfThenStmt(testExpr,lead=fl.formatStart+'  ').flow())
+        newUnit.execs.append(fs.AssignStmt('r','a',lead=fl.formatStart+'    ').flow())
+        newUnit.execs.append(fs.ElseStmt(lead=fl.formatStart+'  ').flow())
+        newUnit.execs.append(fs.AssignStmt('r','b',lead=fl.formatStart+'    ').flow())
+        newUnit.execs.append(fs.EndifStmt(lead=fl.formatStart+'  ').flow())
+        newUnit.end.append(fs.EndStmt(lead=fl.formatStart).flow())
     return subroutinizedIntrsincis
     
 class UnitCanonicalizer(object):
