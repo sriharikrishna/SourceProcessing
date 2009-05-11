@@ -5,6 +5,9 @@ from fixedfmt     import fixedfmt
 from freefmt      import freefmt
 from PyUtil.chomp import chomp
 
+_fixedFormatStart=' ' * 5
+_freeFormatStart=''
+
 def _fixed_flow_line(l,cont='+'):
     '''given a long line, write it out as a series of continued lines'''
     comment_p = fixedfmt.comment_p
@@ -16,10 +19,10 @@ def _fixed_flow_line(l,cont='+'):
     rem = l1[72:]
     while len(rem) > 66:
         tmp  = rem[0:66]
-        rv  += ' ' * 5 + cont + tmp + '\n'
+        rv  += _fixedFormatStart + cont + tmp + '\n'
         rem  = rem[66:]
     if len(rem) > 0:
-        rv  += ' ' * 5 + cont + rem 
+        rv  += _fixedFormatStart + cont + rem 
     return rv
 
 _free_line_len = 80
@@ -38,15 +41,20 @@ def _free_flow_line(l):
     rem = l1[fll:]
     while len(rem) > fl2:
         tmp  = rem[0:fl2]
-        rv  += ' ' * 5 + cont + tmp + '\n'
+        rv  += _fixedFormatStart + cont + tmp + '\n'
         rem  = rem[fl2:]
     if len(rem) > 0:
-        rv  += ' ' * 5 + cont + rem + '\n'
+        rv  += _fixedFormatStart + cont + rem + '\n'
     return rv
 
 flow_line = _fixed_flow_line
+formatStart = _fixedFormatStart
 
 def free_flow(switch=True):
     global flow_line
     flow_line = (switch and _free_flow_line) or _fixed_flow_line
-
+    global formatStart
+    if (switch):
+        formatStart = _freeFormatStart
+    else:
+        formatStart = _fixedFormatStart
