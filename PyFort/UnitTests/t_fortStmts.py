@@ -471,21 +471,21 @@ class TestDoStmt(TestCase):
     def test1(self):
         '''do i = 1,2'''
         s = 'do i = 1,2'
-        r = DoStmt(None,'i','1','2',None)
+        r = DoStmt(None,None,'i','1','2',None)
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
     def test2(self):
         '''do i = 1,2,1'''
         s = 'do i = 1,2,1'
-        r = DoStmt(None,'i','1','2','1')
+        r = DoStmt(None,None,'i','1','2','1')
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
     def test3(self):
         '''do i = floor(x),2'''
         s = 'do i = floor(x),2'
-        r = DoStmt(None,'i',App('floor',['x']),'2',None)
+        r = DoStmt(None,None,'i',App('floor',['x']),'2',None)
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
@@ -493,6 +493,7 @@ class TestDoStmt(TestCase):
         '''do i = floor(x)+10,2,abs(y+2)'''
         s = 'do i = floor(x)+10,2,abs(y+2)'
         r = DoStmt(None,
+                   None,
                    'i',
                    Ops('+',App('floor',['x']),'10'),
                    '2',
@@ -503,16 +504,23 @@ class TestDoStmt(TestCase):
     def test5(self):
         '''do statement with label "do 40 i = 1,2"'''
         s = 'do 40 i = 1,2'
-        r = DoStmt('40','i','1','2',None)
+        r = DoStmt(None,'40','i','1','2',None)
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
     def test6(self):
         '''do statement with label and stride "do 40 i = 1,2,1"'''
         s = 'do 40 i = 1,2,1'
-        r = DoStmt('40','i','1','2','1')
+        r = DoStmt(None,'40','i','1','2','1')
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
+
+    def test6(self):
+        '''do statement with do name'''
+        theString = 'l1000: do ic = 1,icm'
+        theRepr = DoStmt('l1000',None,'ic','1','icm',None)
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
 
 class TestWhileStmt(TestCase):
     '''While statements'''

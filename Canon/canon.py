@@ -296,7 +296,8 @@ class UnitCanonicalizer(object):
         self.__recursionDepth += 1
         replacementStart = self.__canonicalizeExpression(aDoStmt.loopStart,aDoStmt)
         newExecsLength = len(self.__myNewExecs)
-        replacementStatement = fs.DoStmt(aDoStmt.doLabel,
+        replacementStatement = fs.DoStmt(aDoStmt.doName,
+                                         aDoStmt.doLabel,
                                          aDoStmt.loopVar,
                                          replacementStart,
                                          self.__canonicalizeExpression(aDoStmt.loopEnd,aDoStmt),

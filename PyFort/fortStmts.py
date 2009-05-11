@@ -1076,6 +1076,12 @@ class EntryStmt(Decl):
 class CycleStmt(Exec):
     pass
 
+class ExitStmt(Exec):
+    pass
+
+class RewindStmt(Exec):
+    pass
+
 class CallStmt(Exec):
     _sons = ['args']
 
@@ -1212,6 +1218,9 @@ class PrintStmt(Exec):
     def __str__(self):
         return '%s %s' % (self.stmt_name,''.join([str(sub) for sub in self.substr_list]))
 
+class FormatStmt(Exec):
+    pass
+
 class StopStmt(Exec):
     pass
 
@@ -1325,6 +1334,14 @@ class WhereStmt(Exec):
                                     str(self.assignLHS),
                                     str(self.assignRHS))
 
+class ElsewhereStmt(Leaf):
+    kw = 'elsewhere'
+    kw_str = kw
+
+class EndWhereStmt(Leaf):
+    kw = 'endwhere'
+    kw_str = 'end where'
+
 class EndStmt(PUend):
     kw =  'end'
 
@@ -1345,17 +1362,24 @@ class EndifStmt(Leaf):
     kw = 'endif'
 
 class DoStmt(Exec):
-    #FIXME: optional construct name and comma are not handled
+    #FIXME: optional comma isn't handled
     '''
-    [do-construct-name :] do [label] [,] &
-      scalar-integer-variable-name = scalar-integer-expression , scalar-integer-expression [, scalar-integer-expression]
+    [do-construct-name :] do [label] [loop control]
+    where loop control is:
+      [,] scalar-integer-variable-name = scalar-integer-expression , scalar-integer-expression [, scalar-integer-expression]
     '''
-    _sons = ['doLabel','loopVar','loopStart','loopEnd','loopStride']
     kw = 'do'
+    kw_str = kw
+    _sons = ['doName','doLabel','loopVar','loopStart','loopEnd','loopStride']
 
     @staticmethod
     def parse(scan,lineNumber):
-        formDoStmt = seq(lit('do'),
+        formDoName = seq(id,
+                         lit(':'))
+        formDoName = treat(formDoName, lambda x: x[0])
+
+        formDoStmt = seq(zo1(formDoName),
+                         lit('do'),
                          zo1(int),
                          id,
                          lit('='),
@@ -1365,32 +1389,36 @@ class DoStmt(Exec):
                          zo1(seq(lit(','),
                                  Exp)))
         try:
-            ((theDoKeyword,doLabel,loopVar,equals,loopStart,comma1,loopEnd,loopStride),rest) = formDoStmt(scan)
+            ((doName,theDoKeyword,doLabel,loopVar,equals,loopStart,comma1,loopEnd,loopStride),rest) = formDoStmt(scan)
         except ListAssemblerException,e:
             raise ParseError(lineNumber,scan,'Do statement')
-        loopStride = loopStride and loopStride[0][1] \
-                                 or None
+        doName = doName and doName[0] \
+                         or None
         doLabel = doLabel and doLabel[0] \
                            or None
-        return DoStmt(doLabel,loopVar,loopStart,loopEnd,loopStride,theDoKeyword,lineNumber)
+        loopStride = loopStride and loopStride[0][1] \
+                                 or None
+        return DoStmt(doName,doLabel,loopVar,loopStart,loopEnd,loopStride,lineNumber)
 
-    def __init__(self,doLabel,loopVar,loopStart,loopEnd,loopStride,stmt_name='do',lineNumber=0,label=False,lead=''):
+    def __init__(self,doName,doLabel,loopVar,loopStart,loopEnd,loopStride,lineNumber=0,label=False,lead=''):
+        self.doName = doName
         self.doLabel = doLabel
         self.loopVar = loopVar
         self.loopStart = loopStart
         self.loopEnd = loopEnd
         self.loopStride = loopStride
-        self.stmt_name = stmt_name
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
 
     def __str__(self):
-        loopStrideString = self.loopStride and ','+str(self.loopStride) \
-                                            or ''
+        doNameString = self.doName and str(self.doName)+': ' \
+                                    or ''
         doLabelString = self.doLabel and str(self.doLabel)+' ' \
                                       or ''
-        return '%s %s%s = %s,%s%s' % (self.stmt_name,doLabelString,str(self.loopVar),str(self.loopStart),str(self.loopEnd),loopStrideString)
+        loopStrideString = self.loopStride and ','+str(self.loopStride) \
+                                            or ''
+        return '%s%s %s%s = %s,%s%s' % (doNameString,self.kw,doLabelString,str(self.loopVar),str(self.loopStart),str(self.loopEnd),loopStrideString)
 
 class WhileStmt(Exec):
     #FIXME: optional construct name, label, and comma are not handled
@@ -1632,6 +1660,7 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              endfunction     = EndStmt,
              endsubroutine   = EndStmt,
              endblockdata    = EndStmt,
+             endwhere        = EndWhereStmt,
              do              = DoStmt,
              enddo           = EnddoStmt,
              dowhile         = WhileStmt,
@@ -1645,7 +1674,7 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              deallocate      = DeallocateStmt
              )
 
-for kw in ('if','continue','return','else','print','use','cycle','where'):
+for kw in ('if','continue','return','else','print','use','cycle','exit','rewind','where','elsewhere','format'):
     kwtbl[kw] = globals()[kw.capitalize() + 'Stmt']
     
 lhs    = disj(app,id)
@@ -1672,10 +1701,7 @@ _types = ('real',
 
 def parse(scan,lineNumber):
     try:
-        if '=>' in scan:
-            return PointerAssignStmt.parse(scan,lineNumber)
-        else:
-            return AssignStmt.parse(scan,lineNumber)
+        return AssignStmt.parse(scan,lineNumber)
 
     except AssemblerException:
         lscan = tuple([ l.lower() for l in scan ])
@@ -1688,8 +1714,14 @@ def parse(scan,lineNumber):
             kw = 'function'
 
         if not kwtbl.get(kw):
-            raise ParseError(lineNumber,scan,None)
-        return kwtbl.get(kw).parse(scan,lineNumber)
+            if '=>' in scan:
+                return PointerAssignStmt.parse(scan,lineNumber)
+            elif ('do' in scan) and (':' in scan):
+                return DoStmt.parse(scan,lineNumber)
+            else:
+                raise ParseError(lineNumber,scan,None)
+        else:
+            return kwtbl.get(kw).parse(scan,lineNumber)
 
 #
 # alias so that stmts like if, etc can call the above routine
