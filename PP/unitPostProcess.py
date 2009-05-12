@@ -329,7 +329,7 @@ class UnitPostProcessor(object):
             aComment =\
                 fs.Comments("C!! requested inline of '"+inlineFunction+\
                                 "' has no defn\n")
-            for aUnit in self._inlineFileUnits:
+            for aUnit in UnitPostProcessor._inlineFileUnits:
                 if (aUnit.uinfo.name).lower() == (inlineFunction).lower():
                     self.__inlineUnit = aUnit
                     aComment = None
@@ -377,7 +377,8 @@ class UnitPostProcessor(object):
     # PARAMS:
     # function -- a unit from the inline file to be used in processing
     # RETURNS: a modified unit with all extraneous statements removed
-    def __getInlineSubroutine(self,function):
+    @staticmethod
+    def __getInlineSubroutine(function):
         pattern = 'C([ ]+)[$]openad[$]([ ]+)end([ ]+)decls'
         newDecls = []
         newExecs = []
@@ -837,11 +838,14 @@ class UnitPostProcessor(object):
 
     # Parses the inline file into units, processes the units, and appends them
     # to inlineFileUnits for use in inlining
-    def processInlineFile(self):
+    @staticmethod
+    def processInlineFile():
         # may be None if so set in postProcess.py
-        for aUnit in fortUnitIterator(self._inlineFile,False):
-            newUnit = self.__getInlineSubroutine(aUnit)
-            self._inlineFileUnits.append(newUnit)
+        if not UnitPostProcessor._inlineFile:
+            return
+        for aUnit in fortUnitIterator(UnitPostProcessor._inlineFile,False):
+            newUnit = UnitPostProcessor.__getInlineSubroutine(aUnit)
+            UnitPostProcessor._inlineFileUnits.append(newUnit)
 
     # Processes all statements in the unit
     def processUnit(self):
@@ -858,10 +862,9 @@ class UnitPostProcessor(object):
 
         if self._mode == 'reverse':
             inline = False
-            self.__templateExpansion(inline)
+            self.__templateExpansion()
             self.__myUnit.decls = self.__myNewDecls
             self.__myUnit.execs = self.__myNewExecs
-            self._inlineFileUnits = []
 
         else:
             (Decls,Execs) = self.__forwardProcessDeclsAndExecs()
