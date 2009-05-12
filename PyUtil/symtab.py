@@ -7,7 +7,8 @@ from _Setup import *
 from PyUtil.caselessDict import caselessDict as cDict
 from PyUtil.debugManager import DebugManager
 
-from PyFort.fortStmts import _PointerInit
+from PyFort.fortExp import App
+from PyFort.fortStmts import _PointerInit,_Kind
 
 class SymtabError(Exception):
     def __init__(self,msg,aSymtabEntry=None,lineNumber=0):
@@ -62,7 +63,6 @@ class Symtab(object):
         return entry
 
     def enter_name(self,name,val):
-        DebugManager.debug('Symtab.enter_name: entering '+str(name)+' = '+str(val)+' in '+str(self))
         self.ids[name] = val
 
     def lookupDimensions(self,name):
@@ -76,6 +76,45 @@ class Symtab(object):
         if entry: return entry.lookupType(level.implicit[name[0]])
         return self.implicit[name[0]]
 
+    def _contextReplace(self,anExpression):
+        '''
+        replace an instances in anExpression of things that may be local to this context (such as renames)
+        with things that are applicable in a general context
+        '''
+        if isinstance(anExpression,str):
+            if (anExpression in self.ids) and (self.ids[anExpression].renameSource):
+                return self.ids[anExpression].renameSource
+        elif isinstance(anExpression,App):
+            for anArg in anExpression.args:
+                anArg = self._contextReplace(anArg)
+        else:
+            raise SymtabError('Symtab._contextReplace: Error -- expression'+str(anExpression)+'is not a string and not an App!')
+        return anExpression
+
+    def replicateEntry(self,aKey,localOrigin):
+        '''
+        create and return a new symbol table entry that is for use in another context
+        In particular, anything that is the result of a local rename must be reverted to the original name for use in other contexts
+        '''
+        theLocalEntry = self.ids[aKey]
+        theNewEntry = SymtabEntry(theLocalEntry.entryKind)
+        # set the type
+        theNewEntry.type = theLocalEntry.type
+        if (theNewEntry.type):
+            DebugManager.debug('symtab.replicateEntry('+theLocalEntry.debug(aKey)+')')
+            # look for attribute mod names in this symbol table.  If they are in there and have a rename, use the rename in the new entry
+            (typename,modifiers) = theNewEntry.type
+            for aModifier in modifiers:
+                if isinstance(aModifier,_Kind):
+                    aModifier.mod = self._contextReplace(aModifier.mod)
+        # set the dimensions
+        theNewEntry.dimensions = theLocalEntry.dimensions
+        # set the length
+        theNewEntry.length = theLocalEntry.length
+        # set the origin
+        theNewEntry.updateOrigin(localOrigin)
+        return theNewEntry
+
     def update_w_module_all(self,aModuleUnit,renameList):
         'update self with all ids from module "unit" symtab, making sure to enter local names whenever there are renames. module name = "name"'
         # go through everything in the module and add it to the local symbol table, being sure to check for it in the rename list
@@ -85,21 +124,21 @@ class Symtab(object):
                 for aRenameItem in renameList:
                     if aRenameItem == aKey:
                         # add the local name to the symbol table
-                        self.ids[aRenameItem] = aModuleUnit.symtab.ids[aKey]
+                        self.ids[aRenameItem] = aModuleUnit.symtab.replicateEntry(aKey,'module:'+aModuleUnit.name())
+                        self.ids[aRenameItem].renameSource = aKey
                         noRename = False
             if noRename:
-                self.ids[aKey] = aModuleUnit.symtab.ids[aKey]
-            self.ids[aKey].origin = 'module:'+aModuleUnit.name()
+                self.ids[aKey] = aModuleUnit.symtab.replicateEntry(aKey,'module:'+aModuleUnit.name())
 
     def update_w_module_only(self,aModuleUnit,onlyList):
         'update self with the subset of ids from module "unit" symtab specified in onlyList. module name = "name"'
         for anOnlyItem in onlyList:
+            # rename items: add only the lhs of the pointer init
             if isinstance(anOnlyItem,_PointerInit):
-                self.ids[anOnlyItem.lhs] = aModuleUnit.symtab.ids[anOnlyItem.rhs]
-                self.ids[anOnlyItem.lhs].origin = 'module:'+aModuleUnit.name()
+                self.ids[anOnlyItem.lhs] = aModuleUnit.symtab.replicateEntry(anOnlyItem.rhs,'module:'+aModuleUnit.name())
+                self.ids[anOnlyItem.lhs].renameSource = anOnlyItem.rhs
             else:
-                self.ids[anOnlyItem] = aModuleUnit.symtab.ids[anOnlyItem]
-                self.ids[anOnlyItem].origin = 'module:'+aModuleUnit.name()
+                self.ids[anOnlyItem] = aModuleUnit.symtab.replicateEntry(anOnlyItem,'module:'+aModuleUnit.name())
 
     def debug(self):
         outString = 'symbol table '+str(self)+':\n'
@@ -110,12 +149,13 @@ class Symtab(object):
         return outString
 
 class SymtabEntry(object):
-    def __init__(self,entryKind,type=None,dimensions=None,length=None,origin=None):
+    def __init__(self,entryKind,type=None,dimensions=None,length=None,origin=None,renameSource=None):
         self.entryKind = entryKind
         self.type = type
         self.dimensions = dimensions
         self.length = length
         self.origin = origin
+        self.renameSource = renameSource
 
     def enterEntryKind(self,newEntryKind,lineNumber=0):
         # the replacement entry kind must be an 'instance' of the existing one.
@@ -151,6 +191,12 @@ class SymtabEntry(object):
     def lookupDimensions(self):
         DebugManager.debug('SymtabEntry.lookupDimensions: returning '+str(self.dimensions))
         return self.dimensions
+
+    def updateOrigin(self,anOriginStr):
+        if self.origin:
+            self.origin = self.origin+'|'+anOriginStr
+        else:
+            self.origin = anOriginStr
 
     def debug(self,name):
         return '[SymtabEntry "'+name+'" -> entryKind='+str(self.entryKind)+\
