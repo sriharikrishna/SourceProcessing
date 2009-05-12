@@ -1403,15 +1403,16 @@ class DoStmt(Exec):
                            or None
         loopStride = loopStride and loopStride[0][1] \
                                  or None
-        return DoStmt(doName,doLabel,loopVar,loopStart,loopEnd,loopStride,lineNumber)
+        return DoStmt(doName,doLabel,loopVar,loopStart,loopEnd,loopStride,theDoKeyword,lineNumber)
 
-    def __init__(self,doName,doLabel,loopVar,loopStart,loopEnd,loopStride,lineNumber=0,label=False,lead=''):
+    def __init__(self,doName,doLabel,loopVar,loopStart,loopEnd,loopStride,doFormatStr='do',lineNumber=0,label=False,lead=''):
         self.doName = doName
         self.doLabel = doLabel
         self.loopVar = loopVar
         self.loopStart = loopStart
         self.loopEnd = loopEnd
         self.loopStride = loopStride
+        self.doFormatStr = doFormatStr
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
@@ -1423,7 +1424,7 @@ class DoStmt(Exec):
                                       or ''
         loopStrideString = self.loopStride and ','+str(self.loopStride) \
                                             or ''
-        return '%s%s %s%s = %s,%s%s' % (doNameString,self.kw,doLabelString,str(self.loopVar),str(self.loopStart),str(self.loopEnd),loopStrideString)
+        return '%s%s %s%s = %s,%s%s' % (doNameString,self.doFormatStr,doLabelString,str(self.loopVar),str(self.loopStart),str(self.loopEnd),loopStrideString)
 
 class WhileStmt(Exec):
     #FIXME: optional construct name, label, and comma are not handled
