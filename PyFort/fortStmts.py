@@ -1557,64 +1557,60 @@ class GotoStmt(Exec):
     pass
 
 class AllocateStmt(Exec):
-    _sons = ['arg']
+    '''
+    For the time being, we do not require proper parsing of allocate and deallocate statements.
+    We have commented out this (incomplete) implementation of the parsing, because it covers many but not all of the cases.
+    '''
     kw = 'allocate'
     kw_str = kw
+#   _sons = ['argList']
 
-    @staticmethod
-    def parse(scan,lineNumber):
-        allocStmt = seq(lit(AllocateStmt.kw),
-                        lit('('),
-                        Exp,
-                        lit(')'))
-        try:
-            ((allocKeyword,openParen,allocArg,closeParen),rest) = allocStmt(scan)
-        except ListAssemblerException,e:
-            raise ParseError(lineNumber,scan,AllocateStmt.kw+' statement')
-        return AllocateStmt(allocArg,allocKeyword,lineNumber)
+#   @staticmethod
+#   def parse(scan,lineNumber):
+#       allocStmt = seq(lit(AllocateStmt.kw),
+#                       lit('('),
+#                       cslist(Exp),
+#                       lit(')'))
+#       try:
+#           ((allocKeyword,oParen,argList,cParen),rest) = allocStmt(scan)
+#       except ListAssemblerException,e:
+#           raise ParseError(lineNumber,scan,AllocateStmt.kw+' statement')
+#       return AllocateStmt(argList,lineNumber)
 
-    def __init__(self,arg,stmt_name=kw,lineNumber=0,label=False,lead=''):
-        self.arg = arg
-        self.stmt_name = stmt_name
-        self.lineNumber = lineNumber
-        self.label = label
-        self.lead = lead
+#   def __init__(self,argList,lineNumber=0,label=False,lead=''):
+#       self.argList = argList
+#       self.lineNumber = lineNumber
+#       self.label = label
+#       self.lead = lead
 
-    def __repr__(self):
-        return self.__class__.__name__+'('+repr(self.arg)+')'
-
-    def __str__(self):
-        return '%s(%s)' % (self.stmt_name,str(self.arg))
+#   def __str__(self):
+#       return '%s(%s)' % (self.kw,','.join([str(arg) for arg in self.argList]))
 
 class DeallocateStmt(Exec):
-    _sons = ['arg']
     kw = 'deallocate'
     kw_str = kw
+#   _sons = ['argList']
 
-    @staticmethod
-    def parse(scan,lineNumber):
-        allocStmt = seq(lit(DeallocateStmt.kw),
-                        lit('('),
-                        Exp,
-                        lit(')'))
-        try:
-            ((allocKeyword,openParen,allocArg,closeParen),rest) = allocStmt(scan)
-        except ListAssemblerException,e:
-            raise ParseError(lineNumber,scan,DeallocateStmt.kw+' statement')
-        return DeallocateStmt(allocArg,allocKeyword,lineNumber)
+#   @staticmethod
+#   def parse(scan,lineNumber):
+#       allocStmt = seq(lit(DeallocateStmt.kw),
+#                       lit('('),
+#                       cslist(Exp),
+#                       lit(')'))
+#       try:
+#           ((allocKeyword,oParen,argList,cParen),rest) = allocStmt(scan)
+#       except ListAssemblerException,e:
+#           raise ParseError(lineNumber,scan,DeallocateStmt.kw+' statement')
+#       return DeallocateStmt(argList,lineNumber)
 
-    def __init__(self,arg,stmt_name=kw,lineNumber=0,label=False,lead=''):
-        self.arg = arg
-        self.stmt_name = stmt_name
-        self.lineNumber = lineNumber
-        self.label = label
-        self.lead = lead
+#   def __init__(self,argList,lineNumber=0,label=False,lead=''):
+#       self.argList = argList
+#       self.lineNumber = lineNumber
+#       self.label = label
+#       self.lead = lead
 
-    def __repr__(self):
-        return self.__class__.__name__+'('+repr(self.arg)+')'
-
-    def __str__(self):
-        return '%s(%s)' % (self.stmt_name,str(self.arg))
+#   def __str__(self):
+#       return '%s(%s)' % (self.kw,','.join([str(arg) for arg in self.argList]))
 
 kwtbl = dict(blockdata       = BlockdataStmt,
              common          = CommonStmt,

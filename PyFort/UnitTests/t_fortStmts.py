@@ -54,16 +54,6 @@ class C1(TestCase):
         s  = 'subroutine foo(x,y,z)'
         a_(isinstance(pps(s),SubroutineStmt))
 
-    def test6(self):
-        'allocate/deallocate stmt'
-        ae = self.assertEquals
-        a_ = self.assert_
-
-        s  = 'allocate(a(2))'
-        ae(repr(pps(s)),repr(AllocateStmt(App('a',['2']))))
-        s  = 'deallocate(a)'
-        ae(repr(pps(s)),repr(DeallocateStmt('a')))
-
 
 class C2(TestCase):
     '''assignment statement'''
@@ -735,6 +725,48 @@ class TestWhereStmt(TestCase):
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
+class TestIntegerStmt(TestCase):
+    '''where statements'''
+
+    def test0(self):
+        '''integer array decl'''
+        theString = 'integer :: NA(6)'
+        theRepr = IntegerStmt([],[],[_NoInit(App('NA',['6']))])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test1(self):
+        '''integer decl with dimension attr'''
+        theString = 'integer,DIMENSION(6) :: NA'
+        theRepr = IntegerStmt([],
+                              [App('DIMENSION',['6'])],
+                              [_NoInit('NA')])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+class TestAllocateDeallocateStmts(TestCase):
+    '''allocate and deallocate statementswhere statements'''
+#   def test0(self):
+#       'simple allocate stmt'
+#       theString = 'allocate(a(2))'
+#       theRepr = AllocateStmt([App('a',['2'])])
+#       self.assertEquals(repr(pps(theString)),repr(theRepr))
+#       self.assertEquals(theString,str(theRepr))
+
+#   def test1(self):
+#       'complicated allocate stmt from SCALE'
+#       theString = 'allocate(aa(ip),at(im,30),ca(im),ch(im,isct),ct(im),cs(im),da(im,mm),db(im,mm),dc(im),ds(ip,mm),qg(igp),rav(im),sa(im,jt),sat(im,jt),sr(im),st(im),v(im),xna(im,jt),xnd(ip,mm),xne(im),xni(im,jt+1),xnn(im),xnr(im),abar(izm),rinnr(izm),rbar(izm),zon_vol(izm))'
+#       theRepr = AllocateStmt([App('aa',['ip']), App('at',['im', '30']), App('ca',['im']), App('ch',['im', 'isct']), App('ct',['im']), App('cs',['im']), App('da',['im', 'mm']), App('db',['im', 'mm']), App('dc',['im']), App('ds',['ip', 'mm']), App('qg',['igp']), App('rav',['im']), App('sa',['im', 'jt']), App('sat',['im', 'jt']), App('sr',['im']), App('st',['im']), App('v',['im']), App('xna',['im', 'jt']), App('xnd',['ip', 'mm']), App('xne',['im']), App('xni',['im', Ops('+','jt','1')]), App('xnn',['im']), App('xnr',['im']), App('abar',['izm']), App('rinnr',['izm']), App('rbar',['izm']), App('zon_vol',['izm'])])
+#       self.assertEquals(repr(pps(theString)),repr(theRepr))
+#       self.assertEquals(theString,str(theRepr))
+
+#   def test2(self):
+#       'simple deallocate stmt'
+#       theString = 'deallocate(a)'
+#       theRepr = DeallocateStmt(['a'])
+#       self.assertEquals(repr(pps(theString)),repr(theRepr))
+#       self.assertEquals(theString,str(theRepr))
+
 suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,C10,TestCharacterDecls,
                                            TestImplicitStmt,
                                            TestDimensionStmt,
@@ -746,7 +778,10 @@ suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,C10,TestCharacterDecls,
                                            TestCaseStmts,
                                            TestModules,
                                            TestPointerAssignStmt,
-                                           TestWhereStmt)
+                                           TestWhereStmt,
+                                           TestIntegerStmt,
+                                           TestAllocateDeallocateStmts,
+              )
 
 if __name__ == '__main__':
     runit(suite)
