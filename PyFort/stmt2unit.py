@@ -55,6 +55,12 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
             theSymtabEntry.enterType(newType,aTypeDeclStmt.lineNumber)
             theSymtabEntry.enterDimensions(newDimensions,aTypeDeclStmt.lineNumber)
             theSymtabEntry.enterLength(newLength,aTypeDeclStmt.lineNumber)
+            # for function/subroutine entries, also update this information in the parent symbol table
+            #if isinstance(theSymtabEntry.entryKind,SymtabEntry.ProcedureEntryKind):
+            if localSymtab.parent and theSymtabEntry.entryKind in (SymtabEntry.FunctionEntryKind,SymtabEntry.SubroutineEntryKind):
+                replacementParentSymtabEntry = localSymtab.replicateEntry(name,str(curr.val.uinfo)+':'+name)
+                localSymtab.parent.enter_name(name,replacementParentSymtabEntry)
+                DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: new PARENT unit symtab entry '+replacementParentSymtabEntry.debug(name))
         else: # no symtab entry -> create one
             newSymtabEntry = SymtabEntry(SymtabEntry.GenericEntryKind,
                                          type=newType,
@@ -161,8 +167,11 @@ def _unit_entry(self,cur):
     currentSymtab = cur.val.symtab
     entry = self.make_unit_entry(currentSymtab)
     currentSymtab.enter_name(self.name,entry)
+    DebugManager.debug('[Line '+str(self.lineNumber)+']: new unit symtab entry '+entry.debug(self.name))
     if currentSymtab.parent:
-        currentSymtab.parent.enter_name(self.name,entry)
+        parentSymtabEntry = currentSymtab.replicateEntry(self.name,str(cur.val.uinfo)+self.name)
+        currentSymtab.parent.enter_name(self.name,parentSymtabEntry)
+        DebugManager.debug('[Line '+str(self.lineNumber)+']: new PARENT unit symtab entry '+parentSymtabEntry.debug(self.name))
     DebugManager.debug('[Line '+str(self.lineNumber)+']: stmt2unit._unit_entry() for '+str(self)+': with symtab '+str(currentSymtab)+' with parent symtab '+str(currentSymtab.parent))
     return self
 
