@@ -126,18 +126,19 @@ class SymtabEntry(object):
         self.entryKind = newEntryKind
 
     def enterType(self,newType,lineNumber=0):
+        DebugManager.debug('\t\tSymtabEntry.enterType: entering type '+str(newType)+' for '+str(self))
         if not newType:
             raise SymtabError('SymtabEntry.enterType: newType is None!',self,lineNumber)
         if self.type and (self.type != newType):
             raise SymtabError('SymtabEntry.enterType: Error -- current type "'+str(self.type)+'" and new type "'+str(newType)+'" conflict!',self,lineNumber)
         # procedures: entering a type means we know it's a function
         if self.entryKind == self.ProcedureEntryKind:
-            DebugManager.debug('SymtabEntry.enterType: entering type '+str(newType)+' for procedure (we now know it is a function)')
+            DebugManager.debug('\t\t\t(SymtabEntry.enterType: entering type information tells us that this procedure is a function)')
             self.entryKind = self.FunctionEntryKind
         self.type = newType
 
     def enterDimensions(self,newDimensions,lineNumber=0):
-        DebugManager.debug('Symtab.enterDimensions: called on '+str(self))
+        DebugManager.debug('\t\tSymtab.enterDimensions: called on '+str(self)+' and setting dimensions to '+str(newDimensions))
         if self.dimensions and (self.dimensions != newDimensions):
             raise SymtabError('SymtabEntry.enterDimensions: Error -- current dimensions "'+str(self.dimensions)+'" and new dimensions "'+str(newDimensions)+'" conflict!',self,lineNumber)
         self.dimensions = newDimensions
@@ -152,11 +153,12 @@ class SymtabEntry(object):
         return self.dimensions
 
     def debug(self,name):
-        return '[SymtabEntry "'+name+'" -> entryKind = '+str(self.entryKind)+\
-                                         ', type = '+str(self.type)+\
-                                         ', dimensions = '+str(self.dimensions)+\
-                                         ', length = '+str(self.length)+\
-                                         ', origin = '+str(self.origin)+\
+        return '[SymtabEntry "'+name+'" -> entryKind='+str(self.entryKind)+\
+                                         ', type='+str(self.type)+\
+                                         ', dimensions='+str(self.dimensions)+\
+                                         ', length='+str(self.length)+\
+                                         ', origin='+str(self.origin)+\
+                                         ', renameSource='+str(self.renameSource)+\
                                          ']'
 
     class GenericEntryKind(object):

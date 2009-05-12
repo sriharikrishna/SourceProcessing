@@ -198,11 +198,15 @@ def isArrayReference(theApp,localSymtab,lineNumber):
     if not theSymtabEntry:
         return False
     # there has to be a symbol table entry for a variable
-    DebugManager.debug('typeInference.isArrayReference: comparing '+str(theSymtabEntry.entryKind)+' to '+str(SymtabEntry.ProcedureEntryKind))
+    DebugManager.debug('typeInference.isArrayReference for '+theSymtabEntry.debug(theApp.head))
     if isinstance(theSymtabEntry.entryKind(),SymtabEntry.ProcedureEntryKind):
         return False
     if (not theSymtabEntry.dimensions or theSymtabEntry.dimensions == ()) and \
        (not theSymtabEntry.length or theSymtabEntry.length == 1):
-        raise TypeInferenceError('typeInference.isArrayReference: Application Expression "'+str(theApp)+'" appears to be an array reference for a scalar variable.',lineNumber)
+#       now we know that its NOT a scalar variable, but rather a function.  so we update the symbol table with this information.
+        DebugManager.debug('typeInference.isArrayReference: Application Expression "'+str(theApp)+\
+                           '" for something that we thought was a scalar variable => assuming it\'s a function and updating the symbol table to reflect this')
+        theSymtabEntry.enterEntryKind(SymtabEntry.FunctionEntryKind)
+        return False
     return True
 
