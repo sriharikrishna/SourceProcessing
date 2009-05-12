@@ -37,11 +37,11 @@ def _free_flow_line(l):
     if comment_p(l) or (len(l1) <= fll):
         return l
 
-    rv = l1[0:fll] + '&\n'
+    rv = l1[0:fll] + cont + '\n'
     rem = l1[fll:]
     while len(rem) > fl2:
         tmp  = rem[0:fl2]
-        rv  += ' ' * 5  + cont + tmp + '\n'
+        rv  += ' ' * 5  + cont + tmp + cont + '\n'
         rem  = rem[fl2:]
     if len(rem) > 0:
         rv  += ' ' * 5  + cont + rem + '\n'
