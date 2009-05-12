@@ -652,34 +652,39 @@ class TestInterfaces(TestCase):
         a_(isinstance(ps,InterfaceStmt),'instance check')
         ae(str(ps),s)
 
-class TestModules(TestCase):
-    '''stuff to do with modules'''
+class TestUseStmts(TestCase):
+    '''various forms of use statements, including use only and renames'''
 
     def test1(self):
         'plain use statement'
-        theString = 'use s_lib'
-        theRepr = UseAllStmt('s_lib',None)
+        theString = 'uSe s_lib'
+        theRepr = UseAllStmt('s_lib',None,'uSe')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test2(self):
         'use statement with renames'
-        theString = 'use s_lib, pressure=>x_pres,altiude=>x_alt'
-        theRepr = UseAllStmt('s_lib',[_PointerInit('pressure','x_pres'), _PointerInit('altiude','x_alt')])
+        theString = 'USE S_LIB, pressure=>x_pres,altiude=>x_alt'
+        theRepr = UseAllStmt('S_LIB',
+                             [_PointerInit('pressure','x_pres'), _PointerInit('altiude','x_alt')],
+                             'USE')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test3(self):
         'use statement with only list'
         theString = 'use data_C, only: xn,xj,nthr,eb_grp,art'
-        theRepr = UseOnlyStmt('data_C',['xn', 'xj', 'nthr', 'eb_grp', 'art'])
+        theRepr = UseOnlyStmt('data_C',['xn', 'xj', 'nthr', 'eb_grp', 'art'],
+                              'use')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test4(self):
         'use statement with only list including renames'
         theString = 'use months, only: january=>jan,may,june=>jun'
-        theRepr = UseOnlyStmt('months',[_PointerInit('january','jan'), 'may', _PointerInit('june','jun')])
+        theRepr = UseOnlyStmt('months',
+                              [_PointerInit('january','jan'), 'may', _PointerInit('june','jun')],
+                              'use')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
@@ -776,7 +781,7 @@ suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,C10,TestCharacterDecls,
                                            TestFunctionStmt,
                                            TestSelectCaseStmt,
                                            TestCaseStmts,
-                                           TestModules,
+                                           TestUseStmts,
                                            TestPointerAssignStmt,
                                            TestWhereStmt,
                                            TestIntegerStmt,

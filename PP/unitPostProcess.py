@@ -85,7 +85,7 @@ class UnitPostProcessor(object):
     # called when a module declaration is encountered in the unit's declarations
     def __addActiveModule(self,arg):
         DebugManager.debug('unitPostProcessor.__addActiveModule called on: "'+str(arg)+"'")
-        new_stmt = fs.UseStmt('OAD_active')
+        new_stmt = fs.UseAllStmt(moduleName='OAD_active',renameList=None)
         return new_stmt
 
     # Rewrites the active type in derived type declarations

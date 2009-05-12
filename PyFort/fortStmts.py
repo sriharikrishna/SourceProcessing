@@ -1000,7 +1000,7 @@ class UseStmt(Decl):
 
     @staticmethod
     def parse(scan,lineNumber):
-        # forms of renameItem: (we will only cover the first one)
+        # forms of renameItem: (we currently support only the first)
         # [ local-name => ] module-entity-name
         # [ OPERATOR ( local-defined-operator ) => ] OPERATOR ( module-defined-operator )
         formRenameItem = seq(id,
@@ -1014,13 +1014,13 @@ class UseStmt(Decl):
                              id,
                              zo1(seq(lit(','),
                                      cslist(formRenameItem))))
-        formUseAllStmt = treat(formUseAllStmt, lambda x: UseAllStmt(x[1],x[2] and x[2][0][1] or None,lineNumber))
+        formUseAllStmt = treat(formUseAllStmt, lambda x: UseAllStmt(x[1],x[2] and x[2][0][1] or None,x[0],lineNumber))
 
         # forms of onlyItem:
         # generic-name
-        # OPERATOR ( module-defined-operator )
-        # ASSIGNMENT ( = )
-        # dtio-generic-spec
+        # OPERATOR ( module-defined-operator )    (not currently supported)
+        # ASSIGNMENT ( = )                        (not currently supported)
+        # dtio-generic-spec                       (not currently supported)
         # module-entity-name
         # rename
         formOnlyItem = disj(formRenameItem,
@@ -1034,7 +1034,7 @@ class UseStmt(Decl):
                               lit('only'),
                               lit(':'),
                               cslist(formOnlyItem))
-        formUseOnlyStmt = treat(formUseOnlyStmt, lambda x: UseOnlyStmt(x[1],x[5],lineNumber))
+        formUseOnlyStmt = treat(formUseOnlyStmt, lambda x: UseOnlyStmt(x[1],x[5],x[0],lineNumber))
 
         (theParsedStmt,rest) = disj(formUseOnlyStmt,formUseAllStmt)(scan)
         return theParsedStmt
@@ -1042,9 +1042,10 @@ class UseStmt(Decl):
 class UseAllStmt(UseStmt):
     _sons  = ['renameList']
 
-    def __init__(self,name,renameList,lineNumber=0,label=False,lead=''):
-        self.name = name
+    def __init__(self,moduleName,renameList,stmt_name='use',lineNumber=0,label=False,lead=''):
+        self.moduleName = moduleName
         self.renameList = renameList
+        self.stmt_name = stmt_name
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
@@ -1052,20 +1053,21 @@ class UseAllStmt(UseStmt):
     def __str__(self):
         renameListStr = self.renameList and ', '+','.join([str(aRenameItem) for aRenameItem in self.renameList]) \
                                          or ''
-        return self.kw+' '+str(self.name)+renameListStr
+        return self.stmt_name+' '+str(self.moduleName)+renameListStr
 
 class UseOnlyStmt(UseStmt):
     _sons  = ['onlyList']
 
-    def __init__(self,name,onlyList,lineNumber=0,label=False,lead=''):
-        self.name = name
+    def __init__(self,moduleName,onlyList,stmt_name='use',lineNumber=0,label=False,lead=''):
+        self.moduleName = moduleName
         self.onlyList = onlyList
+        self.stmt_name = stmt_name
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
 
     def __str__(self):
-        return self.kw+' '+str(self.name)+', only: '+','.join([str(anOnlyItem) for anOnlyItem in self.onlyList])
+        return self.stmt_name+' '+str(self.moduleName)+', only: '+','.join([str(anOnlyItem) for anOnlyItem in self.onlyList])
 
 class FormatStmt(Decl):
     pass
