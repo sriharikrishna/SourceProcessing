@@ -69,7 +69,7 @@ class UnitPostProcessor(object):
         self.__myNewExecs = []
         self.__recursionDepth = 0
         self.__expChanged = False
-        # if we're in an inquiry expression
+        # if we're processing an inquiry expression
         self.__inquiryExpression = False
         # the recursion level at which the inquiry expression occurred
         self.__inquiryRecursionLevel = 0
@@ -78,18 +78,26 @@ class UnitPostProcessor(object):
         # the file which contains all declarations of active variables
         self.__active_file = None
         # determines whether or not the current subroutine 
-        # has been written to the active file
+        # should be written to the active file
         self.__write_subroutine=True
 
     # adds the active module OAD_active
     # called when a module declaration is encountered in the unit's declarations
+    # PARAMS:
+    # arg -- the first use statement declaration in this subunit
+    # RETURNS: a new statement to append to the unit's declaration statements
     def __addActiveModule(self,arg):
-        DebugManager.debug('unitPostProcessor.__addActiveModule called on: "'+str(arg)+"'")
+        DebugManager.debug('unitPostProcessor.__addActiveModule called on: "'\
+                           +str(arg)+"'")
         new_stmt = fs.UseAllStmt(moduleName='OAD_active',renameList=None)
         return new_stmt
 
     # Rewrites the active type in derived type declarations
     # returns the declaration
+    # PARAMS:
+    # DrvdTypeDecl: A derived type declaration to be transformed
+    # RETURNS: a transformed declaration statement to apppend to the unit's 
+    # declaration statements
     def __rewriteActiveType(self, DrvdTypeDecl):
         ''' convert abstract to concrete active type 
         only applied to type declaration statements '''
@@ -107,6 +115,10 @@ class UnitPostProcessor(object):
 
     # Transforms active types for an expression recursively
     # (replaces instances of __value__ and __deriv__)
+    # PARAMS:
+    # theExpression -- an fe.Exp object in which to transform active types
+    # RETURNS: a transformed expression with all __value__ and __deriv__ calls
+    # replaced
     def __transformActiveTypesExpression(self,theExpression):
         'mutate __value__ and __deriv__ calls'
         # deepcopy allows for comparison of return value and input value in calling function
@@ -159,6 +171,9 @@ class UnitPostProcessor(object):
 
 
     # transforms active types in a subroutine Call statement
+    # PARAMS:
+    # aSubCallStmt -- an instance of fs.CallStmt to be processed
+    # RETURNS: a new fs.CallStmt with __value__ and __deriv__ calls replaced
     def __processSubCallStmt(self,aSubCallStmt):
         DebugManager.debug('unitPostProcessor.__processSubCallStmt called on: "'+str(aSubCallStmt)+"'")
         replacementArgs = []
@@ -177,9 +192,17 @@ class UnitPostProcessor(object):
                         lead=aSubCallStmt.lead).flow()
         return replacementStatement
 
-    # transforms active types in a WriteStmt
+    # transforms active types corresponding to 'active' input in a WriteStmt
+    # __value__ calls are replaced by "%v"; __deriv__ calls are replaced by %d 
+    # iff self._transform_deriv is true (set by user) and are otherwise removed
+    # PARAMS:
+    # aWriteStmt -- an instance of fs.WriteStmt to be processed
+    # active -- a string equal to "__value__" or "__deriv__" to determine what
+    #           to transform within write statement's substrings
+    # RETURNS: processed WriteStmt with all __value__ or __deriv__ calls removed
     def __processWriteStmt(self,aWriteStmt,active):
-        DebugManager.debug('unitPostProcessor.__processWriteStmt called on: "'+str(aWriteStmt)+"'")        
+        DebugManager.debug('unitPostProcessor.__processWriteStmt called on: "'\
+                               +str(aWriteStmt)+"'")        
         process = ""; newSubs = []
         accumulate = False
         for sub in aWriteStmt.substr_list:
@@ -194,7 +217,7 @@ class UnitPostProcessor(object):
                             process = process[1:len(process)-1]
                     if active == "__value__":
                         process = process+"%v"
-                    else:
+                    elif self._transform_deriv:
                         process = process+"%d"
                     newSubs.append(process)
                     accumulate = False
@@ -219,6 +242,15 @@ class UnitPostProcessor(object):
 
     # Does active type transformations on a StmtFnStmt; 
     # reconstructs it as an AssignStmt if StmtFnStmt.name is "__value__"
+    # PARAMS:
+    # StmtFnStmt -- an instance of fs.StmtFnStmt to be processed. If the
+    # processed statement has __value__ or __deriv__ as the statement name, it
+    # must be reconstructed as an fs.AssignStmt. The parser processes these
+    # statements as declarations, but after __value__ and __deriv__ calls are
+    # transformed (active types replaced), the statements are in the form of
+    # Assign statements, and must become executive statements
+    # RETURNS: a processed AssignStmt with all __value__ and __deriv__ calls 
+    # replaced
     def __processStmtFnStmt(self, StmtFnStmt):
         DebugManager.debug('unitPostProcessor.__processStmtFnStmt called on: "'+str(StmtFnStmt)+"'")
 
@@ -238,11 +270,23 @@ class UnitPostProcessor(object):
                               newStatement.lineNumber,
                               label=newStatement.label,
                               lead=newStatement.lead).flow()
+        elif newStatement.name == '__deriv__':
+            newApp = self.__transformActiveTypesExpression(fe.App(newStatement.name,newStatement.args))
+            replacementStatement = \
+                fs.AssignStmt(newApp,
+                              newStatement.body,
+                              newStatement.lineNumber,
+                              label=newStatement.label,
+                              lead=newStatement.lead).flow()
         else:
             replacementStatement = newStatement
         return replacementStatement
 
     # Transforms active types on executable statements
+    # PARAMS:
+    # aStmt -- a generic fs.Exec statement to be processed
+    # RETURNS: a transformed statement with all __value__ and __deriv__ calls
+    # replaced
     def __transformActiveTypes(self,aStmt):
         '''Transforms active types on general executable statements'''
         DebugManager.debug('unitPostProcessor.__transformActiveTypes called on: "'+str(aStmt)+"'")
@@ -265,18 +309,27 @@ class UnitPostProcessor(object):
     # Determines the function to be inlined (if there is one)
     # from the comment, and sets inlineUnit (the current unit being inlined)
     # to be the corresponding unit from the inline file's units
+    # PARAMS:
+    # aComment -- a comment from the input file being processed
+    # RETURNS: a tuple containing a comment and a boolean. If an inline command
+    # was contained within the input comment, the return comment is the remainder
+    # of the comment after the inline request is removed. The boolean determines
+    # whether or not inlining should happen in the next applicable statement. 
+    # inline is True if an inline was requested, and false otherwise
     def __getInlinedFunction(self,aComment):
         '''Retrieves the unit to be inlined'''
         function = None
         inline = False
-        match = re.search('C[ ]+[$]openad[$][ ]+inline',aComment.rawline,re.IGNORECASE)
+        match = re.search('C[ ]+[$]openad[$][ ]+inline',\
+                              aComment.rawline,re.IGNORECASE)
         if match:
             p = re.compile(r'\(')
             # get name of inlined function
             inlineFunction = p.split(aComment.rawline[match.end():])[0].lstrip()
             aComment =\
-                fs.Comments("C!! requested inline of '"+inlineFunction+"' has no defn\n")
-            for aUnit in self._inlineFileUnits:
+                fs.Comments("C!! requested inline of '"+inlineFunction+\
+                                "' has no defn\n")
+            for aUnit in UnitPostProcessor._inlineFileUnits:
                 if (aUnit.uinfo.name).lower() == (inlineFunction).lower():
                     self.__inlineUnit = aUnit
                     aComment = None
@@ -285,13 +338,17 @@ class UnitPostProcessor(object):
         return (aComment,inline)
 
     # gets the replacement number from a begin replacement comment
+    # PARAMS:
+    # aComment -- a comment from the input file being processed
+    # RETURNS: a pragma number for replacement, if the comment contained a begin
+    # replacement command. Otherwise 0
     def __getReplacementNum(self,aComment):
         '''Determines the pragma number for replacement'''
         begin_match = \
             re.search('C[ ]+[$]openad[$][ ]+begin[ ]+replacement[ ]+',
                       aComment.rawline,re.IGNORECASE)
         if begin_match:
-            num_match = re.search('[0-9]+',aComment.rawline[begin_match.end(0):])
+            num_match=re.search('[0-9]+',aComment.rawline[begin_match.end(0):])
             if num_match:
                 replacementNum = num_match.group(0)
                 return int(replacementNum)
@@ -299,6 +356,10 @@ class UnitPostProcessor(object):
             return 0
 
     # finds the end of a replacement
+    # PARAMS:
+    # aComment -- a comment from the input file being processed
+    # RETURNS: True if an end replacement command is contained in the comment.
+    # False otherwise
     def __endReplacement(self,aComment):
         '''Finds the end of a replacement'''
         end_match = \
@@ -313,7 +374,11 @@ class UnitPostProcessor(object):
     # from a unit (function) in the inline file
     # also adapts for failure to parse multiple statements on one line in parsing
     # TODO: remove split over ';' once that is fixed
-    def __getInlineSubroutine(self,function):
+    # PARAMS:
+    # function -- a unit from the inline file to be used in processing
+    # RETURNS: a modified unit with all extraneous statements removed
+    @staticmethod
+    def __getInlineSubroutine(function):
         pattern = 'C([ ]+)[$]openad[$]([ ]+)end([ ]+)decls'
         newDecls = []
         newExecs = []
@@ -346,6 +411,15 @@ class UnitPostProcessor(object):
     # Replaces inline args with the given args (as determined from a comment)
     # During inlining of a subroutine function in reverse mode
     # used on a string (AssignStmts, etc)
+    # PARAMS:
+    # argReps -- the number of times to loop through looking at arguments (the
+    # number of arguments to look at); equal to the minimum of the number of
+    # inlineArgs and number of replacementArgs
+    # string -- the string in which arguments must be replaced
+    # inlineArgs -- arguments from the inline file (args to be replaced)
+    # replacementArgs -- arguments from the input file being processed
+    # RETURNS: a modified strings with all inlineArgs replaced by the 
+    # appropriate argument from replacementArgs
     def __replaceArgs(self,argReps,string,inlineArgs,replacementArgs):
         while argReps >= 0:
             if isinstance(inlineArgs[argReps],fe.App):
@@ -382,6 +456,12 @@ class UnitPostProcessor(object):
     # Replaces inline args with the given args (as determined from a comment)
     # During inlining of a subroutine function in reverse mode
     # called on _son attributes
+    # PARAMS:
+    # arg -- the expression to be modified (is one of the sons of a statement)
+    # inlineArgs -- arguments from the inline file (args to be replaced)
+    # replacementArgs -- arguments from the input file being processed
+    # RETURNS: a modified expression to replace the old son in the statement
+    # being processed
     def __replaceSon(self,arg,inlineArgs,replacementArgs):
         newSon = arg
         if isinstance(arg,fe.Sel):
@@ -427,6 +507,12 @@ class UnitPostProcessor(object):
     # Given new exec statement args (as determined from inline comment)
     # replace inline args in given inline file subroutine with new args
     # transform all active types, and return all new exec statements
+    # PARAMS:
+    # execStmtArgs -- arguments with which to replace the inline arguments in
+    # the subroutine from the inline file
+    # stmt_lead -- the lead at the beginning of the statement being processed
+    # RETURNS: new exec statements created from statements from the inline file
+    # and the execStmtArgs
     def __createNewExecs(self,execStmtArgs,stmt_lead):
         replacementArgs = []
         Execs = []; Stmts = []
@@ -498,6 +584,18 @@ class UnitPostProcessor(object):
 
     # processes the comments (used for reverse mode)
     # determines if a comment declares inlining or pragma replacement
+    # PARAMS:
+    # Comments -- an instance of fs.Comments from the file being processed
+    # replacementNum -- the replacement number for the pragma after which exec
+    # statements are currently being processed
+    # commentList -- a list where each index contains a list of comments. 
+    #   Comments are grouped in specific indices by replacement number
+    # currentComments -- comments currently being processed
+    # inline -- whether or not upcoming statements require inlined 
+    # functions to be inserted into file
+    # RETURNS: the updated comment list, the current set of statements that have
+    # been processed for the current replacement number, whether or not
+    # statements should be inlined, and the current pragma (replacement) number
     def __processComments(self,Comments,replacementNum,commentList,
                           currentComments,inline=False):
         for aComment in Comments:
@@ -522,6 +620,22 @@ class UnitPostProcessor(object):
     # transforms all active types in an exec statement
     # determines if inlining should occur (based on comments)
     # creates new exec statements for inlining based on the inline file
+    # PARAMS:
+    # (in forward mode, only anExecStmt and Execs are used)
+    # anExecStmt -- the exec statement to be processed
+    # Execs -- The execs currently being accumulated for this pragma number
+    # execList -- a list of lists of accumulated processed exec statements
+    # indexed by pragma number
+    # inline -- a boolean determining whether or not inlining should occur
+    # (if a comment to begin replacement just occurred)
+    # replacementNum -- current pragma number being processed
+    # RETURNS:
+    # forward mode: returns a list of processed exec statements
+    # reverse mode: a list of accumulated exec statements indexed by pragma
+    # number, a list of execs for the current pragma number, a boolean
+    # determining whether or not inlining should occur in the next statements
+    # (if there was a comment to begin replacement), and a replacement pragma
+    # number
     def __processExec(self,anExecStmt,Execs,execList=[],
                       inline=False,replacementNum=0): 
         try:
@@ -547,8 +661,7 @@ class UnitPostProcessor(object):
                     Execs.append(newStmt)
             elif isinstance(anExecStmt,fs.WriteStmt):
                 newStmt = self.__processWriteStmt(anExecStmt,"__value__")
-                if self._transform_deriv:
-                    newStmt = self.__processWriteStmt(anExecStmt,"__deriv__")
+                newStmt = self.__processWriteStmt(anExecStmt,"__deriv__")
                 Execs.append(newStmt)
             else:
                 newStmt = self.__transformActiveTypes(anExecStmt)
@@ -565,6 +678,28 @@ class UnitPostProcessor(object):
        
     # rewrites active types and adds the active module for a declaration stmt
     # determines if inlining or pragma replacement should occur
+    # transforms all active types in an exec statement
+    # determines if inlining should occur (based on comments)
+    # creates new exec statements for inlining based on the inline file
+    # PARAMS:
+    # (in forward mode, only aDecl,Decls,Execs and UseStmtSeen are used)
+    # aDecl -- the decl statement to be processed
+    # Decls -- The declarations currently being accumulated for this pragma number
+    # Execs -- The exec statements currently being accumulated for this pragma
+    # number (since StmtFnStmt instances may be transformed into Assign statements)
+    # UseStmtSeen -- boolean to determine if active module needs to be added
+    # declList -- a list of lists of accumulated processed declaration statements
+    # indexed by pragma number
+    # execList -- a list of lists of accumulated processed exec statements
+    # indexed by pragma number
+    # replacementNum -- current pragma number being processed
+    # RETURNS:
+    # forward mode: returns a list of processed exec statements
+    # reverse mode: a list of accumulated exec statements indexed by pragma
+    # number, a list of execs for the current pragma number, a boolean
+    # determining whether or not inlining should occur in the next statements
+    # (if there was a comment to begin replacement), and a replacement pragma
+    # number
     def __processDecl(self,aDecl,Decls,Execs,UseStmtSeen,declList=[],
                       execList=[],replacementNum=0):
         try:
@@ -633,8 +768,9 @@ class UnitPostProcessor(object):
     # (if it's not a Function or Module Stmt)
     # processes the input file
     # calls expandTemplate with the processed statements
-    def __templateExpansion(self,inline):
-        (Decls,Execs) = self.__reverseProcessDeclsAndExecs(inline)
+    # updates self.__myUnit with all processed and added statements
+    def __templateExpansion(self):
+        (Decls,Execs) = self.__reverseProcessDeclsAndExecs()
         if isinstance(self.__myUnit.uinfo,fs.ModuleStmt) \
                 or isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
             i = 0
@@ -661,6 +797,8 @@ class UnitPostProcessor(object):
 
 
     # processes all declaration and execution statements in forward mode
+    # RETURNS: a tuple containing a list of processed decls and a list of
+    # processed execs.
     def __forwardProcessDeclsAndExecs(self):
         UseStmtSeen = False
         execNum = 0;
@@ -675,8 +813,12 @@ class UnitPostProcessor(object):
 
     # process all decls and execs, adding all decls which are transformed 
     # to assign stmts by post processing to new execs
-    def __reverseProcessDeclsAndExecs(self,inline=False):
-        UseStmtSeen = False
+    # RETURNS: a tuple containing a list of processed decls and a list of
+    # processed execs. Each list is indexed by pragma numbers, such that 
+    # Execs[pragma] is all the execs that should be inserted in the template
+    # for the given pragma.
+    def __reverseProcessDeclsAndExecs(self):
+        UseStmtSeen = False; inline=False
         replacementNum = 0 
         currentExecs = []; currentDecls = []
         Execs = []; Decls = []
@@ -694,6 +836,17 @@ class UnitPostProcessor(object):
             Execs.append(currentExecs)
         return (Decls,Execs)
 
+    # Parses the inline file into units, processes the units, and appends them
+    # to inlineFileUnits for use in inlining
+    @staticmethod
+    def processInlineFile():
+        # may be None if so set in postProcess.py
+        if not UnitPostProcessor._inlineFile:
+            return
+        for aUnit in fortUnitIterator(UnitPostProcessor._inlineFile,False):
+            newUnit = UnitPostProcessor.__getInlineSubroutine(aUnit)
+            UnitPostProcessor._inlineFileUnits.append(newUnit)
+
     # Processes all statements in the unit
     def processUnit(self):
         ''' post-process a unit '''
@@ -708,15 +861,10 @@ class UnitPostProcessor(object):
         self.__active_file = open('activeVariableDefinitions.f','a')
 
         if self._mode == 'reverse':
-            if self._inlineFile : # may be None if so set in postProcess.py
-                for aUnit in fortUnitIterator(self._inlineFile,False):
-                    newUnit = self.__getInlineSubroutine(aUnit)
-                    self._inlineFileUnits.append(newUnit)
             inline = False
-            self.__templateExpansion(inline)
+            self.__templateExpansion()
             self.__myUnit.decls = self.__myNewDecls
             self.__myUnit.execs = self.__myNewExecs
-            self._inlineFileUnits = []
 
         else:
             (Decls,Execs) = self.__forwardProcessDeclsAndExecs()

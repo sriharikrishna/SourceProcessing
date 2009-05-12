@@ -136,6 +136,7 @@ def main():
             UnitPostProcessor.setInlineFile(config.inline)
         if (config.noInline):
             UnitPostProcessor.setInlineFile(None)
+        UnitPostProcessor.processInlineFile()
         templateFile = config.template or 'ad_template.f'
         TemplateExpansion.setTemplateFile(templateFile)
 

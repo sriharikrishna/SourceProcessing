@@ -11,6 +11,8 @@ import PyFort.intrinsic as intrinsic
 from PyFort.typeInference import TypeInferenceError,expressionType,functionType,isArrayReference
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
+import PyFort.fortUnit as fu
+import PyFort.flow as fl
 
 import function2subroutine
 
@@ -23,6 +25,42 @@ class CanonError(Exception):
 def _subroutinizeIntrinsic(aFunction):
     return intrinsic.getGenericName(aFunction.head) in ('max','min')
 
+_requiredSubroutinizedIntrinsics=[]
+
+def requireSubroutinezedIntrinsic(key,typeClass):
+    if ((key,typeClass) not in _requiredSubroutinizedIntrinsics):
+        _requiredSubroutinizedIntrinsics.append((key,typeClass))
+
+_call_prefix  = 'oad_s_'
+_tmp_prefix   = 'oad_ctmp'
+
+def makeSubroutinezedIntrinsicName(intrName,typeClass):
+    return _call_prefix + intrName + (intrinsic.isPolymorphic(intrName) and '_'+typeClass.kw.lower()[0] or '')    
+
+def makeSubroutinizedIntrinsics():
+    ''' this is just a starter and currently works only for max/min '''
+    subroutinizedIntrsincis=[]
+    for (key,typeClass) in _requiredSubroutinizedIntrinsics:
+        newUnit=fu.Unit()
+        subroutinizedIntrsincis.append(newUnit)
+        newUnit.uinfo=fs.SubroutineStmt(makeSubroutinezedIntrinsicName(key,typeClass),
+                                        ["a","b","r"],lead=fl.formatStart).flow()
+        newUnit.decls.append(typeClass(None,None,'a',lead=fl.formatStart+'  ').flow())
+        newUnit.decls.append(typeClass(None,None,'b',lead=fl.formatStart+'  ').flow())
+        newUnit.decls.append(typeClass(None,None,'r',lead=fl.formatStart+'  ').flow())
+        testExpr=None
+        if key=='max':
+            testExpr=fe.Ops('>','a','b')
+        else:
+            testExpr=fe.Ops('<','a','b')
+        newUnit.execs.append(fs.IfThenStmt(testExpr,lead=fl.formatStart+'  ').flow())
+        newUnit.execs.append(fs.AssignStmt('r','a',lead=fl.formatStart+'    ').flow())
+        newUnit.execs.append(fs.ElseStmt(lead=fl.formatStart+'  ').flow())
+        newUnit.execs.append(fs.AssignStmt('r','b',lead=fl.formatStart+'    ').flow())
+        newUnit.execs.append(fs.EndifStmt(lead=fl.formatStart+'  ').flow())
+        newUnit.end.append(fs.EndStmt(lead=fl.formatStart).flow())
+    return subroutinizedIntrsincis
+    
 class UnitCanonicalizer(object):
     'class to facilitate canonicalization on a per-unit basis'
 
@@ -41,8 +79,6 @@ class UnitCanonicalizer(object):
         self.__myUnit = aUnit
         self.__myNewDecls = []
         self.__myNewExecs = []
-        self.__tmp_prefix   = 'oad_ctmp'
-        self.__call_prefix  = 'oad_s_'
         self.__tempCounter = 0
         self.__recursionDepth = 0
 
@@ -70,7 +106,7 @@ class UnitCanonicalizer(object):
 
     def __newTemp(self,anExpression,parentStmt):
         '''The new temporary variable assumes the value of anExpression'''
-        theNewTemp = self.__tmp_prefix + str(self.__tempCounter)
+        theNewTemp = _tmp_prefix + str(self.__tempCounter)
         self.__tempCounter += 1
         (varTypeClass,varModifierList) = expressionType(anExpression,self.__myUnit.symtab,parentStmt.lineNumber)
         if (varModifierList!=[] and isinstance(varModifierList[0],fs._FLenMod) and varModifierList[0].len=='*'):
@@ -95,18 +131,20 @@ class UnitCanonicalizer(object):
         self.__recursionDepth += 1
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|  creating new temp for the result of the subroutine that replaces "'+str(theFuncCall)+'":',newLine=False)
         (theNewTemp,newTempType) = self.__newTemp(theFuncCall,parentStmt)
+        newSubName=''
         if intrinsic.is_intrinsic(theFuncCall.head):
-            funcName = intrinsic.getGenericName(theFuncCall.head)
-            polymorphismSuffix = intrinsic.isPolymorphic(funcName) and '_'+newTempType.kw.lower()[0] or ''
+            funcName=intrinsic.getGenericName(theFuncCall.head)
+            newSubName=makeSubroutinezedIntrinsicName(funcName,
+                                                      newTempType)
+            requireSubroutinezedIntrinsic(funcName,newTempType)
         else:
-            funcName = theFuncCall.head
-            polymorphismSuffix = ''
-        self.__myNewExecs.append(self.__canonicalizeSubCallStmt(fs.CallStmt(self.__call_prefix + funcName + polymorphismSuffix,
+            newSubName=_call_prefix + theFuncCall.head
+        self.__myNewExecs.append(self.__canonicalizeSubCallStmt(fs.CallStmt(newSubName,
                                                                             theFuncCall.args + [theNewTemp],
                                                                             lineNumber=parentStmt.lineNumber,
                                                                             label=False,
                                                                             lead=parentStmt.lead
-                                                                           ).flow()))
+                                                                            ).flow()))
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|_')
         self.__recursionDepth -= 1
         return theNewTemp
