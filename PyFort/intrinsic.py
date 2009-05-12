@@ -4,7 +4,9 @@ a predicate to test for a function being an intrinsic
 '''
 __intrinsics = (
     'abs',
+    'aimag',
     'allocated',
+    'alog',
     'amax0',
     'amax1',
     'amin0',
@@ -13,9 +15,12 @@ __intrinsics = (
     'atan',
     'atan2',
     'close',
+    'cmplx',
     'cos',
     'dabs',
     'dble',
+    'dexp',
+    'dlog',
     'dmax1',
     'dmin1',
     'dsign',
@@ -23,11 +28,14 @@ __intrinsics = (
     'exp',
     'float',
     'int',
+    'iabs',
     'len',
     'log',
     'max',
+    'max0',
     'maxval',
     'min',
+    'min0',
     'minval',
     'mod',
     'nint',
@@ -42,6 +50,7 @@ __intrinsics = (
     'sum',
     'tan',
     'tanh',
+    'transpose',
     'trim',
     'ubound',
     )
@@ -68,7 +77,11 @@ def getGenericName(op):
         return archaicName[1:-1]
     elif (archaicName[0] == 'd' and archaicName[-1] == '1' and archaicName[1:-1] in ('max','min') ):
         return archaicName[1:-1]
-    elif (archaicName[0] == 'd' and archaicName[1:] in ('sign','abs','sqrt') ):
+    elif (archaicName[0] == 'd' and archaicName[1:] in ('sign','abs','log','sqrt') ):
+        return archaicName[1:]
+    elif (archaicName[0] == 'i' and archaicName[1:] in ('abs') ):
+        return archaicName[1:]
+    elif (archaicName[0] == 'a' and archaicName[1:] in ('log') ):
         return archaicName[1:]
     else :
         return archaicName

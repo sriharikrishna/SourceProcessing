@@ -130,12 +130,14 @@ def identifierType(anId,localSymtab,lineNumber):
     return returnType
 
 def intrinsicType(anIntrinsicApp,localSymtab,lineNumber):
-    if anIntrinsicApp.head.lower() == 'real':
+    if anIntrinsicApp.head.lower() in ['aimag','alog','real']:
         return (fortStmts.RealStmt, [])
     elif anIntrinsicApp.head.lower() == 'int':
         return (fortStmts.IntegerStmt, [])
-    elif anIntrinsicApp.head.lower() in ['dble','dabs','dsqrt']:
+    elif anIntrinsicApp.head.lower() in ['dble','dabs','dexp','dlog','dsqrt']:
         return (fortStmts.DoubleStmt, [])
+    elif anIntrinsicApp.head.lower() == 'cmplx':
+        return (fortStmts.ComplexStmt, [])
     else:
         return typemerge([expressionType(anArg,localSymtab,lineNumber) for anArg in anIntrinsicApp.args],
                          (None,None))
