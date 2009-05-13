@@ -18,10 +18,10 @@ def markRequired(key,typeClass):
     if ((key,typeClass) not in _requiredSubroutinizedIntrinsics):
         _requiredSubroutinizedIntrinsics.append((key,typeClass))
 
-_call_prefix  = 'oad_s_'
+call_prefix  = 'oad_s_'
 
 def makeName(intrName,typeClass):
-    return _call_prefix + intrName + (intrinsic.isPolymorphic(intrName) and '_'+typeClass.kw.lower()[0] or '')    
+    return call_prefix + intrName + (intrinsic.isPolymorphic(intrName) and '_'+typeClass.kw.lower()[0] or '')    
 
 def makeSubroutinizedIntrinsics():
     ''' this is just a starter and currently works only for max/min '''

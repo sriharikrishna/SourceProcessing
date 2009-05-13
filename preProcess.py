@@ -120,7 +120,6 @@ def main():
         else: out = sys.stdout
         for aUnit in fortUnitIterator(inputFile,config.isFreeFormat):
             UnitCanonicalizer(aUnit).canonicalizeUnit().printit(out)
-        print "makeSubroutinizedIntrinsics() =",makeSubroutinizedIntrinsics()
         for aUnit in makeSubroutinizedIntrinsics():
             aUnit.printit(out)
         if config.outputFile: out.close()

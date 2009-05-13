@@ -14,7 +14,6 @@ import PyFort.fortStmts as fs
 
 import function2subroutine
 import subroutinizedIntrinsics
-from subroutinizedIntrinsics import _call_prefix
 
 _tmp_prefix   = 'oad_ctmp'
 
@@ -104,7 +103,7 @@ class UnitCanonicalizer(object):
                                                           newTempType)
             subroutinizedIntrinsics.markRequired(funcName,newTempType)
         else:
-            newSubName=_call_prefix + theFuncCall.head
+            newSubName = subroutinizedIntrinsics.call_prefix + theFuncCall.head
         self.__myNewExecs.append(self.__canonicalizeSubCallStmt(fs.CallStmt(newSubName,
                                                                             theFuncCall.args + newArgs,
                                                                             lineNumber=parentStmt.lineNumber,
