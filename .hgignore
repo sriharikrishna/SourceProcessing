@@ -3,6 +3,7 @@ Regression
 *.swp
 *.pyc
 *~
+*.orig
 doc/*
 CVS
 .project
