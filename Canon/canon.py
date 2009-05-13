@@ -168,7 +168,7 @@ class UnitCanonicalizer(object):
             replacementExpression = fe.Ops(theExpression.op,a1Result,a2result)
         # Everything else...
         else:
-            DebugManager.debug(', which is some other nontrivial type that is assumed to require no canonicalization')
+            DebugManager.debug(', which is of type '+str(theExpression.__class__)+' that is assumed to require no canonicalization')
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|_')
         self.__recursionDepth -= 1
         return replacementExpression
