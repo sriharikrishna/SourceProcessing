@@ -13,7 +13,8 @@ import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
 
 import function2subroutine
-from subroutinizedIntrinsics import shouldSubroutinizeIntrinsic,makeSubroutinizedIntrinsicName,requireSubroutinizedIntrinsic,_call_prefix
+import subroutinizedIntrinsics
+from subroutinizedIntrinsics import _call_prefix
 
 _tmp_prefix   = 'oad_ctmp'
 
@@ -62,7 +63,7 @@ class UnitCanonicalizer(object):
             raise CanonError('UnitCanonicalizer.shouldSubroutinizeFunction: TypeInferenceError: '+errorObj.msg,parentStmt.lineNumber)
         if is_intrinsic(theApp.head):
             DebugManager.debug('UnitCanonicalizer.shouldSubroutinizeFunction: It\'s an intrinsic of type '+str(funcType))
-            return shouldSubroutinizeIntrinsic(theApp) and not funcType == fs.IntegerStmt
+            return subroutinizedIntrinsics.shouldSubroutinize(theApp) and not funcType == fs.IntegerStmt
         else:
             return True
 
@@ -99,9 +100,9 @@ class UnitCanonicalizer(object):
             funcName=getGenericName(theFuncCall.head)
             if funcName in ('maxval','minval'):
                 newArgs = [fe.App('size',[theFuncCall.args[0],'1']), theNewTemp]
-            newSubName = makeSubroutinizedIntrinsicName(funcName,
-                                                        newTempType)
-            requireSubroutinizedIntrinsic(funcName,newTempType)
+            newSubName = subroutinizedIntrinsics.makeName(funcName,
+                                                          newTempType)
+            subroutinizedIntrinsics.markRequired(funcName,newTempType)
         else:
             newSubName=_call_prefix + theFuncCall.head
         self.__myNewExecs.append(self.__canonicalizeSubCallStmt(fs.CallStmt(newSubName,

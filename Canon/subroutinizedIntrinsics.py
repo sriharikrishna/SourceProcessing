@@ -9,18 +9,18 @@ class SubroutinizeError(Exception):
     def __init__(self,msg):
         self.msg  = msg
 
-def shouldSubroutinizeIntrinsic(aFunction):
+def shouldSubroutinize(aFunction):
     return intrinsic.getGenericName(aFunction.head) in ('max','maxval','min','minval')
 
 _requiredSubroutinizedIntrinsics=[]
 
-def requireSubroutinizedIntrinsic(key,typeClass):
+def markRequired(key,typeClass):
     if ((key,typeClass) not in _requiredSubroutinizedIntrinsics):
         _requiredSubroutinizedIntrinsics.append((key,typeClass))
 
 _call_prefix  = 'oad_s_'
 
-def makeSubroutinizedIntrinsicName(intrName,typeClass):
+def makeName(intrName,typeClass):
     return _call_prefix + intrName + (intrinsic.isPolymorphic(intrName) and '_'+typeClass.kw.lower()[0] or '')    
 
 def makeSubroutinizedIntrinsics():
@@ -38,7 +38,7 @@ def makeSubroutinizedIntrinsics():
     return subroutinizedIntrinsics
 
 def makeSubroutinizedMaxOrMin(newUnit,aKey,aTypeClass):
-    newUnit.uinfo=fs.SubroutineStmt(makeSubroutinizedIntrinsicName(aKey,aTypeClass),
+    newUnit.uinfo=fs.SubroutineStmt(makeName(aKey,aTypeClass),
                                     ["a","b","r"],
                                     lead=flow.formatStart
                                    ).flow()
@@ -67,7 +67,7 @@ def makeSubroutinizedMaxOrMin(newUnit,aKey,aTypeClass):
     newUnit.end.append(fs.EndStmt(lead=flow.formatStart).flow())
 
 def makeSubroutinizedMaxvalOrMinval(newUnit,aKey,aTypeClass):
-    newUnit.uinfo = fs.SubroutineStmt(makeSubroutinizedIntrinsicName(aKey,aTypeClass),
+    newUnit.uinfo = fs.SubroutineStmt(makeName(aKey,aTypeClass),
                                       ['a','l','r'],
                                       lead=flow.formatStart
                                      ).flow()
@@ -101,5 +101,5 @@ def makeSubroutinizedMaxvalOrMinval(newUnit,aKey,aTypeClass):
                                        App('i',['1']),
                                        lead=flow.formatStart+'    '
                                       ).flow())
-    newUnit.end.append(fs.EndStmt(lead=formatStart).flow())
+    newUnit.end.append(fs.EndStmt(lead=flow.formatStart).flow())
 
