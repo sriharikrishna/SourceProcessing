@@ -1235,7 +1235,7 @@ class IfStmt(Exec):
         prefix = seq(lit('if'),lit('('),Exp,lit(')'))
         ((ifLit,dc1,test,dc2),rest) = prefix(scan)
         if [l.lower() for l in rest] == ['then']:
-            return IfThenStmt(test,ifLit,thenLit,lineNumber)
+            return IfThenStmt(test,ifLit,rest,lineNumber)
         else:
             return IfNonThenStmt(test,_kw_parse(rest,lineNumber),ifLit,lineNumber)
 

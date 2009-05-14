@@ -263,7 +263,7 @@ class UnitCanonicalizer(object):
         self.__recursionDepth -= 1
         # append the canonicalized version of the executable statement
         anIfNonThenStmt.stmt.lead = anIfNonThenStmt.lead+'  '
-        self.__canonicalizeExecStmt(anIfNonThenStmt.stmt)
+        self.__canonicalizeExecStmt(anIfNonThenStmt.stmt.flow())
         self.__recursionDepth += 1
         # insert the endif statement as the replacement
         replacementStatement = fs.EndifStmt().flow()
