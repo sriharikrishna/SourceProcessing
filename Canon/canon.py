@@ -247,16 +247,26 @@ class UnitCanonicalizer(object):
         return replacementStatement
 
     def __canonicalizeIfNonThenStmt(self,anIfNonThenStmt):
-        '''Canonicalize if stmt (without "then" by canonicalizing the test component and the conditionally executed statement
-        returns a list of statements that replace anIfNonThenStmt'''
-        DebugManager.debug(self.__recursionDepth*'|\t'+'canonicalizing if statement (without "then") "'+str(anIfNonThenStmt)+'"')
+        '''Canonicalize if stmt (without "then") by converting to an if-then construct and then recursively
+           canonicalizing the test component and the conditionally executed statement'''
+        # the replacement statement should be the endif
+        DebugManager.debug(self.__recursionDepth*'|\t'+'canonicalizing if statement (without "then") "'+str(anIfNonThenStmt)+'" => replacing with an if-then statement')
         self.__recursionDepth += 1
-        replacementStatement = fs.IfNonThenStmt(self.__canonicalizeExpression(anIfNonThenStmt.test,anIfNonThenStmt),
-                                                self.__canonicalizeExpression(anIfNonThenStmt.stmt,anIfNonThenStmt),
-                                                lineNumber=anIfNonThenStmt.lineNumber,
-                                                label=anIfNonThenStmt.label,
-                                                lead=anIfNonThenStmt.lead
-                                               ).flow()
+        # first append the new IfThenStmt
+        self.__myNewExecs.append(fs.IfThenStmt(self.__canonicalizeExpression(anIfNonThenStmt.test,anIfNonThenStmt),
+                                 ifFormatStr=anIfNonThenStmt.ifFormatStr,
+                                 thenFormatStr='then',
+                                 lineNumber=anIfNonThenStmt.lineNumber,
+                                 label=anIfNonThenStmt.label,
+                                 lead=anIfNonThenStmt.lead
+                                ).flow())
+        self.__recursionDepth -= 1
+        # append the canonicalized version of the executable statement
+        anIfNonThenStmt.stmt.lead = anIfNonThenStmt.lead+'  '
+        self.__canonicalizeExecStmt(anIfNonThenStmt.stmt)
+        self.__recursionDepth += 1
+        # insert the endif statement as the replacement
+        replacementStatement = fs.EndifStmt().flow()
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|_')
         self.__recursionDepth -= 1
         return replacementStatement
@@ -348,6 +358,35 @@ class UnitCanonicalizer(object):
         self.__recursionDepth -= 1
         return replacementStatement
 
+    def __canonicalizeExecStmt(self,anExecStmt):
+        newExecsLength = len(self.__myNewExecs) # store the current number of execs (to determine afterwards whether we've added some)
+        replacementStatement = anExecStmt
+        if isinstance(anExecStmt,fs.CallStmt):
+            replacementStatement = self.__canonicalizeSubCallStmt(anExecStmt)
+        elif isinstance(anExecStmt,fs.AssignStmt):
+            replacementStatement = self.__canonicalizeAssignStmt(anExecStmt)
+        elif isinstance(anExecStmt,fs.IfNonThenStmt):
+            replacementStatement = self.__canonicalizeIfNonThenStmt(anExecStmt)
+        elif isinstance(anExecStmt,fs.IfThenStmt):
+            replacementStatement = self.__canonicalizeIfThenStmt(anExecStmt)
+        elif isinstance(anExecStmt,fs.ElseifStmt):
+            replacementStatement = self.__canonicalizeElseifStmt(anExecStmt)
+        elif isinstance(anExecStmt,fs.DoStmt):
+            replacementStatement = self.__canonicalizeDoStmt(anExecStmt)
+        elif isinstance(anExecStmt,fs.WhileStmt):
+            replacementStatement = self.__canonicalizeWhileStmt(anExecStmt)
+        elif isinstance(anExecStmt,fs.SelectCaseStmt):
+            replacementStatement = self.__canonicalizeSelectCaseStmt(anExecStmt)
+        else:
+            DebugManager.debug('Statement "'+str(anExecStmt)+'" is assumed to require no canonicalization')
+        if self.__recursionDepth != 0:
+            raise CanonError('Recursion depth did not resolve to zero when canonicalizing '+str(anExecStmt),anExecStmt.lineNumber)
+        # determine whether a change was made
+        if len(self.__myNewExecs) > newExecsLength: # some new statements were inserted
+            self.__myNewExecs.append(replacementStatement) # => replace anExecStmt with the canonicalized version
+        else: # no new statements were inserted
+            self.__myNewExecs.append(anExecStmt) # => leave anExecStmt alone
+
     def canonicalizeUnit(self):
         '''Recursively canonicalize \p aUnit'''
         DebugManager.debug(('+'*55)+' Begin canonicalize unit <'+str(self.__myUnit.uinfo)+'> '+(55*'+'))
@@ -359,35 +398,9 @@ class UnitCanonicalizer(object):
 
         DebugManager.debug('canonicalizing executable statements:')
         for anExecStmt in self.__myUnit.execs:
+            DebugManager.debug('[Line '+str(anExecStmt.lineNumber)+']:')
             try:
-                DebugManager.debug('[Line '+str(anExecStmt.lineNumber)+']:')
-                newExecsLength = len(self.__myNewExecs) # store the current number of execs (to determine afterwards whether we've added some)
-                replacementStatement = anExecStmt
-                if isinstance(anExecStmt,fs.CallStmt):
-                    replacementStatement = self.__canonicalizeSubCallStmt(anExecStmt)
-                elif isinstance(anExecStmt,fs.AssignStmt):
-                    replacementStatement = self.__canonicalizeAssignStmt(anExecStmt)
-                elif isinstance(anExecStmt,fs.IfNonThenStmt):
-                    replacementStatement = self.__canonicalizeIfNonThenStmt(anExecStmt)
-                elif isinstance(anExecStmt,fs.IfThenStmt):
-                    replacementStatement = self.__canonicalizeIfThenStmt(anExecStmt)
-                elif isinstance(anExecStmt,fs.ElseifStmt):
-                    replacementStatement = self.__canonicalizeElseifStmt(anExecStmt)
-                elif isinstance(anExecStmt,fs.DoStmt):
-                    replacementStatement = self.__canonicalizeDoStmt(anExecStmt)
-                elif isinstance(anExecStmt,fs.WhileStmt):
-                    replacementStatement = self.__canonicalizeWhileStmt(anExecStmt)
-                elif isinstance(anExecStmt,fs.SelectCaseStmt):
-                    replacementStatement = self.__canonicalizeSelectCaseStmt(anExecStmt)
-                else:
-                    DebugManager.debug('Statement "'+str(anExecStmt)+'" is assumed to require no canonicalization')
-                if self.__recursionDepth != 0:
-                    raise CanonError('Recursion depth did not resolve to zero when canonicalizing',anExecStmt,anExecStmt.lineNumber)
-                # determine whether a change was made
-                if len(self.__myNewExecs) > newExecsLength: # some new statements were inserted
-                    self.__myNewExecs.append(replacementStatement) # => replace anExecStmt with the canonicalized version
-                else: # no new statements were inserted
-                    self.__myNewExecs.append(anExecStmt) # => leave anExecStmt alone
+                self.__canonicalizeExecStmt(anExecStmt)
             except TypeInferenceError,e:
                 raise CanonError('Caught TypeInferenceError: '+e.msg,anExecStmt.lineNumber)
             except SymtabError,e:
