@@ -4,6 +4,8 @@ a predicate to test for a function being an intrinsic
 '''
 __intrinsics = (
     'abs',
+    'adjustl',
+    'adjustr',
     'aimag',
     'allocated',
     'alog',
@@ -30,6 +32,7 @@ __intrinsics = (
     'int',
     'iabs',
     'len',
+    'len_trim',
     'log',
     'max',
     'max0',
