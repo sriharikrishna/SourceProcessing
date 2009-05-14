@@ -1233,19 +1233,19 @@ class IfStmt(Exec):
     @staticmethod
     def parse(scan,lineNumber):
         prefix = seq(lit('if'),lit('('),Exp,lit(')'))
-        ((dc,dc1,e,dc2),rest) = prefix(scan)
+        ((ifLit,dc1,test,dc2),rest) = prefix(scan)
         if [l.lower() for l in rest] == ['then']:
-            return IfThenStmt(e,dc,l,lineNumber)
+            return IfThenStmt(test,ifLit,thenLit,lineNumber)
         else:
-            return IfNonThenStmt(e,_kw_parse(rest,lineNumber),dc,lineNumber)
+            return IfNonThenStmt(test,_kw_parse(rest,lineNumber),ifLit,lineNumber)
 
 class IfThenStmt(IfStmt):
     _sons = ['test']
 
-    def __init__(self,e,stmt_name='if',stmt_name2='then',lineNumber=0,label=False,lead=''):
-        self.test = e
-        self.stmt_name = stmt_name
-        self.stmt_name2 = stmt_name2
+    def __init__(self,test,ifFormatStr='if',thenFormatStr='then',lineNumber=0,label=False,lead=''):
+        self.test = test
+        self.ifFormatStr = ifFormatStr
+        self.thenFormatStr = thenFormatStr
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
@@ -1254,15 +1254,15 @@ class IfThenStmt(IfStmt):
         return 'IfThenStmt(%s)' % (repr(self.test),)
 
     def __str__(self):
-        return '%s (%s) %s' % (self.stmt_name,str(self.test),self.stmt_name2)
+        return '%s (%s) %s' % (self.ifFormatStr,str(self.test),self.thenFormatStr)
 
 class IfNonThenStmt(IfStmt):
     _sons = ['test','stmt']
 
-    def __init__(self,test,stmt,stmt_name='if',lineNumber=0,label=False,lead=''):
+    def __init__(self,test,stmt,ifFormatStr='if',lineNumber=0,label=False,lead=''):
         self.test = test
         self.stmt = stmt
-        self.stmt_name = stmt_name
+        self.ifFormatStr = ifFormatStr
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
@@ -1272,7 +1272,7 @@ class IfNonThenStmt(IfStmt):
                                          repr(self.stmt))
 
     def __str__(self):
-        return '%s (%s) %s' % (self.stmt_name,str(self.test),str(self.stmt))
+        return '%s (%s) %s' % (self.ifFormatStr,str(self.test),str(self.stmt))
 
 class ElseifStmt(Exec):
     _sons = ['test']
