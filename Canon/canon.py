@@ -266,7 +266,7 @@ class UnitCanonicalizer(object):
         self.__canonicalizeExecStmt(anIfNonThenStmt.stmt.flow())
         self.__recursionDepth += 1
         # insert the endif statement as the replacement
-        replacementStatement = fs.EndifStmt().flow()
+        replacementStatement = fs.EndifStmt(lead=anIfNonThenStmt.lead).flow()
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|_')
         self.__recursionDepth -= 1
         return replacementStatement
