@@ -469,8 +469,15 @@ class Exec(NonComment):
         return '%s(%s)' % (self.__class__.__name__,
                            ','.join([repr(getattr(self,aSon)) for aSon in self._sons]))
 
+    def __str__(self):
+        return self.__class__.kw
+
 class Leaf(Exec):
     "special Exec that doesn't have components"
+
+    @classmethod
+    def parse(cls,scan,lineNumber):
+        return cls(lineNumber)
 
     def __init__(self,lineNumber=0,label=False,lead='',*dc):
         self.lineNumber = lineNumber
@@ -479,9 +486,6 @@ class Leaf(Exec):
 
     def __repr__(self):
         return '%s()' % self.__class__.__name__
-
-    def __str__(self):
-        return '%s' % self.__class__.kw
 
 class DeclLeaf(Decl):
     "special Decl that has no components"
@@ -1069,20 +1073,20 @@ class UseOnlyStmt(UseStmt):
     def __str__(self):
         return self.stmt_name+' '+str(self.moduleName)+', only: '+','.join([str(anOnlyItem) for anOnlyItem in self.onlyList])
 
-class FormatStmt(Decl):
-    pass
-
 class EntryStmt(Decl):
     pass
 
-class CycleStmt(Exec):
-    pass
+class CycleStmt(Leaf):
+    kw = 'cycle'
+    kw_str = kw
 
-class ExitStmt(Exec):
-    pass
+class ExitStmt(Leaf):
+    kw = 'exit'
+    kw_str = kw
 
-class RewindStmt(Exec):
-    pass
+class RewindStmt(Leaf):
+    kw = 'rewind'
+    kw_str = kw
 
 class CallStmt(Exec):
     _sons = ['args']
@@ -1221,13 +1225,16 @@ class PrintStmt(Exec):
         return '%s %s' % (self.stmt_name,''.join([str(sub) for sub in self.substr_list]))
 
 class FormatStmt(Exec):
-    pass
+    kw = 'format'
+    kw_str = kw
 
 class StopStmt(Exec):
-    pass
+    kw = 'stop'
+    kw_str = kw
 
 class ReturnStmt(Leaf):
     kw = 'return'
+    kw_str = kw
 
 class IfStmt(Exec):
     @staticmethod
@@ -1532,7 +1539,7 @@ class CaseRangeListStmt(Exec):
     '''
     _sons = ['caseRangeList']
     kw = 'case'
-    kw_str = 'case'
+    kw_str = kw
 
     @staticmethod
     def parse(scan,lineNumber):
@@ -1557,7 +1564,32 @@ class CaseRangeListStmt(Exec):
         return '%s (%s)' % (self.stmt_name,','.join([str(range) for range in self.caseRangeList]))
 
 class GotoStmt(Exec):
-    pass
+    kw = 'goto'
+    kw_str = 'go to'
+    _sons = ['targetLabel']
+
+    @staticmethod
+    def parse(scan,lineNumber):
+        noSpace = seq(lit('goto'),
+                      int)
+
+        withSpace = seq(lit('go'),
+                        lit('to'),
+                        int)
+        withSpace = treat(withSpace, lambda x: (x[0]+' '+x[1],x[2]))
+
+        ((gotoFormatStr,targetLabel),rest) = disj(withSpace,noSpace)(scan)
+        return GotoStmt(targetLabel,gotoFormatStr,lineNumber)
+
+    def __init__(self,targetLabel,gotoFormatStr=kw,lineNumber=0,label=False,lead=''):
+        self.targetLabel = targetLabel
+        self.gotoFormatStr = gotoFormatStr
+        self.lineNumber = lineNumber
+        self.label = label
+        self.lead = lead
+
+    def __str__(self):
+        return self.gotoFormatStr+' '+self.targetLabel
 
 class AllocateStmt(Exec):
     '''
@@ -1574,14 +1606,12 @@ class AllocateStmt(Exec):
 #                       lit('('),
 #                       cslist(Exp),
 #                       lit(')'))
-#       try:
-#           ((allocKeyword,oParen,argList,cParen),rest) = allocStmt(scan)
-#       except ListAssemblerException,e:
-#           raise ParseError(lineNumber,scan,AllocateStmt.kw+' statement')
-#       return AllocateStmt(argList,lineNumber)
+#       ((allocKeyword,oParen,argList,cParen),rest) = allocStmt(scan)
+#       return AllocateStmt(argList,allocKeyword,lineNumber)
 
-#   def __init__(self,argList,lineNumber=0,label=False,lead=''):
+#   def __init__(self,argList,allocateFormatStr=kw,lineNumber=0,label=False,lead=''):
 #       self.argList = argList
+#       self.allocateFormatStr = allocateFormatStr
 #       self.lineNumber = lineNumber
 #       self.label = label
 #       self.lead = lead
@@ -1592,28 +1622,27 @@ class AllocateStmt(Exec):
 class DeallocateStmt(Exec):
     kw = 'deallocate'
     kw_str = kw
-#   _sons = ['argList']
+    _sons = ['argList']
 
-#   @staticmethod
-#   def parse(scan,lineNumber):
-#       allocStmt = seq(lit(DeallocateStmt.kw),
-#                       lit('('),
-#                       cslist(Exp),
-#                       lit(')'))
-#       try:
-#           ((allocKeyword,oParen,argList,cParen),rest) = allocStmt(scan)
-#       except ListAssemblerException,e:
-#           raise ParseError(lineNumber,scan,DeallocateStmt.kw+' statement')
-#       return DeallocateStmt(argList,lineNumber)
+    @staticmethod
+    def parse(scan,lineNumber):
+        #formDeallocateStmt = seq(lit('deallocate'),
+        formDeallocateStmt = seq(lit(DeallocateStmt.kw),
+                                 lit('('),
+                                 cslist(Exp),
+                                 lit(')'))
+        ((deallocKeyword,oParen,argList,cParen),rest) = formDeallocateStmt(scan)
+        return DeallocateStmt(argList,deallocKeyword,lineNumber)
 
-#   def __init__(self,argList,lineNumber=0,label=False,lead=''):
-#       self.argList = argList
-#       self.lineNumber = lineNumber
-#       self.label = label
-#       self.lead = lead
+    def __init__(self,argList,deallocateFormatStr=kw,lineNumber=0,label=False,lead=''):
+        self.argList = argList
+        self.deallocateFormatStr = deallocateFormatStr
+        self.lineNumber = lineNumber
+        self.label = label
+        self.lead = lead
 
-#   def __str__(self):
-#       return '%s(%s)' % (self.kw,','.join([str(arg) for arg in self.argList]))
+    def __str__(self):
+        return '%s(%s)' % (self.kw,','.join([str(arg) for arg in self.argList]))
 
 kwtbl = dict(blockdata       = BlockdataStmt,
              common          = CommonStmt,
@@ -1717,13 +1746,22 @@ def parse(scan,lineNumber):
 
         if not kwtbl.get(kw):
             if '=>' in scan:
-                return PointerAssignStmt.parse(scan,lineNumber)
+                try:
+                    return PointerAssignStmt.parse(scan,lineNumber)
+                except ListAssemblerException,e:
+                    raise ParseError(lineNumber,scan,PointerAssignStmt)
             elif ('do' in scan) and (':' in scan):
-                return DoStmt.parse(scan,lineNumber)
+                try:
+                    return DoStmt.parse(scan,lineNumber)
+                except ListAssemblerException,e:
+                    raise ParseError(lineNumber,scan,DoStmt)
             else:
                 raise ParseError(lineNumber,scan,None)
         else:
-            return kwtbl.get(kw).parse(scan,lineNumber)
+            try:
+                return kwtbl.get(kw).parse(scan,lineNumber)
+            except ListAssemblerException,e:
+                raise ParseError(lineNumber,scan,kwtbl.get(kw))
 
 #
 # alias so that stmts like if, etc can call the above routine

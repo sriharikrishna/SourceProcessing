@@ -772,6 +772,23 @@ class TestAllocateDeallocateStmts(TestCase):
 #       self.assertEquals(repr(pps(theString)),repr(theRepr))
 #       self.assertEquals(theString,str(theRepr))
 
+class TestGotoStmt(TestCase):
+    '''goto statements'''
+
+    def test0(self):
+        '''goto without space'''
+        theString = 'GoTo 100'
+        theRepr = GotoStmt('100',gotoFormatStr='GoTo')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test1(self):
+        '''goto with space'''
+        theString = 'Go to 100'
+        theRepr = GotoStmt('100',gotoFormatStr='Go to')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
 suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,C10,TestCharacterDecls,
                                            TestImplicitStmt,
                                            TestDimensionStmt,
@@ -786,6 +803,7 @@ suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,C10,TestCharacterDecls,
                                            TestWhereStmt,
                                            TestIntegerStmt,
                                            TestAllocateDeallocateStmts,
+                                           TestGotoStmt,
               )
 
 if __name__ == '__main__':
