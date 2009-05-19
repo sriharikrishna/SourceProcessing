@@ -1166,10 +1166,12 @@ class PointerAssignStmt(Exec):
         return '%s => %s' % (str(self.lhs),str(self.rhs))
 
 class OpenStmt(Exec):
-    pass
+    kw = 'open'
+    kw_str = kw
 
 class CloseStmt(Exec):
-    pass
+    kw = 'close'
+    kw_str = kw
 
 class ReadStmt(Exec):
     @staticmethod
