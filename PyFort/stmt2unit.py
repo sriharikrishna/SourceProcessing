@@ -3,7 +3,7 @@
 
 from _Setup import *
 
-from PyUtil.symtab import Symtab,SymtabEntry
+from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
 from PyUtil.debugManager import DebugManager
 
 import fortStmts     as fs
@@ -141,10 +141,13 @@ def _use_module(aUseStmt,cur):
     DebugManager.debug('[Line '+str(aUseStmt.lineNumber)+']: stmt2unit._use_module() for '+str(aUseStmt)+': with symtab '+str(cur.val.symtab)+' and parent symtab '+str(cur.val.symtab.parent))
     module_unit = cur.module_handler.get_module(aUseStmt.moduleName)
     if module_unit:
-        if isinstance(aUseStmt,fs.UseAllStmt):
-            cur.val.symtab.update_w_module_all(module_unit,aUseStmt.renameList)
-        elif isinstance(aUseStmt,fs.UseOnlyStmt):
-            cur.val.symtab.update_w_module_only(module_unit,aUseStmt.onlyList)
+        try:
+            if isinstance(aUseStmt,fs.UseAllStmt):
+                cur.val.symtab.update_w_module_all(module_unit,aUseStmt.renameList)
+            elif isinstance(aUseStmt,fs.UseOnlyStmt):
+                cur.val.symtab.update_w_module_only(module_unit,aUseStmt.onlyList)
+        except KeyError,e:
+            raise SymtabError('error when updating a symbol table according to use statement '+str(aUseStmt),None,lineNumber=aUseStmt.lineNumber)
     else:
 	global reportedMissingModules
         if not (aUseStmt.moduleName.lower() in reportedMissingModules) :
