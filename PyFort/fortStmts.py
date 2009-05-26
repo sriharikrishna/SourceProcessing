@@ -461,6 +461,14 @@ class PUstart(Decl):
     def is_decl(self,unit=_non):  return True
     def is_ustart(self,unit=_non): return True
 
+class PointerStmt(Decl):
+    kw = 'pointer'
+    kw_str = kw
+
+class TargetStmt(Decl):
+    kw = 'target'
+    kw_str = kw
+
 class Exec(NonComment):
     ''' base class for all executable statements'''
     def is_exec(self,unit=_non): return True
@@ -1707,7 +1715,7 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              deallocate      = DeallocateStmt
              )
 
-for kw in ('if','continue','return','else','print','use','cycle','exit','rewind','where','elsewhere','format'):
+for kw in ('if','continue','return','else','print','use','cycle','exit','rewind','where','elsewhere','format','pointer','target'):
     kwtbl[kw] = globals()[kw.capitalize() + 'Stmt']
     
 lhs    = disj(app,id)
