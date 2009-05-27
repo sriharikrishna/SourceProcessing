@@ -164,6 +164,20 @@ class Zslice(_Exp):
     def __str__(self):
         return ':'
 
+class MultiParenExp(_Exp):
+    'parenthesized expression with a comma-separated list like (a,b)'
+    def __init__(self,expList):
+        self.expList = expList
+
+    def __repr__(self):
+        return 'MultiParenExp(%s)' % (repr(self.expList),)
+
+    def __str__(self):
+        return '(%s)' % (','.join([str(e) for e in self.expList]))
+
+    def map(self,fn):
+        return MultiParenExp([fn(self.exp) for e in self.expList])
+
 class Unary(_Exp):
     _sons = ['exp']
 
@@ -361,6 +375,11 @@ def _mkparen(parn):
     (dc,e,dc2) = parn
     return ParenExp(e)
 
+def _makeMultiParen(formMultiParen):
+    'turn a recognized multiple parenthesized expression into a MultiParenExp object'
+    (leftParen,expList,rightParen) = formMultiParen
+    return MultiParenExp(expList)
+
 def _mkexp(e):
     'convert a recognized exp into an Ops object'
     (a,oplst) = e
@@ -376,7 +395,7 @@ unary   = pred(is_unary)
 
 def atom0(scan):
     '''eta expansion, since letrec unavail in python'''
-    return disj(id,const,unaryExp,paren)(scan)
+    return disj(id,const,unaryExp,paren,formMultiParen)(scan)
 
 def atom(scan):
 
@@ -452,6 +471,11 @@ unaryExp  = treat(unaryExp,_mkunary)
 
 paren     = seq(lit('('),Exp,lit(')'))
 paren     = treat(paren,_mkparen)
+
+formMultiParen = seq(lit('('),
+                 cslist(Exp),
+                 lit(')'))
+formMultiParen = treat(formMultiParen,_makeMultiParen)
 
 # utility list
 #

@@ -98,6 +98,13 @@ class C2(TestCase):
            repr(AssignStmt(Sel(App(Sel(App(Sel('x','v'),['1', '2']),'q'),
                                    ['xx']),'r'),'5')))
 
+    def test5(self):
+        '''Assignment statement with multiple RHS values (for complex, array, user-defined type, etc.)'''
+        theString = 'GAMMAL = (0.0D00,0.0D00)'
+        theRepr = AssignStmt('GAMMAL',MultiParenExp(['0.0D00', '0.0D00']))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
 class C3(TestCase):
     def test1(self):
         'create comment block'
