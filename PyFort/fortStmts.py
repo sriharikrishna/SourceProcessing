@@ -1004,8 +1004,6 @@ class ModuleStmt(PUstart):
     def __str__(self):
         return 'module %s' % self.name
 
-    pass
-
 class UseStmt(Decl):
     kw     = 'use'
     kw_str = kw

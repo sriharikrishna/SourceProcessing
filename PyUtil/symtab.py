@@ -198,7 +198,7 @@ class SymtabEntry(object):
         else:
             self.origin = anOriginStr
 
-    def debug(self,name):
+    def debug(self,name=''):
         return '[SymtabEntry "'+name+'" -> entryKind='+str(self.entryKind)+\
                                          ', type='+str(self.type)+\
                                          ', dimensions='+str(self.dimensions)+\

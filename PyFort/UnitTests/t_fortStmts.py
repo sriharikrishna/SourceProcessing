@@ -109,7 +109,7 @@ class C3(TestCase):
 
 class C4(TestCase):
     def test1(self):
-        'assignment statement classes have have "_sons" attribute'
+        'assignment statement classes have "_sons" attribute'
         ae = self.assertEquals
         a_ = self.assert_
 
@@ -118,7 +118,7 @@ class C4(TestCase):
         ae(v._sons,['lhs','rhs'])
 
     def test2(self):
-        'if statement classes have have "_sons" attribute'
+        'if statement classes have "_sons" attribute'
         ae = self.assertEquals
         a_ = self.assert_
 
