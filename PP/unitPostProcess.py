@@ -676,10 +676,8 @@ class UnitPostProcessor(object):
         except SymtabError,e:
             raise PostProcessError('Caught SymtabError: '+e.msg,anExecStmt.lineNumber)
        
-    # rewrites active types and adds the active module for a declaration stmt
-    # determines if inlining or pragma replacement should occur
-    # transforms all active types in an exec statement
-    # determines if inlining should occur (based on comments)
+    # transforms all active types in an declaration statement; determines
+    # if inlining or pragma replacement should occur (based on comments)
     # creates new exec statements for inlining based on the inline file
     # PARAMS:
     # (in forward mode, only aDecl,Decls,Execs and UseStmtSeen are used)
