@@ -100,67 +100,67 @@ def main():
                    action='store_true',
                    default=False)
 
-    config, args = opt.parse_args()
-
-    # Set input file
-    if len(args) != 1:
-        opt.error("expect exactly one argument <input_file>, given are "+str(len(args))+" which are:"+str(args)+" and the following options: "+str(config))
-    inputFile = args[0]
-
-    if (config.width and config.output):
-        opt.error("cannot specify both --width and -o.")
-
-    # set symtab type defaults
-    Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
-
-    # set __deriv__ output format(__deriv__(v) -> "(v)%d" if -d option or "v" by default)
-    UnitPostProcessor.setDerivType(config.deriv)
-
-    # set free/fixed format
-    free_flow(config.free)
-
-    # configure forward/reverse mode (including inline file for reverse mode)
-    if (config.mode != 'r'):
-        if (config.inline):
-            opt.error("option -i requires reverse mode ( -m r )")
-        if (config.template):
-            opt.error("option -t requires reverse mode ( -m r )")
-    if config.mode == 'f':
-        UnitPostProcessor.setMode('forward')
-    if config.mode == 'r':
-        UnitPostProcessor.setMode('reverse')
-        UnitPostProcessor.setFreeFlow(config.free)
-        if (config.inline):
-            if (config.noInline):
-                opt.error("option --noInline conflicts with option -i")
-            UnitPostProcessor.setInlineFile(config.inline)
-        if (config.noInline):
-            UnitPostProcessor.setInlineFile(None)
-        UnitPostProcessor.processInlineFile()
-        templateFile = config.template or 'ad_template.f'
-        TemplateExpansion.setTemplateFile(templateFile)
-
-    # set options for splitting compile units
-    if config.width:
-        splitUnits = True
-        unitNameWidth = config.width
-    else:
-        splitUnits = False
-
-    # set replacement type 
-    UnitPostProcessor.setReplacementType(config.concreteType)
-    # set abstract type 
-    UnitPostProcessor.setAbstractType(config.abstractType)
-
-    # set verbosity
-    DebugManager.setVerbose(config.verbose)
-    DebugManager.debug("running for <input_file>:"+args[0]+" and the following options: "+str(config))
-
-    # set whitespace
-    fe.Ops.setWhitespace(config.whitespace)
-
     outFileNameList=[]
     try:
+        config, args = opt.parse_args()
+
+        # Set input file
+        if len(args) != 1:
+            opt.error("expect exactly one argument <input_file>, given are "+str(len(args))+" which are:"+str(args)+" and the following options: "+str(config))
+        inputFile = args[0]
+
+        if (config.width and config.output):
+            opt.error("cannot specify both --width and -o.")
+
+        # set symtab type defaults
+        Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
+
+        # set __deriv__ output format(__deriv__(v) -> "(v)%d" if -d option or "v" by default)
+        UnitPostProcessor.setDerivType(config.deriv)
+
+        # set free/fixed format
+        free_flow(config.free)
+
+        # configure forward/reverse mode (including inline file for reverse mode)
+        if (config.mode != 'r'):
+            if (config.inline):
+                opt.error("option -i requires reverse mode ( -m r )")
+            if (config.template):
+                opt.error("option -t requires reverse mode ( -m r )")
+        if config.mode == 'f':
+            UnitPostProcessor.setMode('forward')
+        if config.mode == 'r':
+            UnitPostProcessor.setMode('reverse')
+            UnitPostProcessor.setFreeFlow(config.free)
+            if (config.inline):
+                if (config.noInline):
+                    opt.error("option --noInline conflicts with option -i")
+                UnitPostProcessor.setInlineFile(config.inline)
+            if (config.noInline):
+                UnitPostProcessor.setInlineFile(None)
+            UnitPostProcessor.processInlineFile()
+            templateFile = config.template or 'ad_template.f'
+            TemplateExpansion.setTemplateFile(templateFile)
+
+        # set options for splitting compile units
+        if config.width:
+            splitUnits = True
+            unitNameWidth = config.width
+        else:
+            splitUnits = False
+
+        # set replacement type 
+        UnitPostProcessor.setReplacementType(config.concreteType)
+        # set abstract type 
+        UnitPostProcessor.setAbstractType(config.abstractType)
+
+        # set verbosity
+        DebugManager.setVerbose(config.verbose)
+        DebugManager.debug("running for <input_file>:"+args[0]+" and the following options: "+str(config))
+
+        # set whitespace
+        fe.Ops.setWhitespace(config.whitespace)
+
         if splitUnits:
             (base,ext) = os.path.splitext(inputFile)
             unitNumExt = "%0"+str(unitNameWidth)+"d"
