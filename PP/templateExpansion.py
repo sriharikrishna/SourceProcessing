@@ -135,6 +135,11 @@ class TemplateExpansion(object):
                 template = self.__getTemplateFromComment(anExec)
                 if template is not None:
                     return template
+        for aStmt in self.__myUnit.end:
+            if aStmt.is_comment():
+                template = self.__getTemplateFromComment(aStmt)
+                if template is not None:
+                    return template
         return TemplateExpansion._templateFile #default template file
 
     # extracts the template name from a comment
@@ -143,7 +148,7 @@ class TemplateExpansion(object):
     # RETURNS: the name specified by the comment or None
     def __getTemplateFromComment(self,comment):
         name = None
-        p = re.compile('c[ ]*[$]openad[ ]+xxx[ ]+template[ ]+',re.IGNORECASE)
+        p = re.compile('[$]openad[ ]+xxx[ ]+template[ ]+',re.IGNORECASE)
         match = p.search(comment.rawline)
         if match:
             end_name = re.search('[\n]|[ ]',comment.rawline[match.end():])
