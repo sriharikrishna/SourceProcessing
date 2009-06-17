@@ -192,54 +192,18 @@ class UnitPostProcessor(object):
                         lead=aSubCallStmt.lead).flow()
         return replacementStatement
 
-    # transforms active types corresponding to 'active' input in a WriteStmt
-    # __value__ calls are replaced by "%v"; __deriv__ calls are replaced by %d 
-    # iff self._transform_deriv is true (set by user) and are otherwise removed
+    # transforms __value__/__deriv__ in active type variables in any IOStmt instance
     # PARAMS:
-    # aWriteStmt -- an instance of fs.WriteStmt to be processed
-    # active -- a string equal to "__value__" or "__deriv__" to determine what
-    #           to transform within write statement's substrings
-    # RETURNS: processed WriteStmt with all __value__ or __deriv__ calls removed
-    def __processWriteStmt(self,aWriteStmt,active):
-        DebugManager.debug('unitPostProcessor.__processWriteStmt called on: "'\
-                               +str(aWriteStmt)+"'")        
-        process = ""; newSubs = []
-        accumulate = False
-        for sub in aWriteStmt.substr_list:
-            if sub == active:
-                accumulate = True
-            elif accumulate is True:
-                if sub[0] == "'" or sub[0] == '"':
-                    if process[0] == "(":
-                        if process[len(process)-1] != ")":
-                            process = process[1:]
-                        else:
-                            process = process[1:len(process)-1]
-                    if active == "__value__":
-                        process = process+"%v"
-                    elif self._transform_deriv:
-                        process = process+"%d"
-                    newSubs.append(process)
-                    accumulate = False
-                    newSubs.append(sub)
-                else:
-                    process = process + sub
-            else:
-                newSubs.append(sub)
-        if accumulate is True:
-            if process[0] == "(":
-                if process[len(process)-1] != ")":
-                    process=process[1:]
-                else:
-                    process = process[1:len(process)-1]
-            if active == "__value__":
-                process = process+"%v"
-            else:
-                process = process+"%d"
-            newSubs.append(process)
-        aWriteStmt.substr_list = newSubs
-        return aWriteStmt.flow()
-
+    # anIOStmt -- the instance of fs.IOStmt to be processed
+    def __processIOStmt(self,anIOStmt):
+        DebugManager.debug('unitPostProcessor.__processIOStmt called on: "'\
+                               +str(anIOStmt)+" "+str(anIOStmt.__class__)+"'")
+        newItemList=[]
+        for item in anIOStmt.itemList:
+            newItemList.append((self.__transformActiveTypesExpression(item)))
+        anIOStmt.itemList=newItemList
+        return anIOStmt.flow()
+        
     # Does active type transformations on a StmtFnStmt; 
     # reconstructs it as an AssignStmt if StmtFnStmt.name is "__value__"
     # PARAMS:
@@ -542,20 +506,12 @@ class UnitPostProcessor(object):
                 newStmt = fs.AssignStmt(lhs,rhs,lead=stmt_lead)
                 newStmt.flow()
                 Execs.append(newStmt)
-            elif isinstance(Stmt,fs.WriteStmt) or \
-                    isinstance(Stmt,fs.PrintStmt) or \
-                    isinstance(Stmt,fs.ReadStmt):
-                new_subs = []
-                for sub in Stmt.substr_list:
-                    i = 0
-                    while i < len(inlineArgs):
-                        if sub.lower() == inlineArgs[i]:
-                            new_subs.append(replacementArgs[i])
-                            break;
-                        else:
-                            new_subs.append(sub)
-                        i += 1
-                Stmt.substr_list = new_subs
+            elif isinstance(Stmt,fs.IOStmt):
+                newItemList = []
+                for item in Stmt.itemList:
+                    newItem=self.__replaceArgs(argReps,str(item),inlineArgs,replacementArgs)
+                    newItemList.append(newItem)
+                Stmt.itemList = newItemList
                 Stmt.flow()
                 Execs.append(Stmt)
             elif hasattr(Stmt, "_sons"):
@@ -659,9 +615,8 @@ class UnitPostProcessor(object):
                 else:
                     newStmt = self.__processSubCallStmt(anExecStmt)
                     Execs.append(newStmt)
-            elif isinstance(anExecStmt,fs.WriteStmt):
-                newStmt = self.__processWriteStmt(anExecStmt,"__value__")
-                newStmt = self.__processWriteStmt(anExecStmt,"__deriv__")
+            elif isinstance(anExecStmt,fs.IOStmt):
+                newStmt = self.__processIOStmt(anExecStmt)
                 Execs.append(newStmt)
             else:
                 newStmt = self.__transformActiveTypes(anExecStmt)

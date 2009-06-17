@@ -447,7 +447,15 @@ def lv_exp(scan):
 Exp = OpPrec(atom,_optbl,('**',))
 Exp = treat(Exp,_mkexp)
 
-ExpList = seq(Exp,star(seq(lit(','),Exp)))
+NamedParmExp = seq(id,lit('='),Exp)
+NamedParmExp = treat(NamedParmExp,_mk_namedParamExp)
+
+StarExp  = lit('*')
+
+NamedParmExpWithStar = seq(id,lit('='),disj(Exp,StarExp))
+NamedParmExpWithStar = treat(NamedParmExpWithStar,_mk_namedParamExp)
+
+ExpList = seq(disj(NamedParmExp,Exp),star(seq(lit(','),disj(NamedParmExp,Exp))))
 
 _appExpR = seq(lit(':'),Exp)
 _appExpR = treat(_appExpR,_mkapp_e_r)
@@ -458,10 +466,7 @@ _appExpL = treat(_appExpL,_mkapp_e_l)
 _appExpZ = lit(':')
 _appExpZ = treat(_appExpZ,_mkapp_z)
 
-_appExpA = seq(id,lit('='),Exp)
-_appExpA = treat(_appExpA,_mk_namedParamExp)
-
-_appExp = disj(_appExpR,_appExpL,_appExpZ,_appExpA,Exp)
+_appExp = disj(_appExpR,_appExpL,_appExpZ,NamedParmExp,Exp)
 
 app1      = seq(id,lit('('),ExpList,lit(')'))
 app1      = treat(app1,_mkapp1)

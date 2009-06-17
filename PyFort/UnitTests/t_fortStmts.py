@@ -540,18 +540,18 @@ class TestWhileStmt(TestCase):
 class TestCallStmt(TestCase):
     '''Subroutine call statements'''
     def test1(self):
-        '''Subroutine call with 1/2 named parameter arguments - FAILS right now, waiting for fix'''
-        s = 'call foo(1,b = bar(x))'
+        '''Subroutine call with 1 plain and 1 named parameter argument'''
+        s = 'call foo(1,b=bar(x))'
         r = CallStmt('foo',['1',
-                            NamedParam('b',App('bar','x'))])
+                            NamedParam('b',App('bar',['x']))])
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
     def test2(self):
-        '''Subroutine call with both named parameter arguments - FAILS right now, waiting for fix'''
-        s = 'call foo(a = 1,b = bar(x))'
+        '''Subroutine call with both named parameter arguments'''
+        s = 'call foo(a=1,b=bar(x))'
         r = CallStmt('foo',[NamedParam('a','1'),
-                            NamedParam('b',App('bar','x'))])
+                            NamedParam('b',App('bar',['x']))])
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
@@ -779,6 +779,72 @@ class TestAllocateDeallocateStmts(TestCase):
 #       self.assertEquals(repr(pps(theString)),repr(theRepr))
 #       self.assertEquals(theString,str(theRepr))
 
+class TestIOtmt(TestCase):
+    ''' I/O statements '''
+    def test0(self):
+        '''write statement with defaults in io_ctrl_spec_list'''
+        theString = 'write(*,*) x+1,y,i'
+        theRepr = WriteStmt('write',['*','*'],[Ops('+','x','1'),'y','i'])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test1(self):
+        '''formatted write statement'''
+        theString = 'write(2,"(A,I3,A,I3,A,EN26.16E3)") "F(",i,",",k,")=",res_adj(i,k)'
+        theRepr = WriteStmt('write',['2','"(A,I3,A,I3,A,EN26.16E3)"'],['"F("','i','","',"k",'")="',App('res_adj',['i','k'])])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test2(self):
+        '''write statement with extra arguments'''
+        theString = 'write(*,*,ADVANCE="NO") x+1,y,i'
+        theRepr = WriteStmt('write',['*','*',NamedParam('ADVANCE','"NO"')],[Ops('+','x','1'),'y','i'])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test3(self):
+        '''read statement with defaults in io_ctrl_spec_list'''
+        theString = 'read(*,*) x,y,i'
+        theRepr = ReadStmt('read',['*','*'],['x','y','i'])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test4(self):
+        '''formatted read statement'''
+        theString = 'read(2,"(A,I3,A,I3,A,EN26.16E3)") "F(",i,",",k,")=",res_adj(i,k)'
+        theRepr = ReadStmt('read',['2','"(A,I3,A,I3,A,EN26.16E3)"'],['"F("','i','","',"k",'")="',App('res_adj',['i','k'])])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test5(self):
+        '''read statement with extra arguments'''
+        theString = 'read(*,*,REC=1) x,y,i'
+        theRepr = ReadStmt('read',['*','*',NamedParam('REC','1')],['x','y','i'])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test6(self):
+        '''read statement with simpler syntax'''
+        theString = 'read *,x,y,i'
+        theRepr = SimpleReadStmt('read','*',['x','y','i'])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test7(self):
+        '''print statement'''
+        theString = 'print *,x+1,y,i'
+        theRepr = PrintStmt('print','*',[Ops('+','x','1'),'y','i'])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test8(self):
+        '''write statement with more extra arguments'''
+        theString = 'write(UNIT=pi_double,FMT=*) pi'
+        theRepr = WriteStmt('write',[NamedParam('UNIT','pi_double'),NamedParam('FMT','*')],['pi'])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+
 class TestGotoStmt(TestCase):
     '''goto statements'''
 
@@ -796,22 +862,24 @@ class TestGotoStmt(TestCase):
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
-suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,C10,TestCharacterDecls,
-                                           TestImplicitStmt,
-                                           TestDimensionStmt,
-                                           TestDoStmt,
-                                           TestWhileStmt,
-                                           TestCallStmt,
-                                           TestFunctionStmt,
-                                           TestSelectCaseStmt,
-                                           TestCaseStmts,
-                                           TestUseStmts,
-                                           TestPointerAssignStmt,
-                                           TestWhereStmt,
-                                           TestIntegerStmt,
-                                           TestAllocateDeallocateStmts,
-                                           TestGotoStmt,
+suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,C10,
+               TestCharacterDecls,
+               TestImplicitStmt,
+               TestDimensionStmt,
+               TestDoStmt,
+               TestWhileStmt,
+               TestCallStmt,
+               TestFunctionStmt,
+               TestSelectCaseStmt,
+               TestCaseStmts,
+               TestUseStmts,
+               TestPointerAssignStmt,
+               TestWhereStmt,
+               TestIntegerStmt,
+               TestAllocateDeallocateStmts,
+               TestIOtmt,
+               TestGotoStmt,
               )
 
 if __name__ == '__main__':
-    runit(suite)
+    sys.exit(runit(suite))

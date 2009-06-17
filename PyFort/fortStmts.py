@@ -651,6 +651,8 @@ class ImplicitStmt(Decl):
 class EquivalenceStmt(Decl):
     pass
 
+aNamedParam = seq(id,lit('='),Exp)
+
 class ParameterStmt(Decl):
     _sons = ['namedParamList']
     kw = 'parameter'
@@ -658,7 +660,6 @@ class ParameterStmt(Decl):
 
     @staticmethod
     def parse(scan,lineNumber):
-        aNamedParam = seq(id,lit('='),Exp)
         p0 = seq(lit('parameter'),
                  lit('('),
                  cslist(aNamedParam),
@@ -1179,59 +1180,80 @@ class CloseStmt(Exec):
     kw = 'close'
     kw_str = kw
 
-class ReadStmt(Exec):
-    @staticmethod
-    def parse(scan,lineNumber):
-        read_stmt = seq(lit('read'))
-        ([dc],s) = read_stmt(scan)
-        return ReadStmt(dc,s,lineNumber)
+class IOStmt(Exec):
 
-    def __init__(self,stmt_name='read',substr_list=[],lineNumber=0,label=False,lead=''):
+    def __init__(self,stmt_name,ioCtrlSpecList,itemList=[],lineNumber=0,label=False,lead=''):
         self.stmt_name = stmt_name
-        self.substr_list = substr_list
+        self.ioCtrlSpecList=ioCtrlSpecList
+        self.itemList=itemList
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
-    
-    def __str__(self):
-        return '%s %s' % (self.stmt_name,''.join([str(sub) for sub in self.substr_list]))
 
-class WriteStmt(Exec):
+class SimpleSyntaxIOStmt(IOStmt):
+
+    @staticmethod
+    def parse(scan,lineNumber,kw,SubClass):
+        io_stmt = seq(lit(kw),disj(lit('*'),Exp),lit(','),cslist(Exp))
+        ([kw,format,comma,itemList],rest) = io_stmt(scan)
+        return SubClass(kw,format,itemList,lineNumber)
+
+    def __init__(self,stmt_name,format,itemList=[],lineNumber=0,label=False,lead=''):
+        IOStmt.__init__(self,stmt_name,[format],itemList,lineNumber,label,lead)
+
+    def __str__(self):
+        return '%s %s,%s' % (self.stmt_name,self.ioCtrlSpecList[0],','.join([str(item) for item in self.itemList]))
+
+class PrintStmt(SimpleSyntaxIOStmt):
+    kw = 'print'
 
     @staticmethod
     def parse(scan,lineNumber):
-        write_stmt = seq(lit('write'))
-        ([dc],s) = write_stmt(scan)
-        return WriteStmt(dc,s,lineNumber)
+        return SimpleSyntaxIOStmt.parse(scan,lineNumber,PrintStmt.kw, PrintStmt)
 
-    def __init__(self,stmt_name='write',substr_list=[],lineNumber=0,label=False,lead=''):
-        self.stmt_name = stmt_name
-        self.substr_list = substr_list
-        self.lineNumber = lineNumber
-        self.label = label
-        self.lead = lead
-    
+class ComplexSyntaxIOStmt(IOStmt):
+
+    @staticmethod
+    def parse(scan,lineNumber,kw,SubClass):
+        io_stmt = seq(lit(kw),lit('('),cslist(disj(lit('*'),NamedParmExpWithStar,Exp)),lit(')'),cslist(Exp))
+        ([kw,lbracket,ioCtrlSpecList,rbracket,itemList],rest) = io_stmt(scan)
+        return SubClass(kw,ioCtrlSpecList,itemList,lineNumber)
+
     def __str__(self):
-        return '%s %s' % (self.stmt_name,''.join([str(sub) for sub in self.substr_list]))
+        return '%s(%s) %s' % (self.stmt_name,','.join([str(ioCtrl) for ioCtrl in self.ioCtrlSpecList]),','.join([str(item) for item in self.itemList]))
 
-class PrintStmt(Exec):
+class SimpleReadStmt(SimpleSyntaxIOStmt):
+    ''' the version that only has format but not a full ioCtrlSpecList; its parse method
+    is only called as a fallback on failure of ReadStmt.parse '''
+    kw = 'read'
 
     @staticmethod
     def parse(scan,lineNumber):
-        print_stmt = seq(lit('print'))
-        ([dc],s) = print_stmt(scan)
-        return PrintStmt(dc,s,lineNumber)
+        return SimpleSyntaxIOStmt.parse(scan,lineNumber,SimpleReadStmt.kw, SimpleReadStmt)
 
-    def __init__(self,stmt_name='print',substr_list=[],lineNumber=0,label=False,lead=''):
-        self.stmt_name = stmt_name
-        self.substr_list = substr_list
-        self.lineNumber = lineNumber
-        self.label = label
-        self.lead = lead
+class ReadStmt(ComplexSyntaxIOStmt):
+    kw = 'read'
+
+    @staticmethod
+    def parse(scan,lineNumber):
+        try : 
+            return ComplexSyntaxIOStmt.parse(scan,lineNumber,ReadStmt.kw,ReadStmt)
+        except ListAssemblerException,e:
+            return SimpleReadStmt.parse(scan,lineNumber)
+
+    def __init__(self,stmt_name=kw,ioCtrlSpecList=[],itemList=[],lineNumber=0,label=False,lead=''):
+        IOStmt.__init__(self,stmt_name,ioCtrlSpecList,itemList,lineNumber,label,lead)
     
-    def __str__(self):
-        return '%s %s' % (self.stmt_name,''.join([str(sub) for sub in self.substr_list]))
+class WriteStmt(ComplexSyntaxIOStmt):
+    kw = 'write'
 
+    @staticmethod
+    def parse(scan,lineNumber):
+        return ComplexSyntaxIOStmt.parse(scan,lineNumber,WriteStmt.kw,WriteStmt)
+
+    def __init__(self,stmt_name=kw,ioCtrlSpecList=[],itemList=[],lineNumber=0,label=False,lead=''):
+        IOStmt.__init__(self,stmt_name,ioCtrlSpecList,itemList,lineNumber,label,lead)
+    
 class FormatStmt(Exec):
     kw = 'format'
     kw_str = kw

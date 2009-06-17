@@ -4,6 +4,7 @@ from PyUtil.debugManager import DebugManager
 import PyFort.fortStmts as fs
 from PyFort.fortUnit import fortUnitIterator
 import re,string
+from PyFort.fortScan import scan1
 
 # Handles template expansion
 class TemplateExpansion(object):
@@ -166,21 +167,15 @@ class TemplateExpansion(object):
     def __insertSubroutineName(self,Unit,anExecStmt):
         match = re.search('__SRNAME__',anExecStmt.rawline,re.IGNORECASE)
         if match:
-            anExecStmt.rawline = \
-                anExecStmt.rawline[:match.start()]+ \
-                Unit.uinfo.name +\
-                anExecStmt.rawline[match.end():]
-            if isinstance(anExecStmt,fs.WriteStmt):
-                ws = re.search("[\w]",anExecStmt.rawline)
-                lead = anExecStmt.rawline[:ws.start()]
-                # remove line breaks
-                lb = re.search("[\n][ ]+[+]",anExecStmt.rawline)
-                while lb:
-                    anExecStmt.rawline = anExecStmt.rawline[:lb.start()]+ \
-                        anExecStmt.rawline[lb.end():]
-                    lb = re.search("[\n][ ]+[+]",anExecStmt.rawline)
-                newExecStmt = fs.WriteStmt(anExecStmt.rawline[ws.end()-1:],lead=lead).flow()
-                return newExecStmt
+            plainLine=str(anExecStmt) # the line w/o continuation+linebreaks
+            plMatch=re.search('__SRNAME__',plainLine,re.IGNORECASE)
+            while plMatch:
+                plainLine=plainLine[:plMatch.start()]+Unit.uinfo.name+plainLine[plMatch.end():]
+                plMatch=re.search('__SRNAME__',plainLine,re.IGNORECASE)
+            # redo scan and parse for the class of the given anExecStmt
+            aNewExecStmt=anExecStmt.__class__.parse(scan1.scan(plainLine)[0],anExecStmt.lineNumber)
+            aNewExecStmt.lead=anExecStmt.lead
+            return aNewExecStmt.flow()
         return anExecStmt
 
     # Given a template file 'template' and the Decls and Execs from the file
