@@ -1128,11 +1128,11 @@ class AssignStmt(Exec):
 
     @staticmethod
     def parse(scan,lineNumber):
-#        lhs     = disj(app,id,)
-
-        lhs     = lv_exp
-        assign  = seq(lhs,lit('='),Exp)
-        ((l,dc,r),rst) = assign(scan)
+        if (not '=' in scan):
+            raise AssemblerException(scan,lineNumber)
+        lhsEq   = seq(lv_exp,lit('='))
+        ((l,dc),rst) = lhsEq(scan)
+        ((r),rst) = Exp(rst)
         return AssignStmt(l,r,lineNumber)
 
     def __init__(self,lhs,rhs,lineNumber=0,label=False,lead=''):
