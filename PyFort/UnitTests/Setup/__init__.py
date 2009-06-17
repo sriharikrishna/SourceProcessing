@@ -48,4 +48,8 @@ def asuite(*cases):
 def runit(s):
     'standard way to run the test runner'
     from unittest import TextTestRunner
-    TextTestRunner(verbosity=2).run(s)
+    testResult=TextTestRunner(verbosity=2).run(s)
+    if testResult.wasSuccessful():
+        return 0
+    else:
+        return 1

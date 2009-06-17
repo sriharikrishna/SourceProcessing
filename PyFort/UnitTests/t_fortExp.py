@@ -447,5 +447,5 @@ for o in [x for (op,p) in _optbl for x in op]:
 suite = asuite(C1,C2,C3,C4,C6)
 
 if __name__ == '__main__':
-    runit(suite)
+    sys.exit(runit(suite))
 

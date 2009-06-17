@@ -65,5 +65,5 @@ class C2(TestCase):
 suite = asuite(C1,C2)
 
 if __name__ == '__main__':
-    runit(suite)
+    sys.exit(runit(suite))
     

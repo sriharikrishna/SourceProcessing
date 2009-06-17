@@ -1,4 +1,4 @@
-import Setup
+from Setup import *
 
 from unittest  import *
 from fortLine  import *
@@ -115,8 +115,5 @@ def suite():
 
     return rv
 
-def runSuite(s):
-    TextTestRunner(verbosity=2).run(s)
-
 if __name__ == "__main__":
-    runSuite(suite())
+    sys.exit(runit(suite()))

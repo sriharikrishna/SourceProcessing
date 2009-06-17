@@ -168,5 +168,5 @@ s = asuite(C1)
 suite = asuite(C1,qstrings,ro_qstrings,qstrings2,scanit,C4)
 
 if __name__ == "__main__":
-    runit(suite)
+    sys.exit(runit(suite))
 

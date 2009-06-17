@@ -19,4 +19,4 @@ class T1(TestCase):
 s = asuite(T1)
 
 if __name__ == '__main__':
-    runit(s)
+    sys.exit(runit(s))

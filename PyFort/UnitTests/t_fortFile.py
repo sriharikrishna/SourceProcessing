@@ -137,5 +137,6 @@ suite = asuite(file1,fileops,heretst,maptest)
 
 
 if __name__ == '__main__':
-    runit(suite)
+    sys.exit(runit(suite))
+
 

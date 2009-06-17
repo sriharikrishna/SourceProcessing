@@ -136,5 +136,5 @@ class TypeMerging(TestCase):
 suite = asuite(TypeUtils,TypeConstants,TypeOpsExpressions,TypeMerging)
 
 if __name__ == '__main__':
-    runit(suite)
+    sys.exit(runit(suite))
 
