@@ -108,4 +108,4 @@ s = asuite(C2)
 suite = asuite(preds,C2)
 
 if __name__ == "__main__":
-    runit(suite)
+    sys.exit(runit(suite))
