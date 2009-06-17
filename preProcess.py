@@ -3,6 +3,7 @@
 canonicalization
 '''
 import sys
+import datetime
 from optparse import OptionParser
 
 from PyUtil.errors import UserError, ScanError, ParseError
@@ -74,6 +75,11 @@ def main():
                    help='set output file (defaults to stdout)',
                    metavar='<output_file>',
                    default=None)
+    opt.add_option('--timing',
+                   dest='timing',
+                   help='simple timing of the execution',
+                   action='store_true',
+                   default=False)
     opt.add_option('-v',
                    '--verbose',
                    dest='isVerbose',
@@ -81,6 +87,11 @@ def main():
                    action='store_true',
                    default=False)
     config, args = opt.parse_args()
+
+    startTime=None
+    if (config.timing):
+        startTime=datetime.datetime.utcnow()
+
 
     # Set input file
     if len(args) != 1:
@@ -123,6 +134,8 @@ def main():
         for aUnit in makeSubroutinizedIntrinsics():
             aUnit.printit(out)
         if config.outputFile: out.close()
+        if (config.timing):
+            print 'SourceProcessing: timing: '+str(datetime.datetime.utcnow()-startTime)
     except CanonError,e:
         print >>sys.stderr,'\nERROR: CanonError on line '+str(e.lineNumber)+': ',e.msg
         cleanup(config)

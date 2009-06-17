@@ -4,6 +4,7 @@ Postprocessing
 '''
 import sys
 import os
+import datetime
 import traceback
 from optparse import OptionParser
 
@@ -91,6 +92,11 @@ def main():
                    help='no inlining; overrides the defaults of the reverse mode settings; (defaults to False)',
                    action='store_true',
                    default=False)
+    opt.add_option('--timing',
+                   dest='timing',
+                   help='simple timing of the execution',
+                   action='store_true',
+                   default=False)
     opt.add_option('--width',
                    dest='width',
                    help='write one compile unit per output file with WIDTH digits prepended to the extension of <input_file>, e.g. for -n 2 and three compile units in an input file named \'a.f\' we create \'a.00.f\', a.01.f\', \'a.02.f\'; also creates a file named \'postProcess.make\' for reference within a makefile; cannot be specified together with -o')
@@ -103,6 +109,11 @@ def main():
     outFileNameList=[]
     try:
         config, args = opt.parse_args()
+
+        startTime=None
+
+        if (config.timing):
+            startTime=datetime.datetime.utcnow()
 
         # Set input file
         if len(args) != 1:
@@ -189,6 +200,10 @@ def main():
                 UnitPostProcessor(aUnit).processUnit().printit(out)
             if config.output: 
                 out.close()
+
+        if (config.timing):
+            print 'SourceProcessing: timing: '+str(datetime.datetime.utcnow()-startTime)
+
     except PostProcessError,e:
         sys.stderr.write('\nERROR: PostProcessError')
         if (e.lineNumber>0) :
