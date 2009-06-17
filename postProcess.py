@@ -117,7 +117,6 @@ def main():
         config, args = opt.parse_args()
 
         startTime=None
-
         if (config.timing):
             startTime=datetime.datetime.utcnow()
 
@@ -182,14 +181,22 @@ def main():
             (base,ext) = os.path.splitext(inputFile)
             unitNumExt = "%0"+str(unitNameWidth)+"d"
             unit_num = 0
+            unitStartTime=None
+            if (config.timing):
+                unitStartTime=datetime.datetime.utcnow()
             for aUnit in fortUnitIterator(inputFile,config.free):
-                if (config.progress): 
-                    print 'SourceProcessing: progress: processing transformed unit '+aUnit.uinfo.name
                 output = base + unitNumExt % unit_num + ext
                 out = open(output,'w')
                 outFileNameList.append(output)
                 UnitPostProcessor(aUnit).processUnit().printit(out)
                 out.close()
+                if (config.progress):
+                    msg='SourceProcessing: progress: done with unit '+aUnit.uinfo.name
+                    if (config.timing):
+                        nTime=datetime.datetime.utcnow()
+                        msg+=' took: '+str(nTime-unitStartTime)
+                        unitStartTime=nTime
+                    print msg
                 unit_num += 1
             makeOut = open('postProcess.make','w')
             makeOut.write("POSTPROCESSEDFILES=")
