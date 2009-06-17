@@ -26,7 +26,7 @@ class ParseError(Exception):
 	exception for errors detected in the parser caused either by 
 	faulty code or by incomplete logic in the parser implementation
     '''
-    def __init__(self,lineNumber,scannedLine,target):
+    def __init__(self,lineNumber,scannedLine,target,details=None):
         '''
         the parser failed to parse scannedLine as a target
         where target is some string to indicated verbally what it is
@@ -34,4 +34,5 @@ class ParseError(Exception):
         self.lineNumber = lineNumber
         self.scannedLine=scannedLine
         self.target=target
+        self.details=details
 

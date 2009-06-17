@@ -1757,19 +1757,19 @@ def parse(scan,lineNumber):
                 try:
                     return PointerAssignStmt.parse(scan,lineNumber)
                 except ListAssemblerException,e:
-                    raise ParseError(lineNumber,scan,PointerAssignStmt)
+                    raise ParseError(lineNumber,scan,PointerAssignStmt,'l_assembler error:'+e.msg+' remainder:'+str(e.rest))
             elif ('do' in scan) and (':' in scan):
                 try:
                     return DoStmt.parse(scan,lineNumber)
                 except ListAssemblerException,e:
-                    raise ParseError(lineNumber,scan,DoStmt)
+                    raise ParseError(lineNumber,scan,DoStmt,'l_assembler error:'+e.msg+' remainder:'+str(e.rest))
             else:
                 raise ParseError(lineNumber,scan,None)
         else:
             try:
                 return kwtbl.get(kw).parse(scan,lineNumber)
             except ListAssemblerException,e:
-                raise ParseError(lineNumber,scan,kwtbl.get(kw))
+                raise ParseError(lineNumber,scan,kwtbl.get(kw),'l_assembler error:'+e.msg+' remainder:'+str(e.rest))
 
 #
 # alias so that stmts like if, etc can call the above routine
