@@ -58,6 +58,12 @@ def main():
                    dest='output',
                    help='redirect output to  file OUTPUT (default output is stdout); cannot be specified together with --width',
                    default=None)
+    opt.add_option('-p',
+                   '--progress',
+                   dest='progress',
+                   help='progress message to stdout per processed unit',
+                   action='store_true',
+                   default=False)
     opt.add_option('-t',
                    '--template',
                    dest='template',
@@ -170,13 +176,15 @@ def main():
         DebugManager.debug("running for <input_file>:"+args[0]+" and the following options: "+str(config))
 
         # set whitespace
-        fe.Ops.setWhitespace(config.whitespace)
+        fe.setWhitespace(config.whitespace)
 
         if splitUnits:
             (base,ext) = os.path.splitext(inputFile)
             unitNumExt = "%0"+str(unitNameWidth)+"d"
             unit_num = 0
             for aUnit in fortUnitIterator(inputFile,config.free):
+                if (config.progress): 
+                    print 'SourceProcessing: progress: processing transformed unit '+aUnit.uinfo.name
                 output = base + unitNumExt % unit_num + ext
                 out = open(output,'w')
                 outFileNameList.append(output)

@@ -64,6 +64,11 @@ def is_op(op):
             return True
     return False
 
+_whitespace = False
+
+def setWhitespace(useWhitespace):
+    _whitespace = useWhitespace    
+
 class _Exp(_Mutable_T):
     'base class for Expression trees'
     _sons = []
@@ -100,7 +105,13 @@ class NamedParam(object):
         return 'NamedParam(%s,%s)' % (self.myId,repr(self.myRHS))
 
     def __str__(self):
-        return str(myId)+' = '+str(myRHS)
+        rstr=str(self.myId)
+        if _whitespace:
+            rstr+=' = '
+        else:
+            rstr+='='
+        rstr+=str(self.myRHS)
+        return rstr
 
 class Sel(_Exp):
     'selection expressions like foo(i,j)%k'
@@ -242,12 +253,6 @@ class Ops(_Exp):
     'some sequence of binops'
     _sons = ['a1','a2']
 
-    _whitespace = False
-
-    @staticmethod
-    def setWhitespace(useWhitespace):
-        Ops._whitespace = useWhitespace    
-
     def __init__(self,op,a1,a2):
         self.op = op
         self.a1 = a1
@@ -257,7 +262,7 @@ class Ops(_Exp):
         return 'Ops(%s,%s,%s)' % (repr(self.op),repr(self.a1),repr(self.a2),)
 
     def __str__(self):
-        if self._whitespace:
+        if _whitespace:
             return '%s %s %s' % (str(self.a1),
                                  str(self.op),
                                  str(self.a2))
