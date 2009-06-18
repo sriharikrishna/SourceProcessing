@@ -79,6 +79,10 @@ def main():
                    dest='abstractType',
                    help='change the abstract active type name to be replaced  (see also --concreteType ) to ABSTRACTTYPE; defaults to \'oadactive\')',
                    default='oadactive')
+    opt.add_option('--activeVariablesFile',
+                   dest='activeVariablesFile',
+                   help='write all active variable declarations into file ACTIVEVARIABLESFILEFILE.',
+                   default=None) 
     opt.add_option('--concreteType',
                    dest='concreteType',
                    help='replace abstract active string (see also --abstractType ) with concrete active type CONCRETETYPE; defaults to \'active\'',
@@ -136,6 +140,11 @@ def main():
 
         # set free/fixed format
         free_flow(config.free)
+
+        if (config.activeVariablesFile):
+            UnitPostProcessor.setActiveVariablesFile(activeVariablesFile)
+            if (os.path.exists(config.activeVariablesFile)):
+                os.remove(config.activeVariablesFile)
 
         # configure forward/reverse mode (including inline file for reverse mode)
         if (config.mode != 'r'):

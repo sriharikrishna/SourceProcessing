@@ -9,6 +9,7 @@ from _Setup import *
 
 from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import SymtabEntry
+from PyUtil.debugManager import DebugManager
 
 import fortStmts
 from fortExp import App,NamedParam,Sel,Unary,Ops,is_const,_id_re,_flonum_re,_int_re,_logicon_set,_quote_set
@@ -120,10 +121,10 @@ def identifierType(anId,localSymtab,lineNumber):
         symtabEntry.enterType(containingSymtab.implicit[anId[0]])
         returnType = symtabEntry.type
         DebugManager.debug('with symtab entry'+symtabEntry.debug(anId)+' (without type).  Implicit type (locally) is '+str(returnType))
-        print >>sys.stderr,'WARNING - typeInference.identifierType: [line '+str(lineNumber)+'] implicit typing (scope ='+str(containingSymtab)+') used for identifier "'+anId+'" type ="',returnType,'"'
+        DebugManager.warning('typeInference.identifierType: [line '+str(lineNumber)+'] implicit typing (scope ='+str(containingSymtab)+') used for identifier "'+anId+'" type ="'+str(returnType)+'"')
     else: # no symtab entry -> try local implicit typing
         returnType = localSymtab.implicit[anId[0]]
-        print >>sys.stderr,'WARNING - typeInference.identifierType: [line '+str(lineNumber)+'] local scope implicit typing used for identifier "'+anId+'" type ="',returnType,'"'
+        DebugManager.warning('typeInference.identifierType: [line '+str(lineNumber)+'] local scope implicit typing used for identifier "'+anId+'" type ="'+str(returnType)+'"')
         DebugManager.debug('with implicit type '+str(returnType))
     if not returnType:
         raise TypeInferenceError('typeInference.identifierType: No type could be determined for identifier "'+anId+'"',lineNumber)

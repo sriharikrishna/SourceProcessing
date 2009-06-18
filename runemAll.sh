@@ -1,20 +1,13 @@
 #! /bin/bash
 
-for i in PyUtil PyIR PyFort Canon PP; do
+for i in `ls -d */UnitTests` 
+do
     echo ================================= Running $i unit tests =================================
     echo ============================================================================================
-    pushd $i/UnitTests
-    read
-    for t in t_*.py; do
-        echo ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Test $t ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        python $t
-        echo ^^^^^^^^^^^^^^^^^^^^^^^^^ End test $t ^^^^^^^^^^^^^^^^^^^^^^^^^
-        echo
-        read
-    done
-    popd
+    cd $i
+    ./runem.sh
+    cd ../../
     echo =================================== End $i unit tests ===================================
     echo
     echo
 done
-

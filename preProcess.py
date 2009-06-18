@@ -51,6 +51,11 @@ def main():
                    help='do not remove the output file if an error was encountered (defaults to False)',
                    action='store_true',
                    default=False)
+    opt.add_option('--noWarnings',
+                   dest='noWarnings',
+                   help='suppress warning messages (defaults to False)',
+                   action='store_true',
+                   default=False)
     opt.add_option('',
                    '--r8',
                    dest='r8',
@@ -125,6 +130,7 @@ def main():
 
     # set verbosity
     DebugManager.setVerbose(config.isVerbose)
+    DebugManager.setQuiet(config.noWarnings)
 
     try: 
         if config.outputFile: out = open(config.outputFile,'w')

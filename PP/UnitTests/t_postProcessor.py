@@ -9,11 +9,14 @@ from PyUtil.symtab import Symtab
 from PyFort.fortUnit import fortUnitIterator
 from PyFort.fortStmts import RealStmt,IntegerStmt
 from unitPostProcess import UnitPostProcessor,PostProcessError
+from PyUtil.debugManager import DebugManager
 
 '''
 Unit tests for post-processor
 
 '''
+
+DebugManager.setQuiet(True)
 
 Symtab.setTypeDefaults((RealStmt,[]),(IntegerStmt,[]))
 

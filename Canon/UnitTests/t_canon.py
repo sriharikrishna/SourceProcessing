@@ -9,11 +9,13 @@ from PyUtil.symtab import Symtab
 from PyFort.fortUnit import fortUnitIterator
 from PyFort.fortStmts import RealStmt,IntegerStmt
 from canon import UnitCanonicalizer,CanonError
+from PyUtil.debugManager import DebugManager
 
 '''
 Unit tests for canonicalizer
 
 '''
+DebugManager.setQuiet(True)
 
 Symtab.setTypeDefaults((RealStmt,[]),(IntegerStmt,[]))
 
@@ -29,6 +31,7 @@ def compareFiles(assertFunc,originalFileName,RefFileName,free):
         testFileLines = testFile.readlines()
         refFile = open(fname_t(RefFileName),'r')
         refFileLines = refFile.readlines()
+	print testFileName
         assertFunc(len(testFileLines),len(refFileLines),'transformation result and reference file have disparate line counts')
         for testLine,refLine in zip(testFileLines,refFileLines):
             assertFunc(testLine,refLine)
@@ -95,5 +98,5 @@ class TestCanonicalizeSubroutineCall(TestCase):
 suite = asuite(C1,C2,TestCanonicalizeSubroutineCall)
 
 if __name__ == "__main__":
-    runit(suite)
+    sys.exit(runit(suite))
 

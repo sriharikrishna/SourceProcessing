@@ -8,9 +8,15 @@ class DebugManager(object):
 
     _verbose = False
 
+    _quiet = False
+
     @staticmethod
     def setVerbose(isVerbose):
         DebugManager._verbose = isVerbose
+
+    @staticmethod
+    def setQuiet(aBool):
+        DebugManager._quiet = aBool
 
     _processedFile = ""
 
@@ -24,11 +30,12 @@ class DebugManager(object):
 
     @staticmethod
     def warning(warningMessage,lineNumber=0):
-        sys.stderr.write('WARNING: '+warningMessage+' ('+DebugManager.processedFile())
-        if (lineNumber>0):
-            sys.stderr.write(':'+str(lineNumber))
-        sys.stderr.write(')\n')
-        sys.stderr.flush()
+        if (not DebugManager._quiet): 
+            sys.stderr.write('SourceProcessing: WARNING: '+warningMessage+' ('+DebugManager.processedFile())
+            if (lineNumber>0):
+                sys.stderr.write(':'+str(lineNumber))
+            sys.stderr.write(')\n')
+            sys.stderr.flush()
 
     @staticmethod
     def debug(debugMessage,outStream=sys.stdout,newLine=True):

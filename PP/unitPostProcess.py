@@ -63,6 +63,12 @@ class UnitPostProcessor(object):
     def setFreeFlow(free):
         UnitPostProcessor._free = free
 
+    _activeVariablesFileName=None
+
+    @staticmethod
+    def setActiveVariablesFile(fileName):
+        UnitPostProcessor._activeVariablesFileName = fileName
+
     def __init__(self, aUnit):
         self.__myUnit = aUnit
         self.__myNewDecls = []
@@ -686,7 +692,7 @@ class UnitPostProcessor(object):
             elif isinstance(aDecl,fs.DrvdTypeDecl):
                 newDecl = self.__rewriteActiveType(aDecl)
                 newDecl.flow()
-                if newDecl.dblc is True:
+                if (self.__active_file and newDecl.dblc):
                     if self.__write_subroutine is True:
                         self.__active_file.write(self.__myUnit.uinfo.rawline)
                         self.__write_subroutine = False
@@ -810,8 +816,8 @@ class UnitPostProcessor(object):
         for subUnit in self.__myUnit.ulist:
             DebugManager.debug(str(subUnit))
             UnitPostProcessor(subUnit).processUnit()
-
-        self.__active_file = open('activeVariableDefinitions.f','a')
+        if (UnitPostProcessor._activeVariablesFileName):     
+            self.__active_file = open(UnitPostProcessor._activeVariablesFileName,'a')
 
         if self._mode == 'reverse':
             inline = False
@@ -824,12 +830,12 @@ class UnitPostProcessor(object):
             self.__myUnit.decls = Decls
             self.__myUnit.execs = Execs
 
-        if self.__write_subroutine is False:
+        if self.__active_file and self.__write_subroutine is False:
             if self.__myUnit.end:
                 for anEndListEntry in self.__myUnit.end:
                     self.__active_file.write(anEndListEntry.rawline,)
             self.__write_subroutine = True
-        self.__active_file.close()
+            self.__active_file.close()
 
         if (self.__recursionDepth is not 0):
             raise PostProcessError('Recursion error in unitPostProcess: final recursion depth is not zero')
