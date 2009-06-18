@@ -5,6 +5,7 @@ import PyFort.fortStmts as fs
 from PyFort.fortUnit import fortUnitIterator
 import re,string
 from PyFort.fortScan import scan1
+from templateUnitMap import getTemplateUnit
 
 # Handles template expansion
 class TemplateExpansion(object):
@@ -192,32 +193,36 @@ class TemplateExpansion(object):
         inputDeclNum = 0
         inputExecNum = 0
         pragma = 0
-        for aUnit in fortUnitIterator(template,False):
-            if aUnit.cmnt is not None:
-                if self.__myUnit.cmnt is not None:
-                    self.__myUnit.cmnt.rawline = \
-                        aUnit.cmnt.rawline+self.__myUnit.cmnt.rawline
-                else:
-                    self.__myUnit.cmnt = aUnit.cmnt
+        aUnit=getTemplateUnit(template)    
+        if aUnit.cmnt is not None:
+            if self.__myUnit.cmnt is not None:
+                self.__myUnit.cmnt.rawline = \
+                    aUnit.cmnt.rawline+self.__myUnit.cmnt.rawline
+            else:
+                self.__myUnit.cmnt = aUnit.cmnt
 
-            if isinstance(aUnit.uinfo,fs.SubroutineStmt):
-                aUnit.uinfo.name = self.__myUnit.uinfo.name
+        if isinstance(aUnit.uinfo,fs.SubroutineStmt):
+            aUnit.uinfo.name = self.__myUnit.uinfo.name
 
-            self.__expandTemplateDecls(aUnit, Decls)
+        self.__expandTemplateDecls(aUnit, Decls)
 
-            self.__expandTemplateExecs(aUnit, Execs)
+        self.__expandTemplateExecs(aUnit, Execs)
 
-            for endStmt in aUnit.end:
-                newEndStmts = []
-                if isinstance(endStmt,fs.EndStmt):
-                    match = re.search("template",endStmt.rawline,re.IGNORECASE)
-                    if match:
-                        endStmt.rawline = \
-                            endStmt.rawline[:match.start(0)] + \
-                            self.__myUnit.uinfo.name + \
-                            endStmt.rawline[match.end(0):]
+        for endStmt in aUnit.end:
+            newEndStmts = []
+            if isinstance(endStmt,fs.EndStmt):
+                match = re.search("template",endStmt.rawline,re.IGNORECASE)
+                if match:
+                    newEndStmt=fs.EndStmt(endStmt.lineNumber,endStmt.label,endStmt.lead)
+                    newEndStmt.rawline=endStmt.rawline
+                    newEndStmt.rawline = \
+                        newEndStmt.rawline[:match.start(0)] + \
+                        self.__myUnit.uinfo.name + \
+                        newEndStmt.rawline[match.end(0):]
+                    newEndStmts.append(newEndStmt)
+                else: 
                     newEndStmts.append(endStmt)
-            self.__myUnit.end = newEndStmts    
+        self.__myUnit.end = newEndStmts    
         self.__myUnit.decls = self.__myNewDecls
         self.__myUnit.execs = self.__myNewExecs
         return self.__myUnit
