@@ -156,4 +156,4 @@ s1 = makeSuite(C3)
 suite = asuite(C1,C2,C3)
 
 if __name__ == "__main__":
-    runit(suite)
+    sys.exit(runit(suite))

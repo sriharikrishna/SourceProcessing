@@ -71,4 +71,4 @@ s1 = makeSuite(C1)
 suite = asuite(C1)
 
 if __name__ == "__main__":
-    runit(suite)
+    sys.exit(runit(suite))
