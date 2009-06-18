@@ -471,4 +471,4 @@ suite = asuite(simple,strings,misc1,filetst,generatorTest,C4)
 _s    = asuite(C4)
 
 if __name__ == '__main__':
-    runit(suite)
+    sys.exit(runit(suite))

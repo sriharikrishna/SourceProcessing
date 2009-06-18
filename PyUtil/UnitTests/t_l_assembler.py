@@ -1,4 +1,4 @@
-import Setup
+from Setup import *
 
 from l_assembler import *
 from unittest import *
@@ -215,7 +215,7 @@ class filetst(TestCase):
         stmt    = seq(s,star(seq(star(c),k)))
         cblk    = plus(c)
     
-        self.f    = file(Setup.fname_t('f0.f')).readlines()
+        self.f    = file(fname_t('f0.f')).readlines()
         self.stmt = stmt
         self.cblk = cblk
 
@@ -248,7 +248,7 @@ class generatorTest(TestCase):
         cblk      = treat(plus(c),jjj)
 
         self.asem = disj(cblk,stmt)
-        self.f    = file(Setup.fname_t('f0.f')).readlines()
+        self.f    = file(fname_t('f0.f')).readlines()
 
     def tearDown(self):
         pass
@@ -278,9 +278,6 @@ def suite():
 
     return rv
 
-def runSuite(s):
-    TextTestRunner(verbosity=2).run(s)
-
 if __name__ == '__main__':
-    runSuite(suite())
+    sys.exit(runit(suite()))
 

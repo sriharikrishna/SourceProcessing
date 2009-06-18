@@ -33,5 +33,5 @@ s1 = asuite(C1)
 suite = asuite(C1)
 
 if __name__ == '__main__':
-    runit(suite)
+    sys.exit(runit(suite))
 
