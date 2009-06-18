@@ -81,7 +81,6 @@ class C1(TestCase):
         'test inline replacement of __value__ and __deriv__ in execution statements: exec_inline.f'
         compareFiles(self.assertEquals,'exec_inline.f','exec_inline.post.f',free=False)
 
-
     def test6(self):
         'test inline replacement of nested __value__ and __deriv__ in decl and execution statements: nested_inline.f'
         compareFiles(self.assertEquals,'nested_inline.f','nested_inline.post.f',free=False)
@@ -89,5 +88,5 @@ class C1(TestCase):
 suite = asuite(C1)
 
 if __name__ == "__main__":
-    runit(suite)
+    sys.exit(runit(suite))
 
