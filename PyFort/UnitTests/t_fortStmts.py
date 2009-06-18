@@ -21,6 +21,8 @@ class C1(TestCase):
         ae(repr(pps(s)),repr(RealStmt([],[],[_NoInit(App('x',['10'])), _NoInit('y'), _NoInit('z')])))
         s  = 'real :: x(:)'
         ae(repr(pps(s)),repr(RealStmt([],[],[_NoInit(App('x',[':']))])))
+        s  = 'real :: x(1:)'
+        ae(repr(pps(s)),repr(RealStmt([],[],[_NoInit(App('x',[Ops(':','1','')]))])))
 
     def test2(self):
         'simple if stmt'

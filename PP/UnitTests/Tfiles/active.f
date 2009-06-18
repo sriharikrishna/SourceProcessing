@@ -22,4 +22,5 @@ C
       type (oadactive) AGLOBAL
       type (oadactive) :: X(1 : 2)
       type (oadactive) :: Y(1 : 1)
+      type (oadactive) :: Z(1 :)
       END SUBROUTINE

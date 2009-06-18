@@ -24,4 +24,5 @@ C
       type(active) :: AGLOBAL
       type(active) :: X(1:2)
       type(active) :: Y(1:1)
+      type(active) :: Z(1:)
       END SUBROUTINE
