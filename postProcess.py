@@ -102,6 +102,11 @@ def main():
                    help='no inlining; overrides the defaults of the reverse mode settings; (defaults to False)',
                    action='store_true',
                    default=False)
+    opt.add_option('--noWarnings',
+                   dest='noWarnings',
+                   help='suppress warning messages (defaults to False)',
+                   action='store_true',
+                   default=False)
     opt.add_option('--timing',
                    dest='timing',
                    help='simple timing of the execution',
@@ -182,6 +187,7 @@ def main():
         # set verbosity
         DebugManager.setVerbose(config.verbose)
         DebugManager.debug("running for <input_file>:"+args[0]+" and the following options: "+str(config))
+        DebugManager.setQuiet(config.noWarnings)
 
         # set whitespace
         fe.setWhitespace(config.whitespace)
