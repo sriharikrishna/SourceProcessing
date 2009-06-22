@@ -27,11 +27,11 @@ def compareFiles(assertFunc,originalFileName,RefFileName,free):
             UnitCanonicalizer(aUnit).canonicalizeUnit()
             aUnit.printit(testFile)
         testFile.close()
+	# print testFileName
         testFile = open(testFileName,'r')
         testFileLines = testFile.readlines()
         refFile = open(fname_t(RefFileName),'r')
         refFileLines = refFile.readlines()
-	print testFileName
         assertFunc(len(testFileLines),len(refFileLines),'transformation result and reference file have disparate line counts')
         for testLine,refLine in zip(testFileLines,refFileLines):
             assertFunc(testLine,refLine)
@@ -94,6 +94,14 @@ class TestCanonicalizeSubroutineCall(TestCase):
     def test2(self):
         'Hoist nonintrinsic function call from subroutine call statement'
         compareFiles(self.assertEquals,'subCall_hoistNonintrinsic.f90','subCall_hoistNonintrinsic.pre.f90',free=True)
+
+    def test2(self):
+        'no hoisting simple named parameters'
+        compareFiles(self.assertEquals,'subCall_simpleNamed.f90','subCall_simpleNamed.pre.f90',free=True)
+
+    def test2(self):
+        'hoisting call from named parameter'
+        compareFiles(self.assertEquals,'subCall_namedWithCall.f90','subCall_namedWithCall.pre.f90',free=True)
 
 suite = asuite(C1,C2,TestCanonicalizeSubroutineCall)
 
