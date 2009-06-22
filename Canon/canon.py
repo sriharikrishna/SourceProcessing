@@ -114,9 +114,11 @@ class UnitCanonicalizer(object):
         self.__recursionDepth -= 1
         return theNewTemp
 
-    def __hoistExpression(self,theExpression,parentStmt):
+    def __hoistExpression(self,theExpression,parentStmt,paramName):
         # function calls that are to be turned into subroutine calls
         # -> return the temp that carries the value for the new subcall
+        # or alternatively if paramName is set return the construct
+        # for a named parameter expression
         if isinstance(theExpression,fe.App) and \
            not isArrayReference(theExpression,self.__myUnit.symtab,parentStmt.lineNumber) and \
            self.shouldSubroutinizeFunction(theExpression,parentStmt):
@@ -129,7 +131,10 @@ class UnitCanonicalizer(object):
                                                                              lineNumber=parentStmt.lineNumber,
                                                                              label=False,
                                                                              lead=parentStmt.lead)))
-        return theNewTemp
+        if (paramName):
+            return fe.NamedParam(paramName,theNewTemp)
+        else: 
+            return theNewTemp
 
     def __canonicalizeExpression(self,theExpression,parentStmt):
         '''Canonicalize an expression tree by recursively replacing function calls with subroutine calls
@@ -183,6 +188,10 @@ class UnitCanonicalizer(object):
         # canonicalize each of the the expressions that serve as arguments
         replacementArgs = []
         for anArg in aSubCallStmt.args:
+            paramName=None
+            if isinstance(anArg,fe.NamedParam):
+                paramName=anArg.myId
+                anArg=anArg.myRHS
             #TODO: remove perens when the whole argument is in them??
             DebugManager.debug((self.__recursionDepth - 1)*'|\t'+'|- argument "'+str(anArg)+'" ',newLine=False)
             (argType,argTypeMod) = expressionType(anArg,self.__myUnit.symtab,aSubCallStmt.lineNumber)
@@ -199,7 +208,7 @@ class UnitCanonicalizer(object):
                     replacementArgs.append(anArg)
                 else:
                     DebugManager.debug('is a string expression to be hoisted:',newLine=False)
-                    replacementArgs.append(self.__hoistExpression(anArg,aSubCallStmt))
+                    replacementArgs.append(self.__hoistExpression(anArg,aSubCallStmt,paramName))
             # other constant expressions
             elif fe.isConstantExpression(anArg):
                 if not self._hoistConstantsFlag:
@@ -207,7 +216,7 @@ class UnitCanonicalizer(object):
                     replacementArgs.append(anArg)
                 else:
                     DebugManager.debug('is a constant expression to be hoisted:',newLine=False)
-                    replacementArgs.append(self.__hoistExpression(anArg,aSubCallStmt))
+                    replacementArgs.append(self.__hoistExpression(anArg,aSubCallStmt,paramName))
             # variables (with VariableEntry in symbol table) -> do nothing
             elif isinstance(anArg,str) and self.__myUnit.symtab.lookup_name(anArg):
                 symtabEntry = self.__myUnit.symtab.lookup_name(anArg)
@@ -220,7 +229,7 @@ class UnitCanonicalizer(object):
             # everything else -> hoist and create an assignment to a temp variable
             else:
                 DebugManager.debug('is a nontrivial expression to be hoisted:',newLine=False)
-                replacementArgs.append(self.__hoistExpression(anArg,aSubCallStmt))
+                replacementArgs.append(self.__hoistExpression(anArg,aSubCallStmt,paramName))
         # replace aCallStmt with the canonicalized version
         replacementStatement = fs.CallStmt(aSubCallStmt.head,
                                            replacementArgs,
