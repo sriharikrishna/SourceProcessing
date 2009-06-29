@@ -28,11 +28,18 @@ def process_fort_stmt(stmt_tuple,lineNumber,jlf):
     lead     = linelead * ' '+_lead_re.match(jl[linelead:]).group(1)
     obj      = jlf(jl[len(lead):],lineNumber)
 
-    obj.rawline  = raw
-    obj.internal = intl
-    obj.label = label
-    obj.lead = lead
-
+    if isinstance(obj,list):
+        for anObj in obj:
+            anObj.rawline = raw
+            anObj.internal = intl
+            anObj.label = label
+            anObj.lead = lead
+    else:
+        obj.rawline = raw
+        obj.internal = intl
+        obj.label = label
+        obj.lead = lead
+        
     return obj
 
 def process_fort_cmnt(dta,lineNumber,cmnt_list_fn):

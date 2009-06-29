@@ -2,7 +2,7 @@ from Setup import *
 
 from unittest      import *
 from fortFile import Ffile
-from fortParse import parse_stmt,parse_cmnt
+from fortParse import parse_stmts,parse_cmnt
 from itertools     import *
 import fortStmts as fs
 
@@ -10,7 +10,7 @@ class C1(TestCase):
     def test1(self):
         'parse file f3.f'
 
-        f1   = Ffile.file(fname_t('f3.f'),free=False,c_action=parse_cmnt,s_action=parse_stmt)
+        f1   = Ffile.file(fname_t('f3.f'),free=False,c_action=parse_cmnt,s_action=parse_stmts)
         ok_s = (fs.Comments,
                 fs.SubroutineStmt,
                 fs.Comments,
@@ -19,6 +19,7 @@ class C1(TestCase):
                 fs.AssignStmt,
                 fs.AssignStmt,
                 fs.AssignStmt,
+                fs.WriteStmt,
                 fs.OpenStmt,
                 fs.FormatStmt,
                 fs.Comments,

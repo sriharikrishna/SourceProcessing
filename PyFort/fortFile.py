@@ -25,11 +25,13 @@ class Ffile(object):
         s      = lambda x:process_fort_stmt(x,self.rawBufIter.myCounter,s_action)
         c      = lambda x:process_fort_cmnt(x,self.rawBufIter.myCounter,c_action)
         cblk   = treat(fl.cblk,c)
+        # produces multiple statements, if multiple statements were on
+        # the same line in the original file
         stmt   = treat(fl.stmt,s)
         a_line = disj(cblk,stmt)
 
         self.rawBufIter = buf_iter(fobj)
-        self.lines = vgen(a_line,self.rawBufIter)
+        self.lines = vgen(a_line,self.rawBufIter,True)
         self.fobj  = fobj
 
     @staticmethod

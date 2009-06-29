@@ -8,7 +8,6 @@ import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
 import PyFort.intrinsic as intrinsic
 from PyFort.fortUnit import fortUnitIterator
-from PyFort.fortParse import parse_stmt
 from PP.templateExpansion import * 
 import re
 import copy
@@ -342,8 +341,6 @@ class UnitPostProcessor(object):
 
     # removes all statements which should not be inserted
     # from a unit (function) in the inline file
-    # also adapts for failure to parse multiple statements on one line in parsing
-    # TODO: remove split over ';' once that is fixed
     # PARAMS:
     # function -- a unit from the inline file to be used in processing
     # RETURNS: a modified unit with all extraneous statements removed
@@ -358,8 +355,6 @@ class UnitPostProcessor(object):
                 newDecls.append(aDecl)
 
         for anExec in function.execs:
-            p = re.compile(r'[;]')
-            stmts = p.split(anExec.rawline)
             if anExec.is_comment():
                 match=re.search(pattern,anExec.rawline,re.IGNORECASE)
                 if match:
@@ -367,10 +362,6 @@ class UnitPostProcessor(object):
                     newExecs.append(fs.Comments(cmnt.strip()))
                 else:
                     newExecs.append(anExec)
-            elif len(stmts) > 1:
-                for aStmt in stmts:
-                    newStmt = parse_stmt(aStmt,anExec.lineNumber)
-                    newExecs.append(newStmt)
             else:
                 newExecs.append(anExec)            
 

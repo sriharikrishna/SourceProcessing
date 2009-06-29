@@ -159,7 +159,12 @@ def zo1(a):
 
     return pat(asm)
 
-def vgen(a,src):
+# if mult_stmts is true, vgen is called on something which may have
+# multiple statements per a-assembly because the original file may have
+# had multiple statements per line (and thus parse_stmts would have returned
+# a list of parsed statements, instead of just a single one)
+# in this case, the returns generator must yield each element in the list.
+def vgen(a,src,mult_stmts=False):
     '''for a given assembler a, and source stream src
     vgen is a returns generator that yields a stream of a-assemblies
     from src, until src is exhausted
@@ -168,7 +173,14 @@ def vgen(a,src):
     while True:
         try:
             (v,rst) = a(rst)
-            yield v
+            if mult_stmts:
+                if isinstance(v,list):
+                    for elt in v:
+                        yield elt
+                else:
+                    yield v
+            else:
+                yield v
         except AssemblerException:
             break
 

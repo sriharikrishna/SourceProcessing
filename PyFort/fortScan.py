@@ -38,10 +38,11 @@ pointerAssignSymbol_re = r'=>'
 id_re    = r'(?i)[_a-zA-Z$][\w$]*'
 int_re   = r'(?x)\d+ (?:_ \w+)?'
 dcoln_re = r'::'
+semi_re  = r';'
 conc_re  = r'//'
 exp_re   = r'\*\*'
 cmpr_re  = r'(?:>|<|=|/)='
-symb_re  = r'[-+*/()=,;%:<>]'
+symb_re  = r'[-+*/()=,%:<>]'
 dot_re   = r'''(?x)(?i)\.    # fortran "dotted" keywords
             (?:
                 eqv    |
@@ -97,6 +98,10 @@ def s_ident(self,s):
     'simplest possible scanner function: return matched string'
     return s
 
+def s_split(self,s):
+    'split semi-colon separated statements with a newline'
+    return '\n'
+
 scan1 = myscan.Scanner([
     (pointerAssignSymbol_re, s_ident),
     (id_re,      s_ident),
@@ -110,5 +115,6 @@ scan1 = myscan.Scanner([
     (qq_re,      s_ident),
     (flonum_re,  s_ident),
     (int_re,     s_ident),
+    (semi_re,    s_split),
     (white_re,   None),
     ],re.I | re.X)
