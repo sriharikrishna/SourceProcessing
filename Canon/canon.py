@@ -424,10 +424,9 @@ class UnitCanonicalizer(object):
         # replace the executable statements for the unit
         self.__myUnit.execs = self.__myNewExecs
 
-#       # for function units, also create a corresponding subroutine
-#       if isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
-#           print 'I know I\'m in a function unit!'
-#           function2subroutine.convertFunction(self.__myUnit)
+        # for function units, also create a corresponding subroutine
+        if isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
+            self.__myUnit = function2subroutine.convertFunction(self.__myUnit)
 
         DebugManager.debug(('+'*54)+' End canonicalize unit <'+str(self.__myUnit.uinfo)+'> '+(54*'+')+'\n\n')
         return self.__myUnit

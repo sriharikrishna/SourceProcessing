@@ -24,8 +24,7 @@ def compareFiles(assertFunc,originalFileName,RefFileName,free):
         (fd,testFileName) = tempfile.mkstemp()
         testFile  = open(testFileName,'w')
         for aUnit in fortUnitIterator(fname_t(originalFileName),free):
-            UnitCanonicalizer(aUnit).canonicalizeUnit()
-            aUnit.printit(testFile)
+            UnitCanonicalizer(aUnit).canonicalizeUnit().printit(testFile)
         testFile.close()
 	# print testFileName
         testFile = open(testFileName,'r')
@@ -103,7 +102,19 @@ class TestCanonicalizeSubroutineCall(TestCase):
         'hoisting call from named parameter'
         compareFiles(self.assertEquals,'subCall_namedWithCall.f90','subCall_namedWithCall.pre.f90',free=True)
 
-suite = asuite(C1,C2,TestCanonicalizeSubroutineCall)
+class TestFunctionToSubroutine(TestCase):    
+    def test1(self):
+        'test converting function to subroutine'
+        compareFiles(self.assertEquals,'funDef2subDef.f90','funDef2subDef.pre.f90',free=True)
+    def test2(self):
+        'test converting function to subroutine 2'
+        compareFiles(self.assertEquals,'funDef2subDef2.f90','funDef2subDef2.pre.f90',free=True)
+
+    def test3(self):
+        'test converting function definition and call to subroutine definition and call'
+        compareFiles(self.assertEquals,'funDef2subDef3.f90','funDef2subDef3.pre.f90',free=True)
+        
+suite = asuite(C1,C2,TestCanonicalizeSubroutineCall,TestFunctionToSubroutine)
 
 if __name__ == "__main__":
     sys.exit(runit(suite))
