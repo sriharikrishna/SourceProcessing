@@ -25,9 +25,11 @@ def convertFunction(functionUnit):
     newSubUnit.uinfo = fs.SubroutineStmt(name,args,lead=functionUnit.uinfo.lead).flow()
 
     # iterate over decls for functionUnit
+    lead = functionUnit.uinfo.lead+'  '
     for aDecl in functionUnit.decls:
         newSubUnit.decls.append(aDecl)
-    lead = functionUnit.decls[0].lead
+        if not isinstance(aDecl,fs.Comments):
+            lead = aDecl.lead
     intentArg = fe.App('intent',['out'])
     (type_name,mod) = functionUnit.uinfo.ty
 
