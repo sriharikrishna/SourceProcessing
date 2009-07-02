@@ -114,7 +114,7 @@ class TemplateExpansion(object):
                     newmatch = pat.search(anExecStmt.rawline[match.end():])
                     newStmt = fs.Comments(anExecStmt.rawline[match.end()+newmatch.end():])
                     self.__myNewExecs.append(newStmt)
-                continue
+                    continue
             anExecStmt = self.__insertSubroutineName(aUnit,anExecStmt)
             self.__myNewExecs.append(anExecStmt)
 
@@ -175,8 +175,10 @@ class TemplateExpansion(object):
                 plMatch=re.search('__SRNAME__',plainLine,re.IGNORECASE)
             # redo scan and parse for the class of the given anExecStmt
             aNewExecStmt=anExecStmt.__class__.parse(scan1.scan(plainLine)[0],anExecStmt.lineNumber)
-            aNewExecStmt.lead=anExecStmt.lead
-            return aNewExecStmt.flow()
+            if not isinstance(aNewExecStmt,fs.Comments):
+                aNewExecStmt.lead=anExecStmt.lead
+                aNewExecStmt.flow()
+            return aNewExecStmt
         return anExecStmt
 
     # Given a template file 'template' and the Decls and Execs from the file
