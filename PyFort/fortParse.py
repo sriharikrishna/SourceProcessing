@@ -17,18 +17,22 @@ def parse_stmts(jl,lineNumber):
     objs = []
 
     count = scan.count('\n')
+    if count == 0:
+        return fs.parse(scan,lineNumber)
     while count > 0:
         index = scan.index('\n')
         stmt = scan[:index]
         if len(stmt) == 0:
             count -= 1
             continue
-        objs.append(fs.parse(stmt,lineNumber))
+        parsed = fs.parse(stmt,lineNumber)
+        objs.append(parsed)
         scan = scan[index+1:]
         count -= 1
-        
+
     if len(scan) != 0:
-        objs.append(fs.parse(scan,lineNumber))
+        parsed = fs.parse(scan,lineNumber)
+        objs.append(parsed)
 
     return objs
     

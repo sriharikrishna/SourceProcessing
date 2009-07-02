@@ -19,6 +19,9 @@ class C1(TestCase):
                 fs.AssignStmt,
                 fs.AssignStmt,
                 fs.AssignStmt,
+                fs.IfStmt,
+                fs.AssignStmt,
+                fs.AssignStmt,
                 fs.WriteStmt,
                 fs.OpenStmt,
                 fs.FormatStmt,
@@ -30,6 +33,7 @@ class C1(TestCase):
                 fs.EndStmt,
                 )
         for (l,c) in izip(f1.lines,ok_s):
+            print l
             a_(isinstance(l,c))
 
 s1 = makeSuite(C1)
