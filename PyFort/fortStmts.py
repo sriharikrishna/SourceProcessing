@@ -1677,6 +1677,10 @@ class DeallocateStmt(Exec):
     def __str__(self):
         return '%s(%s)' % (self.kw,','.join([str(arg) for arg in self.argList]))
 
+class InquireStmt(Exec):
+    kw = 'inquire'
+    kw_str = kw
+
 kwtbl = dict(blockdata       = BlockdataStmt,
              common          = CommonStmt,
              logical         = LogicalStmt,
@@ -1735,7 +1739,8 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              intent          = IntentStmt,
              optional        = OptionalStmt,
              allocate        = AllocateStmt,
-             deallocate      = DeallocateStmt
+             deallocate      = DeallocateStmt,
+             inquire         = InquireStmt
              )
 
 for kw in ('if','continue','return','else','print','use','cycle','exit','rewind','where','elsewhere','format','pointer','target'):
