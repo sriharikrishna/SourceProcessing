@@ -511,9 +511,17 @@ class UnitPostProcessor(object):
                 Stmt.itemList = newItemList
                 Stmt.flow()
                 Execs.append(Stmt)
+            elif isinstance(Stmt,fs.AllocateStmt):
+                Stmt.rawline= \
+                            self.__replaceArgs(argReps,Stmt.rawline,inlineArgs,replacementArgs)
+                Execs.append(Stmt)
+            elif isinstance(Stmt,fs.DeallocateStmt):
+                Stmt.rawline= \
+                            self.__replaceArgs(argReps,Stmt.rawline,inlineArgs,replacementArgs)
+                Execs.append(Stmt)
             elif hasattr(Stmt, "_sons"):
                 for aSon in Stmt._sons:
-                    theSon = getattr(Stmt,aSon)
+                    theSon = getattr(Stmt,aSon) 
                     if theSon is None:
                         continue
                     elif isinstance(theSon,list):
