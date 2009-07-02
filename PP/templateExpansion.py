@@ -170,14 +170,21 @@ class TemplateExpansion(object):
     def __insertSubroutineName(self,Unit,anExecStmt):
         match = re.search('__SRNAME__',anExecStmt.rawline,re.IGNORECASE)
         if match:
-            plainLine=str(anExecStmt) # the line w/o continuation+linebreaks
+            if isinstance(anExecStmt,fs.Comments):
+                plainLine = anExecStmt.rawline
+            else:
+                plainLine=str(anExecStmt) # the line w/o continuation+linebreaks
+
             plMatch=re.search('__SRNAME__',plainLine,re.IGNORECASE)
             while plMatch:
                 plainLine=plainLine[:plMatch.start()]+Unit.uinfo.name+plainLine[plMatch.end():]
                 plMatch=re.search('__SRNAME__',plainLine,re.IGNORECASE)
-            # redo scan and parse for the class of the given anExecStmt
-            aNewExecStmt=anExecStmt.__class__.parse(scan1.scan(plainLine)[0],anExecStmt.lineNumber)
-            if not isinstance(aNewExecStmt,fs.Comments):
+
+            if isinstance(anExecStmt,fs.Comments):
+                aNewExecStmt = fs.Comments(plainLine)
+            else:
+                # redo scan and parse for the class of the given anExecStmt
+                aNewExecStmt=anExecStmt.__class__.parse(scan1.scan(plainLine)[0],anExecStmt.lineNumber)
                 aNewExecStmt.lead=anExecStmt.lead
                 aNewExecStmt.flow()
             return aNewExecStmt
