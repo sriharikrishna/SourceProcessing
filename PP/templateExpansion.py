@@ -114,7 +114,9 @@ class TemplateExpansion(object):
                     newmatch = pat.search(anExecStmt.rawline[match.end():])
                     newStmt = fs.Comments(anExecStmt.rawline[match.end()+newmatch.end():])
                     self.__myNewExecs.append(newStmt)
-                    continue
+                else:
+                    self.__myNewExecs.append(anExecStmt)
+                continue
             anExecStmt = self.__insertSubroutineName(aUnit,anExecStmt)
             self.__myNewExecs.append(anExecStmt)
 
