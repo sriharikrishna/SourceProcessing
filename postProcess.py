@@ -4,6 +4,7 @@ Postprocessing
 '''
 import sys
 import os
+import re
 import datetime
 import traceback
 from optparse import OptionParser
@@ -107,6 +108,21 @@ def main():
                    help='suppress warning messages (defaults to False)',
                    action='store_true',
                    default=False)
+    opt.add_option('--separateOutput',
+                   dest='separateOutput',
+                   help='split output into files as specified by the input file pragmas placed by preProcess.py (defaults to False)',
+                   action='store_true',
+                   default=False)
+    opt.add_option('-P',
+                   '--pathSuffix',
+                   dest='pathSuffix',
+                   help='for use with --separateOutput: append this suffix to the directory name of the corresponding input file (defaults to "OAD")',
+                   default='OAD')
+    opt.add_option('-F',
+                   '--filenameSuffix',
+                   dest='filenameSuffix',
+                   help='for use with --separateOutput: append this suffix to the name of the corresponding input file (defaults to "_OAD")',
+                   default='_OAD')
     opt.add_option('--timing',
                    dest='timing',
                    help='simple timing of the execution',
@@ -134,8 +150,10 @@ def main():
             opt.error("expect exactly one argument <input_file>, given are "+str(len(args))+" which are:"+str(args)+" and the following options: "+str(config))
         inputFile = args[0]
 
-        if (config.width and config.output):
-            opt.error("cannot specify both --width and -o.")
+        if ((config.width and config.output) or
+            (config.width and config.separateOutput) or
+            (config.output and config.separateOutput)):
+            opt.error("cannot specify more than one of --width, --separateOutput, and -o")
 
         # set symtab type defaults
         Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
@@ -219,6 +237,27 @@ def main():
                 makeOut.write(" \\\n"+outFileName)
             makeOut.write("\n")
             makeOut.close()
+        # SEPARATE OUTPUT INTO FILES AS SPECIFIED BY PRAGMAS
+        elif config.separateOutput:
+            out = None
+            for aUnit in fortUnitIterator(inputFile,config.free):
+                # We expect to find file pragmas in the cmnt section of units exclusively
+                if aUnit.cmnt:
+                    if (re.search('openad xxx file_start',aUnit.cmnt.rawline,re.IGNORECASE)):
+                        if out: # close the previous output file (if any)
+                            out.close()
+                        # extract the new output file location (and add path and filename suffixes)
+                        (head,tail) = os.path.split(aUnit.cmnt.rawline.split('start [')[1].split(']')[0])
+                        (fileName,fileExtension) = os.path.splitext(tail)
+                        outputDirectory = head+config.pathSuffix
+                        if not os.path.exists(outputDirectory): os.mkdir(outputDirectory)
+                        newOutputFile = os.path.join(outputDirectory,fileName+config.filenameSuffix+fileExtension)
+                        out = open(newOutputFile,'w')
+                elif not out:
+                    raise PostProcessError('option separateOutput specified, no output file can be determined for the first unit',0)
+                # postprocess the unit and print it
+                UnitPostProcessor(aUnit).processUnit().printit(out)
+            out.close()
         else: 
             out=None
             if config.output: 
