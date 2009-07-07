@@ -252,6 +252,7 @@ def main():
                         outputDirectory = head+config.pathSuffix
                         if not os.path.exists(outputDirectory): os.mkdir(outputDirectory)
                         newOutputFile = os.path.join(outputDirectory,fileName+config.filenameSuffix+fileExtension)
+                        outFileNameList.append(newOutputFile)
                         out = open(newOutputFile,'w')
                 elif not out:
                     raise PostProcessError('option separateOutput specified, no output file can be determined for the first unit',0)
