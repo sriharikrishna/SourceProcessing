@@ -11,7 +11,7 @@ from PyUtil.symtab import Symtab
 import fortStmts as fs
 from fortFile import Ffile
 from fortParse import parse_stmts,parse_cmnt
-from module_handler import ModuleHandler
+import module_handler
 
 import stmt2unit
 
@@ -197,7 +197,7 @@ class _curr(object):
         return u
 
 def fortUnitIterator(fileName,free):
-    return vgen(install_pat(_curr(ModuleHandler())),
+    return vgen(install_pat(_curr(module_handler.ourModuleHandler)),
                 buf_iter(Ffile.file(fileName,free,parse_cmnt,parse_stmts).lines))
 
 if __name__ == '__main__':

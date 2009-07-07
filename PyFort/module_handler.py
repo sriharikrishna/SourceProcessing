@@ -11,3 +11,6 @@ class ModuleHandler(object):
         self.modules[name] = stab
     def get_module(self,name):
         return self.modules.get(name)
+
+ourModuleHandler = ModuleHandler()
+
