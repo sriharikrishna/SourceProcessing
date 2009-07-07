@@ -97,11 +97,10 @@ def main():
     if (config.timing):
         startTime=datetime.datetime.utcnow()
 
-
-    # Set input file
-    if len(args) != 1:
-        opt.error("expect input file argument")
-    inputFile = args[0]
+    # Set input file(s)
+    if len(args) == 0:
+        opt.error("expected at least one input file argument")
+    inputFileList = args
 
     # configure forward/reverse mode
     if config.mode:
@@ -135,29 +134,35 @@ def main():
     try: 
         if config.outputFile: out = open(config.outputFile,'w')
         else: out = sys.stdout
-        for aUnit in fortUnitIterator(inputFile,config.isFreeFormat):
-            UnitCanonicalizer(aUnit).canonicalizeUnit().printit(out)
+        currentInputFile = '<none>'
+        for anInputFile in inputFileList:
+            currentInputFile = anInputFile
+            # output the file start pragma
+            out.write('!$openad xxx file_start ['+anInputFile+']\n')
+            out.flush()
+            for aUnit in fortUnitIterator(anInputFile,config.isFreeFormat):
+                UnitCanonicalizer(aUnit).canonicalizeUnit().printit(out)
         for aUnit in makeSubroutinizedIntrinsics():
             aUnit.printit(out)
         if config.outputFile: out.close()
         if (config.timing):
             print 'SourceProcessing: timing: '+str(datetime.datetime.utcnow()-startTime)
     except CanonError,e:
-        print >>sys.stderr,'\nERROR: CanonError on line '+str(e.lineNumber)+': ',e.msg
+        print >>sys.stderr,'\nERROR: CanonError in '+currentInputFile+' at line '+str(e.lineNumber)+': ',e.msg
         cleanup(config)
         return 1
     except SymtabError,e:
         debugstr = e.entry and e.entry.debug('unknown') \
                             or ''
-        print >>sys.stderr,'\nERROR: SymtabError on line '+str(e.lineNumber)+':',e.msg,' for entry',debugstr
+        print >>sys.stderr,'\nERROR: SymtabError in '+currentInputFile+' at line '+str(e.lineNumber)+':',e.msg,' for entry',debugstr
         cleanup(config)
         return 1
     except UserError,e:
-        print >>sys.stderr,'\nERROR: UserError:',e.msg
+        print >>sys.stderr,'\nERROR: UserError in '+currentInputFile+':',e.msg
         cleanup(config)
         return 1 
     except ScanError,e: 
-        print >>sys.stderr,'\nERROR: ScanError: scanner fails at line '+str(e.lineNumber)+':'
+        print >>sys.stderr,'\nERROR: ScanError: scanner fails in '+currentInputFile+' at line '+str(e.lineNumber)+':'
         print >>sys.stderr,e.aFortLine
         print >>sys.stderr,(len(e.aFortLine)-len(e.rest))*' '+'^'
         print >>sys.stderr,''
@@ -171,18 +176,18 @@ def main():
         cleanup(config)
         return 1 
     except ParseError,e: 
-        print >>sys.stderr,'\nERROR: ParseError: parser fails to assemble tokens in scanned line '+str(e.lineNumber)+':'
+        print >>sys.stderr,'\nERROR: ParseError: parser fails to assemble tokens in '+currentInputFile+' at scanned line '+str(e.lineNumber)+':'
         print >>sys.stderr,e.scannedLine
         if e.target:
             print >>sys.stderr,"tried to parse as",e.target
         cleanup(config)
         return 1 
     except AssemblerException,e:
-        print >>sys.stderr,"\nERROR: AssemblerError: parser failed:",e.msg
+        print >>sys.stderr,'\nERROR: AssemblerError: parser failed in '+currentInputFile+':',e.msg
         cleanup(config)
         return 1 
     except ListAssemblerException,e:
-        print >>sys.stderr,"\nERROR: ListAssemblerError: parser failed:",e.msg
+        print >>sys.stderr,'\nERROR: ListAssemblerError: parser failed in '+currentInputFile+':',e.msg
         print >>sys.stderr,'rest =', e.rest
         cleanup(config)
         return 1 
