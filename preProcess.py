@@ -28,7 +28,7 @@ def cleanup(config):
             print >>sys.stderr,'Cannot remove output file '+config.outputFile
  
 def main():
-    usage = '%prog [options] <input_file>'
+    usage = '%prog [options] <input_file> [additional input files]'
     modes={'f':'forward','r':'reverse'}
     modeChoices=modes.keys()
     modeChoicesHelp=""
@@ -137,9 +137,9 @@ def main():
         currentInputFile = '<none>'
         for anInputFile in inputFileList:
             currentInputFile = anInputFile
-            # output the file start pragma
-            out.write('!$openad xxx file_start ['+anInputFile+']\n')
-            out.flush()
+            if (len(inputFileList) > 1): # output the file start pragma
+                out.write('!$openad xxx file_start ['+anInputFile+']\n')
+                out.flush()
             for aUnit in fortUnitIterator(anInputFile,config.isFreeFormat):
                 UnitCanonicalizer(aUnit).canonicalizeUnit().printit(out)
         for aUnit in makeSubroutinizedIntrinsics():
