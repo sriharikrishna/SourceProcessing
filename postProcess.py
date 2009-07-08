@@ -299,7 +299,7 @@ def main():
         print >>sys.stderr,''
         print >>sys.stderr,"Tokens scanned ok: ", e.scanned,'\tUnable to scan: "'+e.rest+'"'
         print >>sys.stderr,''
-        if (e.rest == '&' and not config.isFreeFormat):
+        if (e.rest == '&' and not config.free):
             print >>sys.stderr,"This failure is likely due to running this script on free-formatted code without specifying the --free flag."
         else:
             print >>sys.stderr,"This failure is likely due to possibly legal but unconventional Fortran,"
