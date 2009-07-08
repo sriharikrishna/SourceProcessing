@@ -121,8 +121,8 @@ def main():
     opt.add_option('-F',
                    '--filenameSuffix',
                    dest='filenameSuffix',
-                   help='for use with --separateOutput: append this suffix to the name of the corresponding input file (defaults to "_OAD")',
-                   default='_OAD')
+                   help='for use with --separateOutput: append this suffix to the name of the corresponding input file (defaults to an empty string)',
+                   default='')
     opt.add_option('--timing',
                    dest='timing',
                    help='simple timing of the execution',
