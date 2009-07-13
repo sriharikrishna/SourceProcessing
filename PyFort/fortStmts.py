@@ -1337,7 +1337,7 @@ class ElseifStmt(Exec):
         return 'ElseifStmt(%s)' % (repr(self.test),)
 
     def __str__(self):
-        return '%s (%s) %s' % (self.stmt_name,repr(self.test),self.stmt_name2)
+        return '%s (%s) %s' % (self.stmt_name,str(self.test),self.stmt_name2)
     
 class ElseStmt(Leaf):
     kw = 'else'
