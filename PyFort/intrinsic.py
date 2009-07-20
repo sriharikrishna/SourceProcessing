@@ -34,6 +34,7 @@ __intrinsics = (
     'len',
     'len_trim',
     'log',
+    'log10',
     'max',
     'max0',
     'maxval',
