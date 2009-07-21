@@ -25,6 +25,8 @@ import PyFort.fortStmts as fs
 from PP.unitPostProcess import UnitPostProcessor,PostProcessError
 from PP.templateExpansion import TemplateExpansion
 
+sys.setrecursionlimit(1500)
+
 def cleanup(outFileNameList):
     for outFile in outFileNameList:
         if os.path.exists(outFile):
@@ -123,6 +125,10 @@ def main():
                    dest='filenameSuffix',
                    help='for use with --separateOutput: append this suffix to the name of the corresponding input file (defaults to an empty string)',
                    default='')
+    opt.add_option('--recursionLimit',
+                   dest='recursionLimit',
+                   type='int',
+                   help='recursion limit for the python interpreter (default: '+str(sys.getrecursionlimit())+'; setting it too high may permit a SEGV in the interpreter)')
     opt.add_option('--timing',
                    dest='timing',
                    help='simple timing of the execution',
@@ -144,6 +150,9 @@ def main():
         startTime=None
         if (config.timing):
             startTime=datetime.datetime.utcnow()
+
+        if (config.recursionLimit):
+            sys.setrecusionlimit(config.recursionLimit);
 
         # Set input file
         if len(args) != 1:
@@ -320,6 +329,14 @@ def main():
         print >>sys.stderr,"\nERROR: ListAssemblerError: parser failed:",e.msg
         cleanup(outFileNameList)
         return 1 
+    except RuntimeError,e:
+        if (len(e.args)>=1 and "maximum recursion depth exceeded" <= e.args[0]):
+            print >>sys.stderr,'\nERROR: RuntimeError: python interpreter failed with: ',e.args[0]
+            print >>sys.stderr,'\twhich can happen for deeply nested bracketing. Try to set a value larger than the current '+str(sys.getrecursionlimit())+' with --recursionLimit .' 
+            cleanup(config)
+            return 1
+        else:
+            raise e
     return 0
 
 if __name__ == "__main__":
