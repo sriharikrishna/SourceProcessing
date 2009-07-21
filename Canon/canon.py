@@ -86,6 +86,12 @@ class UnitCanonicalizer(object):
                                                     origin='temp'))
         return (theNewTemp,varTypeClass)
 
+    def __canonicalizeIntrinsicEllipsisRec(self,head,args):
+        if (len(args)==2):
+            return fe.App(head,args)
+        else:
+            return fe.App(head,[args[0],self.__canonicalizeIntrinsicEllipsisRec(head,args[1:])])
+        
     def __canonicalizeFuncCall(self,theFuncCall,parentStmt):
         '''turn a function call into a subroutine call
         returns the new temp created as return value for the new subroutine call'''
@@ -102,6 +108,9 @@ class UnitCanonicalizer(object):
             newSubName = subroutinizedIntrinsics.makeName(funcName,
                                                           newTempType)
             subroutinizedIntrinsics.markRequired(funcName,newTempType)
+            if funcName in ('max','min') and len(theFuncCall.args)>2 :
+                self.__recursionDepth -= 1
+                return self.__canonicalizeFuncCall(self.__canonicalizeIntrinsicEllipsisRec(theFuncCall.head,theFuncCall.args),parentStmt)
         else:
             newSubName = subroutinizedIntrinsics.call_prefix + theFuncCall.head
         self.__myNewExecs.append(self.__canonicalizeSubCallStmt(fs.CallStmt(newSubName,

@@ -26,12 +26,12 @@ def compareFiles(assertFunc,originalFileName,RefFileName,free):
         for aUnit in fortUnitIterator(fname_t(originalFileName),free):
             UnitCanonicalizer(aUnit).canonicalizeUnit().printit(testFile)
         testFile.close()
-	# print testFileName
+#	print testFileName
         testFile = open(testFileName,'r')
         testFileLines = testFile.readlines()
         refFile = open(fname_t(RefFileName),'r')
         refFileLines = refFile.readlines()
-#        assertFunc(len(testFileLines),len(refFileLines),'transformation result and reference file have disparate line counts')
+#       assertFunc(len(testFileLines),len(refFileLines),'transformation result and reference file have disparate line counts')
         for testLine,refLine in zip(testFileLines,refFileLines):
             assertFunc(testLine,refLine)
         refFile.close()
@@ -117,8 +117,13 @@ class TestFunctionToSubroutine(TestCase):
     def test4(self):
         'test result argument replacement while converting function definition to subroutine definition'
         compareFiles(self.assertEquals,'funDef_resultReplacement.f90','funDef_resultReplacement.pre.f90',free=True)
+
+class TestCanonicalizeEllipsis(TestCase):
+    def test1(self):
+        'test converting max ellipsis'
+        compareFiles(self.assertEquals,'ellipsisFunCall.f90','ellipsisFunCall.pre.f90',free=True)
         
-suite = asuite(C1,C2,TestCanonicalizeSubroutineCall,TestFunctionToSubroutine)
+suite = asuite(C1,C2,TestCanonicalizeSubroutineCall,TestFunctionToSubroutine,TestCanonicalizeEllipsis)
 
 if __name__ == "__main__":
     sys.exit(runit(suite))
