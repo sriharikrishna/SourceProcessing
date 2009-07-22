@@ -267,8 +267,14 @@ class Comments(GenStmt):
     def __repr__(self):
         return 'Comments(blk)'
 
+    def __str__(self):
+        return self.rawline
+
     def viz(self):
         return 'Comments(%s)' % self.rawline
+
+    def flow(self):
+        return self
 
     def is_comment(self,unit=_non): return True
 
