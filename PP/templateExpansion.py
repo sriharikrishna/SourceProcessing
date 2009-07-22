@@ -95,8 +95,8 @@ class TemplateExpansion(object):
                     re.IGNORECASE)
                 match = pat.search(anExecStmt.rawline)
                 if match:
-                    stmt = anExecStmt.rawline[:match.start()].lstrip()
-                    if len(stmt) != 0:
+                    stmt = anExecStmt.rawline[:match.start()]
+                    if len(stmt.strip()) != 0:
                         newStmt = self.__insertSubroutineName(aUnit,fs.Comments(stmt))
                         self.__myNewExecs.append(newStmt)
                     endline = re.search('[\n]',anExecStmt.rawline[match.end():])
@@ -114,8 +114,8 @@ class TemplateExpansion(object):
                     # continue template
                     pat = re.compile("[0-9]+")
                     newmatch = pat.search(anExecStmt.rawline[match.end():])
-                    stmt = anExecStmt.rawline[match.end()+newmatch.end():].strip()
-                    if len(stmt) != 0:
+                    stmt = anExecStmt.rawline[match.end()+newmatch.end():]
+                    if len(stmt.strip()) != 0:
                         newStmt = self.__insertSubroutineName(aUnit,fs.Comments(stmt))
                         self.__myNewExecs.append(newStmt)
                 else:
