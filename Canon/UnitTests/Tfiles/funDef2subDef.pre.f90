@@ -1,6 +1,6 @@
 subroutine oad_s_bar(x,RES)
-  real :: x
   real,intent(out) :: RES
+  real :: x
   RES = x*2
   return
 end subroutine oad_s_bar
