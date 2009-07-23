@@ -26,12 +26,11 @@ def compareFiles(assertFunc,originalFileName,RefFileName,free):
         for aUnit in fortUnitIterator(fname_t(originalFileName),free):
             UnitCanonicalizer(aUnit).canonicalizeUnit().printit(testFile)
         testFile.close()
-#	print testFileName
         testFile = open(testFileName,'r')
         testFileLines = testFile.readlines()
         refFile = open(fname_t(RefFileName),'r')
         refFileLines = refFile.readlines()
-#       assertFunc(len(testFileLines),len(refFileLines),'transformation result and reference file have disparate line counts')
+        assertFunc(len(testFileLines),len(refFileLines),'transformation result and reference file have disparate line counts')
         for testLine,refLine in zip(testFileLines,refFileLines):
             assertFunc(testLine,refLine)
         refFile.close()
@@ -106,6 +105,7 @@ class TestFunctionToSubroutine(TestCase):
     def test1(self):
         'test converting function to subroutine'
         compareFiles(self.assertEquals,'funDef2subDef.f90','funDef2subDef.pre.f90',free=True)
+
     def test2(self):
         'test converting function to subroutine 2'
         compareFiles(self.assertEquals,'funDef2subDef2.f90','funDef2subDef2.pre.f90',free=True)
