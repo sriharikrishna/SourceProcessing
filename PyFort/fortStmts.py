@@ -255,6 +255,9 @@ class GenStmt(_Mappable,_Mutable_T):
     def is_contains(self,unit=_non): return False
     def is_comment(self,unit=_non): return False
 
+    def __str__(self):
+        return self.rawline
+
 class Skip(GenStmt):
     def __init__(self):
         self.scan = []
@@ -267,14 +270,20 @@ class Comments(GenStmt):
     def __repr__(self):
         return 'Comments(blk)'
 
-    def __str__(self):
-        return self.rawline
-
     def viz(self):
         return 'Comments(%s)' % self.rawline
 
     def flow(self):
-        return self
+        lines = self.rawline.splitlines()
+        self.rawline = ''
+        if flow.flow_line == flow._free_flow_line:
+            for line in lines:
+                self.rawline += '!'+line[1:]+'\n'
+            return self
+        else:
+            for line in lines:
+                self.rawline += 'C'+flow.flow_line(line[1:],cont='!')+'\n'
+            return self
 
     def is_comment(self,unit=_non): return True
 

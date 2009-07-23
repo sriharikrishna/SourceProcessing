@@ -116,6 +116,24 @@ class C3(TestCase):
         c2 = Comments('\n'.join(['c This','c is','c a','c comment'])+'\n')
         ae(c1.viz(),c2.viz())
 
+    def test2(self):
+        'test flow to free format on comments in fixed format'
+        ae = self.assertEquals
+        c1 = Comments('C     comment 1 is free format\nC     comment 2 is long long long. it must be more than 72 characters in\nC     order to cause line break for fixed format comment\n')
+        c2 = Comments('!     comment 1 is free format\n!     comment 2 is long long long. it must be more than 72 characters in\n!     order to cause line break for fixed format comment\n')
+        flow.free_flow(True)
+        c1.flow()
+        ae(c1.rawline,c2.rawline)
+
+    def test3(self):
+        'test flow to fixed format on comments in free format'
+        ae = self.assertEquals
+        c1 = Comments('!     comment 1 is free format\n!     comment 2 is long long long. it must be more than 72 characters in order to cause line break for fixed format comment\n')
+        c2 = Comments('C     comment 1 is free format\nC     comment 2 is long long long. it must be more than 72 characters in \n     !order to cause line break for fixed format comment\n')
+        flow.free_flow(False)
+        c1.flow()
+        ae(c1.rawline,c2.rawline)
+
 class C4(TestCase):
     def test1(self):
         'assignment statement classes have "_sons" attribute'
