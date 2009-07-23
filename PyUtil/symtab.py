@@ -11,10 +11,11 @@ from PyFort.fortExp import App
 from PyFort.fortStmts import _PointerInit,_Kind
 
 class SymtabError(Exception):
-    def __init__(self,msg,aSymtabEntry=None,lineNumber=0):
+    def __init__(self,msg,aSymtabEntry=None,lineNumber=0, nameClash=False):
         self.msg = msg
         self.entry = aSymtabEntry
         self.lineNumber = lineNumber
+        self.nameClash = nameClash
 
 class Symtab(object):
     @staticmethod
@@ -169,8 +170,18 @@ class SymtabEntry(object):
         DebugManager.debug('\t\tSymtabEntry.enterType: entering type '+str(newType)+' for '+str(self))
         if not newType:
             raise SymtabError('SymtabEntry.enterType: newType is None!',self,lineNumber)
-        if self.type and (self.type != newType):
-            raise SymtabError('SymtabEntry.enterType: Error -- current type "'+str(self.type)+'" and new type "'+str(newType)+'" conflict!',self,lineNumber)
+        if self.type : # assume a name clash
+            raise SymtabError('SymtabEntry.enterType:',self,lineNumber, True)
+           # The following code makes some (incomplete) effort to determine the equality of the current type and the new type.
+           # It is commented out because (1) it's incomplete and (2): it's not clear that fortran allows us to re-declare any type information for a particular symbol.
+           #(currentTypeClass,currentTypeModifier) = self.type
+           #(newTypeClass,newTypeModifier) = newType
+           #if (currentTypeClass != newTypeClass):
+           #    raise SymtabError('SymtabEntry.enterType: Error -- current type class "'+str(currentTypeClass)+
+           #                                                    '" and new type class "'+str(newTypeClass)+'" conflict!',self,lineNumber)
+           #if (currentTypeModifier[0].mod != newTypeModifier[0].mod):
+           #    raise SymtabError('SymtabEntry.enterType: Error -- current type modifier "'+str(currentTypeModifier[0].mod)+
+           #                                                    '" and new type modifier "'+str(newTypeModifier[0].mod)+'" conflict!',self,lineNumber)
         # procedures: entering a type means we know it's a function
         if self.entryKind == self.ProcedureEntryKind:
             DebugManager.debug('\t\t\t(SymtabEntry.enterType: entering type information tells us that this procedure is a function)')
@@ -181,6 +192,13 @@ class SymtabEntry(object):
         DebugManager.debug('\t\tSymtab.enterDimensions: called on '+str(self)+' and setting dimensions to '+str(newDimensions))
         if self.dimensions and (self.dimensions != newDimensions):
             raise SymtabError('SymtabEntry.enterDimensions: Error -- current dimensions "'+str(self.dimensions)+'" and new dimensions "'+str(newDimensions)+'" conflict!',self,lineNumber)
+       # The following code makes some (incomplete) effort to determine the equality of the current dimensions and the new dimensions.
+       # See the similar comment in enterType above for more details.
+       #if self.dimensions:
+       #    for currentDimItem,newDimItem in zip(self.dimensions,newDimensions):
+       #        if (currentDimItem != newDimItem):
+       #            raise SymtabError('SymtabEntry.enterDimensions: Error -- current dimensions "'+str(self.dimensions)+
+       #                                                                  '" and new dimensions "'+str(newDimensions)+'" conflict!',self,lineNumber)
         self.dimensions = newDimensions
 
     def enterLength(self,newLength,lineNumber=0):

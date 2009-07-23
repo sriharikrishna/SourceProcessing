@@ -52,7 +52,14 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
         theSymtabEntry = localSymtab.lookup_name_local(name)
         if theSymtabEntry: # already in symtab -> enter new information (taking exception to any conflicts)
             DebugManager.debug('decl "'+str(aDecl)+'" already present in local symbol table as '+str(theSymtabEntry.debug(name)))
-            theSymtabEntry.enterType(newType,aTypeDeclStmt.lineNumber)
+            try : 
+                theSymtabEntry.enterType(newType,aTypeDeclStmt.lineNumber)
+            except SymtabError, e:
+                if e.nameClash:
+                    # add the name to the exception message so the user knows which one is the problem
+                    raise SymtabError(e.msg+" declaration for "+name+" conflicts with an earlier declaration using the same name",e.entry,e.lineNumber,e.nameClash)
+                else:
+                    raise e
             theSymtabEntry.enterDimensions(newDimensions,aTypeDeclStmt.lineNumber)
             theSymtabEntry.enterLength(newLength,aTypeDeclStmt.lineNumber)
             # for function/subroutine entries, also update this information in the parent symbol table

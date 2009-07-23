@@ -301,7 +301,7 @@ def main():
     except SymtabError,e:
         debugstr = e.entry and e.entry.debug('unknown') \
                             or ''
-        print >>sys.stderr,'\nERROR: SymtabError on line '+str(e.lineNumber)+':\n',e.msg,'\nfor entry',debugstr
+        print >>sys.stderr,'\nERROR: SymtabError on line '+str(e.lineNumber)+':\n',e.msg
         cleanup(outFileNameList)
         return 1
     except UserError,e:
