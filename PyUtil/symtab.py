@@ -11,10 +11,11 @@ from PyFort.fortExp import App
 from PyFort.fortStmts import _PointerInit,_Kind
 
 class SymtabError(Exception):
-    def __init__(self,msg,aSymtabEntry=None,lineNumber=0):
+    def __init__(self,msg,aSymtabEntry=None,lineNumber=0, nameClash=False):
         self.msg = msg
         self.entry = aSymtabEntry
         self.lineNumber = lineNumber
+        self.nameClash = nameClash
 
 class Symtab(object):
     @staticmethod
@@ -169,8 +170,8 @@ class SymtabEntry(object):
         DebugManager.debug('\t\tSymtabEntry.enterType: entering type '+str(newType)+' for '+str(self))
         if not newType:
             raise SymtabError('SymtabEntry.enterType: newType is None!',self,lineNumber)
-        if self.type and (self.type != newType):
-            raise SymtabError('SymtabEntry.enterType: Error -- current type "'+str(self.type)+'" and new type "'+str(newType)+'" conflict!',self,lineNumber)
+        if self.type : # assume a name clash
+            raise SymtabError('SymtabEntry.enterType:',self,lineNumber, True)
         # procedures: entering a type means we know it's a function
         if self.entryKind == self.ProcedureEntryKind:
             DebugManager.debug('\t\t\t(SymtabEntry.enterType: entering type information tells us that this procedure is a function)')
