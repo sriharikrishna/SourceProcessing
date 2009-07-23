@@ -90,6 +90,11 @@ def main():
                    dest='concreteType',
                    help='replace abstract active string (see also --abstractType ) with concrete active type CONCRETETYPE; defaults to \'active\'',
                    default='active')
+    opt.add_option('--freeOutput',
+                   dest='freeOutput',
+                   help="<output_file> is in free format",
+                   action = 'store_true',
+                   default=False)
     opt.add_option('--free',
                    dest='free',
                    help="<input_file> is in free format",
@@ -210,6 +215,8 @@ def main():
         UnitPostProcessor.setReplacementType(config.concreteType)
         # set abstract type 
         UnitPostProcessor.setAbstractType(config.abstractType)
+        # set output format
+        UnitPostProcessor.setOutputFormat(config.freeOutput)
 
         # set verbosity
         DebugManager.setVerbose(config.verbose)

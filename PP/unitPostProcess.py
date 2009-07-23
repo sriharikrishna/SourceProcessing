@@ -9,6 +9,7 @@ import PyFort.fortStmts as fs
 import PyFort.intrinsic as intrinsic
 from PyFort.fortUnit import fortUnitIterator
 from PP.templateExpansion import * 
+import PyFort.flow as flow
 import re
 import copy
 
@@ -50,6 +51,10 @@ class UnitPostProcessor(object):
     @staticmethod
     def setAbstractType(abstractType):
         UnitPostProcessor._abstract_type = abstractType.lower()
+
+    @staticmethod
+    def setOutputFormat(freeOutput):
+        flow.free_flow(freeOutput)
 
     _mode = 'forward'
 
@@ -604,12 +609,12 @@ class UnitPostProcessor(object):
             newStmt = None
             if anExecStmt.is_comment():
                 if self._mode == 'reverse':
-                    p = re.compile(r'[\n]')
-                    comments = p.split(anExecStmt.rawline)
+                    comments = anExecStmt.rawline.splitlines()
                     (execList,Execs,inline,replacementNum) = \
                         self.__processComments(comments,replacementNum,
                                                execList,Execs,inline)
                 else:
+                    anExecStmt.flow()
                     Execs.append(anExecStmt)
             elif isinstance(anExecStmt,fs.CallStmt):
                 if inline is True:
@@ -674,8 +679,7 @@ class UnitPostProcessor(object):
                     Decls.append(newDecl)
             elif aDecl.is_comment():
                 if self._mode == 'reverse':
-                    p = re.compile(r'[\n]')
-                    comments = p.split(aDecl.rawline)
+                    comments = aDecl.rawline.splitlines()
                     (declList,Decls,inline,newRepNum) = \
                         self.__processComments(comments,replacementNum,
                                                declList,Decls)
