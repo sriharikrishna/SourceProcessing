@@ -1171,7 +1171,7 @@ class AssignStmt(Exec):
         return 'AssignStmt(%s,%s)' % (repr(self.lhs),repr(self.rhs))
 
     def __str__(self):
-        return '%s=%s' % (str(self.lhs),str(self.rhs))
+        return '%s = %s' % (str(self.lhs),str(self.rhs))
 
 class PointerAssignStmt(Exec):
     _sons = ['lhs','rhs']
