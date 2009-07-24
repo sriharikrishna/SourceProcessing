@@ -155,7 +155,17 @@ def _ta_listify(asm):
         rv.append(item)
     return rv
 
-type_attr_list = star(seq(lit(','),Exp))
+DimensionSpecifier = seq(lit('dimension'),
+                         lit('('),
+                         disj(lit('*'),Exp),
+                         lit(')'))
+DimensionSpecifier = treat(DimensionSpecifier,lambda x: App(x[0],[x[2]]))
+
+typeAttributeExpression = disj(DimensionSpecifier,
+                               Exp)
+
+type_attr_list = star(seq(lit(','),
+                          typeAttributeExpression))
 type_attr_list = treat(type_attr_list,_ta_listify)
 
 class _Init(object):

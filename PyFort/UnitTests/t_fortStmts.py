@@ -403,6 +403,24 @@ class TestImplicitStmt(TestCase):
 
         ae(kill_blanks(s1),kill_blanks(str(v)))
 
+class TestRealStmt(TestCase):
+    'test declaration of real variables'
+
+    def test0(self):
+        '''real variable with an intent'''
+        theString = 'real,INTENT(IN) :: Y'
+        theRepr = RealStmt([],[App('INTENT',['IN'])],[_NoInit('Y')])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test1(self):
+        '''real variable with * dimension and inout intent'''
+        theString = 'real,DIMENSION(*),INTENT(INOUT) :: Y'
+        theRepr = RealStmt([],[App('DIMENSION',['*']), App('INTENT',['INOUT'])],[_NoInit('Y')])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+
 class TestCharacterDecls(TestCase):
     'test character declaration statements'
     def test1(self):
@@ -883,6 +901,7 @@ class TestGotoStmt(TestCase):
         self.assertEquals(theString,str(theRepr))
 
 suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,C10,
+               TestRealStmt,
                TestCharacterDecls,
                TestImplicitStmt,
                TestDimensionStmt,
