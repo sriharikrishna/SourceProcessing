@@ -776,7 +776,7 @@ class TestWhereStmt(TestCase):
         self.assertEquals(theString,str(theRepr))
 
 class TestIntegerStmt(TestCase):
-    '''where statements'''
+    '''tests declarations of integer variables'''
 
     def test0(self):
         '''integer array decl'''

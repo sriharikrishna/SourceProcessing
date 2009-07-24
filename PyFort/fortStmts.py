@@ -1772,7 +1772,7 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              optional        = OptionalStmt,
              allocate        = AllocateStmt,
              deallocate      = DeallocateStmt,
-             inquire         = InquireStmt
+             inquire         = InquireStmt,
              )
 
 for kw in ('if','continue','return','else','print','use','cycle','exit','rewind','where','elsewhere','format','pointer','target'):
