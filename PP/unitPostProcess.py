@@ -817,7 +817,8 @@ class UnitPostProcessor(object):
         if (UnitPostProcessor._activeVariablesFileName):     
             self.__active_file = open(UnitPostProcessor._activeVariablesFileName,'a')
 
-        if self.__myUnit.cmnt.rawline.strip() == '':
+        if self.__myUnit.cmnt is None or \
+               self.__myUnit.cmnt.rawline.strip() == '':
             self.__myUnit.cmnt = None
         else:
             self.__myUnit.cmnt.flow()
