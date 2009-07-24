@@ -817,7 +817,10 @@ class UnitPostProcessor(object):
         if (UnitPostProcessor._activeVariablesFileName):     
             self.__active_file = open(UnitPostProcessor._activeVariablesFileName,'a')
 
-        self.__myUnit.cmnt.flow()
+        if self.__myUnit.cmnt.rawline.strip() == '':
+            self.__myUnit.cmnt = None
+        else:
+            self.__myUnit.cmnt.flow()
         self.__myUnit.uinfo.flow()
         if isinstance(self.__myUnit.end,list):
             for aStmt in self.__myUnit.end:
