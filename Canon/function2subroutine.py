@@ -139,6 +139,7 @@ def replaceResultVal(execStmt,oldResult,newResult):
 
 def convertFunction(functionUnit):
     '''converts a function unit definition to a subroutine unit definition'''
+
     newSubUnit = Unit(parent=functionUnit.parent,fmod=functionUnit.fmod)
     outParam = fs._NoInit('RES')
     args = functionUnit.uinfo.args
@@ -165,7 +166,7 @@ def convertFunction(functionUnit):
     for aDecl in functionUnit.decls:
         if not funTypeFound and isinstance(aDecl,fs.TypeDecl):
             for decl in aDecl.decls:
-                if functionUnit.uinfo.name == decl.lhs:
+                if hasattr(decl,'lhs') and functionUnit.uinfo.name == decl.lhs:
                     aDecl.decls.remove(decl)
                     aDecl.flow()
                     newDecl = createTypeDecl(aDecl.kw,aDecl.mod,outParam,lead)
@@ -177,8 +178,7 @@ def convertFunction(functionUnit):
         
     # iterate over execs for functionUnit
     for anExec in functionUnit.execs:
-        if hasattr(anExec,"flow"):
-            anExec.flow()
+        anExec.flow()
         newExec = replaceResultVal(anExec,result,outParam)
         newSubUnit.execs.append(newExec)
 
