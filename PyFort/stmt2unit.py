@@ -39,81 +39,85 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
     for aDecl in aTypeDeclStmt.decls:
         DebugManager.debug('\tProcessing decl '+repr(aDecl)+' ... ',newLine=False)
         (name,newDimensions) = typesep(aDecl,dflt_d)
-        # set the length for character statements
-        if (aTypeDeclStmt.kw_str == 'character'):
-            newLength = aTypeDeclStmt.mod and aTypeDeclStmt.mod[0] \
-                                           or 1
-            # extract the name and length for character declarations such as "character foo*7"
-            if (isinstance(aDecl,fs._NoInit) or isinstance(aDecl,fs._AssignInit)):
-                if (isinstance(aDecl.lhs,fe.Ops) and aDecl.lhs.op == '*'):
-                    DebugManager.debug('(recognized as a character statement with asterisk length specification) ... ',newLine=False)
-                    name = aDecl.lhs.a1
-                    newLength = aDecl.lhs.a2
-        theSymtabEntry = localSymtab.lookup_name_local(name)
-        if theSymtabEntry: # already in symtab -> enter new information (taking exception to any conflicts)
-            DebugManager.debug('decl "'+str(aDecl)+'" already present in local symbol table as '+str(theSymtabEntry.debug(name)))
-            try : 
-                theSymtabEntry.enterType(newType,aTypeDeclStmt.lineNumber)
-            except SymtabError, e:
-                if e.nameClash:
-                    # add the name to the exception message so the user knows which one is the problem
-                    raise SymtabError(e.msg+" declaration for "+name+" conflicts with an earlier declaration using the same name",e.entry,e.lineNumber,e.nameClash)
-                else:
-                    raise e
-            theSymtabEntry.enterDimensions(newDimensions,aTypeDeclStmt.lineNumber)
-            theSymtabEntry.enterLength(newLength,aTypeDeclStmt.lineNumber)
-            # for function/subroutine entries, also update this information in the parent symbol table
-            #if isinstance(theSymtabEntry.entryKind,SymtabEntry.ProcedureEntryKind):
-            if localSymtab.parent and theSymtabEntry.entryKind in (SymtabEntry.FunctionEntryKind,SymtabEntry.SubroutineEntryKind):
-                replacementParentSymtabEntry = localSymtab.replicateEntry(name,str(curr.val.uinfo)+':'+name)
-                localSymtab.parent.enter_name(name,replacementParentSymtabEntry)
-                DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: new PARENT unit symtab entry '+replacementParentSymtabEntry.debug(name))
-        else: # no symtab entry -> create one
-            newSymtabEntry = SymtabEntry(SymtabEntry.GenericEntryKind,
-                                         type=newType,
-                                         dimensions=newDimensions,
-                                         length=newLength,
-                                         origin='local')
-            DebugManager.debug('decl "'+str(aDecl)+'" NOT already present in symbol table => adding '+str(newSymtabEntry.debug(name)))
-            localSymtab.enter_name(name,newSymtabEntry)
+        try:
+            # set the length for character statements
+            if (aTypeDeclStmt.kw_str == 'character'):
+                newLength = aTypeDeclStmt.mod and aTypeDeclStmt.mod[0] \
+                                               or 1
+                # extract the name and length for character declarations such as "character foo*7"
+                if (isinstance(aDecl,fs._NoInit) or isinstance(aDecl,fs._AssignInit)):
+                    if (isinstance(aDecl.lhs,fe.Ops) and aDecl.lhs.op == '*'):
+                        DebugManager.debug('(recognized as a character statement with asterisk length specification) ... ',newLine=False)
+                        name = aDecl.lhs.a1
+                        newLength = aDecl.lhs.a2
+            theSymtabEntry = localSymtab.lookup_name_local(name)
+            if theSymtabEntry: # already in symtab -> enter new information (taking exception to any conflicts)
+                DebugManager.debug('decl "'+str(aDecl)+'" already present in local symbol table as '+str(theSymtabEntry.debug(name)))
+                theSymtabEntry.enterType(newType)
+                theSymtabEntry.enterDimensions(newDimensions)
+                theSymtabEntry.enterLength(newLength)
+                # for function/subroutine entries, also update this information in the parent symbol table
+                #if isinstance(theSymtabEntry.entryKind,SymtabEntry.ProcedureEntryKind):
+                if localSymtab.parent and theSymtabEntry.entryKind in (SymtabEntry.FunctionEntryKind,SymtabEntry.SubroutineEntryKind):
+                    replacementParentSymtabEntry = localSymtab.replicateEntry(name,str(curr.val.uinfo)+':'+name)
+                    localSymtab.parent.enter_name(name,replacementParentSymtabEntry)
+                    DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: new PARENT unit symtab entry '+replacementParentSymtabEntry.debug(name))
+            else: # no symtab entry -> create one
+                newSymtabEntry = SymtabEntry(SymtabEntry.GenericEntryKind,
+                                             type=newType,
+                                             dimensions=newDimensions,
+                                             length=newLength,
+                                             origin='local')
+                DebugManager.debug('decl "'+str(aDecl)+'" NOT already present in symbol table => adding '+str(newSymtabEntry.debug(name)))
+                localSymtab.enter_name(name,newSymtabEntry)
+        except SymtabError,e: # add lineNumber and symbol name to any SymtabError we encounter
+            e.lineNumber = e.lineNumber or aTypeDeclStmt.lineNumber
+            e.symbolName = e.symbolName or name
+            raise e
     return aTypeDeclStmt
-
-#def _processDeclStmt(aDeclStmt,curr):
-#    print 'called _processDeclStmt on',aDeclStmt
-#    return aDeclStmt
 
 def _processDimensionStmt(aDimensionStmt,curr):
     localSymtab = curr.val.symtab
     DebugManager.debug('[Line '+str(aDimensionStmt.lineNumber)+']: stmt2unit._processDimensionStmt('+str(aDimensionStmt)+') with symbol table '+str(localSymtab))
     for anApp in aDimensionStmt.lst:
-        theSymtabEntry = localSymtab.lookup_name_local(anApp.head)
-        if theSymtabEntry:
-            DebugManager.debug('\tvariable "'+anApp.head+'" already present in local symbol table as '+theSymtabEntry.debug(anApp.head))
-            theSymtabEntry.enterDimensions(tuple(anApp.args),aDimensionStmt.lineNumber)
-        else:
-            newSymtabEntry = SymtabEntry(SymtabEntry.VariableEntryKind,
-                                         dimensions=tuple(anApp.args),
-                                         origin='local')
-            DebugManager.debug('\tvariable "'+anApp.head+'" NOT already present in symbol table -- adding '+newSymtabEntry.debug(anApp.head))
-            localSymtab.enter_name(anApp.head,newSymtabEntry)
+        try:
+            theSymtabEntry = localSymtab.lookup_name_local(anApp.head)
+            if theSymtabEntry:
+                DebugManager.debug('\tvariable "'+anApp.head+'" already present in local symbol table as '+theSymtabEntry.debug(anApp.head))
+                theSymtabEntry.enterDimensions(tuple(anApp.args))
+            else:
+                newSymtabEntry = SymtabEntry(SymtabEntry.VariableEntryKind,
+                                             dimensions=tuple(anApp.args),
+                                             origin='local')
+                DebugManager.debug('\tvariable "'+anApp.head+'" NOT already present in symbol table -- adding '+newSymtabEntry.debug(anApp.head))
+                localSymtab.enter_name(anApp.head,newSymtabEntry)
+        except SymtabError,e: # add lineNumber and symbol name to any SymtabError we encounter
+            e.lineNumber = e.lineNumber or aDimensionStmt.lineNumber
+            e.symbolName = e.symbolName or anApp.head
+            raise e
     return aDimensionStmt
 
 def _processExternalStmt(anExternalStmt,curr):
     localSymtab = curr.val.symtab
     DebugManager.debug('[Line '+str(anExternalStmt.lineNumber)+']: stmt2unit._processExternalStmt: called on "'+str(anExternalStmt)+'" with localSymtab '+str(localSymtab))
     for aProcedureName in anExternalStmt.procedureNames:
-        theSymtabEntry = localSymtab.lookup_name(aProcedureName)
-        if not theSymtabEntry:
-            newSymtabEntry = SymtabEntry(SymtabEntry.ProcedureEntryKind,
-                                         origin='external')
-            localSymtab.enter_name(aProcedureName,newSymtabEntry)
-            DebugManager.debug('\tprocedure NOT already present in symbol table -- adding '+newSymtabEntry.debug(aProcedureName))
-        else:
-            DebugManager.debug('\tprocedure already has SymtabEntry'+theSymtabEntry.debug(aProcedureName))
-            # if the entry has a type, we know it's a function
-            newEntryKind = theSymtabEntry.type and SymtabEntry.FunctionEntryKind \
-                                                or SymtabEntry.ProcedureEntryKind
-            theSymtabEntry.enterEntryKind(newEntryKind,anExternalStmt.lineNumber)
+        try:
+            theSymtabEntry = localSymtab.lookup_name(aProcedureName)
+            if not theSymtabEntry:
+                newSymtabEntry = SymtabEntry(SymtabEntry.ProcedureEntryKind,
+                                             origin='external')
+                localSymtab.enter_name(aProcedureName,newSymtabEntry)
+                DebugManager.debug('\tprocedure NOT already present in symbol table -- adding '+newSymtabEntry.debug(aProcedureName))
+            else:
+                DebugManager.debug('\tprocedure already has SymtabEntry'+theSymtabEntry.debug(aProcedureName))
+                # if the entry has a type, we know it's a function
+                newEntryKind = theSymtabEntry.type and SymtabEntry.FunctionEntryKind \
+                                                    or SymtabEntry.ProcedureEntryKind
+                theSymtabEntry.enterEntryKind(newEntryKind)
+        except SymtabError,e: # add lineNumber and symbol name to any SymtabError we encounter
+            e.lineNumber = e.lineNumber or anExternalStmt.lineNumber
+            e.symbolName = e.symbolName or aProcedureName
+            raise e
     return anExternalStmt
 
 def _assign2stmtfn(anAssignmentStmt,curr):
@@ -154,7 +158,10 @@ def _use_module(aUseStmt,cur):
             elif isinstance(aUseStmt,fs.UseOnlyStmt):
                 cur.val.symtab.update_w_module_only(module_unit,aUseStmt.onlyList)
         except KeyError,e:
-            raise SymtabError('error when updating a symbol table according to use statement '+str(aUseStmt),None,lineNumber=aUseStmt.lineNumber)
+            raise SymtabError('error when updating a symbol table according to use statement '+str(aUseStmt),
+                              symbolName=None,
+                              entry=None,
+                              lineNumber=aUseStmt.lineNumber)
     else:
 	global reportedMissingModules
         if not (aUseStmt.moduleName.lower() in reportedMissingModules) :

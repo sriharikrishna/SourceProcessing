@@ -11,11 +11,11 @@ from PyFort.fortExp import App
 from PyFort.fortStmts import _PointerInit,_Kind
 
 class SymtabError(Exception):
-    def __init__(self,msg,aSymtabEntry=None,lineNumber=0, nameClash=False):
+    def __init__(self,msg,symbolName=None,entry=None,lineNumber=None):
         self.msg = msg
-        self.entry = aSymtabEntry
+        self.symbolName = symbolName
+        self.entry = entry
         self.lineNumber = lineNumber
-        self.nameClash = nameClash
 
 class Symtab(object):
     @staticmethod
@@ -158,52 +158,52 @@ class SymtabEntry(object):
         self.origin = origin
         self.renameSource = renameSource
 
-    def enterEntryKind(self,newEntryKind,lineNumber=0):
+    def enterEntryKind(self,newEntryKind):
         # the replacement entry kind must be an 'instance' of the existing one.
         # for example, we can replace a procedureKind with a functionKind,
         # but we cannot replace a variableKind with a functionKind
         if not isinstance(newEntryKind(),self.entryKind):
-            raise SymtabError('SymtabEntry.enterEntryKind: replace kind '+str(self.entryKind)+' with '+str(newEntryKind)+' !!!!',self,lineNumber)
+            raise SymtabError('SymtabEntry.enterEntryKind: replace kind '+str(self.entryKind)+' with '+str(newEntryKind)+' !!!!',entry=self)
         self.entryKind = newEntryKind
 
-    def enterType(self,newType,lineNumber=0):
+    def enterType(self,newType):
         DebugManager.debug('\t\tSymtabEntry.enterType: entering type '+str(newType)+' for '+str(self))
         if not newType:
-            raise SymtabError('SymtabEntry.enterType: newType is None!',self,lineNumber)
+            raise SymtabError('SymtabEntry.enterType: newType is None!',entry=self)
         if self.type : # assume a name clash
-            raise SymtabError('SymtabEntry.enterType:',self,lineNumber, True)
+            raise SymtabError('SymtabEntry.enterType: Name clash -- the declaration for this symbol conflicts with an earlier declaration using the same name"',entry=self)
            # The following code makes some (incomplete) effort to determine the equality of the current type and the new type.
            # It is commented out because (1) it's incomplete and (2): it's not clear that fortran allows us to re-declare any type information for a particular symbol.
            #(currentTypeClass,currentTypeModifier) = self.type
            #(newTypeClass,newTypeModifier) = newType
            #if (currentTypeClass != newTypeClass):
            #    raise SymtabError('SymtabEntry.enterType: Error -- current type class "'+str(currentTypeClass)+
-           #                                                    '" and new type class "'+str(newTypeClass)+'" conflict!',self,lineNumber)
+           #                                                    '" and new type class "'+str(newTypeClass)+'" conflict!',entry=self)
            #if (currentTypeModifier[0].mod != newTypeModifier[0].mod):
            #    raise SymtabError('SymtabEntry.enterType: Error -- current type modifier "'+str(currentTypeModifier[0].mod)+
-           #                                                    '" and new type modifier "'+str(newTypeModifier[0].mod)+'" conflict!',self,lineNumber)
+           #                                                    '" and new type modifier "'+str(newTypeModifier[0].mod)+'" conflict!',entry=self)
         # procedures: entering a type means we know it's a function
         if self.entryKind == self.ProcedureEntryKind:
             DebugManager.debug('\t\t\t(SymtabEntry.enterType: entering type information tells us that this procedure is a function)')
             self.entryKind = self.FunctionEntryKind
         self.type = newType
 
-    def enterDimensions(self,newDimensions,lineNumber=0):
+    def enterDimensions(self,newDimensions):
         DebugManager.debug('\t\tSymtab.enterDimensions: called on '+str(self)+' and setting dimensions to '+str(newDimensions))
         if self.dimensions and (self.dimensions != newDimensions):
-            raise SymtabError('SymtabEntry.enterDimensions: Error -- current dimensions "'+str(self.dimensions)+'" and new dimensions "'+str(newDimensions)+'" conflict!',self,lineNumber)
+            raise SymtabError('SymtabEntry.enterDimensions: Error -- current dimensions "'+str(self.dimensions)+'" and new dimensions "'+str(newDimensions)+'" conflict!',entry=self)
        # The following code makes some (incomplete) effort to determine the equality of the current dimensions and the new dimensions.
        # See the similar comment in enterType above for more details.
        #if self.dimensions:
        #    for currentDimItem,newDimItem in zip(self.dimensions,newDimensions):
        #        if (currentDimItem != newDimItem):
        #            raise SymtabError('SymtabEntry.enterDimensions: Error -- current dimensions "'+str(self.dimensions)+
-       #                                                                  '" and new dimensions "'+str(newDimensions)+'" conflict!',self,lineNumber)
+       #                                                                  '" and new dimensions "'+str(newDimensions)+'" conflict!',entry=self)
         self.dimensions = newDimensions
 
-    def enterLength(self,newLength,lineNumber=0):
+    def enterLength(self,newLength):
         if self.length and (self.length != newLength):
-            raise SymtabError('SymtabEntry.enterLength: Error -- current length "'+str(self.length)+'" and new length "'+str(newLength)+'" conflict!',self,lineNumber)
+            raise SymtabError('SymtabEntry.enterLength: Error -- current length "'+str(self.length)+'" and new length "'+str(newLength)+'" conflict!',entry=self)
         self.length = newLength
 
     def lookupDimensions(self):
@@ -216,7 +216,7 @@ class SymtabEntry(object):
         else:
             self.origin = anOriginStr
 
-    def debug(self,name=''):
+    def debug(self,name='<symbol name unknown>'):
         return '[SymtabEntry "'+name+'" -> entryKind='+str(self.entryKind)+\
                                          ', type='+str(self.type)+\
                                          ', dimensions='+str(self.dimensions)+\

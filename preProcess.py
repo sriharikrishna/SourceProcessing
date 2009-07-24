@@ -161,9 +161,10 @@ def main():
         cleanup(config)
         return 1
     except SymtabError,e:
-        debugstr = e.entry and e.entry.debug('unknown') \
-                            or ''
-        print >>sys.stderr,'\nERROR: SymtabError in '+currentInputFile+' at line '+str(e.lineNumber)+':',e.msg,' for entry',debugstr
+        print >>sys.stderr,'\nERROR: SymtabError in '+currentInputFile+' at line '+str(e.lineNumber)+':',e.msg
+        if e.entry:
+            symbolNameStr = e.symbolName or '<symbol name unknown>'
+            print >>sys.stderr,'For entry', e.entry.debug(symbolNameStr)
         cleanup(config)
         return 1
     except UserError,e:

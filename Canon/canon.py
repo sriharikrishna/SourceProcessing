@@ -421,8 +421,9 @@ class UnitCanonicalizer(object):
                 self.__canonicalizeExecStmt(anExecStmt)
             except TypeInferenceError,e:
                 raise CanonError('Caught TypeInferenceError: '+e.msg,anExecStmt.lineNumber)
-            except SymtabError,e:
-                raise CanonError('Caught SymtabError: '+e.msg,anExecStmt.lineNumber)
+            except SymtabError,e: # add a lineNumber to SymtabErrors that don't have one
+                e.lineNumber = e.lineNumber or anExecStmt.lineNumber
+                raise e
 
         # build rawlines for the new declarations and add them to the unit
         for aDecl in self.__myNewDecls:

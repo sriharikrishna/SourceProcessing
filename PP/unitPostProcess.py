@@ -635,8 +635,9 @@ class UnitPostProcessor(object):
 
         except TypeInferenceError,e:
             raise PostProcessError('Caught TypeInferenceError: '+e.msg,anExecStmt.lineNumber)
-        except SymtabError,e:
-            raise PostProcessError('Caught SymtabError: '+e.msg,anExecStmt.lineNumber)
+        except SymtabError,e: # add a lineNumber to SymtabErrors that don't have one
+            e.lineNumber = e.lineNumber or anExecStmt.lineNumber
+            raise e
        
     # transforms all active types in an declaration statement; determines
     # if inlining or pragma replacement should occur (based on comments)
@@ -717,9 +718,9 @@ class UnitPostProcessor(object):
 
         except TypeInferenceError,e:
             raise PostProcessError('Caught TypeInferenceError: '+e.msg,aDecl.lineNumber)
-        except SymtabError,e:
-            raise PostProcessError('Caught SymtabError: '+e.msg,aDecl.lineNumber)
-
+        except SymtabError,e: # add a lineNumber to SymtabErrors that don't have one
+            e.lineNumber = e.lineNumber or aDecl.lineNumber
+            raise e
 
     # Determines if a template should be expanded 
     # (if it's not a Function or Module Stmt)
