@@ -256,7 +256,9 @@ class GenStmt(_Mappable,_Mutable_T):
     def is_comment(self,unit=_non): return False
 
     def __str__(self):
-        return self.rawline.strip()
+        if hasattr(self,'rawline'):
+            return self.rawline.strip()
+        return self.__class__.kw
 
 class Skip(GenStmt):
     def __init__(self):
@@ -348,6 +350,9 @@ def attrstr(l):
 
 def ditemstr(l):
     return ','.join([str(ll) for ll in l])
+
+def itemstr(l):
+    return ''.join([str(ll) for ll in l])
 
 class TypeDecl(Decl):
     '''
@@ -499,9 +504,6 @@ class Exec(NonComment):
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__,
                            ','.join([repr(getattr(self,aSon)) for aSon in self._sons]))
-
-#    def __str__(self):
-#        return self.__class__.kw
 
 class Leaf(Exec):
     "special Exec that doesn't have components"
@@ -701,7 +703,7 @@ class ParameterStmt(Decl):
         return 'ParamterStmt(%s)' % ','.join([repr(aNamedParam) for aNamedParam in self.namedParamList])
 
     def __str__(self):
-        return 'parameter (%s)' % ','.join([str(aNamedParam) for aNamedParam in self.namedParamList])
+        return 'parameter (%s)' % ','.join([itemstr(aNamedParam) for aNamedParam in self.namedParamList])
 
 class SaveStmt(Decl):
     pass
