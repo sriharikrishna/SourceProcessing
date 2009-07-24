@@ -256,7 +256,7 @@ class GenStmt(_Mappable,_Mutable_T):
     def is_comment(self,unit=_non): return False
 
     def __str__(self):
-        return self.rawline
+        return self.rawline.strip()
 
 class Skip(GenStmt):
     def __init__(self):
@@ -278,11 +278,16 @@ class Comments(GenStmt):
         self.rawline = ''
         if flow.flow_line == flow._free_flow_line:
             for line in lines:
+                if line.strip() == '':
+                    self.rawline += '\n'
+                    continue
                 self.rawline += '!'+line[1:]+'\n'
             return self
         else:
             for line in lines:
-                self.rawline += 'C'+flow.flow_line(line[1:],cont='!')+'\n'
+                if line.strip() == '':
+                    continue
+                self.rawline += 'C'+flow.flow_comment(line[1:])
             return self
 
     def is_comment(self,unit=_non): return True
@@ -495,8 +500,8 @@ class Exec(NonComment):
         return '%s(%s)' % (self.__class__.__name__,
                            ','.join([repr(getattr(self,aSon)) for aSon in self._sons]))
 
-    def __str__(self):
-        return self.__class__.kw
+#    def __str__(self):
+#        return self.__class__.kw
 
 class Leaf(Exec):
     "special Exec that doesn't have components"
@@ -902,7 +907,7 @@ class SubroutineStmt(PUstart):
         if args:
             (dc,args,dc1) = args[0]
 
-        return SubroutineStmt(name,args,dc,lineNumber)
+        return SubroutineStmt(name,args,lineNumber=lineNumber)
 
     def __init__(self,name,args,stmt_name='subroutine',lineNumber=0,label=False,lead=''):
         self.name = name

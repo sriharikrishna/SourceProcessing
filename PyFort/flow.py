@@ -47,6 +47,19 @@ def _free_flow_line(l):
         rv  += ' ' * 5  + cont + rem + '\n'
     return rv
 
+def flow_comment(l):
+    '''given a long comment, write it out as a series of continued lines'''
+    l1 = chomp(l)
+    rv = l1[0:72] + '\n'
+    rem = l1[72:]
+    while len(rem) > 70:
+        tmp = rem[0:70]
+        rv += 'C '+tmp+'\n'
+        rem = rem[70:]
+    if len(rem) > 0:
+        rv += 'C ' + rem+'\n'
+    return rv
+
 flow_line = _fixed_flow_line
 formatStart = _fixedFormatStart
 

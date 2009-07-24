@@ -121,6 +121,7 @@ class UnitPostProcessor(object):
             DrvdTypeDecl.dblc = True
         else:
             DrvdTypeDecl.dblc = False
+        DrvdTypeDecl.flow()
         return DrvdTypeDecl
 
     # Transforms active types for an expression recursively
@@ -200,7 +201,7 @@ class UnitPostProcessor(object):
                         lineNumber=aSubCallStmt.lineNumber,
                         label=aSubCallStmt.label,
                         lead=aSubCallStmt.lead).flow()
-        return replacementStatement
+        return replacementStatement    
 
     # transforms __value__/__deriv__ in active type variables in any IOStmt instance
     # PARAMS:
@@ -276,9 +277,9 @@ class UnitPostProcessor(object):
                 diff = True
                 setattr(aStmt,aSon,newSon)
         # if statement is unchanged, leave it alone
-        if self.__expChanged is True:
-            aStmt.flow()
-        return aStmt
+        #        if self.__expChanged is True:
+        #            aStmt.flow()
+        return aStmt.flow()
 
     # Determines the function to be inlined (if there is one)
     # from the comment, and sets inlineUnit (the current unit being inlined)
@@ -501,29 +502,27 @@ class UnitPostProcessor(object):
             if isinstance(Stmt,fs.Comments):
                 Stmt.rawline = \
                     self.__replaceArgs(argReps,Stmt.rawline,inlineArgs,replacementArgs)
-                Execs.append(Stmt)
+                Execs.append(Stmt.flow())
             elif isinstance(Stmt,fs.AssignStmt):
                 lhs = self.__replaceArgs(argReps,str(Stmt.lhs),inlineArgs,replacementArgs)
                 rhs = self.__replaceArgs(argReps,str(Stmt.rhs),inlineArgs,replacementArgs)
                 newStmt = fs.AssignStmt(lhs,rhs,lead=stmt_lead)
-                newStmt.flow()
-                Execs.append(newStmt)
+                Execs.append(newStmt.flow())
             elif isinstance(Stmt,fs.IOStmt):
                 newItemList = []
                 for item in Stmt.itemList:
                     newItem=self.__replaceArgs(argReps,str(item),inlineArgs,replacementArgs)
                     newItemList.append(newItem)
                 Stmt.itemList = newItemList
-                Stmt.flow()
-                Execs.append(Stmt)
+                Execs.append(Stmt.flow())
             elif isinstance(Stmt,fs.AllocateStmt):
                 Stmt.rawline= \
                             self.__replaceArgs(argReps,Stmt.rawline,inlineArgs,replacementArgs)
-                Execs.append(Stmt)
+                Execs.append(Stmt.flow())
             elif isinstance(Stmt,fs.DeallocateStmt):
                 Stmt.rawline= \
                             self.__replaceArgs(argReps,Stmt.rawline,inlineArgs,replacementArgs)
-                Execs.append(Stmt)
+                Execs.append(Stmt.flow())
             elif hasattr(Stmt, "_sons"):
                 for aSon in Stmt._sons:
                     theSon = getattr(Stmt,aSon) 
@@ -542,8 +541,7 @@ class UnitPostProcessor(object):
                     Stmt.flow()
                 Stmt.rawline.strip()
                 Stmt.lead = stmt_lead
-                Stmt.flow()
-                Execs.append(Stmt)
+                Execs.append(Stmt.flow())
         return Execs
 
 
@@ -564,10 +562,10 @@ class UnitPostProcessor(object):
     # statements should be inlined, and the current pragma (replacement) number
     def __processComments(self,Comments,replacementNum,commentList,
                           currentComments,inline=False):
-        for aComment in Comments:
-            if aComment == '' or aComment.strip() == '':
+        for commentString in Comments:
+            if commentString == '' or commentString.strip() == '':
                 continue
-            newComment = fs.Comments(aComment+"\n")
+            newComment = fs.Comments(commentString+"\n")
             newRepNum = self.__getReplacementNum(newComment)
             if newRepNum != 0:
                 replacementNum = newRepNum
@@ -580,7 +578,7 @@ class UnitPostProcessor(object):
             else:
                 (Comment,inline) = self.__getInlinedFunction(newComment)
                 if Comment is not None:
-                    currentComments.append(Comment)
+                    currentComments.append(Comment.flow())
         return (commentList,currentComments,inline,replacementNum)
                     
     # transforms all active types in an exec statement
@@ -614,8 +612,7 @@ class UnitPostProcessor(object):
                         self.__processComments(comments,replacementNum,
                                                execList,Execs,inline)
                 else:
-                    anExecStmt.flow()
-                    Execs.append(anExecStmt)
+                    Execs.append(anExecStmt.flow())
             elif isinstance(anExecStmt,fs.CallStmt):
                 if inline is True:
                     newExecs = self.__createNewExecs(anExecStmt.args,anExecStmt.lead)
@@ -624,7 +621,7 @@ class UnitPostProcessor(object):
                         Execs.extend(newExecs)
                 else:
                     newStmt = self.__processSubCallStmt(anExecStmt)
-                    Execs.append(newStmt)
+                    Execs.append(newStmt.flow())
             elif isinstance(anExecStmt,fs.IOStmt):
                 newStmt = self.__processIOStmt(anExecStmt)
                 Execs.append(newStmt)
@@ -669,14 +666,13 @@ class UnitPostProcessor(object):
             DebugManager.debug('[Line '+str(aDecl.lineNumber)+']:')
             if isinstance(aDecl, fs.UseStmt):
                 # add old use stmt
-                Decls.append(aDecl)
+                Decls.append(aDecl.flow())
                 if not UseStmtSeen: # add the active module
                     newDecl = self.__addActiveModule(aDecl)
                     # build rawlines for the new declarations
                     newDecl.lead = self.__myUnit.uinfo.lead+''
-                    newDecl.flow()
                     UseStmtSeen = True
-                    Decls.append(newDecl)
+                    Decls.append(newDecl.flow())
             elif aDecl.is_comment():
                 if self._mode == 'reverse':
                     comments = aDecl.rawline.splitlines()
@@ -691,10 +687,9 @@ class UnitPostProcessor(object):
                             Execs = []
                         replacementNum += 1
                 else:
-                    Decls.append(aDecl)
+                    Decls.append(aDecl.flow())
             elif isinstance(aDecl,fs.DrvdTypeDecl):
                 newDecl = self.__rewriteActiveType(aDecl)
-                newDecl.flow()
                 if (self.__active_file and newDecl.dblc):
                     if self.__write_subroutine is True:
                         self.__active_file.write(self.__myUnit.uinfo.rawline)
@@ -713,7 +708,7 @@ class UnitPostProcessor(object):
             else:
                 DebugManager.debug('Statement "'+str(aDecl)+'" is assumed to require no post-processing')
 
-                Decls.append(aDecl)
+                Decls.append(aDecl.flow())
                 UseStmtSeen = False
             if self._mode == 'reverse':
                 return (declList,Decls,execList,Execs,UseStmtSeen,replacementNum)
@@ -821,6 +816,14 @@ class UnitPostProcessor(object):
             UnitPostProcessor(subUnit).processUnit()
         if (UnitPostProcessor._activeVariablesFileName):     
             self.__active_file = open(UnitPostProcessor._activeVariablesFileName,'a')
+
+        self.__myUnit.cmnt.flow()
+        self.__myUnit.uinfo.flow()
+        if isinstance(self.__myUnit.end,list):
+            for aStmt in self.__myUnit.end:
+                aStmt.flow()
+        else:
+            self.__myUnit.end.flow()
 
         if self._mode == 'reverse':
             inline = False
