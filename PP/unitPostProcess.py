@@ -523,6 +523,12 @@ class UnitPostProcessor(object):
                 Stmt.rawline= \
                             self.__replaceArgs(argReps,Stmt.rawline,inlineArgs,replacementArgs)
                 Execs.append(Stmt.flow())
+            elif isinstance(Stmt,fs.WhileStmt):
+                for aSon in Stmt._sons:
+                    theSon = getattr(Stmt,aSon)
+                    newSon = self.__replaceArgs(argReps,str(theSon),inlineArgs,replacementArgs)
+                    setattr(Stmt,aSon,newSon)
+                Execs.append(Stmt.flow())
             elif hasattr(Stmt, "_sons"):
                 for aSon in Stmt._sons:
                     theSon = getattr(Stmt,aSon) 
