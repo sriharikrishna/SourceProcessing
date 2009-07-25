@@ -829,6 +829,8 @@ class UnitPostProcessor(object):
                 aStmt.flow()
         else:
             self.__myUnit.end.flow()
+        for aContainsEntry in self.__myUnit.contains:
+            aContainsEntry.flow()
 
         if self._mode == 'reverse':
             inline = False
