@@ -811,6 +811,27 @@ class UnitPostProcessor(object):
             newUnit = UnitPostProcessor.__getInlineSubroutine(aUnit)
             UnitPostProcessor._inlineFileUnits.append(newUnit)
 
+    # format non-declaration or exec statements by calling flow
+    def __formatUnit(self):
+        # flow comments
+        if self.__myUnit.cmnt is None or \
+               self.__myUnit.cmnt.rawline.strip() == '':
+            self.__myUnit.cmnt = None
+        else:
+            self.__myUnit.cmnt.flow()
+        # flow unit info
+        if self.__myUnit.uinfo is not None:
+            self.__myUnit.uinfo.flow()
+        # flow unit contains entries
+        for aContainsEntry in self.__myUnit.contains:
+            aContainsEntry.flow()
+        # flow unit end statements
+        if isinstance(self.__myUnit.end,list):
+            for aStmt in self.__myUnit.end:
+                aStmt.flow()
+        else:
+            self.__myUnit.end.flow()
+
     # Processes all statements in the unit
     def processUnit(self):
         ''' post-process a unit '''
@@ -821,22 +842,11 @@ class UnitPostProcessor(object):
         for subUnit in self.__myUnit.ulist:
             DebugManager.debug(str(subUnit))
             UnitPostProcessor(subUnit).processUnit()
+
         if (UnitPostProcessor._activeVariablesFileName):     
             self.__active_file = open(UnitPostProcessor._activeVariablesFileName,'a')
 
-        if self.__myUnit.cmnt is None or \
-               self.__myUnit.cmnt.rawline.strip() == '':
-            self.__myUnit.cmnt = None
-        else:
-            self.__myUnit.cmnt.flow()
-        self.__myUnit.uinfo.flow()
-        if isinstance(self.__myUnit.end,list):
-            for aStmt in self.__myUnit.end:
-                aStmt.flow()
-        else:
-            self.__myUnit.end.flow()
-        for aContainsEntry in self.__myUnit.contains:
-            aContainsEntry.flow()
+        self.__formatUnit()
 
         if self._mode == 'reverse':
             inline = False
