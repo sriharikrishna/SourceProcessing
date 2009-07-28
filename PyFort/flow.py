@@ -60,6 +60,7 @@ def flow_comment(l):
         rv += 'C ' + rem+'\n'
     return rv
 
+# the default is fixed format:
 flow_line = _fixed_flow_line
 formatStart = _fixedFormatStart
 
