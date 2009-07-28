@@ -314,9 +314,9 @@ class NonComment(GenStmt):
                            ','.join([repr(aSon) for aSon in self._sons]))
 
     def flow(self):
-        init = self.label and ' ' + ('%-4d' % self.label) + ' ' \
-                           or ''
-        self.rawline = flow.flow_line(init + self.lead + str(self))+'\n'
+        labelStr = self.label and ' ' + ('%-4d' % self.label) + ' ' \
+                               or ''
+        self.rawline = flow.flow_line(labelStr + self.lead + str(self))+'\n'
         return self
 
     def reflow(self):
