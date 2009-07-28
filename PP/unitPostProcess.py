@@ -54,7 +54,7 @@ class UnitPostProcessor(object):
 
     @staticmethod
     def setOutputFormat(freeOutput):
-        flow.free_flow(freeOutput)
+        flow.setFixedOrFreeFormatting(freeOutput)
 
     _mode = 'forward'
 
