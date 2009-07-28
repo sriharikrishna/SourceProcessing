@@ -5,18 +5,17 @@
       x(2) = -3.6D0
       print *,f(x(1)) + f(x(2))
     end program functionComment
-    subroutine oad_s_f(x,RES)
+    subroutine oad_s_f(x,f)
 !     blah blah
 !     aren't these names interesting?: pomentale and gargantini
-      real,intent(out) :: RES
+      real,intent(out) :: f
       real :: x
-
-      if (x<=0) then
-        RES = 4.0D0
+       if (x<=0) then
+        f = 4.0D0
       elseif (x<=39) then
-        RES = exp(x*(1.0D0/(x+2)))
+        f = exp(x*(1.0D0/(x+2)))
       else
-        RES = 0
-      endif
+        f = 0
+      end if
     end subroutine oad_s_f
 

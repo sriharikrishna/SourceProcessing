@@ -32,146 +32,51 @@ def createTypeDecl(type_kw,mod,outParam,lead):
 
     return newDecl
 
-def replaceSon(arg,oldResult,newResult):
-    newSon = arg
-    if isinstance(arg,fe.Sel):
-        if arg.head == oldResult:
-            newSon = fe.Sel(newResult,arg.proj)
-        if arg.proj == oldResult:
-            newSon = fe.Sel(newSon.head,newResult)
-    elif isinstance(arg,fe.App):
-        head = arg.head
-        args = arg.args
-        newArgs = []
-        i = 0
-        while i < len(arg.args):
-            anArg = arg.args[i]
-            if isinstance(anArg,fe.App) or isinstance(anArg,fe.Sel):
-                newArgs.append(replaceSon(anArg,oldResult,newResult))
-            else:
-                if anArg == oldResult:
-                    newArg = newResult
-                    newArgs.append(newArg)
-                else:
-                    newArgs.append(anArg)
-            i += 1
-        if len(newArgs) != 0:
-            args = newArgs
-        if head == oldResult:
-            head = newResult
-        newSon = fe.App(head,newArgs)
+def convertFunctionStmt(functionStmt):
+    if functionStmt.result is None:
+        outParam = fs._NoInit(functionStmt.name.lower())
     else:
-        if arg== oldResult:
-            newSon = newResult
-        elif hasattr(arg,"_sons"):
-            for aSon in arg._sons:
-                theSon = getattr(arg,aSon)
-                if theSon is None:
-                    continue
-                elif isinstance(theSon,list):
-                    index = 0
-                    while index < len(theSon):
-                        rep_son = theSon[index]
-                        newSon = replaceSon(rep_son,oldResult,newResult)
-                        theSon[index] = newSon
-                        index += 1
-                else:
-                    newSon = replaceSon(theSon,oldResult,newResult)
-                    setattr(arg,aSon,newSon)
-                newSon = arg
-            
-    return newSon
+        outParam = fs._NoInit(functionStmt.result.lower())
 
-def replaceStr(execStr,oldResult,newResult):
-    if isinstance(oldResult,fe.App):
-        old = oldResult.head
-    else:
-        old = oldResult
-    lno_replace = "[\w]"+old
-    rno_replace = old+"[\w]"
-    p = re.compile("("+rno_replace+"|"+lno_replace+")")
-    p2 = re.compile(old)
-    pats = p.finditer(execStr,re.IGNORECASE)
-    prevEnd = 0; stopRep=len(execStr)
-    for match in pats:
-        (stopRep,end) = match.span()
-        m2 = p.search(execStr[prevEnd:stopRep],re.IGNORECASE)
-        if m2:
-            prevEnd = m2.end()
-        newstr = p2.sub(str(newResult),execStr[prevEnd:stopRep],re.IGNORECASE)
-        execStr = execStr[:prevEnd]+\
-                  newstr+\
-                  execStr[(stopRep):]
-        prevEnd = end
-        stopRep = len(execStr)
-    match = p.search(execStr[prevEnd:],re.IGNORECASE)
-    if match:
-        execStr = execStr[:match.end()]+\
-                  p2.sub(str(newResult),execStr[match.end():],re.IGNORECASE)
-    elif execStr[prevEnd:].lower() == old:
-        execStr = execStr[:prevEnd]+str(newResult)
-    else:
-        execStr = execStr[:prevEnd]+\
-                  p2.sub(str(newResult),execStr[prevEnd:],re.IGNORECASE)
-    return execStr
-    
-def replaceResultVal(execStmt,oldResult,newResult):
-    if isinstance(execStmt,fs.Comments):
-        execStmt.rawline = \
-                         replaceStr(execStmt.rawline,oldResult,newResult)
-    elif isinstance(execStmt,fs.AssignStmt):
-        lhs = replaceStr(str(execStmt.lhs),oldResult,newResult)
-        rhs = replaceStr(str(execStmt.rhs),oldResult,newResult)
-        execStmt = fs.AssignStmt(lhs,rhs,lead=execStmt.lead)
-        execStmt.flow()
-    elif isinstance(execStmt,fs.IOStmt):
-        newItemList = []
-        for item in execStmt.itemList:
-            newItem=replaceStr(str(item),oldResult,newResult)
-            newItemList.append(newItem)
-        execStmt.itemList = newItemList
-        execStmt.flow()
-    else:
-        execStmt = replaceSon(execStmt,oldResult,newResult)
-        execStmt.rawline.strip()
-        execStmt.flow()
-    return execStmt
+    args = functionStmt.args
+    args.append(outParam)
+    name = 'oad_s_'+functionStmt.name.lower()
+    subroutineStmt = fs.SubroutineStmt(name,args,lead=functionStmt.lead).flow()
+
+    return (outParam,subroutineStmt)
+
+def createResultDecl(functionStmt,outParam):
+    if functionStmt.ty is not None:
+        (type_name,mod) = functionStmt.ty
+        newDecl = createTypeDecl(type_name.kw,mod,outParam,functionStmt.lead+'  ')
+        return newDecl
+    return None
 
 def convertFunction(functionUnit):
     '''converts a function unit definition to a subroutine unit definition'''
-
     newSubUnit = Unit(parent=functionUnit.parent,fmod=functionUnit.fmod)
-    outParam = fs._NoInit('RES')
-    args = functionUnit.uinfo.args
-    args.append(outParam)
-    name = 'oad_s_'+functionUnit.uinfo.name.lower()
-    if functionUnit.uinfo.result is None:
-        result = functionUnit.uinfo.name.lower()
-    else:
-        result =functionUnit.uinfo.result
-    newSubUnit.uinfo = fs.SubroutineStmt(name,args,lead=functionUnit.uinfo.lead).flow()
+    (outParam,newSubUnit.uinfo) = convertFunctionStmt(functionUnit.uinfo)
 
-    intentArg = fe.App('intent',['out'])
-    funTypeFound = False
-    lead = functionUnit.uinfo.lead+'  '
-    if functionUnit.uinfo.ty is not None:
-        (type_name,mod) = functionUnit.uinfo.ty
+    resultDecl = createResultDecl(functionUnit.uinfo,outParam)
+    if resultDecl is not None:
         funTypeFound = True
-        
         # append declaration for new out parameter
-        newDecl = createTypeDecl(type_name.kw,mod,outParam,lead)
-        newSubUnit.decls.append(newDecl)
+        newSubUnit.decls.append(resultDecl.flow())
+    else:
+        funTypeFound = False
 
     # iterate over decls for functionUnit
     for aDecl in functionUnit.decls:
         if not funTypeFound and isinstance(aDecl,fs.TypeDecl):
             for decl in aDecl.decls:
-                if hasattr(decl,'lhs') and functionUnit.uinfo.name == decl.lhs:
+                if (str(outParam) == decl) or \
+                       (hasattr(decl,'lhs') and (str(outParam) == decl.lhs)):
                     aDecl.decls.remove(decl)
                     aDecl.flow()
-                    newDecl = createTypeDecl(aDecl.kw,aDecl.mod,outParam,lead)
+                    newDecl = createTypeDecl(aDecl.kw,aDecl.mod,outParam,aDecl.lead)
                     newSubUnit.decls.append(newDecl.flow())
-                    
+                    funTypeFound = True
+
         newSubUnit.decls.append(aDecl)
         if not isinstance(aDecl,fs.Comments):
             lead = aDecl.lead
@@ -179,8 +84,7 @@ def convertFunction(functionUnit):
     # iterate over execs for functionUnit
     for anExec in functionUnit.execs:
         anExec.flow()
-        newExec = replaceResultVal(anExec,result,outParam)
-        newSubUnit.execs.append(newExec)
+        newSubUnit.execs.append(anExec)
 
     # iterate over end stmts for functionUnit
     for endStmt in functionUnit.end:

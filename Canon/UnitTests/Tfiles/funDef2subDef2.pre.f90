@@ -1,7 +1,7 @@
-      subroutine oad_s_average(X,Y,Z,RES)
-        real,intent(out) :: RES
+      subroutine oad_s_average(X,Y,Z,average)
+        real,intent(out) :: average
         REAL X,Y,Z,SUM
         SUM = X+Y+Z
-        RES = SUM/3.0
-        return
+        AVERAGE = SUM/3.0
+        RETURN
       end subroutine oad_s_average

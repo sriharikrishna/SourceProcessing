@@ -1,5 +1,5 @@
-      subroutine oad_s_fltrn(RES)
-        real(double),intent(out) :: RES
+      subroutine oad_s_fltrn(z)
+        real(double),intent(out) :: z
 
         integer :: k
         integer,parameter :: r1 = 12211, m1 = 2147483563
@@ -16,9 +16,9 @@
         if (s2.lt.0) then
           s2 = s2+m2
         endif
-        RES = s1-s2
-        if (RES.lt.1) then
-          RES = RES+m1-1
+        z = s1-s2
+        if (z.lt.1) then
+          z = z+m1-1
         endif
-        RES = RES/m1
+        z = z/m1
       end subroutine oad_s_fltrn
