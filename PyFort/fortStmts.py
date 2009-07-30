@@ -579,7 +579,13 @@ class DataStmt(Decl):
 
     @staticmethod
     def parse(scan,lineNumber):
-        # this isn't very general (and could be thought of as temporary) but it works
+        # FIXME we don't cover the full range of possibilities.  In particular, here is an incomplete list of the issues:
+        #  - there can be an entire comma-separated list of object-value pairs
+        #  - there can be more than one object
+        #  - we don't cover the optional repeat-factor
+        #  - The values should all be constants, and NOT general expressions:
+        #      '1-1' is no good, but '-1' is.  It's just that '-1' doesnt match as a constant by the scanner (it matches as a unary expression)
+        #      the definition of "const" can't be fixed easily due to scanner particulars (sometimes we want the '-' and '1' to be separate tokens, sometimes not)
 
         # form of DATA statement:
         # DATA data-statement-object-list / data-value-list / [ [ , ] data-statement-object-list / data-value-list / ] ...
@@ -625,7 +631,7 @@ class DataStmt(Decl):
         formDataStmtImplicitDo = seq(lit('data'),   # 0 = stmt_name
                                      formImpliedDo, # 1 = implicit do
                                      lit('/'),      #
-                                     cslist(const), # 3 = valueList
+                                     cslist(Exp), # 3 = valueList
                                      lit('/'))      #
         formDataStmtImplicitDo = treat(formDataStmtImplicitDo, lambda x: DataStmtImplicitDo(x[1],x[3],stmt_name=x[0],lineNumber=lineNumber))
 
@@ -635,7 +641,7 @@ class DataStmt(Decl):
         formDataStmtSimple = seq(lit('data'), # 0
                                  id,          # 1
                                  lit('/'),    # 2
-                                 cslist(const), # 3
+                                 cslist(Exp), # 3
                                  lit('/'))    # 4
         formDataStmtSimple = treat(formDataStmtSimple, lambda x: DataStmtSimple(x[1],x[3],stmt_name=x[0],lineNumber=lineNumber))
 

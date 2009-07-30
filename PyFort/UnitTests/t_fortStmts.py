@@ -924,6 +924,41 @@ class TestDataStmt(TestCase):
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
+    def test3(self):
+        '''data statement with negative constant in the value list'''
+        theString = 'DATA COEF / -1.D0 /'
+        theRepr = DataStmtSimple('COEF',[Umi('1.D0')],stmt_name='DATA')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test4(self):
+        '''long data statement from centrm with continuations removed'''
+        theString = 'DATA COEF / 1.D0, 1.D0, -1.D0, 3.D0, -3.D0, 5.D0, 3.D0, -30.D0, 35.D0, 15.D0, -70.D0, 63.D0, -5.D0, 105.D0, -315.D0, 231.D0, -35.D0, 315.D0, -693.D0, 429.D0, 35.D0, -1260.D0, 6930.D0, -12012.D0, 6435.D0, 315.D0, -4620.D0, 18018.D0, -25740.D0, 12155.D0, -63.D0, 3465.D0, -30030.D0, 90090.D0, -109395.D0, 46189.D0, -693.D0, 15015.D0, -90090.D0, 218790.D0, -230945.D0, 88179.D0 /'
+        theRepr = DataStmtSimple('COEF',['1.D0', '1.D0', Umi('1.D0'), '3.D0', Umi('3.D0'), '5.D0', '3.D0', Umi('30.D0'), '35.D0', '15.D0', Umi('70.D0'), '63.D0', Umi('5.D0'), '105.D0', Umi('315.D0'), '231.D0', Umi('35.D0'), '315.D0', Umi('693.D0'), '429.D0', '35.D0', Umi('1260.D0'), '6930.D0', Umi('12012.D0'), '6435.D0', '315.D0', Umi('4620.D0'), '18018.D0', Umi('25740.D0'), '12155.D0', Umi('63.D0'), '3465.D0', Umi('30030.D0'), '90090.D0', Umi('109395.D0'), '46189.D0', Umi('693.D0'), '15015.D0', Umi('90090.D0'), '218790.D0', Umi('230945.D0'), '88179.D0'],stmt_name='DATA')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test4(self):
+        '''data statement -- KNOWN TO FAIL'''
+        theString = 'DATA START / NULL() /'
+        theRepr = DataStmtSimple('',[''],stmt_name='DATA')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test5(self):
+        '''data statement with -- KNOWN TO FAIL'''
+        theString = 'DATA NAME / "JOHN DOE" /, METERS / 10*0 /'
+        theRepr = DataStmtSimple('',[''],stmt_name='DATA')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test6(self):
+        '''data statement with -- KNOWN TO FAIL'''
+        theString = 'DATA ((SKEW (K, J), K = 1, J-1), J = 1, 100) / 4950 * 1.0 /'
+        theRepr = DataStmtSimple('',[''],stmt_name='DATA')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
 suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,C10,
                TestRealStmt,
                TestCharacterDecls,
