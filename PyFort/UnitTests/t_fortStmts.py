@@ -938,22 +938,29 @@ class TestDataStmt(TestCase):
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
-    def test4(self):
+    def test5(self):
+        '''data statement with double implied do and repeat factor -- KNOWN TO FAIL'''
+        theString = 'DATA ((x (i,j), i=1,2), j=1,3) / 6 * 2 /'
+        theRepr = DataStmtSimple('',[''],stmt_name='DATA')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test6(self):
         '''data statement -- KNOWN TO FAIL'''
         theString = 'DATA START / NULL() /'
         theRepr = DataStmtSimple('',[''],stmt_name='DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
-    def test5(self):
-        '''data statement with -- KNOWN TO FAIL'''
+    def test7(self):
+        '''data statement -- KNOWN TO FAIL'''
         theString = 'DATA NAME / "JOHN DOE" /, METERS / 10*0 /'
         theRepr = DataStmtSimple('',[''],stmt_name='DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
-    def test6(self):
-        '''data statement with -- KNOWN TO FAIL'''
+    def test8(self):
+        '''data statement -- KNOWN TO FAIL'''
         theString = 'DATA ((SKEW (K, J), K = 1, J-1), J = 1, 100) / 4950 * 1.0 /'
         theRepr = DataStmtSimple('',[''],stmt_name='DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
