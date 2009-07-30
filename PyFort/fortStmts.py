@@ -559,8 +559,124 @@ class BlockdataStmt(PUstart):
 class CommonStmt(Decl):
     pass
 
+class _DataStmtImplicitDo(object):
+    def __init__(self,app,auxVariable,doStart,doEnd,doStride):
+        self.app = app
+        self.auxVariable = auxVariable
+        self.doStart = doStart
+        self.doEnd = doEnd
+        self.doStride = doStride
+
+    def __str__(self):
+        return '('+str(self.app)+', '+self.auxVariable+' = '+self.doStart+', '+self.doEnd+', '+self.doStride+')'
+
+    def __repr__(self):
+        return self.__class__.__name__+'('+','.join([repr(aSon) for aSon in (self.app,self.auxVariable,self.doStart,self.doEnd,self.doStride)])+')'
+
 class DataStmt(Decl):
-    pass
+    kw = 'data'
+    kw_str = kw
+
+    @staticmethod
+    def parse(scan,lineNumber):
+        # this isn't very general (and could be thought of as temporary) but it works
+
+        # form of DATA statement:
+        # DATA data-statement-object-list / data-value-list / [ [ , ] data-statement-object-list / data-value-list / ] ...
+            # form of data object is one of
+            #  variable
+            #  data-implied-do:
+            # ( data-implied-do-object-list , named-scalar-integer-variable = scalar-integer-expression , scalar-integer-expression [ , scalar-integer-expression ] )
+                # data-implied-do object is one of
+                #  array-element
+                #  scalar-structure-component
+                #  data-implied-do
+            # form of data-value:
+            # [ repeat-factor * ] data-constant
+                # data-constant is one of
+                #  scalar-constant
+                #  scalar-constant-subobject
+                #  signed-integer-literal-constant
+                #  signed-real-literal-constant
+                #  null-initialization
+                #  structure-constructor
+
+    #######################################################################################
+        # DATA statement with implicit do
+
+        #form of implied-do:
+        # ( data-implied-do-object-list , named-scalar-integer-variable = scalar-integer-expression , scalar-integer-expression [ , scalar-integer-expression ] )
+        # \FIXME \todo the third integer is OPTIONAL  
+        formImpliedDo = seq(lit('('),    #
+                            Exp,         # 1 = App
+                            lit(','),    #
+                            id,          # 3 = auxVariable
+                            lit('='),    #
+                            int,         # 5 = doStart
+                            lit(','),    #
+                            int,         # 7 = doEnd
+                            lit(','),    #
+                            int,         # 9 = doStride
+                            lit(')'))    #
+                           #z01(seq(lit(','),
+                           #        Exp)))
+        formImpliedDo = treat(formImpliedDo, lambda x: _DataStmtImplicitDo(x[1],x[3],x[5],x[7],x[9]))
+
+        formDataStmtImplicitDo = seq(lit('data'),   # 0 = stmt_name
+                                     formImpliedDo, # 1 = implicit do
+                                     lit('/'),      #
+                                     cslist(const), # 3 = valueList
+                                     lit('/'))      #
+        formDataStmtImplicitDo = treat(formDataStmtImplicitDo, lambda x: DataStmtImplicitDo(x[1],x[3],stmt_name=x[0],lineNumber=lineNumber))
+
+    #######################################################################################
+        # DATA statement without implicit do
+        # this isn't very general (and could be thought of as temporary) but it works
+        formDataStmtSimple = seq(lit('data'), # 0
+                                 id,          # 1
+                                 lit('/'),    # 2
+                                 cslist(const), # 3
+                                 lit('/'))    # 4
+        formDataStmtSimple = treat(formDataStmtSimple, lambda x: DataStmtSimple(x[1],x[3],stmt_name=x[0],lineNumber=lineNumber))
+
+    #######################################################################################
+
+        (theParsedStmt,rest) = disj(formDataStmtImplicitDo,formDataStmtSimple)(scan)
+        return theParsedStmt
+
+class DataStmtImplicitDo(DataStmt):
+    _sons = ['implicitDo','valueList']
+
+    def __init__(self,implicitDo,valueList,stmt_name='data',lineNumber=0,label=False,lead=''):
+        self.implicitDo = implicitDo
+        self.valueList = valueList
+        self.stmt_name = stmt_name
+        self.lineNumber = lineNumber
+        self.label = label
+        self.lead = lead
+
+    def __str__(self):
+        return self.stmt_name+str(self.implicitDo)+' / '+', '.join([str(aValue) for aValue in self.valueList])+' /'
+
+    def __repr__(self):
+        return self.__class__.__name__+'('+repr(self.implicitDo)+','+repr(self.valueList)+')'
+
+class DataStmtSimple(DataStmt):
+    _sons = ['variable','valueList']
+
+    def __init__(self,variable,valueList,stmt_name='data',lineNumber=0,label=False,lead=''):
+        self.variable = variable
+        self.valueList = valueList
+        self.stmt_name = stmt_name
+        self.lineNumber = lineNumber
+        self.label = label
+        self.lead = lead
+
+    def __str__(self):
+        return self.stmt_name+' '+str(self.variable)+' / '+', '.join([str(aValue) for aValue in self.valueList])+' /'
+
+    def __repr__(self):
+        return self.__class__.__name__+'('+repr(self.variable)+','+repr(self.valueList)+')'
 
 class EndInterfaceStmt(DeclLeaf):
     'End of interface block'

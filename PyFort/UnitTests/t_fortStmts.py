@@ -4,7 +4,7 @@ from Setup     import *
 from unittest  import *
 
 from fortStmts import *
-from fortStmts import _F90ExplLen,_Star,_NoInit,_Kind,_ExplKind,_PointerInit
+from fortStmts import _F90ExplLen,_Star,_NoInit,_Kind,_ExplKind,_PointerInit,_DataStmtImplicitDo
 from useparse  import *
 
 class C1(TestCase):
@@ -900,6 +900,30 @@ class TestGotoStmt(TestCase):
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
+class TestDataStmt(TestCase):
+    '''data statements'''
+
+    def test0(self):
+        '''simple scalar data statement'''
+        theString = 'DATA TTP2 / 3.42D+02 /'
+        theRepr = DataStmtSimple('TTP2',['3.42D+02'],stmt_name='DATA')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test1(self):
+        '''simple array data statement'''
+        theString = 'data simp / 0.333333333D0, 1.333333333D0, 0.666666667D0 /'
+        theRepr = DataStmtSimple('simp',['0.333333333D0', '1.333333333D0', '0.666666667D0'])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test2(self):
+        '''data statement with implied do construct'''
+        theString = 'DATA(A1(tmp0), tmp0 = 1, 5, 1) / 3.4D-01, 5.9D-01, 1.0D00, 1.5D00, 1.3D00 /'
+        theRepr = DataStmtImplicitDo(_DataStmtImplicitDo(App('A1',['tmp0']),'tmp0','1','5','1'),['3.4D-01', '5.9D-01', '1.0D00', '1.5D00', '1.3D00'],stmt_name='DATA')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
 suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,C10,
                TestRealStmt,
                TestCharacterDecls,
@@ -918,6 +942,7 @@ suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,C10,
                TestAllocateDeallocateStmts,
                TestIOtmt,
                TestGotoStmt,
+               TestDataStmt,
               )
 
 if __name__ == '__main__':
