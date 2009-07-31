@@ -4,7 +4,7 @@ from Setup     import *
 from unittest  import *
 
 from fortStmts import *
-from fortStmts import _F90ExplLen,_Star,_NoInit,_Kind,_ExplKind,_PointerInit,_DataStmtImplicitDo
+from fortStmts import _F90ExplLen,_Star,_NoInit,_Kind,_ExplKind,_PointerInit,_ImplicitDoConstruct
 from useparse  import *
 
 class C1(TestCase):
@@ -906,63 +906,70 @@ class TestDataStmt(TestCase):
     def test0(self):
         '''simple scalar data statement'''
         theString = 'DATA TTP2 / 3.42D+02 /'
-        theRepr = DataStmtSimple('TTP2',['3.42D+02'],stmt_name='DATA')
+        theRepr = DataStmt('TTP2',['3.42D+02'],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test1(self):
         '''simple array data statement'''
         theString = 'data simp / 0.333333333D0, 1.333333333D0, 0.666666667D0 /'
-        theRepr = DataStmtSimple('simp',['0.333333333D0', '1.333333333D0', '0.666666667D0'])
+        theRepr = DataStmt('simp',['0.333333333D0', '1.333333333D0', '0.666666667D0'],'data')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test2(self):
         '''data statement with implied do construct'''
         theString = 'DATA(A1(tmp0), tmp0 = 1, 5, 1) / 3.4D-01, 5.9D-01, 1.0D00, 1.5D00, 1.3D00 /'
-        theRepr = DataStmtImplicitDo(_DataStmtImplicitDo(App('A1',['tmp0']),'tmp0','1','5','1'),['3.4D-01', '5.9D-01', '1.0D00', '1.5D00', '1.3D00'],stmt_name='DATA')
+        theRepr = DataStmt(_ImplicitDoConstruct(App('A1',['tmp0']),'tmp0','1','5','1'),['3.4D-01', '5.9D-01', '1.0D00', '1.5D00', '1.3D00'],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test3(self):
         '''data statement with negative constant in the value list'''
         theString = 'DATA COEF / -1.D0 /'
-        theRepr = DataStmtSimple('COEF',[Umi('1.D0')],stmt_name='DATA')
+        theRepr = DataStmt('COEF',[Umi('1.D0')],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test4(self):
         '''long data statement from centrm with continuations removed'''
         theString = 'DATA COEF / 1.D0, 1.D0, -1.D0, 3.D0, -3.D0, 5.D0, 3.D0, -30.D0, 35.D0, 15.D0, -70.D0, 63.D0, -5.D0, 105.D0, -315.D0, 231.D0, -35.D0, 315.D0, -693.D0, 429.D0, 35.D0, -1260.D0, 6930.D0, -12012.D0, 6435.D0, 315.D0, -4620.D0, 18018.D0, -25740.D0, 12155.D0, -63.D0, 3465.D0, -30030.D0, 90090.D0, -109395.D0, 46189.D0, -693.D0, 15015.D0, -90090.D0, 218790.D0, -230945.D0, 88179.D0 /'
-        theRepr = DataStmtSimple('COEF',['1.D0', '1.D0', Umi('1.D0'), '3.D0', Umi('3.D0'), '5.D0', '3.D0', Umi('30.D0'), '35.D0', '15.D0', Umi('70.D0'), '63.D0', Umi('5.D0'), '105.D0', Umi('315.D0'), '231.D0', Umi('35.D0'), '315.D0', Umi('693.D0'), '429.D0', '35.D0', Umi('1260.D0'), '6930.D0', Umi('12012.D0'), '6435.D0', '315.D0', Umi('4620.D0'), '18018.D0', Umi('25740.D0'), '12155.D0', Umi('63.D0'), '3465.D0', Umi('30030.D0'), '90090.D0', Umi('109395.D0'), '46189.D0', Umi('693.D0'), '15015.D0', Umi('90090.D0'), '218790.D0', Umi('230945.D0'), '88179.D0'],stmt_name='DATA')
+        theRepr = DataStmt('COEF',['1.D0', '1.D0', Umi('1.D0'), '3.D0', Umi('3.D0'), '5.D0', '3.D0', Umi('30.D0'), '35.D0', '15.D0', Umi('70.D0'), '63.D0', Umi('5.D0'), '105.D0', Umi('315.D0'), '231.D0', Umi('35.D0'), '315.D0', Umi('693.D0'), '429.D0', '35.D0', Umi('1260.D0'), '6930.D0', Umi('12012.D0'), '6435.D0', '315.D0', Umi('4620.D0'), '18018.D0', Umi('25740.D0'), '12155.D0', Umi('63.D0'), '3465.D0', Umi('30030.D0'), '90090.D0', Umi('109395.D0'), '46189.D0', Umi('693.D0'), '15015.D0', Umi('90090.D0'), '218790.D0', Umi('230945.D0'), '88179.D0'],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test5(self):
-        '''data statement with double implied do and repeat factor -- KNOWN TO FAIL'''
-        theString = 'DATA ((x (i,j), i=1,2), j=1,3) / 6 * 2 /'
-        theRepr = DataStmtSimple('',[''],stmt_name='DATA')
+        '''data statement with double implied do and repeat factor'''
+        theString = 'DATA((x(i,j), i = 1, 2), j = 1, 3) / 6*2 /'
+        theRepr = DataStmt(_ImplicitDoConstruct(_ImplicitDoConstruct(App('x',['i', 'j']),'i','1','2',None),'j','1','3',None),[Ops('*','6','2')],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test6(self):
-        '''data statement -- KNOWN TO FAIL'''
+        '''data statement with "NULL()" in the value list'''
         theString = 'DATA START / NULL() /'
-        theRepr = DataStmtSimple('',[''],stmt_name='DATA')
+        theRepr = DataStmt('START',[App('NULL',[])],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test7(self):
-        '''data statement -- KNOWN TO FAIL'''
+        '''data statement with multiple objectList-valueList pairs -- KNOWN TO FAIL'''
         theString = 'DATA NAME / "JOHN DOE" /, METERS / 10*0 /'
-        theRepr = DataStmtSimple('',[''],stmt_name='DATA')
+        theRepr = DataStmt('NAME',['"JOHN DOE"'],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test8(self):
-        '''data statement -- KNOWN TO FAIL'''
-        theString = 'DATA ((SKEW (K, J), K = 1, J-1), J = 1, 100) / 4950 * 1.0 /'
-        theRepr = DataStmtSimple('',[''],stmt_name='DATA')
+        '''data statement with an expression inside the implied do end'''
+        theString = 'DATA((SKEW(K,J), K = 1, J-1), J = 1, 100) / 4950*1.0 /'
+        theRepr = DataStmt(_ImplicitDoConstruct(_ImplicitDoConstruct(App('SKEW',['K', 'J']),'K','1',Ops('-','J','1'),None),'J','1','100',None),[Ops('*','4950','1.0')],'DATA')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test9(self):
+        '''data statement with implied do without optional stride'''
+        theString = 'DATA(A1(tmp0), tmp0 = 1, 3) / 3.4D-01, 5.9D-01, 1.0D00 /'
+        theRepr = DataStmt(_ImplicitDoConstruct(App('A1',['tmp0']),'tmp0','1','3',None),['3.4D-01', '5.9D-01', '1.0D00'],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
