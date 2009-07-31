@@ -551,7 +551,7 @@ class TestWhileStmt(TestCase):
         s = 'do while (1.lt.3)'
         r = WhileStmt(Ops('.lt.','1','3'))
         self.assertEquals(repr(pps(s)),repr(r))
-        self.assertEquals(s,str(r))
+        self.assertEquals(str(pps(s)),str(r))
 
     def test2(self):
         '''do while (foo(x).and.p.eq.q)'''
@@ -560,7 +560,15 @@ class TestWhileStmt(TestCase):
                           App('foo',['x']),
                           Ops('.eq.','p','q')))
         self.assertEquals(repr(pps(s)),repr(r))
-        self.assertEquals(s,str(r))
+        self.assertEquals(str(pps(s)),str(r))
+
+    def test3(self):
+        'do while statement from SCALE'
+        theString = 'do while ( j /= ma(i02) )'
+        theRepr = WhileStmt(Ops('/=','j',App('ma',['i02'])))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+
 
 class TestCallStmt(TestCase):
     '''Subroutine call statements'''

@@ -1625,7 +1625,8 @@ class WhileStmt(Exec):
     [do-construct-name : ] DO [ label ] [ , ] while ( scalar-logical-expression )
     '''
     _sons = ['testExpression']
-    kw = 'do while'
+    kw = 'dowhile'
+    kw_str = 'do while'
 
     @staticmethod
     def parse(scan,lineNumber):
@@ -1644,7 +1645,7 @@ class WhileStmt(Exec):
         self.lead = lead
 
     def __str__(self):
-        return '%s (%s)' % (self.stmt_name,str(self.testExpression))
+        return 'do while (%s)' % str(self.testExpression)
 
 class EnddoStmt(Leaf):
     kw = 'enddo'
