@@ -158,15 +158,6 @@ class C5(TestCase):
 class C6(TestCase):
     '''F90 style types
     '''
-    def test1(self):
-        'real with attributes'
-        ae = self.assertEquals
-        a_ = self.assert_
-        s = 'real(3),dimension(aaa) :: x,y'
-        ps = pps(s)
-        a_(isinstance(ps,RealStmt))
-        a_(ps.attrs)
-        ae(len(ps.decls),2)
 
     def test2(self):
         'double precision with attributes'
@@ -178,13 +169,6 @@ class C6(TestCase):
         a_(ps.attrs)
         ae(len(ps.attrs),2)
         ae(str(ps.attrs[1]),str(App('intent',['inout'])))
-
-    def test3(self):
-        'string value of real stmt w attributes'
-        ae = self.assertEquals
-        a_ = self.assert_
-        vv = RealStmt([_Kind('4')],[App('intent',['in']),'allocatable'],['x','y',])
-        ae(str(vv),'real(4),intent(in),allocatable :: x,y')
 
     def test4(self):
         'string value of double stmt w attributes'
@@ -388,11 +372,26 @@ class TestRealStmt(TestCase):
 
     def test3(self):
         '''real variable with * dimension and inout intent'''
-        theString = 'REAL(DOUBLE), DIMENSION(NGP3,*) :: ELIN'
+        theString = 'real(DOUBLE),DIMENSION(NGP3,*) :: ELIN'
         theRepr = RealStmt([_Kind('DOUBLE')],[App('DIMENSION',['NGP3', '*'])],[_NoInit('ELIN')])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
+    def test4(self):
+        'F90 style real statement with kind "3" and variable dimension'
+        theString = 'real(3),dimension(aaa) :: x,y'
+        theRepr = RealStmt([_Kind('3')],[App('dimension',['aaa'])],[_NoInit('x'), _NoInit('y')])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+        self.assert_(pps(theString).attrs)
+        self.assertEquals(len(pps(theString).decls),2)
+
+    def test5(self):
+        'F90 style real statement with intent and allocatable attribute'
+        theString = 'real,intent(in),allocatable :: x,y'
+        theRepr = RealStmt([],[App('intent',['in']), 'allocatable'],[_NoInit('x'), _NoInit('y')])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
 
 class TestCharacterDecls(TestCase):
     'test character declaration statements'
