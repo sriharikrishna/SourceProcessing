@@ -1785,26 +1785,40 @@ class AllocateStmt(Exec):
     '''
     kw = 'allocate'
     kw_str = kw
-#   _sons = ['argList']
+    _sons = ['argList','statVariable']
 
-#   @staticmethod
-#   def parse(scan,lineNumber):
-#       allocStmt = seq(lit(AllocateStmt.kw),
-#                       lit('('),
-#                       cslist(Exp),
-#                       lit(')'))
-#       ((allocKeyword,oParen,argList,cParen),rest) = allocStmt(scan)
-#       return AllocateStmt(argList,allocKeyword,lineNumber)
+    @staticmethod
+    def parse(scan,lineNumber):
+        formAllocateStmt = seq(lit(AllocateStmt.kw), # 0 = allocateFormatStr
+                               lit('('),             # 1
+                               cslist(Exp),          # 2 = argList
+                               lit(')'))
+        formAllocateStmt = treat(formAllocateStmt, lambda x: AllocateStmt(x[2],allocateFormatStr=x[0],lineNumber=lineNumber))
+        if scan[-4].lower() == 'stat':
+            newScan = scan[0:-5]
+            newScan.append(')')
+            (theParsedStmt,rest) = formAllocateStmt(newScan)
+            theParsedStmt.statFormatStr = scan[-4]
+            theParsedStmt.statVariable = scan[-2]
+            return theParsedStmt
+        else:
+            (theParsedStmt,rest) = formAllocateStmt(scan)
+            return theParsedStmt
 
-#   def __init__(self,argList,allocateFormatStr=kw,lineNumber=0,label=False,lead=''):
-#       self.argList = argList
-#       self.allocateFormatStr = allocateFormatStr
-#       self.lineNumber = lineNumber
-#       self.label = label
-#       self.lead = lead
+    def __init__(self,argList,statVariable=None,statFormatStr='stat',allocateFormatStr=kw,lineNumber=0,label=False,lead=''):
+        self.argList = argList
+        self.statVariable = statVariable
+        self.allocateFormatStr = allocateFormatStr
+        self.lineNumber = lineNumber
+        self.label = label
+        self.lead = lead
 
-#   def __str__(self):
-#       return '%s(%s)' % (self.kw,','.join([str(arg) for arg in self.argList]))
+    def __str__(self):
+        statVarStr = self.statVariable and ',stat='+self.statVariable \
+                                   or ''
+        return '%s(%s%s)' % (self.allocateFormatStr,
+                             ','.join([str(arg) for arg in self.argList]),
+                             statVarStr)
 
 class DeallocateStmt(Exec):
     kw = 'deallocate'
