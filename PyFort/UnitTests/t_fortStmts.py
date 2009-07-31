@@ -12,26 +12,6 @@ class C1(TestCase):
     some simple statements
     '''
 
-    def test1(self):
-        'simple real stmt'
-        ae = self.assertEquals
-        a_ = self.assert_
-
-        s  = 'real  x(10),y,z'
-        ae(repr(pps(s)),repr(RealStmt([],[],[_NoInit(App('x',['10'])), _NoInit('y'), _NoInit('z')])))
-        s  = 'real :: x(:)'
-        ae(repr(pps(s)),repr(RealStmt([],[],[_NoInit(App('x',[':']))])))
-        s  = 'real :: x(1:)'
-        ae(repr(pps(s)),repr(RealStmt([],[],[_NoInit(App('x',[Ops(':','1','')]))])))
-
-    def test2(self):
-        'simple if stmt'
-        ae = self.assertEquals
-        a_ = self.assert_
-
-        s  = 'if (x(11).EQ.y.OR.x(12).lt.(floob*(i**k))) goto 10'
-        a_(isinstance(pps(s),IfStmt))
-
     def test3(self):
         'endif stmt as "end if"'
         ae = self.assertEquals
@@ -47,14 +27,6 @@ class C1(TestCase):
 
         s  = 'endif'
         a_(isinstance(pps(s),EndifStmt))
-
-    def test5(self):
-        'simple subroutine stmt'
-        ae = self.assertEquals
-        a_ = self.assert_
-
-        s  = 'subroutine foo(x,y,z)'
-        a_(isinstance(pps(s),SubroutineStmt))
 
 
 class C2(TestCase):
@@ -143,14 +115,6 @@ class C4(TestCase):
         v = pps('if(ix,iy) = sin(x)')
         a_(hasattr(v,'_sons'))
         ae(v._sons,['lhs','rhs'])
-
-    def test2(self):
-        'if statement classes have "_sons" attribute'
-        ae = self.assertEquals
-        a_ = self.assert_
-
-        s  = 'if (x .eq. 5) goto 23'
-        a_(hasattr(pps(s),'_sons'))
 
 class C5(TestCase):
     '''Test derived type
@@ -271,13 +235,6 @@ class C9(TestCase):
         chk = ['module','program','function','subroutine','block data']
         for l in chk:
             a_(isinstance(pps('end '+l),EndStmt))
-
-class C10(TestCase):
-    'check statement property predicates'
-    def test1(self):
-        'subroutine is both decl and ustart'
-        s = pps('subroutine foo')
-        a_(s.is_decl() and s.is_ustart())
 
 class TestImplicitStmt(TestCase):
     '''Implicit statements'''
@@ -420,6 +377,15 @@ class TestRealStmt(TestCase):
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
+    def test2(self):
+        'simple real stmt'
+        s  = 'real  x(10),y,z'
+        self.assertEquals(repr(pps(s)),repr(RealStmt([],[],[_NoInit(App('x',['10'])), _NoInit('y'), _NoInit('z')])))
+        s  = 'real :: x(:)'
+        self.assertEquals(repr(pps(s)),repr(RealStmt([],[],[_NoInit(App('x',[':']))])))
+        s  = 'real :: x(1:)'
+        self.assertEquals(repr(pps(s)),repr(RealStmt([],[],[_NoInit(App('x',[Ops(':','1','')]))])))
+
 
 class TestCharacterDecls(TestCase):
     'test character declaration statements'
@@ -557,6 +523,21 @@ class TestDoStmt(TestCase):
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
+class TestIfStmt(TestCase):
+    '''If statements have two types: IfThenStmt and IfNonThenStmt'''
+
+    def test0(self):
+        'if statement classes have "_sons" attribute'
+        s  = 'if (x .eq. 5) goto 23'
+        self.assert_(hasattr(pps(s),'_sons'))
+
+    def test1(self):
+        'IfNonThenStmt with a relatively complicated conditional'
+        theString = 'if (x(11).EQ.y.OR.x(12).lt.(floob*(i**k))) goto 10'
+        theRepr = IfNonThenStmt(Ops('.OR.',Ops('.EQ.',App('x',['11']),'y'),Ops('.lt.',App('x',['12']),ParenExp(Ops('*','floob',ParenExp(Ops('**','i','k')))))),GotoStmt('10'))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
 class TestWhileStmt(TestCase):
     '''While statements'''
     def test1(self):
@@ -592,6 +573,7 @@ class TestCallStmt(TestCase):
                             NamedParam('b',App('bar',['x']))])
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
+
 
 class TestFunctionStmt(TestCase):
     '''Function statements'''
@@ -749,6 +731,22 @@ class TestPointerAssignStmt(TestCase):
         theRepr = PointerAssignStmt('xjtn',App('xj',[Zslice(), Zslice(), Lslice('iftg')]))
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
+
+class TestSubroutineStmt(TestCase):
+    '''subroutine statements'''
+
+    def test0(self):
+        'subroutine stmt property predicates: is both decl and ustart'
+        s = pps('subroutine foo')
+        self.assert_(s.is_decl() and s.is_ustart())
+
+    def test1(self):
+        'simple subroutine stmt'
+        theString  = 'subroutine foo(x,y,z)'
+        theRepr = SubroutineStmt('foo',['x', 'y', 'z'])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
 
 class TestWhereStmt(TestCase):
     '''where statements'''
@@ -973,12 +971,13 @@ class TestDataStmt(TestCase):
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
-suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,C10,
+suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,
                TestRealStmt,
                TestCharacterDecls,
                TestImplicitStmt,
                TestDimensionStmt,
                TestDoStmt,
+               TestIfStmt,
                TestWhileStmt,
                TestCallStmt,
                TestFunctionStmt,
@@ -986,6 +985,7 @@ suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,C10,
                TestCaseStmts,
                TestUseStmts,
                TestPointerAssignStmt,
+               TestSubroutineStmt,
                TestWhereStmt,
                TestIntegerStmt,
                TestAllocateDeallocateStmts,
