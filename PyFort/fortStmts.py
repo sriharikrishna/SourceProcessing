@@ -155,13 +155,18 @@ def _ta_listify(asm):
         rv.append(item)
     return rv
 
-DimensionSpecifier = seq(lit('dimension'),
-                         lit('('),
-                         disj(lit('*'),Exp),
-                         lit(')'))
-DimensionSpecifier = treat(DimensionSpecifier,lambda x: App(x[0],[x[2]]))
+class _DimensionSpecifier(object):
+    '''specifier for the dimension attribute in type declarations
+       (currently not used dimension statements)'''
 
-typeAttributeExpression = disj(DimensionSpecifier,
+    form = seq(lit('dimension'),
+               lit('('),
+               cslist(disj(lit('*'),
+                           Exp)),
+               lit(')'))
+    form = treat(form,lambda x: App(x[0],x[2]))
+
+typeAttributeExpression = disj(_DimensionSpecifier.form,
                                Exp)
 
 type_attr_list = star(seq(lit(','),

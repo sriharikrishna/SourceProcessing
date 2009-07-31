@@ -386,6 +386,13 @@ class TestRealStmt(TestCase):
         s  = 'real :: x(1:)'
         self.assertEquals(repr(pps(s)),repr(RealStmt([],[],[_NoInit(App('x',[Ops(':','1','')]))])))
 
+    def test3(self):
+        '''real variable with * dimension and inout intent'''
+        theString = 'REAL(DOUBLE), DIMENSION(NGP3,*) :: ELIN'
+        theRepr = RealStmt([_Kind('DOUBLE')],[App('DIMENSION',['NGP3', '*'])],[_NoInit('ELIN')])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
 
 class TestCharacterDecls(TestCase):
     'test character declaration statements'
