@@ -462,12 +462,12 @@ class UnitCanonicalizer(object):
             newList.append(newUnit)
         self.__myUnit.ulist = newList
             
-        for aDecl in self.__myUnit.decls:
-            self.__canonicalizeFunctionDecls(aDecl)
+       #for aDecl in self.__myUnit.decls:
+       #    self.__canonicalizeFunctionDecls(aDecl)
 
-        # replace the declaration statements for the unit
-        self.__myUnit.decls = self.__myNewDecls
-        self.__myNewDecls = []
+       ## replace the declaration statements for the unit
+       #self.__myUnit.decls = self.__myNewDecls
+       #self.__myNewDecls = []
         
         DebugManager.debug('canonicalizing executable statements:')
         for anExecStmt in self.__myUnit.execs:
@@ -490,8 +490,8 @@ class UnitCanonicalizer(object):
         self.__myUnit.execs = self.__myNewExecs
 
         # for function units, also create a corresponding subroutine
-        if isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
-            self.__myUnit = function2subroutine.convertFunction(self.__myUnit)
+       #if isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
+       #    self.__myUnit = function2subroutine.convertFunction(self.__myUnit)
 
         DebugManager.debug(('+'*54)+' End canonicalize unit <'+str(self.__myUnit.uinfo)+'> '+(54*'+')+'\n\n')
         return self.__myUnit
