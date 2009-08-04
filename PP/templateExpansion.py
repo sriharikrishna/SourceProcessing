@@ -43,7 +43,7 @@ class TemplateExpansion(object):
                 match = pat.search(aDecl.rawline)
                 if match:
                     newStmt = fs.Comments(aDecl.rawline[:match.start()])
-                    self.__myNewDecls.append(newStmt.flow())
+                    self.__myNewDecls.append(newStmt)
                     # return to input
                     if len(Decls) > 0:
                         for decl in Decls[0]:
@@ -52,9 +52,9 @@ class TemplateExpansion(object):
                         Decls[0] = None
                     # continue template
                     newStmt = fs.Comments(aDecl.rawline[match.end():])
-                    self.__myNewDecls.append(newStmt.flow())
+                    self.__myNewDecls.append(newStmt)
                     continue
-            self.__myNewDecls.append(aDecl.flow())
+            self.__myNewDecls.append(aDecl)
 
         if Decls[0] != None:
             for decl in Decls[0]:
@@ -98,7 +98,7 @@ class TemplateExpansion(object):
                     stmt = anExecStmt.rawline[:match.start()]
                     if len(stmt.strip()) != 0:
                         newStmt = self.__insertSubroutineName(aUnit,fs.Comments(stmt))
-                        self.__myNewExecs.append(newStmt.flow())
+                        self.__myNewExecs.append(newStmt)
                     endline = re.search('[\n]',anExecStmt.rawline[match.end():])
                     if endline:
                         end = match.end()+endline.start()
@@ -117,13 +117,13 @@ class TemplateExpansion(object):
                     stmt = anExecStmt.rawline[match.end()+newmatch.end():]
                     if len(stmt.strip()) != 0:
                         newStmt = self.__insertSubroutineName(aUnit,fs.Comments(stmt))
-                        self.__myNewExecs.append(newStmt.flow())
+                        self.__myNewExecs.append(newStmt)
                 else:
                     anExecStmt = self.__insertSubroutineName(aUnit,anExecStmt)
-                    self.__myNewExecs.append(anExecStmt.flow())
+                    self.__myNewExecs.append(anExecStmt)
                 continue
             anExecStmt = self.__insertSubroutineName(aUnit,anExecStmt)
-            self.__myNewExecs.append(anExecStmt.flow())
+            self.__myNewExecs.append(anExecStmt)
 
 
     # gets the name of the template used
@@ -191,7 +191,6 @@ class TemplateExpansion(object):
                 # redo scan and parse for the class of the given anExecStmt
                 aNewExecStmt=anExecStmt.__class__.parse(scan1.scan(plainLine)[0],anExecStmt.lineNumber)
                 aNewExecStmt.lead=anExecStmt.lead
-                aNewExecStmt.flow()
             return aNewExecStmt
         return anExecStmt
 
@@ -216,11 +215,9 @@ class TemplateExpansion(object):
                     aUnit.cmnt.rawline+self.__myUnit.cmnt.rawline
             else:
                 self.__myUnit.cmnt = aUnit.cmnt
-            self.__myUnit.cmnt.flow()
             
         if isinstance(aUnit.uinfo,fs.SubroutineStmt):
             aUnit.uinfo.name = self.__myUnit.uinfo.name
-            self.__myUnit.uinfo.flow()
             
         self.__expandTemplateDecls(aUnit, Decls)
 
@@ -237,9 +234,9 @@ class TemplateExpansion(object):
                         newEndStmt.rawline[:match.start(0)] + \
                         self.__myUnit.uinfo.name + \
                         newEndStmt.rawline[match.end(0):]
-                    newEndStmts.append(newEndStmt.flow())
+                    newEndStmts.append(newEndStmt)
                 else: 
-                    newEndStmts.append(endStmt.flow())
+                    newEndStmts.append(endStmt)
         self.__myUnit.end = newEndStmts    
         self.__myUnit.decls = self.__myNewDecls
         self.__myUnit.execs = self.__myNewExecs

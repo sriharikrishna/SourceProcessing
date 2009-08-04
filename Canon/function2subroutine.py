@@ -20,12 +20,12 @@ def createTypeDecl(type_kw,mod,outParam,lead):
     intentArg = fe.App('intent',['out'])
     try:
         newDecl = {
-            'real': fs.RealStmt(mod,[intentArg],[outParam,],lead=lead).flow(),
-            'complex': fs.ComplexStmt(mod,[intentArg],[outParam,],lead=lead).flow(),
-            'integer': fs.IntegerStmt(mod,[intentArg],[outParam,],lead=lead).flow(),
-            'logical': fs.LogicalStmt(mod,[intentArg],[outParam,],lead=lead).flow(),
-            'doubleprecision': fs.DoubleStmt(mod,[intentArg],[outParam,],lead=lead).flow(),
-            'doublecomplex': fs.DoubleCplexStmt(mod,[intentArg],[outParam,],lead=lead).flow()
+            'real': fs.RealStmt(mod,[intentArg],[outParam,],lead=lead),
+            'complex': fs.ComplexStmt(mod,[intentArg],[outParam,],lead=lead),
+            'integer': fs.IntegerStmt(mod,[intentArg],[outParam,],lead=lead),
+            'logical': fs.LogicalStmt(mod,[intentArg],[outParam,],lead=lead),
+            'doubleprecision': fs.DoubleStmt(mod,[intentArg],[outParam,],lead=lead),
+            'doublecomplex': fs.DoubleCplexStmt(mod,[intentArg],[outParam,],lead=lead)
             }[type_kw]
     except KeyError:
         raise FunToSubError('Unrecognized type "'+type_kw+'"')
@@ -41,7 +41,7 @@ def convertFunctionStmt(functionStmt):
     args = functionStmt.args
     args.append(outParam)
     name = 'oad_s_'+functionStmt.name.lower()
-    subroutineStmt = fs.SubroutineStmt(name,args,lead=functionStmt.lead).flow()
+    subroutineStmt = fs.SubroutineStmt(name,args,lead=functionStmt.lead)
 
     return (outParam,subroutineStmt)
 
@@ -61,7 +61,7 @@ def convertFunction(functionUnit):
     if resultDecl is not None:
         funTypeFound = True
         # append declaration for new out parameter
-        newSubUnit.decls.append(resultDecl.flow())
+        newSubUnit.decls.append(resultDecl)
     else:
         funTypeFound = False
 
@@ -72,9 +72,8 @@ def convertFunction(functionUnit):
                 if (str(outParam) == decl) or \
                        (hasattr(decl,'lhs') and (str(outParam) == decl.lhs)):
                     aDecl.decls.remove(decl)
-                    aDecl.flow()
                     newDecl = createTypeDecl(aDecl.kw,aDecl.mod,outParam,aDecl.lead)
-                    newSubUnit.decls.append(newDecl.flow())
+                    newSubUnit.decls.append(newDecl)
                     funTypeFound = True
 
         newSubUnit.decls.append(aDecl)
@@ -83,7 +82,6 @@ def convertFunction(functionUnit):
         
     # iterate over execs for functionUnit
     for anExec in functionUnit.execs:
-        anExec.flow()
         newSubUnit.execs.append(anExec)
 
     # iterate over end stmts for functionUnit
