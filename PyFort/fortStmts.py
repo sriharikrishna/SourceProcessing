@@ -155,13 +155,18 @@ def _ta_listify(asm):
         rv.append(item)
     return rv
 
-DimensionSpecifier = seq(lit('dimension'),
-                         lit('('),
-                         disj(lit('*'),Exp),
-                         lit(')'))
-DimensionSpecifier = treat(DimensionSpecifier,lambda x: App(x[0],[x[2]]))
+class _DimensionSpecifier(object):
+    '''specifier for the dimension attribute in type declarations
+       (currently not used dimension statements)'''
 
-typeAttributeExpression = disj(DimensionSpecifier,
+    form = seq(lit('dimension'),
+               lit('('),
+               cslist(disj(lit('*'),
+                           Exp)),
+               lit(')'))
+    form = treat(form,lambda x: App(x[0],x[2]))
+
+typeAttributeExpression = disj(_DimensionSpecifier.form,
                                Exp)
 
 type_attr_list = star(seq(lit(','),
@@ -559,8 +564,124 @@ class BlockdataStmt(PUstart):
 class CommonStmt(Decl):
     pass
 
+class _ImplicitDoConstruct(object):
+    '''implicit do construct for DATA statements'''
+                # data-implied-do object is one of
+                #  array-element
+                #  scalar-structure-component
+                #  data-implied-do
+    form = seq(lit('('),    #
+                        app,         # 1 = app
+                        lit(','),    #
+                        id,          # 3 = auxVariable
+                        lit('='),    #
+                        Exp,         # 5 = doStart
+                        lit(','),    #
+                        Exp,         # 7 = doEnd
+                        zo1(seq(lit(','), # 8 = doStride
+                                Exp)),
+                        lit(')'))    #
+    form = treat(form, lambda x: _ImplicitDoConstruct(x[1],x[3],x[5],x[7],x[8] and x[8][0][1] or None))
+
+        #  form of data-implied-do:
+        # ( data-implied-do-object-list , named-scalar-integer-variable = scalar-integer-expression , scalar-integer-expression [ , scalar-integer-expression ] )
+    form = seq(lit('('),    #
+                        disj(app,    # 1 = object
+                             form),
+                        lit(','),    #
+                        id,          # 3 = auxVariable
+                        lit('='),    #
+                        Exp,         # 5 = doStart
+                        lit(','),    #
+                        Exp,         # 7 = doEnd
+                        zo1(seq(lit(','), # 8 = doStride
+                                Exp)),
+                        lit(')'))    #
+    form = treat(form, lambda x: _ImplicitDoConstruct(x[1],x[3],x[5],x[7],x[8] and x[8][0][1] or None))
+
+    def __init__(self,object,auxVariable,doStart,doEnd,doStride):
+        self.object = object
+        self.auxVariable = auxVariable
+        self.doStart = doStart
+        self.doEnd = doEnd
+        self.doStride = doStride # optional
+
+    def __str__(self):
+        optionalDoStrideStr = self.doStride and ', '+str(self.doStride) \
+                                             or ''
+        return '(%s, %s = %s, %s%s)' %  (str(self.object),
+                                         self.auxVariable,
+                                         str(self.doStart),
+                                         str(self.doEnd),
+                                         optionalDoStrideStr)
+
+    def __repr__(self):
+        return self.__class__.__name__ + \
+               '(' + \
+               ','.join([repr(aSon) for aSon in (self.object,self.auxVariable,self.doStart,self.doEnd,self.doStride)]) + \
+               ')'
+
 class DataStmt(Decl):
-    pass
+    kw = 'data'
+    kw_str = kw
+    _sons = ['object','valueList']
+
+    @staticmethod
+    def parse(scan,lineNumber):
+        # FIXME we don't cover the full range of possibilities.  In particular, here is an incomplete list of the issues:
+        #  - there can be an entire comma-separated list of object-value pairs
+        #  - there can be more than one object
+        #  - The values should all be constants, and NOT general expressions:
+        #      '1-1' is no good, but '-1' is.  It's just that '-1' doesnt match as a constant by the scanner (it matches as a unary expression)
+        #      the definition of "const" can't be fixed easily due to scanner particulars (sometimes we want the '-' and '1' to be separate tokens, sometimes not)
+        #  - we don't cover the optional repeat-factor for the value items (though this is handled by the fact that the values are parsed as expressions.  see previous item)
+
+            # form of data-value:
+            # [ repeat-factor * ] data-constant
+                # data-constant is one of
+                #  scalar-constant
+                #  scalar-constant-subobject
+                #  signed-integer-literal-constant
+                #  signed-real-literal-constant
+                #  null-initialization
+                #  structure-constructor
+
+        # form of DATA statement:
+        # DATA data-statement-object-list / data-value-list / [ [ , ] data-statement-object-list / data-value-list / ] ...
+            # form of data object is one of
+            #  variable
+            #  data-implied-do
+        formDataStmt = seq(lit('data'),        # 0 = stmt_name
+                           disj(_ImplicitDoConstruct.form, # 1 = object (variable or implicit do construct)
+                                id),
+                           lit('/'),           #
+                           cslist(Exp),        # 3 = valueList
+                           lit('/'))           #
+        formDataStmt = treat(formDataStmt, lambda x: DataStmt(x[1],x[3],stmt_name=x[0],lineNumber=lineNumber))
+        (theParsedStmt,rest) = formDataStmt(scan)
+        return theParsedStmt
+
+    def __init__(self,object,valueList,stmt_name='data',lineNumber=0,label=False,lead=''):
+        self.object = object
+        self.valueList = valueList
+        self.stmt_name = stmt_name
+        self.lineNumber = lineNumber
+        self.label = label
+        self.lead = lead
+
+    def __str__(self):
+        # put a space after the data keyword iff the object is variable
+        spaceStr = isinstance(self.object,str) and ' ' or ''
+        return '%s%s%s / %s /' % (self.stmt_name,
+                                  spaceStr,
+                                  str(self.object),
+                                  ', '.join([str(aValue) for aValue in self.valueList]))
+
+    def __repr__(self):
+        return self.__class__.__name__ + \
+               '(' + \
+               ','.join([repr(aSon) for aSon in (self.object,self.valueList,self.stmt_name)]) + \
+               ')'
 
 class EndInterfaceStmt(DeclLeaf):
     'End of interface block'
@@ -1504,7 +1625,8 @@ class WhileStmt(Exec):
     [do-construct-name : ] DO [ label ] [ , ] while ( scalar-logical-expression )
     '''
     _sons = ['testExpression']
-    kw = 'do while'
+    kw = 'dowhile'
+    kw_str = 'do while'
 
     @staticmethod
     def parse(scan,lineNumber):
@@ -1523,7 +1645,7 @@ class WhileStmt(Exec):
         self.lead = lead
 
     def __str__(self):
-        return '%s (%s)' % (self.stmt_name,str(self.testExpression))
+        return 'do while (%s)' % str(self.testExpression)
 
 class EnddoStmt(Leaf):
     kw = 'enddo'
@@ -1663,26 +1785,40 @@ class AllocateStmt(Exec):
     '''
     kw = 'allocate'
     kw_str = kw
-#   _sons = ['argList']
+    _sons = ['argList','statVariable']
 
-#   @staticmethod
-#   def parse(scan,lineNumber):
-#       allocStmt = seq(lit(AllocateStmt.kw),
-#                       lit('('),
-#                       cslist(Exp),
-#                       lit(')'))
-#       ((allocKeyword,oParen,argList,cParen),rest) = allocStmt(scan)
-#       return AllocateStmt(argList,allocKeyword,lineNumber)
+    @staticmethod
+    def parse(scan,lineNumber):
+        formAllocateStmt = seq(lit(AllocateStmt.kw), # 0 = allocateFormatStr
+                               lit('('),             # 1
+                               cslist(Exp),          # 2 = argList
+                               lit(')'))
+        formAllocateStmt = treat(formAllocateStmt, lambda x: AllocateStmt(x[2],allocateFormatStr=x[0],lineNumber=lineNumber))
+        if scan[-4].lower() == 'stat':
+            newScan = scan[0:-5]
+            newScan.append(')')
+            (theParsedStmt,rest) = formAllocateStmt(newScan)
+            theParsedStmt.statFormatStr = scan[-4]
+            theParsedStmt.statVariable = scan[-2]
+            return theParsedStmt
+        else:
+            (theParsedStmt,rest) = formAllocateStmt(scan)
+            return theParsedStmt
 
-#   def __init__(self,argList,allocateFormatStr=kw,lineNumber=0,label=False,lead=''):
-#       self.argList = argList
-#       self.allocateFormatStr = allocateFormatStr
-#       self.lineNumber = lineNumber
-#       self.label = label
-#       self.lead = lead
+    def __init__(self,argList,statVariable=None,statFormatStr='stat',allocateFormatStr=kw,lineNumber=0,label=False,lead=''):
+        self.argList = argList
+        self.statVariable = statVariable
+        self.allocateFormatStr = allocateFormatStr
+        self.lineNumber = lineNumber
+        self.label = label
+        self.lead = lead
 
-#   def __str__(self):
-#       return '%s(%s)' % (self.kw,','.join([str(arg) for arg in self.argList]))
+    def __str__(self):
+        statVarStr = self.statVariable and ',stat='+self.statVariable \
+                                   or ''
+        return '%s(%s%s)' % (self.allocateFormatStr,
+                             ','.join([str(arg) for arg in self.argList]),
+                             statVarStr)
 
 class DeallocateStmt(Exec):
     kw = 'deallocate'

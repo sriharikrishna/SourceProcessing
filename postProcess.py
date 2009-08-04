@@ -326,7 +326,8 @@ def main():
     except ParseError,e: 
         print >>sys.stderr,'\nERROR: ParseError: parser fails to assemble tokens in scanned line '+str(e.lineNumber)+':'
         print >>sys.stderr,e.scannedLine
-        print >>sys.stderr,"as",e.target
+        if e.details: print >>sys.stderr,e.details
+        if e.target: print >>sys.stderr,"tried to parse as",e.target
         cleanup(outFileNameList)
         return 1 
     except AssemblerException,e:
