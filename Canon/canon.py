@@ -28,6 +28,8 @@ class UnitCanonicalizer(object):
 
     _hoistConstantsFlag = False
     _hoistStringsFlag = False
+    _functionBlockFlag = False
+    _createResultDeclFlag = False
 
     @staticmethod
     def setHoistConstantsFlag(hoistConstantsFlag):
@@ -37,12 +39,21 @@ class UnitCanonicalizer(object):
     def setHoistStringsFlag(hoistStringsFlag):
         UnitCanonicalizer._hoistStringsFlag = hoistStringsFlag
 
+    @staticmethod
+    def setFunctionBlockFlag(functionBlockFlag):
+        UnitCanonicalizer._functionBlockFlag = functionBlockFlag
+
+    @staticmethod
+    def setCreateResultDeclFlag(createResultFlag):
+        UnitCanonicalizer._createResultDeclFlag
+
     def __init__(self,aUnit):
         self.__myUnit = aUnit
         self.__myNewDecls = []
         self.__myNewExecs = []
         self.__tempCounter = 0
         self.__recursionDepth = 0
+        self.__outParam = ''
 
     def shouldSubroutinizeFunction(self,theApp,parentStmt):
         '''
@@ -405,15 +416,59 @@ class UnitCanonicalizer(object):
         else: # no new statements were inserted
             self.__myNewExecs.append(anExecStmt) # => leave anExecStmt alone
 
+    def __canonicalizeFunctionDecls(self,aDecl):
+        if isinstance(aDecl,fs.FunctionStmt):
+            self.setFunctionBlockFlag(True)
+            (self.__outParam,subroutineStmt) = function2subroutine.\
+                                               convertFunctionStmt(aDecl)
+            self.__myNewDecls.append(subroutineStmt)
+            resultDecl = function2subroutine.\
+                         createResultDecl(aDecl,self.__outParam)
+            if resultDecl is not None:
+                self.__myNewDecls.append(resultDecl.flow())
+                self.setCreateResultDeclFlag(False)
+            else:
+                self.setCreateResultDeclFlag(True)
+        elif not self._functionBlockFlag:
+            self.__myNewDecls.append(aDecl)
+        elif self._createResultDeclFlag \
+                 and isinstance(aDecl,fs.TypeDecl):
+            for decl in aDecl.decls:
+                if hasattr(decl,'lhs') and str(self.__outParam) == decl.lhs:
+                    aDecl.decls.remove(decl)
+                    aDecl.flow()
+                    newDecl = function2subroutine.\
+                              createTypeDecl(aDecl.kw,aDecl.mod,self.__outParam,aDecl.lead)
+                    self.__myNewDecls.append(newDecl.flow())
+                    self.setCreateResultDeclFlag(False)
+            self.__myNewDecls.append(aDecl)
+        elif isinstance(aDecl,fs.EndStmt):
+            newEndStmt = fs.EndStmt(aDecl.lineNumber,aDecl.label,aDecl.lead)
+            newEndStmt.rawline = aDecl.lead+'end subroutine\n'
+            self.__myNewDecls.append(newEndStmt)
+            self.setFunctionBlockFlag(False)
+        else:
+            self.__myNewDecls.append(aDecl)
+
     def canonicalizeUnit(self):
         '''Recursively canonicalize \p aUnit'''
         DebugManager.debug(('+'*55)+' Begin canonicalize unit <'+str(self.__myUnit.uinfo)+'> '+(55*'+'))
         DebugManager.debug('local '+self.__myUnit.symtab.debug())
         DebugManager.debug('subunits (len ='+str(len(self.__myUnit.ulist))+'):')
+        newList = []
         for subUnit in self.__myUnit.ulist:
             DebugManager.debug(str(subUnit))
-            UnitCanonicalizer(subUnit).canonicalizeUnit()
+            newUnit = UnitCanonicalizer(subUnit).canonicalizeUnit()
+            newList.append(newUnit)
+        self.__myUnit.ulist = newList
+            
+       #for aDecl in self.__myUnit.decls:
+       #    self.__canonicalizeFunctionDecls(aDecl)
 
+       ## replace the declaration statements for the unit
+       #self.__myUnit.decls = self.__myNewDecls
+       #self.__myNewDecls = []
+        
         DebugManager.debug('canonicalizing executable statements:')
         for anExecStmt in self.__myUnit.execs:
             DebugManager.debug('[Line '+str(anExecStmt.lineNumber)+']:')
@@ -435,8 +490,8 @@ class UnitCanonicalizer(object):
         self.__myUnit.execs = self.__myNewExecs
 
         # for function units, also create a corresponding subroutine
-        #if isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
-        #    self.__myUnit = function2subroutine.convertFunction(self.__myUnit)
+       #if isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
+       #    self.__myUnit = function2subroutine.convertFunction(self.__myUnit)
 
         DebugManager.debug(('+'*54)+' End canonicalize unit <'+str(self.__myUnit.uinfo)+'> '+(54*'+')+'\n\n')
         return self.__myUnit

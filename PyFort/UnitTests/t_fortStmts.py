@@ -4,33 +4,13 @@ from Setup     import *
 from unittest  import *
 
 from fortStmts import *
-from fortStmts import _F90ExplLen,_Star,_NoInit,_Kind,_ExplKind,_PointerInit
+from fortStmts import _F90ExplLen,_Star,_NoInit,_Kind,_ExplKind,_PointerInit,_ImplicitDoConstruct
 from useparse  import *
 
 class C1(TestCase):
     '''Test that appropriate instances are created for
     some simple statements
     '''
-
-    def test1(self):
-        'simple real stmt'
-        ae = self.assertEquals
-        a_ = self.assert_
-
-        s  = 'real  x(10),y,z'
-        ae(repr(pps(s)),repr(RealStmt([],[],[_NoInit(App('x',['10'])), _NoInit('y'), _NoInit('z')])))
-        s  = 'real :: x(:)'
-        ae(repr(pps(s)),repr(RealStmt([],[],[_NoInit(App('x',[':']))])))
-        s  = 'real :: x(1:)'
-        ae(repr(pps(s)),repr(RealStmt([],[],[_NoInit(App('x',[Ops(':','1','')]))])))
-
-    def test2(self):
-        'simple if stmt'
-        ae = self.assertEquals
-        a_ = self.assert_
-
-        s  = 'if (x(11).EQ.y.OR.x(12).lt.(floob*(i**k))) goto 10'
-        a_(isinstance(pps(s),IfStmt))
 
     def test3(self):
         'endif stmt as "end if"'
@@ -47,14 +27,6 @@ class C1(TestCase):
 
         s  = 'endif'
         a_(isinstance(pps(s),EndifStmt))
-
-    def test5(self):
-        'simple subroutine stmt'
-        ae = self.assertEquals
-        a_ = self.assert_
-
-        s  = 'subroutine foo(x,y,z)'
-        a_(isinstance(pps(s),SubroutineStmt))
 
 
 class C2(TestCase):
@@ -144,14 +116,6 @@ class C4(TestCase):
         a_(hasattr(v,'_sons'))
         ae(v._sons,['lhs','rhs'])
 
-    def test2(self):
-        'if statement classes have "_sons" attribute'
-        ae = self.assertEquals
-        a_ = self.assert_
-
-        s  = 'if (x .eq. 5) goto 23'
-        a_(hasattr(pps(s),'_sons'))
-
 class C5(TestCase):
     '''Test derived type
     '''
@@ -194,15 +158,6 @@ class C5(TestCase):
 class C6(TestCase):
     '''F90 style types
     '''
-    def test1(self):
-        'real with attributes'
-        ae = self.assertEquals
-        a_ = self.assert_
-        s = 'real(3),dimension(aaa) :: x,y'
-        ps = pps(s)
-        a_(isinstance(ps,RealStmt))
-        a_(ps.attrs)
-        ae(len(ps.decls),2)
 
     def test2(self):
         'double precision with attributes'
@@ -214,13 +169,6 @@ class C6(TestCase):
         a_(ps.attrs)
         ae(len(ps.attrs),2)
         ae(str(ps.attrs[1]),str(App('intent',['inout'])))
-
-    def test3(self):
-        'string value of real stmt w attributes'
-        ae = self.assertEquals
-        a_ = self.assert_
-        vv = RealStmt([_Kind('4')],[App('intent',['in']),'allocatable'],['x','y',])
-        ae(str(vv),'real(4),intent(in),allocatable :: x,y')
 
     def test4(self):
         'string value of double stmt w attributes'
@@ -271,13 +219,6 @@ class C9(TestCase):
         chk = ['module','program','function','subroutine','block data']
         for l in chk:
             a_(isinstance(pps('end '+l),EndStmt))
-
-class C10(TestCase):
-    'check statement property predicates'
-    def test1(self):
-        'subroutine is both decl and ustart'
-        s = pps('subroutine foo')
-        a_(s.is_decl() and s.is_ustart())
 
 class TestImplicitStmt(TestCase):
     '''Implicit statements'''
@@ -420,6 +361,37 @@ class TestRealStmt(TestCase):
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
+    def test2(self):
+        'simple real stmt'
+        s  = 'real  x(10),y,z'
+        self.assertEquals(repr(pps(s)),repr(RealStmt([],[],[_NoInit(App('x',['10'])), _NoInit('y'), _NoInit('z')])))
+        s  = 'real :: x(:)'
+        self.assertEquals(repr(pps(s)),repr(RealStmt([],[],[_NoInit(App('x',[':']))])))
+        s  = 'real :: x(1:)'
+        self.assertEquals(repr(pps(s)),repr(RealStmt([],[],[_NoInit(App('x',[Ops(':','1','')]))])))
+
+    def test3(self):
+        '''real variable with * dimension and inout intent'''
+        theString = 'real(DOUBLE),DIMENSION(NGP3,*) :: ELIN'
+        theRepr = RealStmt([_Kind('DOUBLE')],[App('DIMENSION',['NGP3', '*'])],[_NoInit('ELIN')])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test4(self):
+        'F90 style real statement with kind "3" and variable dimension'
+        theString = 'real(3),dimension(aaa) :: x,y'
+        theRepr = RealStmt([_Kind('3')],[App('dimension',['aaa'])],[_NoInit('x'), _NoInit('y')])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+        self.assert_(pps(theString).attrs)
+        self.assertEquals(len(pps(theString).decls),2)
+
+    def test5(self):
+        'F90 style real statement with intent and allocatable attribute'
+        theString = 'real,intent(in),allocatable :: x,y'
+        theRepr = RealStmt([],[App('intent',['in']), 'allocatable'],[_NoInit('x'), _NoInit('y')])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
 
 class TestCharacterDecls(TestCase):
     'test character declaration statements'
@@ -557,6 +529,21 @@ class TestDoStmt(TestCase):
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
+class TestIfStmt(TestCase):
+    '''If statements have two types: IfThenStmt and IfNonThenStmt'''
+
+    def test0(self):
+        'if statement classes have "_sons" attribute'
+        s  = 'if (x .eq. 5) goto 23'
+        self.assert_(hasattr(pps(s),'_sons'))
+
+    def test1(self):
+        'IfNonThenStmt with a relatively complicated conditional'
+        theString = 'if (x(11).EQ.y.OR.x(12).lt.(floob*(i**k))) goto 10'
+        theRepr = IfNonThenStmt(Ops('.OR.',Ops('.EQ.',App('x',['11']),'y'),Ops('.lt.',App('x',['12']),ParenExp(Ops('*','floob',ParenExp(Ops('**','i','k')))))),GotoStmt('10'))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
 class TestWhileStmt(TestCase):
     '''While statements'''
     def test1(self):
@@ -564,7 +551,7 @@ class TestWhileStmt(TestCase):
         s = 'do while (1.lt.3)'
         r = WhileStmt(Ops('.lt.','1','3'))
         self.assertEquals(repr(pps(s)),repr(r))
-        self.assertEquals(s,str(r))
+        self.assertEquals(str(pps(s)),str(r))
 
     def test2(self):
         '''do while (foo(x).and.p.eq.q)'''
@@ -573,7 +560,15 @@ class TestWhileStmt(TestCase):
                           App('foo',['x']),
                           Ops('.eq.','p','q')))
         self.assertEquals(repr(pps(s)),repr(r))
-        self.assertEquals(s,str(r))
+        self.assertEquals(str(pps(s)),str(r))
+
+    def test3(self):
+        'do while statement from SCALE'
+        theString = 'do while ( j /= ma(i02) )'
+        theRepr = WhileStmt(Ops('/=','j',App('ma',['i02'])))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+
 
 class TestCallStmt(TestCase):
     '''Subroutine call statements'''
@@ -592,6 +587,7 @@ class TestCallStmt(TestCase):
                             NamedParam('b',App('bar',['x']))])
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
+
 
 class TestFunctionStmt(TestCase):
     '''Function statements'''
@@ -750,6 +746,22 @@ class TestPointerAssignStmt(TestCase):
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
+class TestSubroutineStmt(TestCase):
+    '''subroutine statements'''
+
+    def test0(self):
+        'subroutine stmt property predicates: is both decl and ustart'
+        s = pps('subroutine foo')
+        self.assert_(s.is_decl() and s.is_ustart())
+
+    def test1(self):
+        'simple subroutine stmt'
+        theString  = 'subroutine foo(x,y,z)'
+        theRepr = SubroutineStmt('foo',['x', 'y', 'z'])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+
 class TestWhereStmt(TestCase):
     '''where statements'''
 
@@ -794,28 +806,51 @@ class TestIntegerStmt(TestCase):
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
-class TestAllocateDeallocateStmts(TestCase):
-    '''allocate and deallocate statementswhere statements'''
-#   def test0(self):
-#       'simple allocate stmt'
-#       theString = 'allocate(a(2))'
-#       theRepr = AllocateStmt([App('a',['2'])])
-#       self.assertEquals(repr(pps(theString)),repr(theRepr))
-#       self.assertEquals(theString,str(theRepr))
+class TestAllocateStmt(TestCase):
+    '''allocate istatements'''
 
-#   def test1(self):
-#       'complicated allocate stmt from SCALE'
-#       theString = 'allocate(aa(ip),at(im,30),ca(im),ch(im,isct),ct(im),cs(im),da(im,mm),db(im,mm),dc(im),ds(ip,mm),qg(igp),rav(im),sa(im,jt),sat(im,jt),sr(im),st(im),v(im),xna(im,jt),xnd(ip,mm),xne(im),xni(im,jt+1),xnn(im),xnr(im),abar(izm),rinnr(izm),rbar(izm),zon_vol(izm))'
-#       theRepr = AllocateStmt([App('aa',['ip']), App('at',['im', '30']), App('ca',['im']), App('ch',['im', 'isct']), App('ct',['im']), App('cs',['im']), App('da',['im', 'mm']), App('db',['im', 'mm']), App('dc',['im']), App('ds',['ip', 'mm']), App('qg',['igp']), App('rav',['im']), App('sa',['im', 'jt']), App('sat',['im', 'jt']), App('sr',['im']), App('st',['im']), App('v',['im']), App('xna',['im', 'jt']), App('xnd',['ip', 'mm']), App('xne',['im']), App('xni',['im', Ops('+','jt','1')]), App('xnn',['im']), App('xnr',['im']), App('abar',['izm']), App('rinnr',['izm']), App('rbar',['izm']), App('zon_vol',['izm'])])
-#       self.assertEquals(repr(pps(theString)),repr(theRepr))
-#       self.assertEquals(theString,str(theRepr))
+    def test0(self):
+        'simple allocate stmt'
+        theString = 'allocate(a(2))'
+        theRepr = AllocateStmt([App('a',['2'])],None)
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
 
-#   def test2(self):
-#       'simple deallocate stmt'
-#       theString = 'deallocate(a)'
-#       theRepr = DeallocateStmt(['a'])
-#       self.assertEquals(repr(pps(theString)),repr(theRepr))
-#       self.assertEquals(theString,str(theRepr))
+    def test1(self):
+        'complicated allocate stmt from SCALE'
+        theString = 'allocate(aa(ip),at(im,30),ca(im),ch(im,isct),ct(im),cs(im),da(im,mm),db(im,mm),dc(im),ds(ip,mm),qg(igp),rav(im),sa(im,jt),sat(im,jt),sr(im),st(im),v(im),xna(im,jt),xnd(ip,mm),xne(im),xni(im,jt+1),xnn(im),xnr(im),abar(izm),rinnr(izm),rbar(izm),zon_vol(izm))'
+        theRepr = AllocateStmt([App('aa',['ip']), App('at',['im', '30']), App('ca',['im']), App('ch',['im', 'isct']), App('ct',['im']), App('cs',['im']), App('da',['im', 'mm']), App('db',['im', 'mm']), App('dc',['im']), App('ds',['ip', 'mm']), App('qg',['igp']), App('rav',['im']), App('sa',['im', 'jt']), App('sat',['im', 'jt']), App('sr',['im']), App('st',['im']), App('v',['im']), App('xna',['im', 'jt']), App('xnd',['ip', 'mm']), App('xne',['im']), App('xni',['im', Ops('+','jt','1')]), App('xnn',['im']), App('xnr',['im']), App('abar',['izm']), App('rinnr',['izm']), App('rbar',['izm']), App('zon_vol',['izm'])],None)
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test2(self):
+        'simpler allocate statement from SCALE'
+        theString = 'allocate(il(2,izm))'
+        theRepr = AllocateStmt([App('il',['2', 'izm'])],None)
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test3(self):
+        'allocate statement with stat (from SCALE)'
+        theString = 'allocate(hlm(lmm,mt),stat=astat)'
+        theRepr = AllocateStmt([App('hlm',['lmm', 'mt'])],'astat')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+class TestDeallocateStmt(TestCase):
+    '''deallocate statements'''
+
+    def test2(self):
+        'simple deallocate stmt'
+        theString = 'deallocate(a)'
+        theRepr = DeallocateStmt(['a'])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
 
 class TestIOtmt(TestCase):
     ''' I/O statements '''
@@ -900,12 +935,86 @@ class TestGotoStmt(TestCase):
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
-suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,C10,
+class TestDataStmt(TestCase):
+    '''data statements'''
+
+    def test0(self):
+        '''simple scalar data statement'''
+        theString = 'DATA TTP2 / 3.42D+02 /'
+        theRepr = DataStmt('TTP2',['3.42D+02'],'DATA')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test1(self):
+        '''simple array data statement'''
+        theString = 'data simp / 0.333333333D0, 1.333333333D0, 0.666666667D0 /'
+        theRepr = DataStmt('simp',['0.333333333D0', '1.333333333D0', '0.666666667D0'],'data')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test2(self):
+        '''data statement with implied do construct'''
+        theString = 'DATA(A1(tmp0), tmp0 = 1, 5, 1) / 3.4D-01, 5.9D-01, 1.0D00, 1.5D00, 1.3D00 /'
+        theRepr = DataStmt(_ImplicitDoConstruct(App('A1',['tmp0']),'tmp0','1','5','1'),['3.4D-01', '5.9D-01', '1.0D00', '1.5D00', '1.3D00'],'DATA')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test3(self):
+        '''data statement with negative constant in the value list'''
+        theString = 'DATA COEF / -1.D0 /'
+        theRepr = DataStmt('COEF',[Umi('1.D0')],'DATA')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test4(self):
+        '''long data statement from centrm with continuations removed'''
+        theString = 'DATA COEF / 1.D0, 1.D0, -1.D0, 3.D0, -3.D0, 5.D0, 3.D0, -30.D0, 35.D0, 15.D0, -70.D0, 63.D0, -5.D0, 105.D0, -315.D0, 231.D0, -35.D0, 315.D0, -693.D0, 429.D0, 35.D0, -1260.D0, 6930.D0, -12012.D0, 6435.D0, 315.D0, -4620.D0, 18018.D0, -25740.D0, 12155.D0, -63.D0, 3465.D0, -30030.D0, 90090.D0, -109395.D0, 46189.D0, -693.D0, 15015.D0, -90090.D0, 218790.D0, -230945.D0, 88179.D0 /'
+        theRepr = DataStmt('COEF',['1.D0', '1.D0', Umi('1.D0'), '3.D0', Umi('3.D0'), '5.D0', '3.D0', Umi('30.D0'), '35.D0', '15.D0', Umi('70.D0'), '63.D0', Umi('5.D0'), '105.D0', Umi('315.D0'), '231.D0', Umi('35.D0'), '315.D0', Umi('693.D0'), '429.D0', '35.D0', Umi('1260.D0'), '6930.D0', Umi('12012.D0'), '6435.D0', '315.D0', Umi('4620.D0'), '18018.D0', Umi('25740.D0'), '12155.D0', Umi('63.D0'), '3465.D0', Umi('30030.D0'), '90090.D0', Umi('109395.D0'), '46189.D0', Umi('693.D0'), '15015.D0', Umi('90090.D0'), '218790.D0', Umi('230945.D0'), '88179.D0'],'DATA')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test5(self):
+        '''data statement with double implied do and repeat factor'''
+        theString = 'DATA((x(i,j), i = 1, 2), j = 1, 3) / 6*2 /'
+        theRepr = DataStmt(_ImplicitDoConstruct(_ImplicitDoConstruct(App('x',['i', 'j']),'i','1','2',None),'j','1','3',None),[Ops('*','6','2')],'DATA')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test6(self):
+        '''data statement with "NULL()" in the value list'''
+        theString = 'DATA START / NULL() /'
+        theRepr = DataStmt('START',[App('NULL',[])],'DATA')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test7(self):
+        '''data statement with multiple objectList-valueList pairs -- KNOWN TO FAIL'''
+        theString = 'DATA NAME / "JOHN DOE" /, METERS / 10*0 /'
+        theRepr = DataStmt('NAME',['"JOHN DOE"'],'DATA')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test8(self):
+        '''data statement with an expression inside the implied do end'''
+        theString = 'DATA((SKEW(K,J), K = 1, J-1), J = 1, 100) / 4950*1.0 /'
+        theRepr = DataStmt(_ImplicitDoConstruct(_ImplicitDoConstruct(App('SKEW',['K', 'J']),'K','1',Ops('-','J','1'),None),'J','1','100',None),[Ops('*','4950','1.0')],'DATA')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test9(self):
+        '''data statement with implied do without optional stride'''
+        theString = 'DATA(A1(tmp0), tmp0 = 1, 3) / 3.4D-01, 5.9D-01, 1.0D00 /'
+        theRepr = DataStmt(_ImplicitDoConstruct(App('A1',['tmp0']),'tmp0','1','3',None),['3.4D-01', '5.9D-01', '1.0D00'],'DATA')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,
                TestRealStmt,
                TestCharacterDecls,
                TestImplicitStmt,
                TestDimensionStmt,
                TestDoStmt,
+               TestIfStmt,
                TestWhileStmt,
                TestCallStmt,
                TestFunctionStmt,
@@ -913,11 +1022,14 @@ suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,C10,
                TestCaseStmts,
                TestUseStmts,
                TestPointerAssignStmt,
+               TestSubroutineStmt,
                TestWhereStmt,
                TestIntegerStmt,
-               TestAllocateDeallocateStmts,
+               TestAllocateStmt,
+               TestDeallocateStmt,
                TestIOtmt,
                TestGotoStmt,
+               TestDataStmt,
               )
 
 if __name__ == '__main__':
