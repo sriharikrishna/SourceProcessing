@@ -493,6 +493,13 @@ class UnitCanonicalizer(object):
         if isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
             self.__myUnit = function2subroutine.convertFunction(self.__myUnit)
 
+        for aSubUnit in self.__myUnit.ulist:
+            if isinstance(aSubUnit.uinfo,fs.SubroutineStmt) and \
+                   aSubUnit.uinfo.name.startswith(function2subroutine.name_init):
+                oldFuncName = aSubUnit.uinfo.name.lstrip(function2subroutine.name_init)
+                for aDecl in self.__myUnit.decls:
+                    aDecl = function2subroutine.convertFunctionDecl(aDecl,oldFuncName,aSubUnit.uinfo.name)
+
         DebugManager.debug(('+'*54)+' End canonicalize unit <'+str(self.__myUnit.uinfo)+'> '+(54*'+')+'\n\n')
         return self.__myUnit
 

@@ -16,6 +16,8 @@ class FunToSubError(Exception):
     def __init__(self,msg):
         self.msg  = msg
 
+name_init = 'oad_s_'
+
 def createTypeDecl(type_kw,mod,outParam,lead):
     intentArg = fe.App('intent',['out'])
     try:
@@ -32,6 +34,19 @@ def createTypeDecl(type_kw,mod,outParam,lead):
 
     return newDecl
 
+def convertFunctionDecl(aDecl,oldFuncName,newFuncName):
+    if hasattr(aDecl,"_sons"):
+        for aSon in aDecl._sons:
+            theSon = getattr(aDecl,aSon)
+            if isinstance(theSon,list):
+                if oldFuncName in theSon:
+                    theSon.remove(oldFuncName)
+                    theSon.append(newFuncName)
+            elif theSon == oldFuncName:
+                setattr(aDecl,aSon,newFuncName)
+        aDecl.flow()
+    return aDecl
+
 def convertFunctionStmt(functionStmt):
     if functionStmt.result is None:
         outParam = fs._NoInit(functionStmt.name.lower())
@@ -40,7 +55,7 @@ def convertFunctionStmt(functionStmt):
 
     args = functionStmt.args
     args.append(outParam)
-    name = 'oad_s_'+functionStmt.name.lower()
+    name = name_init+functionStmt.name.lower()
     subroutineStmt = fs.SubroutineStmt(name,args,lead=functionStmt.lead).flow()
 
     return (outParam,subroutineStmt)
