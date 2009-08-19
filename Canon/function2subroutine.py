@@ -75,8 +75,6 @@ def convertFunction(functionUnit):
     resultDecl = createResultDecl(functionUnit.uinfo,outParam)
     if resultDecl is not None:
         funTypeFound = True
-        # append declaration for new out parameter
-        newSubUnit.decls.append(resultDecl.flow())
     else:
         funTypeFound = False
 
@@ -91,10 +89,11 @@ def convertFunction(functionUnit):
                     newDecl = createTypeDecl(aDecl.kw,aDecl.mod,outParam,aDecl.lead)
                     newSubUnit.decls.append(newDecl.flow())
                     funTypeFound = True
-
         newSubUnit.decls.append(aDecl)
-        if not isinstance(aDecl,fs.Comments):
-            lead = aDecl.lead
+
+    if resultDecl is not None:
+        # append declaration for new out parameter
+        newSubUnit.decls.append(resultDecl.flow())
         
     # iterate over execs for functionUnit
     for anExec in functionUnit.execs:
