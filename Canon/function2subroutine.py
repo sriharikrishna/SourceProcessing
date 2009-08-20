@@ -67,6 +67,29 @@ def createResultDecl(functionStmt,outParam):
         return newDecl
     return None
 
+def updateResultDecl(decl,outParam):
+    if (str(outParam) == decl) or \
+           (hasattr(decl,'lhs') and (str(outParam) == decl.lhs)):
+        return True
+    else:
+        return False
+
+def updateTypeDecl(aDecl,outParam,declList):
+    resultDeclCreated = False
+    if (len(aDecl.decls) == 1) and \
+           updateResultDecl(aDecl.decls[0],outParam):
+        aDecl = createTypeDecl(aDecl.kw,aDecl.mod,outParam,aDecl.lead).flow()
+        resultDeclCreated = True
+    else:
+        for decl in aDecl.decls:
+            if updateResultDecl(decl,outParam):
+                newDecl = createTypeDecl(aDecl.kw,aDecl.mod,outParam,aDecl.lead)
+                aDecl.decls.remove(decl)
+                aDecl.flow()
+                declList.append(newDecl.flow())
+                resultDeclCreated = True
+    return (aDecl,resultDeclCreated)
+
 def convertFunction(functionUnit):
     '''converts a function unit definition to a subroutine unit definition'''
     newSubUnit = Unit(parent=functionUnit.parent,fmod=functionUnit.fmod)
@@ -81,14 +104,7 @@ def convertFunction(functionUnit):
     # iterate over decls for functionUnit
     for aDecl in functionUnit.decls:
         if not funTypeFound and isinstance(aDecl,fs.TypeDecl):
-            for decl in aDecl.decls:
-                if (str(outParam) == decl) or \
-                       (hasattr(decl,'lhs') and (str(outParam) == decl.lhs)):
-                    aDecl.decls.remove(decl)
-                    aDecl.flow()
-                    newDecl = createTypeDecl(aDecl.kw,aDecl.mod,outParam,aDecl.lead)
-                    newSubUnit.decls.append(newDecl.flow())
-                    funTypeFound = True
+            (aDecl,funTypeFound) = updateTypeDecl(aDecl,outParam,newSubUnit.decls)
         newSubUnit.decls.append(aDecl)
 
     if resultDecl is not None:
