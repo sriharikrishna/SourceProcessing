@@ -389,36 +389,24 @@ class UnitPostProcessor(object):
     # appropriate argument from replacementArgs
     def __replaceArgs(self,argReps,string,inlineArgs,replacementArgs):
         while argReps >= 0:
-            if isinstance(inlineArgs[argReps],fe.App):
-                inline_arg = inlineArgs[argReps].head
-            else:
-                inline_arg = inlineArgs[argReps]
-            lno_replace = "[\w]"+inline_arg
-            rno_replace = inline_arg+"[\w]"
-            p = re.compile("("+rno_replace+"|"+lno_replace+")")
-            p2 = re.compile(inline_arg)
-            pats = p.finditer(string,re.IGNORECASE)
-            prevEnd = 0; stopRep=len(string)
-            for match in pats:
-                (stopRep,end) = match.span()
-                m2 = p.search(string[prevEnd:stopRep])
-                if m2:
-                    prevEnd = m2.end()
-                newstr = p2.sub(str(replacementArgs[argReps]),string[prevEnd:stopRep]) 
-                string = string[:prevEnd]+\
-                    newstr+\
-                    string[(stopRep):]
-                prevEnd = end
-                stopRep = len(string)
-            match = p.search(string[prevEnd:])
-            if match:
-                string = string[:match.end()]+\
-                    p2.sub(str(replacementArgs[argReps]),string[match.end():])
-            else:
-                string = string[:prevEnd]+\
-                    p2.sub(str(replacementArgs[argReps]),string[prevEnd:])
+            string = self.__replaceArg(string,\
+                                       str(inlineArgs[argReps]),\
+                                       str(replacementArgs[argReps]))
             argReps -= 1
         return string
+    
+    # Replace every instance of one particular argument in a string
+    def __replaceArg(self,string,inlineArg,replacementArg):
+        strList = string.split(inlineArg)
+        i = 1
+        while i < len(strList):
+            if (strList[i-1])[-1:].isalnum() or (strList[i])[:1].isalnum():
+                strList[i-1] = strList[i-1]+inlineArg+strList[i]
+                strList.pop(i)
+            else:
+                i += 1
+        newStr = replacementArg.join(strList)
+        return newStr
 
     # Replaces inline args with the given args (as determined from a comment)
     # During inlining of a subroutine function in reverse mode
