@@ -16,6 +16,8 @@ class FunToSubError(Exception):
     def __init__(self,msg):
         self.msg  = msg
 
+name_init = 'oad_s_'
+
 def createTypeDecl(type_kw,mod,outParam,lead):
     intentArg = fe.App('intent',['out'])
     try:
@@ -32,6 +34,18 @@ def createTypeDecl(type_kw,mod,outParam,lead):
 
     return newDecl
 
+def convertFunctionDecl(aDecl,oldFuncName,newFuncName):
+    if hasattr(aDecl,"_sons"):
+        for aSon in aDecl._sons:
+            theSon = getattr(aDecl,aSon)
+            if isinstance(theSon,list):
+                if oldFuncName in theSon:
+                    theSon.remove(oldFuncName)
+                    theSon.append(newFuncName)
+            elif theSon == oldFuncName:
+                setattr(aDecl,aSon,newFuncName)
+    return aDecl
+
 def convertFunctionStmt(functionStmt):
     if functionStmt.result is None:
         outParam = fs._NoInit(functionStmt.name.lower())
@@ -40,7 +54,7 @@ def convertFunctionStmt(functionStmt):
 
     args = functionStmt.args
     args.append(outParam)
-    name = 'oad_s_'+functionStmt.name.lower()
+    name = name_init+functionStmt.name.lower()
     subroutineStmt = fs.SubroutineStmt(name,args,lead=functionStmt.lead)
 
     return (outParam,subroutineStmt)
@@ -52,6 +66,28 @@ def createResultDecl(functionStmt,outParam):
         return newDecl
     return None
 
+def updateResultDecl(decl,outParam):
+    if (str(outParam) == decl) or \
+           (hasattr(decl,'lhs') and (str(outParam) == decl.lhs)):
+        return True
+    else:
+        return False
+
+def updateTypeDecl(aDecl,outParam,declList):
+    resultDeclCreated = False
+    if (len(aDecl.decls) == 1) and \
+           updateResultDecl(aDecl.decls[0],outParam):
+        aDecl = createTypeDecl(aDecl.kw,aDecl.mod,outParam,aDecl.lead)
+        resultDeclCreated = True
+    else:
+        for decl in aDecl.decls:
+            if updateResultDecl(decl,outParam):
+                newDecl = createTypeDecl(aDecl.kw,aDecl.mod,outParam,aDecl.lead)
+                aDecl.decls.remove(decl)
+                declList.append(newDecl)
+                resultDeclCreated = True
+    return (aDecl,resultDeclCreated)
+
 def convertFunction(functionUnit):
     '''converts a function unit definition to a subroutine unit definition'''
     newSubUnit = Unit(parent=functionUnit.parent,fmod=functionUnit.fmod)
@@ -60,25 +96,18 @@ def convertFunction(functionUnit):
     resultDecl = createResultDecl(functionUnit.uinfo,outParam)
     if resultDecl is not None:
         funTypeFound = True
-        # append declaration for new out parameter
-        newSubUnit.decls.append(resultDecl)
     else:
         funTypeFound = False
 
     # iterate over decls for functionUnit
     for aDecl in functionUnit.decls:
         if not funTypeFound and isinstance(aDecl,fs.TypeDecl):
-            for decl in aDecl.decls:
-                if (str(outParam) == decl) or \
-                       (hasattr(decl,'lhs') and (str(outParam) == decl.lhs)):
-                    aDecl.decls.remove(decl)
-                    newDecl = createTypeDecl(aDecl.kw,aDecl.mod,outParam,aDecl.lead)
-                    newSubUnit.decls.append(newDecl)
-                    funTypeFound = True
-
+            (aDecl,funTypeFound) = updateTypeDecl(aDecl,outParam,newSubUnit.decls)
         newSubUnit.decls.append(aDecl)
-        if not isinstance(aDecl,fs.Comments):
-            lead = aDecl.lead
+
+    if resultDecl is not None:
+        # append declaration for new out parameter
+        newSubUnit.decls.append(resultDecl)
         
     # iterate over execs for functionUnit
     for anExec in functionUnit.execs:
