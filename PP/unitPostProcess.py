@@ -189,11 +189,7 @@ class UnitPostProcessor(object):
         DebugManager.debug('unitPostProcessor.__processSubCallStmt called on: "'+str(aSubCallStmt)+"'")
         replacementArgs = []
         for anArg in aSubCallStmt.args:
-            if isinstance(anArg,fe.App):
-                newArg = self.__transformActiveTypesExpression(anArg)
-                replacementArgs.append(newArg)
-            else:
-                replacementArgs.append(anArg)
+           replacementArgs.append(self.__transformActiveTypesExpression(anArg))
         replacementStatement = \
             fs.CallStmt(aSubCallStmt.head,
                         replacementArgs,
