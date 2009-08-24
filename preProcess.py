@@ -12,7 +12,7 @@ from PyUtil.l_assembler import AssemblerException as ListAssemblerException
 from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabError
 
-from PyFort.flow import free_flow
+from PyFort.flow import setFixedOrFreeFormatting
 from PyFort.fortUnit import Unit,fortUnitIterator
 import PyFort.fortStmts as fs
 
@@ -127,7 +127,7 @@ def main():
         Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
 
     # set free/fixed format
-    free_flow(config.isFreeFormat) 
+    setFixedOrFreeFormatting(config.isFreeFormat) 
 
     # configure constant expression hoisting
     if config.hoistConstantsFlag:

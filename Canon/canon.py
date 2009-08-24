@@ -45,7 +45,7 @@ class UnitCanonicalizer(object):
 
     @staticmethod
     def setCreateResultDeclFlag(createResultFlag):
-        UnitCanonicalizer._createResultDeclFlag
+        UnitCanonicalizer._createResultDeclFlag = createResultFlag
 
     def __init__(self,aUnit):
         self.__myUnit = aUnit
@@ -54,6 +54,7 @@ class UnitCanonicalizer(object):
         self.__tempCounter = 0
         self.__recursionDepth = 0
         self.__outParam = ''
+        self.__resultDecl = None
 
     def shouldSubroutinizeFunction(self,theApp,parentStmt):
         '''
@@ -128,8 +129,7 @@ class UnitCanonicalizer(object):
                                                                             theFuncCall.args + newArgs,
                                                                             lineNumber=parentStmt.lineNumber,
                                                                             label=False,
-                                                                            lead=parentStmt.lead
-                                                                            ).flow()))
+                                                                            lead=parentStmt.lead)))
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|_')
         self.__recursionDepth -= 1
         return theNewTemp
@@ -255,8 +255,7 @@ class UnitCanonicalizer(object):
                                            replacementArgs,
                                            lineNumber=aSubCallStmt.lineNumber,
                                            label=aSubCallStmt.label,
-                                           lead=aSubCallStmt.lead
-                                          ).flow()
+                                           lead=aSubCallStmt.lead)
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|_')
         self.__recursionDepth -= 1
         return replacementStatement
@@ -269,8 +268,7 @@ class UnitCanonicalizer(object):
                                              self.__canonicalizeExpression(anAssignStmt.rhs,anAssignStmt),
                                              lineNumber=anAssignStmt.lineNumber,
                                              label=anAssignStmt.label,
-                                             lead=anAssignStmt.lead
-                                            ).flow()
+                                             lead=anAssignStmt.lead)
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|_')
         self.__recursionDepth -= 1
         return replacementStatement
@@ -287,15 +285,14 @@ class UnitCanonicalizer(object):
                                  thenFormatStr='then',
                                  lineNumber=anIfNonThenStmt.lineNumber,
                                  label=anIfNonThenStmt.label,
-                                 lead=anIfNonThenStmt.lead
-                                ).flow())
+                                 lead=anIfNonThenStmt.lead))
         self.__recursionDepth -= 1
         # append the canonicalized version of the executable statement
         anIfNonThenStmt.stmt.lead = anIfNonThenStmt.lead+'  '
-        self.__canonicalizeExecStmt(anIfNonThenStmt.stmt.flow())
+        self.__canonicalizeExecStmt(anIfNonThenStmt.stmt)
         self.__recursionDepth += 1
         # insert the endif statement as the replacement
-        replacementStatement = fs.EndifStmt(lead=anIfNonThenStmt.lead).flow()
+        replacementStatement = fs.EndifStmt(lead=anIfNonThenStmt.lead)
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|_')
         self.__recursionDepth -= 1
         return replacementStatement
@@ -308,8 +305,7 @@ class UnitCanonicalizer(object):
         replacementStatement = fs.IfThenStmt(self.__canonicalizeExpression(anIfThenStmt.test,anIfThenStmt),
                                              lineNumber=anIfThenStmt.lineNumber,
                                              label=anIfThenStmt.label,
-                                             lead=anIfThenStmt.lead
-                                            ).flow()
+                                             lead=anIfThenStmt.lead)
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|_')
         self.__recursionDepth -= 1
         return replacementStatement
@@ -322,8 +318,7 @@ class UnitCanonicalizer(object):
         replacementStatement = fs.ElseifStmt(self.__canonicalizeExpression(anElseifStmt.test,anElseifStmt),
                                              lineNumber=anElseifStmt.lineNumber,
                                              label=anElseifStmt.label,
-                                             lead=anElseifStmt.lead
-                                            ).flow()
+                                             lead=anElseifStmt.lead)
         if len(self.__myNewExecs) > newExecsLength: # this is the case iff some new statements were inserted
             raise CanonError('elseif test-component "'+str(anElseifStmt.test)+'" requires hoisting, but the placement of the extra assignment(s) is problematic.',anElseifStmt.lineNumber)
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|_')
@@ -346,8 +341,7 @@ class UnitCanonicalizer(object):
                                          self.__canonicalizeExpression(aDoStmt.loopStride,aDoStmt),
                                          lineNumber=aDoStmt.lineNumber,
                                          label=aDoStmt.label,
-                                         lead=aDoStmt.lead
-                                        ).flow()
+                                         lead=aDoStmt.lead)
         if len(self.__myNewExecs) > newExecsLength: # this is the case iff loopEnd or loopStride required hopisting
             raise CanonError('Either loopEnd "'+str(aDoStmt.loopEnd)+'" or loopStride "'+str(aDoStmt.loopStride)+'" for DoStmt "'+str(aDoStmt)+'" requires hoisting, but the placement of the extra assignment(s) is problematic.',aDoStmt.lineNumber)
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|_')
@@ -364,8 +358,7 @@ class UnitCanonicalizer(object):
         replacementStatement = fs.WhileStmt(self.__canonicalizeExpression(aWhileStmt.testExpression,aWhileStmt),
                                             lineNumber=aWhileStmt.lineNumber,
                                             label=aWhileStmt.label,
-                                            lead=aWhileStmt.lead
-                                           ).flow()
+                                            lead=aWhileStmt.lead)
         if len(self.__myNewExecs) > newExecsLength: # this is the case iff some new statements were inserted
             raise CanonError('while statement test expression "'+str(aWhileStmt.testExpression)+'" requires hoisting, but the placement of the extra assignment(s) is problematic.',aWhileStmt.lineNumber)
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|_')
@@ -381,8 +374,7 @@ class UnitCanonicalizer(object):
         replacementStatement = fs.SelectCaseStmt(self.__canonicalizeExpression(aSelectCaseStmt.caseExpression,aSelectCaseStmt),
                                                  lineNumber=aSelectCaseStmt.lineNumber,
                                                  label=aSelectCaseStmt.label,
-                                                 lead=aSelectCaseStmt.lead
-                                                ).flow()
+                                                 lead=aSelectCaseStmt.lead)
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|_')
         self.__recursionDepth -= 1
         return replacementStatement
@@ -422,31 +414,32 @@ class UnitCanonicalizer(object):
             (self.__outParam,subroutineStmt) = function2subroutine.\
                                                convertFunctionStmt(aDecl)
             self.__myNewDecls.append(subroutineStmt)
-            resultDecl = function2subroutine.\
+            self.__resultDecl = function2subroutine.\
                          createResultDecl(aDecl,self.__outParam)
-            if resultDecl is not None:
-                self.__myNewDecls.append(resultDecl.flow())
-                self.setCreateResultDeclFlag(False)
-            else:
-                self.setCreateResultDeclFlag(True)
+
+            self.setCreateResultDeclFlag(True)
         elif not self._functionBlockFlag:
-            self.__myNewDecls.append(aDecl)
-        elif self._createResultDeclFlag \
-                 and isinstance(aDecl,fs.TypeDecl):
-            for decl in aDecl.decls:
-                if hasattr(decl,'lhs') and str(self.__outParam) == decl.lhs:
-                    aDecl.decls.remove(decl)
-                    aDecl.flow()
-                    newDecl = function2subroutine.\
-                              createTypeDecl(aDecl.kw,aDecl.mod,self.__outParam,aDecl.lead)
-                    self.__myNewDecls.append(newDecl.flow())
-                    self.setCreateResultDeclFlag(False)
             self.__myNewDecls.append(aDecl)
         elif isinstance(aDecl,fs.EndStmt):
             newEndStmt = fs.EndStmt(aDecl.lineNumber,aDecl.label,aDecl.lead)
             newEndStmt.rawline = aDecl.lead+'end subroutine\n'
             self.__myNewDecls.append(newEndStmt)
             self.setFunctionBlockFlag(False)
+        elif isinstance(aDecl,fs.Comments):
+            if aDecl.rawline.strip() == '':
+                pass
+            else:
+                self.__myNewDecls.append(aDecl)
+        elif self._createResultDeclFlag \
+                 and not isinstance(aDecl,fs.UseStmt):
+            if self.__resultDecl is not None:
+                self.__myNewDecls.append(self.__resultDecl)
+                self.setCreateResultDeclFlag(False)
+            elif isinstance(aDecl,fs.TypeDecl):
+                (aDecl,resultDeclFlag) = function2subroutine.updateTypeDecl(\
+                    aDecl,self.__outParam,self.__myNewDecls)
+                self.setCreateResultDeclFlag(resultDeclFlag)
+            self.__myNewDecls.append(aDecl)
         else:
             self.__myNewDecls.append(aDecl)
 
@@ -480,10 +473,9 @@ class UnitCanonicalizer(object):
                 e.lineNumber = e.lineNumber or anExecStmt.lineNumber
                 raise e
 
-        # build rawlines for the new declarations and add them to the unit
+        # set the leading whitespace for the new declarations and add them to the unit
         for aDecl in self.__myNewDecls:
             aDecl.lead = self.__myUnit.uinfo.lead+'  '
-            aDecl.flow()
         self.__myUnit.decls.extend(self.__myNewDecls)
 
         # replace the executable statements for the unit
@@ -492,6 +484,13 @@ class UnitCanonicalizer(object):
         # for function units, also create a corresponding subroutine
        #if isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
        #    self.__myUnit = function2subroutine.convertFunction(self.__myUnit)
+
+        for aSubUnit in self.__myUnit.ulist:
+            if isinstance(aSubUnit.uinfo,fs.SubroutineStmt) and \
+                   aSubUnit.uinfo.name.startswith(function2subroutine.name_init):
+                oldFuncName = aSubUnit.uinfo.name.lstrip(function2subroutine.name_init)
+                for aDecl in self.__myUnit.decls:
+                    aDecl = function2subroutine.convertFunctionDecl(aDecl,oldFuncName,aSubUnit.uinfo.name)
 
         DebugManager.debug(('+'*54)+' End canonicalize unit <'+str(self.__myUnit.uinfo)+'> '+(54*'+')+'\n\n')
         return self.__myUnit

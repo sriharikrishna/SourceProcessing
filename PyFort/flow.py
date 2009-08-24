@@ -64,11 +64,9 @@ def flow_comment(l):
 flow_line = _fixed_flow_line
 formatStart = _fixedFormatStart
 
-def free_flow(switch=True):
+def setFixedOrFreeFormatting(switch=True):
     global flow_line
     flow_line = (switch and _free_flow_line) or _fixed_flow_line
     global formatStart
-    if (switch):
-        formatStart = _freeFormatStart
-    else:
-        formatStart = _fixedFormatStart
+    formatStart = (switch and _freeFormatStart) or _fixedFormatStart
+
