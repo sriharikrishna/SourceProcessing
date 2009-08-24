@@ -465,7 +465,7 @@ class DrvdTypeDefn(Decl):
 
 class InterfaceStmt(Decl):
     kw = 'interface'
-    kw_str = 'interface'
+    kw_str = kw
 
     def __init__(self,l,lineNumber=0,label=False,lead=''):
         self.name = l
@@ -651,7 +651,7 @@ class DataStmt(Decl):
             # form of data object is one of
             #  variable
             #  data-implied-do
-        formDataStmt = seq(lit('data'),        # 0 = stmt_name
+        formDataStmt = seq(lit(DataStmt.kw),        # 0 = stmt_name
                            disj(_ImplicitDoConstruct.form, # 1 = object (variable or implicit do construct)
                                 id),
                            lit('/'),           #
@@ -661,7 +661,7 @@ class DataStmt(Decl):
         (theParsedStmt,rest) = formDataStmt(scan)
         return theParsedStmt
 
-    def __init__(self,object,valueList,stmt_name='data',lineNumber=0,label=False,lead=''):
+    def __init__(self,object,valueList,stmt_name=kw,lineNumber=0,label=False,lead=''):
         self.object = object
         self.valueList = valueList
         self.stmt_name = stmt_name
@@ -761,11 +761,13 @@ impelt = disj(impelt1,impelt2)
 impeltf = disj(impelt1f,impelt2f)
 
 class ImplicitStmt(Decl):
+    kw = 'implicit'
+    kw_str = kw
     _sons = ['lst']
 
     @staticmethod
     def parse(scan,lineNumber):
-        p0 = seq(lit('implicit'),lit('none'))
+        p0 = seq(lit(ImplicitStmt.kw),lit('none'))
         p0 = treat(p0,ImplicitNone)
 
         impelt1 = seq(type_pat_sem,lit('('),cslist(Exp),lit(')'))
@@ -776,7 +778,7 @@ class ImplicitStmt(Decl):
 
         impelt = disj(impelt1,impelt2)
 
-        p1 = seq(lit('implicit'),
+        p1 = seq(lit(ImplicitStmt.kw),
                  cslist(impelt))
 
         p1 = treat(p1,lambda l:ImplicitStmt(l[1],lineNumber))
@@ -816,7 +818,7 @@ class ParameterStmt(Decl):
 
     @staticmethod
     def parse(scan,lineNumber):
-        p0 = seq(lit('parameter'),
+        p0 = seq(lit(ParameterStmt.kw),
                  lit('('),
                  cslist(aNamedParam),
                  lit(')'))
@@ -866,7 +868,7 @@ class ExternalStmt(Decl):
 
     @staticmethod
     def parse(scan,lineNumber):
-        formExternalStmt = seq(lit('external'),
+        formExternalStmt = seq(lit(ExternalStmt.kw),
                                zo1(lit('::')),
                                cslist(id))
         ((externalKeyword,doubleColon,procedureNames),rest) = formExternalStmt(scan)
@@ -891,7 +893,7 @@ class AllocatableStmt(Decl):
 
     @staticmethod
     def parse(scan,lineNumber):
-        formAllocatableStmt = seq(lit('allocatable'),
+        formAllocatableStmt = seq(lit(AllocatableStmt.kw),
                                zo1(lit('::')),
                                cslist(id))
         ((allocatableKeyword,doubleColon,lst),rest) = formAllocatableStmt(scan)
@@ -929,7 +931,7 @@ class CharacterStmt(TypeDecl):
         explLen  = seq(lit('('),lit('len'),lit('='),Exp,lit(')'))
         explLen  = treat(explLen,lambda l: _F90ExplLen(l[3]))
                 
-        p1 = seq(lit('character'),
+        p1 = seq(lit(CharacterStmt.kw),
                  zo1(disj(f77mod,f90mod,explLen)),type_attr_list,zo1(lit('::')),
                  cslist(char_decl_item))
         try: 
@@ -939,7 +941,7 @@ class CharacterStmt(TypeDecl):
 
         return CharacterStmt(mod,attrs,decls,dc,lineNumber)
 
-    def __init__(self,mod,attrs,decls,stmt_name='character',lineNumber=0,label=False,lead=''):
+    def __init__(self,mod,attrs,decls,stmt_name=kw,lineNumber=0,label=False,lead=''):
         self.mod   = mod
         self.decls = decls
         self.attrs = attrs
@@ -995,16 +997,18 @@ class DoubleCplexStmt(TypeDecl):
     kw_str = 'double complex'
 
 class DimensionStmt(Decl):
+    kw = 'dimension'
+    kw_str = kw
     _sons = ['lst']
 
     @staticmethod
     def parse(scan,lineNumber):
-        p1 = seq(lit('dimension'),
+        p1 = seq(lit(DimensionStmt.kw),
                  cslist(app))
         ((dc,lst),rest) = p1(scan)
         return DimensionStmt(lst,dc,lineNumber)
 
-    def __init__(self,lst,stmt_name='dimension',lineNumber=0,label=False,lead=''):
+    def __init__(self,lst,stmt_name=kw,lineNumber=0,label=False,lead=''):
         self.lst = lst
         self.stmt_name = stmt_name
         self.lineNumber = lineNumber
@@ -1027,12 +1031,14 @@ class NamelistStmt(Decl):
     pass
 
 class SubroutineStmt(PUstart):
-    utype_name = 'subroutine'
+    kw = 'subroutine'
+    kw_str = kw
+    utype_name = kw
     _sons = ['args']
 
     @staticmethod
     def parse(scan,lineNumber):
-        p1 = seq(lit('subroutine'),
+        p1 = seq(lit(SubroutineStmt.kw),
                  id,
                  zo1(seq(lit('('),cslist(id),lit(')')))
                  )
@@ -1042,7 +1048,7 @@ class SubroutineStmt(PUstart):
 
         return SubroutineStmt(name,args,lineNumber=lineNumber)
 
-    def __init__(self,name,args,stmt_name='subroutine',lineNumber=0,label=False,lead=''):
+    def __init__(self,name,args,stmt_name=kw,lineNumber=0,label=False,lead=''):
         self.name = name
         self.args = args
         self.stmt_name = stmt_name
@@ -1059,16 +1065,18 @@ class SubroutineStmt(PUstart):
                                       ','.join([str(d) for d in self.args]))
 
 class ProgramStmt(PUstart):
-    utype_name = 'program'
+    kw = 'program'
+    kw_str = kw
+    utype_name = kw
 
     @staticmethod
     def parse(scan,lineNumber):
-        p1 = seq(lit('program'),
+        p1 = seq(lit(ProgramStmt.kw),
                  id)
         ((dc,name),rest) = p1(scan)
         return ProgramStmt(name,dc,lineNumber)
 
-    def __init__(self,name,stmt_name='program',lineNumber=0,label=False,lead=''):
+    def __init__(self,name,stmt_name=kw,lineNumber=0,label=False,lead=''):
         self.name = name
         self.stmt_name = stmt_name
         self.lineNumber = lineNumber
@@ -1082,13 +1090,15 @@ class ProgramStmt(PUstart):
         return '%s %s' % (self.stmt_name,self.name)
 
 class FunctionStmt(PUstart):
-    utype_name = 'function'
+    kw = 'function'
+    kw_str = kw
+    utype_name = kw
     _sons = ['ty','args']
 
     @staticmethod
     def parse(scan,lineNumber):
         p1 = seq(zo1(type_pat_sem),
-                 lit('function'),
+                 lit(FunctionStmt.kw),
                  id,
                  lit('('),
                  cslist(id),
@@ -1141,10 +1151,13 @@ class FunctionStmt(PUstart):
                                         resultStr)
 
 class ModuleStmt(PUstart):
-    utype_name = 'module'
+    kw = 'module'
+    kw_str = kw
+    utype_name = kw
+
     @staticmethod
     def parse(scan,lineNumber):
-        p1 = seq(lit('module'),
+        p1 = seq(lit(ModuleStmt.kw),
                  id)
         ((dc,name),rest) = p1(scan)
         return ModuleStmt(name,lineNumber)
@@ -1177,7 +1190,7 @@ class UseStmt(Decl):
 
         # use statement with NO ONLY: (we currently don't support module nature)
         # USE [[ , module-nature ] :: ] module-name [ , rename-list ]
-        formUseAllStmt = seq(lit('use'),
+        formUseAllStmt = seq(lit(UseStmt.kw),
                              id,
                              zo1(seq(lit(','),
                                      cslist(formRenameItem))))
@@ -1195,7 +1208,7 @@ class UseStmt(Decl):
 
         # use statement WITH ONLY: (we currently don't support module nature)
         # USE [[ , module-nature ] :: ] module-name , ONLY : [ only-list ]
-        formUseOnlyStmt = seq(lit('use'),
+        formUseOnlyStmt = seq(lit(UseStmt.kw),
                               id,
                               lit(','),
                               lit('only'),
@@ -1209,7 +1222,7 @@ class UseStmt(Decl):
 class UseAllStmt(UseStmt):
     _sons  = ['renameList']
 
-    def __init__(self,moduleName,renameList,stmt_name='use',lineNumber=0,label=False,lead=''):
+    def __init__(self,moduleName,renameList,stmt_name=UseStmt.kw,lineNumber=0,label=False,lead=''):
         self.moduleName = moduleName
         self.renameList = renameList
         self.stmt_name = stmt_name
@@ -1225,7 +1238,7 @@ class UseAllStmt(UseStmt):
 class UseOnlyStmt(UseStmt):
     _sons  = ['onlyList']
 
-    def __init__(self,moduleName,onlyList,stmt_name='use',lineNumber=0,label=False,lead=''):
+    def __init__(self,moduleName,onlyList,stmt_name=UseStmt.kw,lineNumber=0,label=False,lead=''):
         self.moduleName = moduleName
         self.onlyList = onlyList
         self.stmt_name = stmt_name
@@ -1252,18 +1265,20 @@ class RewindStmt(Leaf):
     kw_str = kw
 
 class CallStmt(Exec):
+    kw = 'call'
+    kw_str = kw
     _sons = ['args']
 
     @staticmethod
     def parse(scan,lineNumber):
-        prefix = seq(lit('call'),disj(app,id))
+        prefix = seq(lit(CallStmt.kw),disj(app,id))
         ((dc,a),rst) = prefix(scan)
         if (isinstance(a,App)):
             return CallStmt(a.head,a.args,dc,lineNumber)
         else:
             return CallStmt(a,[],dc,lineNumber)
 
-    def __init__(self,head,args,stmt_name='call',lineNumber=0,label=False,lead=''):
+    def __init__(self,head,args,stmt_name=kw,lineNumber=0,label=False,lead=''):
         self.head = head
         self.args = args
         self.stmt_name = stmt_name
@@ -1362,6 +1377,7 @@ class SimpleSyntaxIOStmt(IOStmt):
 
 class PrintStmt(SimpleSyntaxIOStmt):
     kw = 'print'
+    kw_str = kw
 
     @staticmethod
     def parse(scan,lineNumber):
@@ -1389,6 +1405,7 @@ class SimpleReadStmt(SimpleSyntaxIOStmt):
 
 class ReadStmt(ComplexSyntaxIOStmt):
     kw = 'read'
+    kw_str = kw
 
     @staticmethod
     def parse(scan,lineNumber):
@@ -1402,6 +1419,7 @@ class ReadStmt(ComplexSyntaxIOStmt):
     
 class WriteStmt(ComplexSyntaxIOStmt):
     kw = 'write'
+    kw_str = kw
 
     @staticmethod
     def parse(scan,lineNumber):
@@ -1423,9 +1441,12 @@ class ReturnStmt(Leaf):
     kw_str = kw
 
 class IfStmt(Exec):
+    kw = 'if'
+    kw_str = kw
+
     @staticmethod
     def parse(scan,lineNumber):
-        prefix = seq(lit('if'),lit('('),Exp,lit(')'))
+        prefix = seq(lit(IfStmt.kw),lit('('),Exp,lit(')'))
         ((ifLit,dc1,test,dc2),rest) = prefix(scan)
         if [l.lower() for l in rest] == ['then']:
             return IfThenStmt(test,ifLit,rest[0],lineNumber)
@@ -1435,7 +1456,7 @@ class IfStmt(Exec):
 class IfThenStmt(IfStmt):
     _sons = ['test']
 
-    def __init__(self,test,ifFormatStr='if',thenFormatStr='then',lineNumber=0,label=False,lead=''):
+    def __init__(self,test,ifFormatStr=IfStmt.kw,thenFormatStr='then',lineNumber=0,label=False,lead=''):
         self.test = test
         self.ifFormatStr = ifFormatStr
         self.thenFormatStr = thenFormatStr
@@ -1452,7 +1473,7 @@ class IfThenStmt(IfStmt):
 class IfNonThenStmt(IfStmt):
     _sons = ['test','stmt']
 
-    def __init__(self,test,stmt,ifFormatStr='if',lineNumber=0,label=False,lead=''):
+    def __init__(self,test,stmt,ifFormatStr=IfStmt.kw,lineNumber=0,label=False,lead=''):
         self.test = test
         self.stmt = stmt
         self.ifFormatStr = ifFormatStr
@@ -1468,17 +1489,18 @@ class IfNonThenStmt(IfStmt):
         return '%s (%s) %s' % (self.ifFormatStr,str(self.test),str(self.stmt))
 
 class ElseifStmt(Exec):
-    _sons = ['test']
     kw = 'elseif'
+    kw_str = kw
+    _sons = ['test']
 
     @staticmethod
     def parse(scan,lineNumber):
-        prefix = seq(lit('elseif'),lit('('),Exp,lit(')'),lit('then'))
+        prefix = seq(lit(ElseifStmt.kw),lit('('),Exp,lit(')'),lit('then'))
 
         ((dc0,dc1,e,dc2,dc3),rest) = prefix(scan)
         return ElseifStmt(e,dc0,dc3,lineNumber)
 
-    def __init__(self,e,stmt_name='elseif',stmt_name2='then',lineNumber=0,label=False,lead=''):
+    def __init__(self,e,stmt_name=kw,stmt_name2='then',lineNumber=0,label=False,lead=''):
         self.test = e
         self.stmt_name = stmt_name
         self.stmt_name2 = stmt_name2
@@ -1508,7 +1530,7 @@ class WhereStmt(Exec):
         formAssign = seq(lv_exp,lit('='),Exp)
         formAssign = treat(formAssign,lambda x:AssignStmt(x[0],x[2],lineNumber))
 
-        formWhereStmt = seq(lit('where'),
+        formWhereStmt = seq(lit(WhereStmt.kw),
                             lit('('),
                             Exp,
                             lit(')'),
@@ -1540,8 +1562,13 @@ class EndWhereStmt(Leaf):
     kw = 'endwhere'
     kw_str = 'end where'
 
+class EndifStmt(Leaf):
+    kw = 'endif'
+    kw_str = 'end if'
+
 class EndStmt(PUend):
-    kw =  'end'
+    kw = 'end'
+    kw_str = kw
 
     def is_uend(self,unit=_non): return True
     def is_decl(self,unit=_non):
@@ -1556,8 +1583,11 @@ class EndPseudoStmt(GenStmt):
             return EndInterfaceStmt.parse(scan,lineNumber)
         return EndStmt.parse(scan,lineNumber)
 
-class EndifStmt(Leaf):
-    kw = 'endif'
+
+class EndModuleStmt(EndStmt):
+    kw =  'endmodule'
+    kw_str = 'end module'
+
 
 class DoStmt(Exec):
     #FIXME: optional comma isn't handled
@@ -1577,7 +1607,7 @@ class DoStmt(Exec):
         formDoName = treat(formDoName, lambda x: x[0])
 
         formDoStmt = seq(zo1(formDoName),
-                         lit('do'),
+                         lit(DoStmt.kw),
                          zo1(int),
                          id,
                          lit('='),
@@ -1598,7 +1628,7 @@ class DoStmt(Exec):
                                  or None
         return DoStmt(doName,doLabel,loopVar,loopStart,loopEnd,loopStride,theDoKeyword,lineNumber)
 
-    def __init__(self,doName,doLabel,loopVar,loopStart,loopEnd,loopStride,doFormatStr='do',lineNumber=0,label=False,lead=''):
+    def __init__(self,doName,doLabel,loopVar,loopStart,loopEnd,loopStride,doFormatStr=kw,lineNumber=0,label=False,lead=''):
         self.doName = doName
         self.doLabel = doLabel
         self.loopVar = loopVar
@@ -1630,14 +1660,14 @@ class WhileStmt(Exec):
 
     @staticmethod
     def parse(scan,lineNumber):
-        formWhileStmt = seq(lit('dowhile'),
+        formWhileStmt = seq(lit(WhileStmt.kw),
                             lit('('),
                             Exp,
                             lit(')'))
         ((theDoWhileKeyword,openPeren,theTestExpression,closePeren),rest) = formWhileStmt(scan)
         return WhileStmt(theTestExpression,theDoWhileKeyword,lineNumber)
 
-    def __init__(self,testExpression,stmt_name='do while',lineNumber=0,label=False,lead=''):
+    def __init__(self,testExpression,stmt_name=kw_str,lineNumber=0,label=False,lead=''):
         self.testExpression = testExpression
         self.stmt_name = stmt_name
         self.lineNumber = lineNumber
@@ -1649,9 +1679,12 @@ class WhileStmt(Exec):
 
 class EnddoStmt(Leaf):
     kw = 'enddo'
+    kw_str = 'end do'
 
 class ContinueStmt(Leaf):
     kw = 'continue'
+    kw_str = kw
+
 
 class SelectCaseStmt(Exec):
     #FIXME: optional case construct name 
@@ -1664,8 +1697,7 @@ class SelectCaseStmt(Exec):
 
     @staticmethod
     def parse(scan,lineNumber):
-        formSelectCaseStmt = seq(lit('selectcase'),
-#                                 lit('case'),
+        formSelectCaseStmt = seq(lit(SelectCaseStmt.kw),
                                  lit('('),
                                  Exp,
                                  lit(')'))
@@ -1675,7 +1707,7 @@ class SelectCaseStmt(Exec):
             raise ParseError(lineNumber,scan,'Select Case statement')
         return SelectCaseStmt(caseExpression,selectCaseKeyword,lineNumber)
 
-    def __init__(self,caseExpression,stmt_name='select case',lineNumber=0,label=False,lead=''):
+    def __init__(self,caseExpression,stmt_name=kw_str,lineNumber=0,label=False,lead=''):
         self.caseExpression = caseExpression
         self.stmt_name = stmt_name
         self.lineNumber = lineNumber
@@ -1704,7 +1736,7 @@ class CaseDefaultStmt(Exec):
 
     @staticmethod
     def parse(scan,lineNumber):
-        formCaseDefaultStmt = seq(lit('casedefault'))
+        formCaseDefaultStmt = seq(lit(CaseDefaultStmt.kw))
         try:
             ((caseDefaultKeyword),rest) = formCaseDefaultStmt(scan)
         except ListAssemblerException,e:
@@ -1730,7 +1762,7 @@ class CaseRangeListStmt(Exec):
 
     @staticmethod
     def parse(scan,lineNumber):
-        formCaseRangeListStmt = seq(lit('case'),
+        formCaseRangeListStmt = seq(lit(CaseRangeListStmt.kw),
                                     lit('('),
                                     cslist(Exp),
                                     lit(')'))
@@ -1740,7 +1772,7 @@ class CaseRangeListStmt(Exec):
             raise ParseError(lineNumber,scan,'case range list statement')
         return CaseRangeListStmt(caseRangeList,caseKeyword,lineNumber)
 
-    def __init__(self,caseRangeList,stmt_name='case',lineNumber=0,label=False,lead=''):
+    def __init__(self,caseRangeList,stmt_name=kw,lineNumber=0,label=False,lead=''):
         self.caseRangeList = caseRangeList
         self.stmt_name = stmt_name
         self.lineNumber = lineNumber
@@ -1757,7 +1789,7 @@ class GotoStmt(Exec):
 
     @staticmethod
     def parse(scan,lineNumber):
-        noSpace = seq(lit('goto'),
+        noSpace = seq(lit(GotoStmt.kw),
                       int)
 
         withSpace = seq(lit('go'),
@@ -1827,7 +1859,6 @@ class DeallocateStmt(Exec):
 
     @staticmethod
     def parse(scan,lineNumber):
-        #formDeallocateStmt = seq(lit('deallocate'),
         formDeallocateStmt = seq(lit(DeallocateStmt.kw),
                                  lit('('),
                                  cslist(Exp),
@@ -1891,7 +1922,7 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              end             = EndStmt,
              endinterface    = EndInterfaceStmt,
              endtype         = EndTypeStmt,
-             endmodule       = EndStmt,
+             endmodule       = EndModuleStmt,
              endprogram      = EndStmt,
              endfunction     = EndStmt,
              endsubroutine   = EndStmt,
