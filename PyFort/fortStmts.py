@@ -253,7 +253,7 @@ class GenStmt(_Mappable,_Mutable_T):
     _sons = []
 
     def __init__(self,scan,lineNumber=0,label=False,lead=''):
-        self.scan = scan
+        self.rawline = ''.join(scan)
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
@@ -271,9 +271,7 @@ class GenStmt(_Mappable,_Mutable_T):
     def is_comment(self,unit=_non): return False
 
     def __str__(self):
-        if hasattr(self,'rawline'):
-            return self.rawline.strip()
-        return self.__class__.kw
+        return self.rawline
 
 class Skip(GenStmt):
     def __init__(self):
@@ -292,20 +290,19 @@ class Comments(GenStmt):
 
     def flow(self):
         lines = self.rawline.splitlines()
-        self.rawline = ''
+        formattedOutput = ''
         if flow.flow_line == flow._free_flow_line:
             for line in lines:
                 if line.strip() == '':
-                    self.rawline += '\n'
+                    formattedOutput += '\n'
                     continue
-                self.rawline += '!'+line[1:]+'\n'
-            return self
+                formattedOutput += '!'+line[1:]+'\n'
         else:
             for line in lines:
                 if line.strip() == '':
                     continue
-                self.rawline += 'C'+flow.flow_comment(line[1:])
-            return self
+                formattedOutput += 'C'+flow.flow_comment(line[1:])
+        return formattedOutput
 
     def is_comment(self,unit=_non): return True
 
