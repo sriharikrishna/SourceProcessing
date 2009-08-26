@@ -120,6 +120,10 @@ def main():
                    help='split output into files as specified by the input file pragmas placed by preProcess.py (defaults to False)',
                    action='store_true',
                    default=False)
+    opt.add_option('--pathPrefix',
+                   dest='pathPrefix',
+                   help='for use with --separateOutput: prepend this prefix to the directory name of the corresponding input file (defaults to an empty string)',
+                   default='')
     opt.add_option('-P',
                    '--pathSuffix',
                    dest='pathSuffix',
@@ -265,7 +269,7 @@ def main():
                         # extract the new output file location (and add path and filename suffixes)
                         (head,tail) = os.path.split(aUnit.cmnt.rawline.split('start [')[1].split(']')[0])
                         (fileName,fileExtension) = os.path.splitext(tail)
-                        outputDirectory = head+config.pathSuffix
+                        outputDirectory = config.pathPrefix+head+config.pathSuffix
                         if not os.path.exists(outputDirectory): os.mkdir(outputDirectory)
                         newOutputFile = os.path.join(outputDirectory,fileName+config.filenameSuffix+fileExtension)
                         outFileNameList.append(newOutputFile)
