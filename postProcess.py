@@ -270,7 +270,7 @@ def main():
                         (head,tail) = os.path.split(aUnit.cmnt.rawline.split('start [')[1].split(']')[0])
                         (fileName,fileExtension) = os.path.splitext(tail)
                         outputDirectory = config.pathPrefix+head+config.pathSuffix
-                        if not os.path.exists(outputDirectory): os.mkdir(outputDirectory)
+                        if not os.path.exists(outputDirectory): os.makedirs(outputDirectory)
                         newOutputFile = os.path.join(outputDirectory,fileName+config.filenameSuffix+fileExtension)
                         outFileNameList.append(newOutputFile)
                         out = open(newOutputFile,'w')
