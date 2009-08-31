@@ -1,4 +1,5 @@
 from _Setup import *
+import flow
 from PyUtil.flatten import flatten
 
 import re
@@ -22,12 +23,18 @@ def process_fort_stmt(stmt_tuple,lineNumber,jlf):
     if jl[0] == '\t':
         jl = ' ' * 8 + jl[1:]
 
-    m        = _label_re.match(jl)
-    label   = m and int(m.group(2))
-    linelead = m and m.end(0) or 0
-    lead     = linelead * ' '+_lead_re.match(jl[linelead:]).group(1)
-    obj      = jlf(jl[len(lead):],lineNumber)
+    m = _label_re.match(jl)
+    label = m and int(m.group(2))
+    # lead shouldn't include fixed flow spacing (first 6 places)
+    if flow.freeInput:
+        linelead = m and m.end(0) or 0
+        lead = linelead * ' '+_lead_re.match(jl[linelead:]).group(1)
+        raw = jl[len(lead):]
+    else:
+        lead = _lead_re.match(jl[6:]).group(1)
+        raw = jl[6:].lstrip()
 
+    obj = jlf(jl[len(lead):],lineNumber)
     if isinstance(obj,list):
         for anObj in obj:
             anObj.rawline = raw

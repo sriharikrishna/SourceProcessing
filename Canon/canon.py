@@ -9,6 +9,7 @@ from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
 
 from PyFort.intrinsic import is_intrinsic,getGenericName
 from PyFort.typeInference import TypeInferenceError,expressionType,functionType,isArrayReference
+import PyFort.flow as flow
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
 
@@ -30,6 +31,11 @@ class UnitCanonicalizer(object):
     _hoistStringsFlag = False
     _functionBlockFlag = False
     _createResultDeclFlag = False
+
+
+    @staticmethod
+    def setOutputFormat(freeOutput):
+        flow.setFixedOrFreeOutput(freeOutput)
 
     @staticmethod
     def setHoistConstantsFlag(hoistConstantsFlag):
@@ -264,8 +270,8 @@ class UnitCanonicalizer(object):
         '''Canonicalize an assigment statement by removing function calls from the rhs'''
         DebugManager.debug(self.__recursionDepth*'|\t'+'canonicalizing assignment statement "'+str(anAssignStmt)+'"')
         self.__recursionDepth += 1
-        replacementStatement = fs.AssignStmt(anAssignStmt.lhs,
-                                             self.__canonicalizeExpression(anAssignStmt.rhs,anAssignStmt),
+        replacementStatement = fs.AssignStmt(anAssignStmt.get_lhs(),
+                                             self.__canonicalizeExpression(anAssignStmt.get_rhs(),anAssignStmt),
                                              lineNumber=anAssignStmt.lineNumber,
                                              label=anAssignStmt.label,
                                              lead=anAssignStmt.lead)

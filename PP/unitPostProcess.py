@@ -54,7 +54,7 @@ class UnitPostProcessor(object):
 
     @staticmethod
     def setOutputFormat(freeOutput):
-        flow.setFixedOrFreeFormatting(freeOutput)
+        flow.setFixedOrFreeOutput(freeOutput)
 
     _mode = 'forward'
 
@@ -113,10 +113,10 @@ class UnitPostProcessor(object):
         only applied to type declaration statements '''
         DebugManager.debug('unitPostProcessor.__rewriteActiveType called on: "'+str(DrvdTypeDecl)+"'")
         newDecls = []
-        for decl in DrvdTypeDecl.decls:
+        for decl in DrvdTypeDecl.get_decls():
             newDecls.append(self.__transformActiveTypesExpression(decl))
         DrvdTypeDecl.decls = newDecls
-        if DrvdTypeDecl.mod[0].lower() == '('+self._abstract_type+')':
+        if DrvdTypeDecl.get_mod()[0].lower() == '('+self._abstract_type+')':
             DrvdTypeDecl.mod = ['('+self._replacement_type+')']
             DrvdTypeDecl.dblc = True
         else:
@@ -162,7 +162,7 @@ class UnitPostProcessor(object):
                 self.__expChanged=True
         else:
             if hasattr(replacementExpression, "_sons"):
-                for aSon in replacementExpression._sons:
+                for aSon in replacementExpression.get_sons():
                     theSon = getattr(replacementExpression,aSon)
                     newSon = self.__transformActiveTypesExpression(theSon)
                     setattr(replacementExpression,aSon,newSon)
@@ -237,7 +237,7 @@ class UnitPostProcessor(object):
             replacementStatement = \
                 fs.AssignStmt(newApp,
                               newStatement.body,
-                              newStatement.lineNumber,
+                              lineNumber=newStatement.lineNumber,
                               label=newStatement.label,
                               lead=newStatement.lead)
         elif newStatement.name == '__deriv__':
@@ -265,7 +265,7 @@ class UnitPostProcessor(object):
             return aStmt
         
         self.__expChanged=False
-        for aSon in aStmt._sons:
+        for aSon in aStmt.get_sons():
             theSon = getattr(aStmt,aSon)
             newSon = self.__transformActiveTypesExpression(theSon)    
             if newSon is not theSon:
@@ -484,9 +484,20 @@ class UnitPostProcessor(object):
                     self.__replaceArgs(argReps,Stmt.rawline,inlineArgs,replacementArgs)
                 Execs.append(Stmt)
             elif isinstance(Stmt,fs.AssignStmt):
-                lhs = self.__replaceArgs(argReps,str(Stmt.lhs),inlineArgs,replacementArgs)
-                rhs = self.__replaceArgs(argReps,str(Stmt.rhs),inlineArgs,replacementArgs)
+                lhs = self.__replaceArgs(argReps,str(Stmt.get_lhs()),inlineArgs,replacementArgs)
+                rhs = self.__replaceArgs(argReps,str(Stmt.get_rhs()),inlineArgs,replacementArgs)
                 newStmt = fs.AssignStmt(lhs,rhs,lead=stmt_lead)
+                Execs.append(newStmt)
+            elif isinstance(Stmt,fs.StmtFnStmt):
+                name=self.__replaceArgs\
+                      (argReps,str(Stmt.get_name()),inlineArgs,replacementArgs)
+                newArgs = []
+                for arg in Stmt.get_args():
+                    newArgs.append(self.__replaceArgs\
+                                   (argReps,str(arg),inlineArgs,replacementArgs))
+                body=self.__replaceArgs\
+                      (argReps,str(Stmt.get_body()),inlineArgs,replacementArgs)
+                newStmt = fs.StmtFnStmt(name,newArgs,body,lead=stmt_lead)
                 Execs.append(newStmt)
             elif isinstance(Stmt,fs.IOStmt):
                 newItemList = []
@@ -504,13 +515,13 @@ class UnitPostProcessor(object):
                             self.__replaceArgs(argReps,Stmt.rawline,inlineArgs,replacementArgs)
                 Execs.append(Stmt)
             elif isinstance(Stmt,fs.WhileStmt):
-                for aSon in Stmt._sons:
+                for aSon in Stmt.get_sons():
                     theSon = getattr(Stmt,aSon)
                     newSon = self.__replaceArgs(argReps,str(theSon),inlineArgs,replacementArgs)
                     setattr(Stmt,aSon,newSon)
                 Execs.append(Stmt)
             elif hasattr(Stmt, "_sons"):
-                for aSon in Stmt._sons:
+                for aSon in Stmt.get_sons():
                     theSon = getattr(Stmt,aSon) 
                     if theSon is None:
                         continue

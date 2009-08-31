@@ -47,7 +47,7 @@ class TemplateExpansion(object):
                     # return to input
                     if len(Decls) > 0:
                         for decl in Decls[0]:
-                            if decl is not None and len(decl.rawline.strip()) != 0:
+                            if decl is not None and len(decl.rawline) != 0:
                                 self.__myNewDecls.append(decl)
                         Decls[0] = None
                     # continue template
@@ -58,12 +58,12 @@ class TemplateExpansion(object):
 
         if Decls[0] != None:
             for decl in Decls[0]:
-                if decl is not None and len(decl.rawline.strip()) != 0:
+                if decl is not None and len(decl.rawline) != 0:
                     self.__myNewDecls.append(decl)            
         i = 1; j = 0
         while i < len(Decls):
             for aDecl in Decls[i]:
-                if aDecl is not None and len(aDecl.rawline.strip()) != 0:
+                if aDecl is not None and len(aDecl.rawline) != 0:
                     self.__myNewDecls.append(aDecl)
                 j += 1
             j = 0
@@ -83,7 +83,7 @@ class TemplateExpansion(object):
             for anInputExec in Execs[0]:
                 if anInputExec is not None:
                     if anInputExec is not None and \
-                            len(anInputExec.rawline.strip()) != 0:
+                            len(anInputExec.rawline) != 0:
                         self.__myNewExecs.append(anInputExec)
                 j += 1
         execRepNum = 0
@@ -109,7 +109,7 @@ class TemplateExpansion(object):
                         # return to input
                         for anInputExec in Execs[pragma]:
                             if anInputExec is not None and \
-                                    len(anInputExec.rawline.strip()) != 0:
+                                    len(anInputExec.rawline) != 0:
                                 self.__myNewExecs.append(anInputExec)
                     # continue template
                     pat = re.compile("[0-9]+")
@@ -228,7 +228,8 @@ class TemplateExpansion(object):
             if isinstance(endStmt,fs.EndStmt):
                 match = re.search("template",endStmt.rawline,re.IGNORECASE)
                 if match:
-                    newEndStmt=fs.EndStmt(endStmt.lineNumber,endStmt.label,endStmt.lead)
+                    newEndStmt=fs.EndStmt(lineNumber=endStmt.lineNumber,\
+                                          label=endStmt.label,lead=endStmt.lead)
                     newEndStmt.rawline=endStmt.rawline
                     newEndStmt.rawline = \
                         newEndStmt.rawline[:match.start(0)] + \

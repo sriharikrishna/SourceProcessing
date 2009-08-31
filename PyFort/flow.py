@@ -22,7 +22,7 @@ def _fixed_flow_line(l,cont='+'):
         rv  += ' ' * 5 + cont + tmp + '\n'
         rem  = rem[66:]
     if len(rem) > 0:
-        rv  += ' ' * 5 + cont + rem 
+        rv  += ' ' * 5 + cont + rem
     return rv
 
 _free_line_len = 80
@@ -70,3 +70,22 @@ def setFixedOrFreeFormatting(switch=True):
     global formatStart
     formatStart = (switch and _freeFormatStart) or _fixedFormatStart
 
+freeOutput = False
+
+def setFixedOrFreeOutput(switch=False):
+    global freeOutput
+    freeOutput = switch
+
+freeInput = False
+
+def setFixedOrFreeInput(switch=False):
+    global freeInput
+    freeInput = switch
+
+
+def format_line(line,input=True):
+    if input:
+        setFixedOrFreeFormatting(freeInput)
+    else:
+        setFixedOrFreeFormatting(freeOutput)
+    return flow_line(line)

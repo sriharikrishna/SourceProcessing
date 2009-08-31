@@ -72,6 +72,8 @@ def setWhitespace(useWhitespace):
 class _Exp(_Mutable_T):
     'base class for Expression trees'
     _sons = []
+    def get_sons(self):
+        return self._sons
     pass
 
 class App(_Exp):
@@ -273,6 +275,7 @@ class Ops(_Exp):
 
     def map(self,fn):
         return Ops(self.op,fn(self.a1),fn(self.a2))
+
 
 def is_id(t):
     return _id_re.match(t)
