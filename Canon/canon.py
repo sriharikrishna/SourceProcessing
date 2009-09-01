@@ -12,6 +12,7 @@ from PyFort.typeInference import TypeInferenceError,expressionType,functionType,
 import PyFort.flow as flow
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
+import PyFort.fortUnit as fortUnit
 
 import function2subroutine
 import subroutinizedIntrinsics
@@ -31,7 +32,7 @@ class UnitCanonicalizer(object):
     _hoistStringsFlag = False
     _functionBlockFlag = False
     _createResultDeclFlag = False
-
+    _keepFunctionDecl = False
 
     @staticmethod
     def setOutputFormat(freeOutput):
@@ -52,6 +53,10 @@ class UnitCanonicalizer(object):
     @staticmethod
     def setCreateResultDeclFlag(createResultFlag):
         UnitCanonicalizer._createResultDeclFlag = createResultFlag
+
+    @staticmethod
+    def setKeepFunctionDef(keepFunctionDefFlag):
+        UnitCanonicalizer._keepFunctionDecl = keepFunctionDefFlag
 
     def __init__(self,aUnit):
         self.__myUnit = aUnit
@@ -414,40 +419,45 @@ class UnitCanonicalizer(object):
         else: # no new statements were inserted
             self.__myNewExecs.append(anExecStmt) # => leave anExecStmt alone
 
-    def __canonicalizeFunctionDecls(self,aDecl):
+    def __canonicalizeFunctionDecls(self,aDecl,subroutineBlock):
+        if self._keepFunctionDecl:
+            self.__myNewDecls.append(aDecl)
         if isinstance(aDecl,fs.FunctionStmt):
             self.setFunctionBlockFlag(True)
             (self.__outParam,subroutineStmt) = function2subroutine.\
                                                convertFunctionStmt(aDecl)
-            self.__myNewDecls.append(subroutineStmt)
+            subroutineBlock.append(subroutineStmt)
             self.__resultDecl = function2subroutine.\
                          createResultDecl(aDecl,self.__outParam)
 
             self.setCreateResultDeclFlag(True)
         elif not self._functionBlockFlag:
-            self.__myNewDecls.append(aDecl)
+            if not self._keepFunctionDecl:
+                self.__myNewDecls.append(aDecl)
         elif isinstance(aDecl,fs.EndStmt):
-            newEndStmt = fs.EndStmt(aDecl.lineNumber,aDecl.label,aDecl.lead)
+            newEndStmt = fs.EndStmt(lineNumber=aDecl.lineNumber,label=aDecl.label,lead=aDecl.lead)
             newEndStmt.rawline = aDecl.lead+'end subroutine\n'
-            self.__myNewDecls.append(newEndStmt)
+            subroutineBlock.append(newEndStmt)
+            self.__myNewDecls.extend(subroutineBlock)
             self.setFunctionBlockFlag(False)
         elif isinstance(aDecl,fs.Comments):
             if aDecl.rawline.strip() == '':
                 pass
             else:
-                self.__myNewDecls.append(aDecl)
+                subroutineBlock.append(aDecl)
         elif self._createResultDeclFlag \
                  and not isinstance(aDecl,fs.UseStmt):
             if self.__resultDecl is not None:
-                self.__myNewDecls.append(self.__resultDecl)
+                subroutineBlock.append(self.__resultDecl)
                 self.setCreateResultDeclFlag(False)
             elif isinstance(aDecl,fs.TypeDecl):
                 (aDecl,resultDeclFlag) = function2subroutine.updateTypeDecl(\
                     aDecl,self.__outParam,self.__myNewDecls)
                 self.setCreateResultDeclFlag(resultDeclFlag)
-            self.__myNewDecls.append(aDecl)
+            subroutineBlock.append(aDecl)
         else:
-            self.__myNewDecls.append(aDecl)
+            subroutineBlock.append(aDecl)
+        return subroutineBlock
 
     def canonicalizeUnit(self):
         '''Recursively canonicalize \p aUnit'''
@@ -460,13 +470,14 @@ class UnitCanonicalizer(object):
             newUnit = UnitCanonicalizer(subUnit).canonicalizeUnit()
             newList.append(newUnit)
         self.__myUnit.ulist = newList
-            
-       #for aDecl in self.__myUnit.decls:
-       #    self.__canonicalizeFunctionDecls(aDecl)
+        
+        subroutineBlock = []    
+        for aDecl in self.__myUnit.decls:
+            subroutineBlock = self.__canonicalizeFunctionDecls(aDecl,subroutineBlock)
 
        ## replace the declaration statements for the unit
-       #self.__myUnit.decls = self.__myNewDecls
-       #self.__myNewDecls = []
+        self.__myUnit.decls = self.__myNewDecls
+        self.__myNewDecls = []
         
         DebugManager.debug('canonicalizing executable statements:')
         for anExecStmt in self.__myUnit.execs:
@@ -488,16 +499,29 @@ class UnitCanonicalizer(object):
         self.__myUnit.execs = self.__myNewExecs
 
         # for function units, also create a corresponding subroutine
-       #if isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
-       #    self.__myUnit = function2subroutine.convertFunction(self.__myUnit)
-
+        if isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
+            self._functionBlockFlag = True
+            if self._keepFunctionDecl:
+                oldUnit = self.__myUnit
+                if oldUnit.parent is None:
+                    oldUnit.parent = fortUnit.Unit()
+                oldUnit.parent.ulist.append(self.__myUnit)
+                self.__myUnit = function2subroutine.convertFunction(self.__myUnit)
+                self.__myUnit.parent = oldUnit
+            else:
+                self.__myUnit = function2subroutine.convertFunction(self.__myUnit)
+                
         for aSubUnit in self.__myUnit.ulist:
             if isinstance(aSubUnit.uinfo,fs.SubroutineStmt) and \
                    aSubUnit.uinfo.name.startswith(function2subroutine.name_init):
                 oldFuncName = aSubUnit.uinfo.name.lstrip(function2subroutine.name_init)
                 for aDecl in self.__myUnit.decls:
                     aDecl = function2subroutine.convertFunctionDecl(aDecl,oldFuncName,aSubUnit.uinfo.name)
-
+        if self._functionBlockFlag and self._keepFunctionDecl:
+            oldUnit.parent.ulist.append(self.__myUnit)
+            self.__myUnit = oldUnit.parent
+            self._functionBlockFlag = False
+            
         DebugManager.debug(('+'*54)+' End canonicalize unit <'+str(self.__myUnit.uinfo)+'> '+(54*'+')+'\n\n')
         return self.__myUnit
 

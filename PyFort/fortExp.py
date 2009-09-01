@@ -102,6 +102,7 @@ class NamedParam(object):
     def __init__(self,anId,aRHS):
         self.myId = anId
         self.myRHS = aRHS
+        self.accessed = False
 
     def __repr__(self):
         return 'NamedParam(%s,%s)' % (self.myId,repr(self.myRHS))
@@ -114,6 +115,10 @@ class NamedParam(object):
             rstr+='='
         rstr+=str(self.myRHS)
         return rstr
+
+    def get_sons(self):
+        self.accessed = True
+        return self._sons
 
 class Sel(_Exp):
     'selection expressions like foo(i,j)%k'

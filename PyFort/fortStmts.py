@@ -297,8 +297,12 @@ class Comments(GenStmt):
         return 'Comments(%s)' % self.rawline
 
     def flow(self):
-        lines = self.rawline.splitlines()
-        formattedOutput = ''
+        if self.rawline.strip() == '':
+            return self.rawline
+        #lead = self.rawline[0:(len(self.rawline)-len(self.rawline.lstrip()))]
+        lines = self.rawline.strip().splitlines()
+        #formattedOutput = lead
+        formattedOutput=''
         if flow.freeOutput:
             for line in lines:
                 if line.strip() == '':
@@ -334,7 +338,6 @@ class NonComment(GenStmt):
             formattedOutput = flow.format_line((labelStr + self.lead + self.get_rawline()),input=False) + '\n'
         else:
             formattedOutput = flow.format_line((labelStr + self.lead + self.get_rawline()),input=False) + '\n'
-
         return formattedOutput
 
     def same_level(self,parsed):
@@ -1529,6 +1532,15 @@ class IfThenStmt(IfStmt):
     def __str__(self):
         return '%s (%s) %s' % (self.ifFormatStr,str(self.test),self.thenFormatStr)
 
+    def get_sons(self):
+        self.accessed = True
+        return self._sons
+
+    def get_rawline(self):
+        if self.accessed:
+            self.rawline = str(self)
+        return self.rawline
+
 class IfNonThenStmt(IfStmt):
     _sons = ['test','stmt']
 
@@ -1546,6 +1558,15 @@ class IfNonThenStmt(IfStmt):
 
     def __str__(self):
         return '%s (%s) %s' % (self.ifFormatStr,str(self.test),str(self.stmt))
+
+    def get_sons(self):
+        self.accessed = True
+        return self._sons
+
+    def get_rawline(self):
+        if self.accessed:
+            self.rawline = str(self)
+        return self.rawline
 
 class ElseifStmt(Exec):
     kw = 'elseif'
@@ -1587,7 +1608,7 @@ class WhereStmt(Exec):
         lhs = lv_exp
 
         formAssign = seq(lv_exp,lit('='),Exp)
-        formAssign = treat(formAssign,lambda x:AssignStmt(x[0],x[2],lineNumber))
+        formAssign = treat(formAssign,lambda x:AssignStmt(x[0],x[2],lineNumber=lineNumber))
 
         formWhereStmt = seq(lit(WhereStmt.kw),
                             lit('('),

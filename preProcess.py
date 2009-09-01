@@ -48,6 +48,12 @@ def main():
                    help="input source is free format",
                    action='store_true',
                    default=False)
+    opt.add_option('',
+                   '--keepFunction',
+                   dest='keepFunction',
+                   help="keep original function definition when it is transformed to a subroutine definitions",
+                   action='store_true',
+                   default=False)
     opt.add_option('-m','--mode',dest='mode',
                    type='choice', choices=modeChoices,
                    help='set default options for transformation mode with MODE being one of: '+ modeChoicesHelp+ '  reverse mode  implies -H but not -S; specific settings override the mode defaults.',
@@ -135,6 +141,8 @@ def main():
     setFixedOrFreeFormatting(config.isFreeFormat)
     setFixedOrFreeInput(config.isFreeFormat) 
 
+    # set keep function definition
+    UnitCanonicalizer.setKeepFunctionDef(config.keepFunction)
     # configure constant expression hoisting
     if config.hoistConstantsFlag:
         UnitCanonicalizer.setHoistConstantsFlag(config.hoistConstantsFlag)

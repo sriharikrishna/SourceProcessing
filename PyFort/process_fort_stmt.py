@@ -21,7 +21,7 @@ def process_fort_stmt(stmt_tuple,lineNumber,jlf):
     '''
     (raw,jl,intl) = stmt_tuple
     if jl[0] == '\t':
-        jl = ' ' * 8 + jl[1:]
+        jl = ' ' * 6 + jl[1:]
 
     m = _label_re.match(jl)
     label = m and int(m.group(2))
@@ -33,8 +33,7 @@ def process_fort_stmt(stmt_tuple,lineNumber,jlf):
     else:
         lead = _lead_re.match(jl[6:]).group(1)
         raw = jl[6:].lstrip()
-
-    obj = jlf(jl[len(lead):],lineNumber)
+    obj = jlf(jl[6+len(lead):],lineNumber)
     if isinstance(obj,list):
         for anObj in obj:
             anObj.rawline = raw
@@ -46,7 +45,6 @@ def process_fort_stmt(stmt_tuple,lineNumber,jlf):
         obj.internal = intl
         obj.label = label
         obj.lead = lead
-        
     return obj
 
 def process_fort_cmnt(dta,lineNumber,cmnt_list_fn):
