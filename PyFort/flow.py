@@ -75,17 +75,10 @@ freeOutput = False
 def setFixedOrFreeOutput(switch=False):
     global freeOutput
     freeOutput = switch
+    setFixedOrFreeFormatting(switch)
 
 freeInput = False
 
 def setFixedOrFreeInput(switch=False):
     global freeInput
     freeInput = switch
-
-
-def format_line(line,input=True):
-    if input:
-        setFixedOrFreeFormatting(freeInput)
-    else:
-        setFixedOrFreeFormatting(freeOutput)
-    return flow_line(line)

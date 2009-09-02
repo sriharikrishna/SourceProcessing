@@ -62,11 +62,6 @@ class UnitPostProcessor(object):
     def setMode(mode):
         UnitPostProcessor._mode = mode
 
-    _free = False
-    @staticmethod
-    def setFreeFlow(free):
-        UnitPostProcessor._free = free
-
     _activeVariablesFileName=None
 
     @staticmethod

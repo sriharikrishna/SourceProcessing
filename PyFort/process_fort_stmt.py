@@ -20,20 +20,21 @@ def process_fort_stmt(stmt_tuple,lineNumber,jlf):
     obj.lead = lead
     '''
     (raw,jl,intl) = stmt_tuple
-    if jl[0] == '\t':
-        jl = ' ' * 6 + jl[1:]
-
+    jl = format_linelead(jl)
     m = _label_re.match(jl)
     label = m and int(m.group(2))
+
     # lead shouldn't include fixed flow spacing (first 6 places)
     if flow.freeInput:
         linelead = m and m.end(0) or 0
         lead = linelead * ' '+_lead_re.match(jl[linelead:]).group(1)
         raw = jl[len(lead):]
+        init_len = len(lead)
     else:
         lead = _lead_re.match(jl[6:]).group(1)
         raw = jl[6:].lstrip()
-    obj = jlf(jl[6+len(lead):],lineNumber)
+        init_len = 6+len(lead)
+    obj = jlf(jl[init_len:],lineNumber)
     if isinstance(obj,list):
         for anObj in obj:
             anObj.rawline = raw
@@ -52,3 +53,17 @@ def process_fort_cmnt(dta,lineNumber,cmnt_list_fn):
     obj.rawline = ''.join(flatten(dta))
     return obj
 
+def format_linelead(jl):
+    if flow.freeInput:
+        if jl[0] == '\t':
+            jl = ' ' * 8 + jl[1:]
+    else:
+        i = 0
+        while i < 6:
+            if jl[i] == '\t':
+                jl = ' '*6 + jl[i+1:]
+                if i != 0:
+                    jl = jl[:i-1] + jl
+                break
+            i += 1
+    return jl

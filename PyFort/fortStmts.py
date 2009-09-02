@@ -299,10 +299,8 @@ class Comments(GenStmt):
     def flow(self):
         if self.rawline.strip() == '':
             return self.rawline
-        #lead = self.rawline[0:(len(self.rawline)-len(self.rawline.lstrip()))]
+        formattedOutput = ''
         lines = self.rawline.strip().splitlines()
-        #formattedOutput = lead
-        formattedOutput=''
         if flow.freeOutput:
             for line in lines:
                 if line.strip() == '':
@@ -335,9 +333,9 @@ class NonComment(GenStmt):
                                or ''
         if not flow.freeOutput and len(labelStr) != 6:
             labelStr = labelStr + (6 - len(labelStr)) * ' '
-            formattedOutput = flow.format_line((labelStr + self.lead + self.get_rawline()),input=False) + '\n'
+            formattedOutput = flow.flow_line(labelStr + self.lead + self.get_rawline()) + '\n'
         else:
-            formattedOutput = flow.format_line((labelStr + self.lead + self.get_rawline()),input=False) + '\n'
+            formattedOutput = flow.flow_line(labelStr + self.lead + self.get_rawline()) + '\n'
         return formattedOutput
 
     def same_level(self,parsed):
@@ -564,6 +562,8 @@ class Leaf(Exec):
 
     def __init__(self,scan=[],lineNumber=0,label=False,lead='',*dc):
         Exec.__init__(self,scan,lineNumber,label,lead)
+        if self.rawline == '':
+            self.rawline = self.__class__.kw
 
     def __repr__(self):
         return '%s()' % self.__class__.__name__
