@@ -450,6 +450,15 @@ class TestCharacterDecls(TestCase):
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
+    def test5(self):
+        '''character type declaration with asterisk length specification and optional attribute (from scalelib/opnfil_I.f90)'''
+        theString = 'character(len=*),intent(in),optional :: act'
+        theRepr = CharacterStmt([_F90ExplLen('*')],[App('intent',['in']), 'optional'],[_NoInit('act')])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+
 class TestDimensionStmt(TestCase):
     '''Dimension statement'''
     def test1(self):

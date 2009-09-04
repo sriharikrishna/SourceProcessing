@@ -928,7 +928,12 @@ class CharacterStmt(TypeDecl):
         f90mod   = seq(lit('('),disj(lit('*'),Exp),lit(')'))
         f90mod   = treat(f90mod,lambda l: _F90Len(l[1]))
 
-        explLen  = seq(lit('('),lit('len'),lit('='),Exp,lit(')'))
+        explLen  = seq(lit('('),
+                       lit('len'),
+                       lit('='),
+                       disj(Exp,
+                            lit('*')),
+                       lit(')'))
         explLen  = treat(explLen,lambda l: _F90ExplLen(l[3]))
                 
         p1 = seq(lit(CharacterStmt.kw),
