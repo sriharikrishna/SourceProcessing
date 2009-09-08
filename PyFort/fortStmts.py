@@ -1594,52 +1594,71 @@ class EndModuleStmt(EndStmt):
     kw_str = 'end module'
 
 
+class _LoopControl(_Mutable_T):
+    '''loop control part of DO statements'''
+    _sons = ['var','start','end','stride']
+    # form of where loop control is:
+    #  [,] scalar-integer-variable-name = scalar-integer-expression , scalar-integer-expression [, scalar-integer-expression]
+    form = seq(id,               # 0 = var
+               lit('='),         #
+               Exp,              # 2 = start
+               lit(','),         #
+               Exp,              # 4 = end
+               zo1(seq(lit(','), # 5 = stride
+                       Exp)))
+    form = treat(form, lambda x: _LoopControl(x[0],x[2],x[4],x[5] and x[5][0][1] or None))
+
+    def __init__(self,var,start,end,stride):
+        self.var = var
+        self.start = start
+        self.end = end
+        self.stride = stride # optional
+
+    def __str__(self):
+        optionalStrideStr = self.stride and ','+str(self.stride) \
+                                                 or ''
+        return '%s = %s,%s%s' %  (self.var,
+                                   str(self.start),
+                                   str(self.end),
+                                   optionalStrideStr)
+
+    def __repr__(self):
+        return '%s(%s,%s,%s,%s)' % (self.__class__.__name__,
+                                    repr(self.var),
+                                    repr(self.start),
+                                    repr(self.end),
+                                    repr(self.stride))
+
+
 class DoStmt(Exec):
     #FIXME: optional comma isn't handled
     '''
     [do-construct-name :] do [label] [loop control]
-    where loop control is:
-      [,] scalar-integer-variable-name = scalar-integer-expression , scalar-integer-expression [, scalar-integer-expression]
     '''
     kw = 'do'
     kw_str = kw
-    _sons = ['doName','doLabel','loopVar','loopStart','loopEnd','loopStride']
+    _sons = ['doName','doLabel','loopControl']
 
     @staticmethod
     def parse(scan,lineNumber):
         formDoName = seq(id,
                          lit(':'))
         formDoName = treat(formDoName, lambda x: x[0])
+        formDoStmt = seq(zo1(formDoName),        # 0 = doName
+                         lit(DoStmt.kw),         # 1 = theDoKeyword
+                         zo1(int),               # 2 = doLabel
+                         zo1(_LoopControl.form)) # 3 = loopControl
+        formDoStmt = treat(formDoStmt, lambda x: DoStmt(x[0] and x[0][0] or None,
+                                                        x[2] and x[2][0] or None,
+                                                        x[3] and x[3][0] or None,
+                                                        x[1]))
+        (theParsedStmt,rest) = formDoStmt(scan)
+        return theParsedStmt 
 
-        formDoStmt = seq(zo1(formDoName),
-                         lit(DoStmt.kw),
-                         zo1(int),
-                         id,
-                         lit('='),
-                         Exp,
-                         lit(','),
-                         Exp,
-                         zo1(seq(lit(','),
-                                 Exp)))
-        try:
-            ((doName,theDoKeyword,doLabel,loopVar,equals,loopStart,comma1,loopEnd,loopStride),rest) = formDoStmt(scan)
-        except ListAssemblerException,e:
-            raise ParseError(lineNumber,scan,'Do statement')
-        doName = doName and doName[0] \
-                         or None
-        doLabel = doLabel and doLabel[0] \
-                           or None
-        loopStride = loopStride and loopStride[0][1] \
-                                 or None
-        return DoStmt(doName,doLabel,loopVar,loopStart,loopEnd,loopStride,theDoKeyword,lineNumber)
-
-    def __init__(self,doName,doLabel,loopVar,loopStart,loopEnd,loopStride,doFormatStr=kw,lineNumber=0,label=False,lead=''):
+    def __init__(self,doName,doLabel,loopControl,doFormatStr=kw,lineNumber=0,label=False,lead=''):
         self.doName = doName
         self.doLabel = doLabel
-        self.loopVar = loopVar
-        self.loopStart = loopStart
-        self.loopEnd = loopEnd
-        self.loopStride = loopStride
+        self.loopControl = loopControl
         self.doFormatStr = doFormatStr
         self.lineNumber = lineNumber
         self.label = label
@@ -1648,11 +1667,12 @@ class DoStmt(Exec):
     def __str__(self):
         doNameString = self.doName and str(self.doName)+': ' \
                                     or ''
-        doLabelString = self.doLabel and str(self.doLabel)+' ' \
+        doLabelString = self.doLabel and ' '+str(self.doLabel) \
                                       or ''
-        loopStrideString = self.loopStride and ','+str(self.loopStride) \
-                                            or ''
-        return '%s%s %s%s = %s,%s%s' % (doNameString,self.doFormatStr,doLabelString,str(self.loopVar),str(self.loopStart),str(self.loopEnd),loopStrideString)
+        loopControlString = self.loopControl and ' '+str(self.loopControl) \
+                                              or ''
+        return '%s%s%s%s' % (doNameString,self.doFormatStr,doLabelString,loopControlString)
+
 
 class WhileStmt(Exec):
     #FIXME: optional construct name, label, and comma are not handled

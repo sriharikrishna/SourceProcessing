@@ -4,7 +4,7 @@ from Setup     import *
 from unittest  import *
 
 from fortStmts import *
-from fortStmts import _F90ExplLen,_Star,_NoInit,_Kind,_ExplKind,_PointerInit,_ImplicitDoConstruct
+from fortStmts import _F90ExplLen,_Star,_NoInit,_Kind,_ExplKind,_PointerInit,_ImplicitDoConstruct,_LoopControl
 from useparse  import *
 
 class C1(TestCase):
@@ -485,58 +485,73 @@ class TestDimensionStmt(TestCase):
 class TestDoStmt(TestCase):
     '''Do statements'''
     def test1(self):
-        '''do i = 1,2'''
-        s = 'do i = 1,2'
-        r = DoStmt(None,None,'i','1','2',None)
-        self.assertEquals(repr(pps(s)),repr(r))
-        self.assertEquals(s,str(r))
+        '''simplest example with loop control: "do i = 1,2"'''
+        theString = 'do i = 1,2'
+        theRepr = DoStmt(None,None,_LoopControl('i','1','2',None))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
 
     def test2(self):
-        '''do i = 1,2,1'''
-        s = 'do i = 1,2,1'
-        r = DoStmt(None,None,'i','1','2','1')
-        self.assertEquals(repr(pps(s)),repr(r))
-        self.assertEquals(s,str(r))
+        '''simplest example with loop control and stride: "do i = 1,2,1"'''
+        theString = 'do i = 1,2,1'
+        theRepr = DoStmt(None,None,_LoopControl('i','1','2','1'))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
 
     def test3(self):
         '''do i = floor(x),2'''
-        s = 'do i = floor(x),2'
-        r = DoStmt(None,None,'i',App('floor',['x']),'2',None)
-        self.assertEquals(repr(pps(s)),repr(r))
-        self.assertEquals(s,str(r))
+        theString = 'do i = floor(x),2'
+        theRepr = DoStmt(None,None,_LoopControl('i',App('floor',['x']),'2',None))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
 
     def test4(self):
         '''do i = floor(x)+10,2,abs(y+2)'''
-        s = 'do i = floor(x)+10,2,abs(y+2)'
-        r = DoStmt(None,
-                   None,
-                   'i',
-                   Ops('+',App('floor',['x']),'10'),
-                   '2',
-                   App('abs',[Ops('+','y','2')]))
-        self.assertEquals(repr(pps(s)),repr(r))
-        self.assertEquals(s,str(r))
+        theString = 'do i = floor(x)+10,2,abs(y+2)'
+        theRepr = DoStmt(None,
+                         None,
+                         _LoopControl('i',
+                                      Ops('+',App('floor',['x']),'10'),
+                                      '2',
+                                      App('abs',[Ops('+','y','2')])))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
 
     def test5(self):
-        '''do statement with label "do 40 i = 1,2"'''
-        s = 'do 40 i = 1,2'
-        r = DoStmt(None,'40','i','1','2',None)
-        self.assertEquals(repr(pps(s)),repr(r))
-        self.assertEquals(s,str(r))
-
-    def test6(self):
-        '''do statement with label and stride "do 40 i = 1,2,1"'''
-        s = 'do 40 i = 1,2,1'
-        r = DoStmt(None,'40','i','1','2','1')
-        self.assertEquals(repr(pps(s)),repr(r))
-        self.assertEquals(s,str(r))
-
-    def test6(self):
-        '''do statement with do name'''
-        theString = 'l1000: do ic = 1,icm'
-        theRepr = DoStmt('l1000',None,'ic','1','icm',None)
+        '''do statement with label: "do 40 i = 1,2"'''
+        theString = 'do 40 i = 1,2'
+        theRepr = DoStmt(None,'40',_LoopControl('i','1','2',None))
         self.assertEquals(repr(pps(theString)),repr(theRepr))
-        self.assertEquals(theString,str(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test6(self):
+        '''do statement with label and stride: "do 40 i = 1,2,1"'''
+        theString = 'do 40 i = 1,2,1'
+        theRepr = DoStmt(None,'40',_LoopControl('i','1','2','1'))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test7(self):
+        '''do statement with do name: "l1000: do ic = 1,icm"'''
+        theString = 'l1000: do ic = 1,icm'
+        theRepr = DoStmt('l1000',None,_LoopControl('ic','1','icm',None))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test8(self):
+        '''do statement without optional loop control'''
+        theString = 'do'
+        theRepr = DoStmt(None,None,None)
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
 
 class TestIfStmt(TestCase):
     '''If statements have two types: IfThenStmt and IfNonThenStmt'''
