@@ -52,10 +52,6 @@ class UnitPostProcessor(object):
     def setAbstractType(abstractType):
         UnitPostProcessor._abstract_type = abstractType.lower()
 
-    @staticmethod
-    def setOutputFormat(freeOutput):
-        flow.setFixedOrFreeOutput(freeOutput)
-
     _mode = 'forward'
 
     @staticmethod
@@ -182,10 +178,10 @@ class UnitPostProcessor(object):
     def __processSubCallStmt(self,aSubCallStmt):
         DebugManager.debug('unitPostProcessor.__processSubCallStmt called on: "'+str(aSubCallStmt)+"'")
         replacementArgs = []
-        for anArg in aSubCallStmt.args:
+        for anArg in aSubCallStmt.get_args():
            replacementArgs.append(self.__transformActiveTypesExpression(anArg))
         replacementStatement = \
-            fs.CallStmt(aSubCallStmt.head,
+            fs.CallStmt(aSubCallStmt.get_head(),
                         replacementArgs,
                         aSubCallStmt.stmt_name,
                         lineNumber=aSubCallStmt.lineNumber,

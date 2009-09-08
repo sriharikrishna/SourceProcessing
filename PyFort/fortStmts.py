@@ -253,7 +253,7 @@ class GenStmt(_Mappable,_Mutable_T):
     _sons = []
 
     def __init__(self,scan,lineNumber=0,label=False,lead=''):
-        self.rawline = ''.join(scan)
+        self.rawline = ' '.join(scan)
         self.lineNumber = lineNumber
         self.label = label
         self.lead = lead
@@ -366,6 +366,15 @@ class NonComment(GenStmt):
         self.flow()
         return self
 
+    def get_sons(self):
+        self.accessed = True
+        return self._sons
+
+    def get_rawline(self):
+        if self.accessed:
+            self.rawline = str(self)
+        return self.rawline
+
 class Decl(NonComment):
     def __init__(self,scan=[],lineNumber=0,label=False,lead=''):
         NonComment.__init__(self,scan,lineNumber,label,lead)
@@ -441,11 +450,6 @@ class TypeDecl(Decl):
         self.accessed = True
         return self.decls
 
-    def get_rawline(self):
-        if self.accessed:
-            self.rawline = str(self)
-        return self.rawline
-    
 class DrvdTypeDecl(TypeDecl):
     '''
     Derived type declarations are treated as declarations of type "type,"
@@ -564,10 +568,14 @@ class Leaf(Exec):
         Exec.__init__(self,scan,lineNumber,label,lead)
         if self.rawline == '':
             self.rawline = self.__class__.kw
-
+            
     def __repr__(self):
         return '%s()' % self.__class__.__name__
 
+
+    def get_rawline(self):
+        return self.rawline
+    
 class DeclLeaf(Decl):
     "special Decl that has no components"
 
@@ -638,8 +646,7 @@ class _ImplicitDoConstruct(object):
         self.doStart = doStart
         self.doEnd = doEnd
         self.doStride = doStride # optional
-        if self.rawline=='':
-            self.rawline=str(self)
+        self.rawline=str(self)
 
     def __str__(self):
         optionalDoStrideStr = self.doStride and ', '+str(self.doStride) \
@@ -1343,6 +1350,19 @@ class CallStmt(Exec):
         return '%s %s(%s)' % (self.stmt_name,str(self.head),
                                 ','.join([str(l) for l in self.args]))
 
+    def get_head(self):
+        self.accessed = True
+        return self.head
+
+    def get_args(self):
+        self.accessed
+        return self.args
+
+    def get_rawline(self):
+        if self.accessed:
+            self.rawline = str(self)
+        return self.rawline
+
 class AssignStmt(Exec):
     _sons = ['lhs','rhs']
 
@@ -1532,15 +1552,6 @@ class IfThenStmt(IfStmt):
     def __str__(self):
         return '%s (%s) %s' % (self.ifFormatStr,str(self.test),self.thenFormatStr)
 
-    def get_sons(self):
-        self.accessed = True
-        return self._sons
-
-    def get_rawline(self):
-        if self.accessed:
-            self.rawline = str(self)
-        return self.rawline
-
 class IfNonThenStmt(IfStmt):
     _sons = ['test','stmt']
 
@@ -1559,14 +1570,6 @@ class IfNonThenStmt(IfStmt):
     def __str__(self):
         return '%s (%s) %s' % (self.ifFormatStr,str(self.test),str(self.stmt))
 
-    def get_sons(self):
-        self.accessed = True
-        return self._sons
-
-    def get_rawline(self):
-        if self.accessed:
-            self.rawline = str(self)
-        return self.rawline
 
 class ElseifStmt(Exec):
     kw = 'elseif'
@@ -1891,7 +1894,7 @@ class GotoStmt(Exec):
         self.gotoFormatStr = gotoFormatStr
         if self.rawline=='':
             self.rawline=str(self)
-
+        
     def __str__(self):
         return self.gotoFormatStr+' '+self.targetLabel
 

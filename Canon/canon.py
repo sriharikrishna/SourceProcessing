@@ -35,10 +35,6 @@ class UnitCanonicalizer(object):
     _keepFunctionDecl = False
 
     @staticmethod
-    def setOutputFormat(freeOutput):
-        flow.setFixedOrFreeOutput(freeOutput)
-
-    @staticmethod
     def setHoistConstantsFlag(hoistConstantsFlag):
         UnitCanonicalizer._hoistConstantsFlag = hoistConstantsFlag
 
@@ -429,14 +425,13 @@ class UnitCanonicalizer(object):
             subroutineBlock.append(subroutineStmt)
             self.__resultDecl = function2subroutine.\
                          createResultDecl(aDecl,self.__outParam)
-
             self.setCreateResultDeclFlag(True)
         elif not self._functionBlockFlag:
             if not self._keepFunctionDecl:
                 self.__myNewDecls.append(aDecl)
         elif isinstance(aDecl,fs.EndStmt):
             newEndStmt = fs.EndStmt(lineNumber=aDecl.lineNumber,label=aDecl.label,lead=aDecl.lead)
-            newEndStmt.rawline = aDecl.lead+'end subroutine\n'
+            newEndStmt.rawline = 'end subroutine\n'
             subroutineBlock.append(newEndStmt)
             self.__myNewDecls.extend(subroutineBlock)
             self.setFunctionBlockFlag(False)

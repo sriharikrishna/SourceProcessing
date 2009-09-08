@@ -12,7 +12,7 @@ from PyUtil.l_assembler import AssemblerException as ListAssemblerException
 from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabError
 
-from PyFort.flow import setFixedOrFreeFormatting, setFixedOrFreeInput
+from PyFort.flow import setFixedOrFreeFormat
 from PyFort.fortUnit import Unit,fortUnitIterator
 import PyFort.fortStmts as fs
 
@@ -41,7 +41,7 @@ def main():
                    dest='freeOutput',
                    help="<output_file> is in free format",
                    action = 'store_true',
-                   default=False)
+                   default=None)
     opt.add_option('',
                    '--free',
                    dest='isFreeFormat',
@@ -138,8 +138,7 @@ def main():
         Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
 
     # set free/fixed format
-    setFixedOrFreeFormatting(config.isFreeFormat)
-    setFixedOrFreeInput(config.isFreeFormat) 
+    setFixedOrFreeFormat(config.isFreeFormat,config.freeOutput)
 
     # set keep function definition
     UnitCanonicalizer.setKeepFunctionDef(config.keepFunction)
@@ -149,8 +148,6 @@ def main():
     # configure string hoisting
     if config.hoistStringsFlag:
         UnitCanonicalizer.setHoistStringsFlag(config.hoistStringsFlag)
-    # set output format
-    UnitCanonicalizer.setOutputFormat(config.freeOutput)
 
     # set verbosity
     DebugManager.setVerbose(config.isVerbose)

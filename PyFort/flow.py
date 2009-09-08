@@ -70,15 +70,15 @@ def setFixedOrFreeFormatting(switch=True):
     global formatStart
     formatStart = (switch and _freeFormatStart) or _fixedFormatStart
 
+freeInput = False
 freeOutput = False
 
-def setFixedOrFreeOutput(switch=False):
-    global freeOutput
-    freeOutput = switch
-    setFixedOrFreeFormatting(switch)
-
-freeInput = False
-
-def setFixedOrFreeInput(switch=False):
+# default output format is the same as the input format
+def setFixedOrFreeFormat(free_input=False,free_output=None):
     global freeInput
-    freeInput = switch
+    global freeOutput
+    freeInput = free_input
+    freeOutput = free_output
+    if freeOutput == None:
+        freeOutput = free_input
+    setFixedOrFreeFormatting(freeOutput)

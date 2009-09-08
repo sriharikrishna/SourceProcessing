@@ -17,7 +17,7 @@ from PyUtil.debugManager import DebugManager
 
 from PyIR.prog1 import Prog1
 
-from PyFort.flow import setFixedOrFreeFormatting
+from PyFort.flow import setFixedOrFreeFormat
 from PyFort.fortUnit import Unit,fortUnitIterator
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
@@ -94,7 +94,7 @@ def main():
                    dest='freeOutput',
                    help="<output_file> is in free format",
                    action = 'store_true',
-                   default=False)
+                   default=None)
     opt.add_option('--free',
                    dest='isFreeFormat',
                    help="<input_file> is in free format",
@@ -180,8 +180,11 @@ def main():
         UnitPostProcessor.setDerivType(config.deriv)
 
         # set free/fixed format
-        setFixedOrFreeFormatting(config.isFreeFormat)
-
+        if config.freeOutput is None:
+            setFixedOrFreeFormat(config.isFreeFormat)
+        else:
+            setFixedOrFreeFormat(config.isFreeFormat,config.freeOutput)
+        
         if (config.activeVariablesFile):
             UnitPostProcessor.setActiveVariablesFile(activeVariablesFile)
             if (os.path.exists(config.activeVariablesFile)):
@@ -197,7 +200,6 @@ def main():
             UnitPostProcessor.setMode('forward')
         if config.mode == 'r':
             UnitPostProcessor.setMode('reverse')
-            UnitPostProcessor.setFreeFlow(config.isFreeFormat)
             if (config.inline):
                 if (config.noInline):
                     opt.error("option --noInline conflicts with option -i")
@@ -219,8 +221,6 @@ def main():
         UnitPostProcessor.setReplacementType(config.concreteType)
         # set abstract type 
         UnitPostProcessor.setAbstractType(config.abstractType)
-        # set output format
-        UnitPostProcessor.setOutputFormat(config.freeOutput)
 
         # set verbosity
         DebugManager.setVerbose(config.verbose)
@@ -270,7 +270,7 @@ def main():
                         (head,tail) = os.path.split(aUnit.cmnt.rawline.split('start [')[1].split(']')[0])
                         (fileName,fileExtension) = os.path.splitext(tail)
                         outputDirectory = config.pathPrefix+head+config.pathSuffix
-                        if not os.path.exists(outputDirectory): os.mkdir(outputDirectory)
+                        if not os.path.exists(outputDirectory): os.makedirs(outputDirectory)
                         newOutputFile = os.path.join(outputDirectory,fileName+config.filenameSuffix+fileExtension)
                         outFileNameList.append(newOutputFile)
                         out = open(newOutputFile,'w')
@@ -356,4 +356,3 @@ if __name__ == "__main__":
     # import cProfile
     # cProfile.runctx( 'main()', globals(), locals(), filename="postProcess.profile" )
     sys.exit(main())
-

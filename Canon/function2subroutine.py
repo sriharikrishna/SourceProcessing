@@ -36,7 +36,7 @@ def createTypeDecl(type_kw,mod,outParam,lead):
 
 def convertFunctionDecl(aDecl,oldFuncName,newFuncName):
     if hasattr(aDecl,"_sons"):
-        for aSon in aDecl._sons:
+        for aSon in aDecl.get_sons():
             theSon = getattr(aDecl,aSon)
             if isinstance(theSon,list):
                 if oldFuncName in theSon:
@@ -76,13 +76,13 @@ def updateResultDecl(decl,outParam):
 def updateTypeDecl(aDecl,outParam,declList):
     resultDeclCreated = False
     if (len(aDecl.decls) == 1) and \
-           updateResultDecl(aDecl.decls[0],outParam):
-        aDecl = createTypeDecl(aDecl.kw,aDecl.mod,outParam,aDecl.lead)
+           updateResultDecl(aDecl.get_decls()[0],outParam):
+        aDecl = createTypeDecl(aDecl.kw,aDecl.get_mod(),outParam,aDecl.lead)
         resultDeclCreated = True
     else:
-        for decl in aDecl.decls:
+        for decl in aDecl.get_decls():
             if updateResultDecl(decl,outParam):
-                newDecl = createTypeDecl(aDecl.kw,aDecl.mod,outParam,aDecl.lead)
+                newDecl = createTypeDecl(aDecl.kw,aDecl.get_mod(),outParam,aDecl.lead)
                 aDecl.decls.remove(decl)
                 declList.append(newDecl)
                 resultDeclCreated = True
@@ -119,7 +119,7 @@ def convertFunction(functionUnit):
         if isinstance(endStmt,fs.EndStmt):
             newEndStmt=fs.EndStmt(lineNumber=endStmt.lineNumber,\
                                   label=endStmt.label,lead=endStmt.lead)
-            newEndStmt.rawline=endStmt.lead+"end subroutine "+newSubUnit.uinfo.name+'\n'
+            newEndStmt.rawline="end subroutine "+newSubUnit.uinfo.name+'\n'
             newEndStmts.append(newEndStmt)
         else:
             newEndStmts.append(endStmt)
