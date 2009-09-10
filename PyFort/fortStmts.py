@@ -630,7 +630,6 @@ class DataStmt(Decl):
     def parse(scan,lineNumber):
         # FIXME we don't cover the full range of possibilities.  In particular, here is an incomplete list of the issues:
         #  - there can be an entire comma-separated list of object-value pairs
-        #  - there can be more than one object
         #  - The values should all be constants, and NOT general expressions:
         #      '1-1' is no good, but '-1' is.  It's just that '-1' doesnt match as a constant by the scanner (it matches as a unary expression)
         #      the definition of "const" can't be fixed easily due to scanner particulars (sometimes we want the '-' and '1' to be separate tokens, sometimes not)
@@ -652,8 +651,8 @@ class DataStmt(Decl):
             #  variable
             #  data-implied-do
         formDataStmt = seq(lit(DataStmt.kw),        # 0 = stmt_name
-                           disj(_ImplicitDoConstruct.form, # 1 = object (variable or implicit do construct)
-                                id),
+                           cslist(disj(_ImplicitDoConstruct.form, # 1 = objectList (variable or implicit do construct)
+                                  id)),
                            lit('/'),           #
                            cslist(Exp),        # 3 = valueList
                            lit('/'))           #
@@ -661,8 +660,8 @@ class DataStmt(Decl):
         (theParsedStmt,rest) = formDataStmt(scan)
         return theParsedStmt
 
-    def __init__(self,object,valueList,stmt_name=kw,lineNumber=0,label=False,lead=''):
-        self.object = object
+    def __init__(self,objectList,valueList,stmt_name=kw,lineNumber=0,label=False,lead=''):
+        self.objectList = objectList
         self.valueList = valueList
         self.stmt_name = stmt_name
         self.lineNumber = lineNumber
@@ -670,17 +669,17 @@ class DataStmt(Decl):
         self.lead = lead
 
     def __str__(self):
-        # put a space after the data keyword iff the object is variable
-        spaceStr = isinstance(self.object,str) and ' ' or ''
+        # put a space after the data keyword iff the first object is a variable
+        spaceStr = isinstance(self.objectList[0],str) and ' ' or ''
         return '%s%s%s / %s /' % (self.stmt_name,
                                   spaceStr,
-                                  str(self.object),
+                                  ', '.join([str(anObject) for anObject in self.objectList]),
                                   ', '.join([str(aValue) for aValue in self.valueList]))
 
     def __repr__(self):
         return self.__class__.__name__ + \
                '(' + \
-               ','.join([repr(aSon) for aSon in (self.object,self.valueList,self.stmt_name)]) + \
+               ','.join([repr(aSon) for aSon in (self.objectList,self.valueList,self.stmt_name)]) + \
                ')'
 
 class EndInterfaceStmt(DeclLeaf):
@@ -1329,7 +1328,7 @@ class PointerAssignStmt(Exec):
 
     @staticmethod
     def parse(scan,lineNumber):
-        formPointerAssignStmt = seq(id,
+        formPointerAssignStmt = seq(lv_exp,
                                     lit('=>'),
                                     Exp)
         ((lhs,assignSymbol,rhs),rst) = formPointerAssignStmt(scan)
@@ -1905,6 +1904,12 @@ class InquireStmt(Exec):
     kw = 'inquire'
     kw_str = kw
 
+
+class NullifyStmt(Exec):
+    kw = 'nullify'
+    kw_str = kw
+
+
 kwtbl = dict(blockdata       = BlockdataStmt,
              common          = CommonStmt,
              logical         = LogicalStmt,
@@ -1965,6 +1970,7 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              allocate        = AllocateStmt,
              deallocate      = DeallocateStmt,
              inquire         = InquireStmt,
+             nullify         = NullifyStmt,
              )
 
 for kw in ('if','continue','return','else','print','use','cycle','exit','rewind','where','elsewhere','format','pointer','target'):
