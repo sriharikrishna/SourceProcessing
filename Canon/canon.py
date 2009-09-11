@@ -518,13 +518,16 @@ class UnitCanonicalizer(object):
                 length = len(self.__myUnit.decls)
                 while index < length:
                     aDecl = self.__myUnit.decls[index]
-                    index += 1
                     (newDecl,modified) = function2subroutine.convertFunctionDecl(\
                         aDecl,oldFuncName,aSubUnit.uinfo.name)
-                    if modified and self._keepFunctionDecl:
-                        self.__myUnit.decls.insert(index,newDecl)
-                        index += 1
-                        length += 1
+                    if modified:
+                        if self._keepFunctionDecl:
+                            index += 1
+                            length += 1
+                            self.__myUnit.decls.insert(index,newDecl)
+                        else:
+                            self.__myUnit.decls[index] = newDecl
+                    index += 1
             
         DebugManager.debug(('+'*54)+' End canonicalize unit <'+str(self.__myUnit.uinfo)+'> '+(54*'+')+'\n\n')
         return self.__myUnit
