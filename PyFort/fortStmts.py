@@ -1916,6 +1916,11 @@ class NullifyStmt(Exec):
     kw_str = kw
 
 
+class BackspaceStmt(Exec):
+    kw = 'backspace'
+    kw_str = kw
+
+
 kwtbl = dict(blockdata       = BlockdataStmt,
              common          = CommonStmt,
              logical         = LogicalStmt,
@@ -1977,6 +1982,7 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              deallocate      = DeallocateStmt,
              inquire         = InquireStmt,
              nullify         = NullifyStmt,
+             backspace       = BackspaceStmt,
              )
 
 for kw in ('if','continue','return','else','print','use','cycle','exit','rewind','where','elsewhere','format','pointer','target'):
