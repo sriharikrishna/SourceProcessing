@@ -9,6 +9,7 @@ from PyFort.fortUnit import Unit,fortUnitIterator
 from PyUtil.symtab import Symtab,SymtabError
 import PyFort.fortStmts as fs
 import PyFort.fortExp as fe
+import copy
 import re
 
 class FunToSubError(Exception):
@@ -35,16 +36,20 @@ def createTypeDecl(type_kw,mod,outParam,lead):
     return newDecl
 
 def convertFunctionDecl(aDecl,oldFuncName,newFuncName):
-    if hasattr(aDecl,"_sons"):
-        for aSon in aDecl.get_sons():
-            theSon = getattr(aDecl,aSon)
+    newDecl = copy.deepcopy(aDecl)
+    modified = False
+    if hasattr(newDecl,"_sons"):
+        for aSon in newDecl.get_sons():
+            theSon = getattr(newDecl,aSon)
             if isinstance(theSon,list):
                 if oldFuncName in theSon:
                     theSon.remove(oldFuncName)
                     theSon.append(newFuncName)
+                    modified = True
             elif theSon == oldFuncName:
-                setattr(aDecl,aSon,newFuncName)
-    return aDecl
+                setattr(newDecl,aSon,newFuncName)
+                modified = True
+    return (newDecl,modified)
 
 def convertFunctionStmt(functionStmt):
     if functionStmt.result is None:
@@ -62,7 +67,7 @@ def convertFunctionStmt(functionStmt):
 def createResultDecl(functionStmt,outParam):
     if functionStmt.ty is not None:
         (type_name,mod) = functionStmt.ty
-        newDecl = createTypeDecl(type_name.kw,mod,outParam,functionStmt.lead+'  ')
+        newDecl = createTypeDecl(type_name.kw,mod,outParam,functionStmt.lead)
         return newDecl
     return None
 

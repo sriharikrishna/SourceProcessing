@@ -13,9 +13,10 @@ import PyFort.flow as flow
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
 import PyFort.fortUnit as fortUnit
-
 import function2subroutine
 import subroutinizedIntrinsics
+
+import copy
 
 _tmp_prefix   = 'oad_ctmp'
 
@@ -32,7 +33,7 @@ class UnitCanonicalizer(object):
     _hoistStringsFlag = False
     _functionBlockFlag = False
     _createResultDeclFlag = False
-    _keepFunctionDecl = False
+    _keepFunctionDecl = True
 
     @staticmethod
     def setHoistConstantsFlag(hoistConstantsFlag):
@@ -417,7 +418,7 @@ class UnitCanonicalizer(object):
 
     def __canonicalizeFunctionDecls(self,aDecl,subroutineBlock):
         if self._keepFunctionDecl:
-            self.__myNewDecls.append(aDecl)
+            self.__myNewDecls.append(copy.deepcopy(aDecl))
         if isinstance(aDecl,fs.FunctionStmt):
             self.setFunctionBlockFlag(True)
             (self.__outParam,subroutineStmt) = function2subroutine.\
@@ -447,7 +448,7 @@ class UnitCanonicalizer(object):
                 self.setCreateResultDeclFlag(False)
             elif isinstance(aDecl,fs.TypeDecl):
                 (aDecl,resultDeclFlag) = function2subroutine.updateTypeDecl(\
-                    aDecl,self.__outParam,self.__myNewDecls)
+                    copy.deepcopy(aDecl),self.__outParam,self.__myNewDecls)
                 self.setCreateResultDeclFlag(resultDeclFlag)
             subroutineBlock.append(aDecl)
         else:
@@ -462,8 +463,14 @@ class UnitCanonicalizer(object):
         newList = []
         for subUnit in self.__myUnit.ulist:
             DebugManager.debug(str(subUnit))
-            newUnit = UnitCanonicalizer(subUnit).canonicalizeUnit()
-            newList.append(newUnit)
+            # if the unit is new, as a result of function transformation,
+            # skip processing
+            if isinstance(subUnit.uinfo,fs.SubroutineStmt) and \
+               subUnit.uinfo.name.startswith('oad_s_'):
+                newList.append(subUnit)
+            else:
+                newUnit = UnitCanonicalizer(subUnit).canonicalizeUnit()
+                newList.append(newUnit)
         self.__myUnit.ulist = newList
         
         subroutineBlock = []    
@@ -495,14 +502,11 @@ class UnitCanonicalizer(object):
 
         # for function units, also create a corresponding subroutine
         if isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
-            self._functionBlockFlag = True
             if self._keepFunctionDecl:
-                oldUnit = self.__myUnit
-                if oldUnit.parent is None:
-                    oldUnit.parent = fortUnit.Unit()
-                oldUnit.parent.ulist.append(self.__myUnit)
-                self.__myUnit = function2subroutine.convertFunction(self.__myUnit)
-                self.__myUnit.parent = oldUnit
+                if self.__myUnit.parent is None:
+                    self.__myUnit.parent = fortUnit.Unit()
+                newUnit = function2subroutine.convertFunction(copy.deepcopy(self.__myUnit))
+                self.__myUnit.parent.ulist.append(newUnit)
             else:
                 self.__myUnit = function2subroutine.convertFunction(self.__myUnit)
                 
@@ -510,12 +514,17 @@ class UnitCanonicalizer(object):
             if isinstance(aSubUnit.uinfo,fs.SubroutineStmt) and \
                    aSubUnit.uinfo.name.startswith(function2subroutine.name_init):
                 oldFuncName = aSubUnit.uinfo.name.lstrip(function2subroutine.name_init)
-                for aDecl in self.__myUnit.decls:
-                    aDecl = function2subroutine.convertFunctionDecl(aDecl,oldFuncName,aSubUnit.uinfo.name)
-        if self._functionBlockFlag and self._keepFunctionDecl:
-            oldUnit.parent.ulist.append(self.__myUnit)
-            self.__myUnit = oldUnit.parent
-            self._functionBlockFlag = False
+                index = 0
+                length = len(self.__myUnit.decls)
+                while index < length:
+                    aDecl = self.__myUnit.decls[index]
+                    index += 1
+                    (newDecl,modified) = function2subroutine.convertFunctionDecl(\
+                        aDecl,oldFuncName,aSubUnit.uinfo.name)
+                    if modified and self._keepFunctionDecl:
+                        self.__myUnit.decls.insert(index,newDecl)
+                        index += 1
+                        length += 1
             
         DebugManager.debug(('+'*54)+' End canonicalize unit <'+str(self.__myUnit.uinfo)+'> '+(54*'+')+'\n\n')
         return self.__myUnit

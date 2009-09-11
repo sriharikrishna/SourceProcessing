@@ -49,9 +49,9 @@ def main():
                    action='store_true',
                    default=False)
     opt.add_option('',
-                   '--keepFunction',
-                   dest='keepFunction',
-                   help="keep original function definition when it is transformed to a subroutine definitions",
+                   '--removeFunction',
+                   dest='removeFunction',
+                   help="remove original function definition when it is transformed to a subroutine definitions",
                    action='store_true',
                    default=False)
     opt.add_option('-m','--mode',dest='mode',
@@ -140,8 +140,9 @@ def main():
     # set free/fixed format
     setFixedOrFreeFormat(config.isFreeFormat,config.freeOutput)
 
-    # set keep function definition
-    UnitCanonicalizer.setKeepFunctionDef(config.keepFunction)
+    # set remove function definition
+    if config.removeFunction:
+        UnitCanonicalizer.setKeepFunctionDef(False)
     # configure constant expression hoisting
     if config.hoistConstantsFlag:
         UnitCanonicalizer.setHoistConstantsFlag(config.hoistConstantsFlag)

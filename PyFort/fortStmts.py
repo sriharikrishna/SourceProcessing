@@ -300,18 +300,22 @@ class Comments(GenStmt):
         if self.rawline.strip() == '':
             return self.rawline
         formattedOutput = ''
+        lead_len = len(self.rawline) - len(self.rawline.lstrip())
+        if lead_len > 0:
+            num_lines = self.rawline[:lead_len].count('\n')
+            formattedOutput += '\n'*num_lines
         lines = self.rawline.strip().splitlines()
         if flow.freeOutput:
             for line in lines:
-                if line.strip() == '':
-                    formattedOutput += '\n'
-                    continue
                 formattedOutput += '!'+line[1:]+'\n'            
         else:
             for line in lines:
-                if line.strip() == '':
-                    continue
                 formattedOutput += 'C'+flow.flow_comment(line[1:])
+
+        end_len = len(self.rawline)-len(self.rawline.rstrip())
+        if end_len > 0:
+            num_lines = self.rawline[len(self.rawline)-end_len+1:].count('\n')
+            formattedOutput += '\n'*num_lines
         return formattedOutput
 
     def is_comment(self,unit=_non): return True
