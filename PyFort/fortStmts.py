@@ -224,6 +224,9 @@ init_spec = zo1(seq(disj(lit('=>'),lit('=')),Exp))
 star_range = seq(Exp,lit(':'),lit('*'))
 star_range = treat(star_range,lambda x: Ops(':',x[0],'*'))
 
+upper_bound_range = seq(lit(':'),Exp)
+upper_bound_range = treat(upper_bound_range, lambda x: Ops(':','',x[1]))
+
 lower_bound_range = seq(Exp,lit(':'))
 lower_bound_range = treat(lower_bound_range, lambda x: Ops(':',x[0],''))
 
@@ -459,7 +462,7 @@ class DrvdTypeDefn(Decl):
     
     @staticmethod
     def parse(scan,lineNumber):
-        p0    = treat(seq(lit('type'),id),lambda l: DrvdTypeDefn(l[1],lineNumber))
+        p0    = treat(seq(lit('type'),zo1(lit('::')),id),lambda l: DrvdTypeDefn(l[2],lineNumber))
         (v,r) = p0(scan)
         return v
 
@@ -1786,9 +1789,12 @@ class CaseRangeListStmt(Exec):
 
     @staticmethod
     def parse(scan,lineNumber):
+        formRangeItem = disj(lower_bound_range,
+                             upper_bound_range,
+                             Exp)
         formCaseRangeListStmt = seq(lit(CaseRangeListStmt.kw),
                                     lit('('),
-                                    cslist(Exp),
+                                    cslist(formRangeItem),
                                     lit(')'))
         try:
             ((caseKeyword,openPeren,caseRangeList,closePeren),rest) = formCaseRangeListStmt(scan)

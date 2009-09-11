@@ -696,6 +696,31 @@ class TestCaseStmts(TestCase):
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
+    def test3(self):
+        'case statement with only lower bound'
+        theString = 'case (1:)'
+        theRepr = CaseRangeListStmt([Ops(':','1','')])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test4(self):
+        'case statement with only upper bound'
+        theString = 'case (:39)'
+        theRepr = CaseRangeListStmt([Ops(':','','39')])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test5(self):
+        'case statement with nontrivial expression as upper bound'
+        theString = 'case (:3+9)'
+        theRepr = CaseRangeListStmt([Ops(':','',Ops('+','3','9'))])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+
 class TestInterfaces(TestCase):
     '''stuff to do with interfaces'''
 
