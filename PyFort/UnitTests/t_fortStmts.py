@@ -481,7 +481,7 @@ class TestCharacterDecls(TestCase):
 
     def test6(self):
         '''character type declaration with array constructor (from SCALE: scalelib/free_form_C.f90)'''
-        theString = "character(len=1),dimension(0:27),parameter :: char_array = (/'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f',' ',',','r','*','$','&','+','-','z','.','o','p'/)"
+        theString = "character(len=1),dimension(0:27),parameter :: char_array=(/'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f',' ',',','r','*','$','&','+','-','z','.','o','p'/)"
         theRepr = CharacterStmt([_F90ExplLen('1')],
                                 [App('dimension',[Ops(':','0','27')]), 'parameter'],
                                 [_AssignInit('char_array',
@@ -492,7 +492,7 @@ class TestCharacterDecls(TestCase):
 
     def test7(self):
         '''character type declaration with array constructor'''
-        theString = "character(len=1),dimension(2) :: andchars = (/'&','&'/)"
+        theString = "character(len=1),dimension(2) :: andchars=(/'&','&'/)"
         theRepr = CharacterStmt([_F90ExplLen('1')],
                                 [App('dimension',['2'])],
                                 [_AssignInit('andchars',ArrayConstructor(["'&'","'&'"]))])
@@ -1007,6 +1007,14 @@ class TestIOtmt(TestCase):
         theRepr = WriteStmt('write',[NamedParam('UNIT','pi_double'),NamedParam('FMT','*')],['pi'])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
+
+    def test9(self):
+        '''write statement with problematic forward slash in string constant ()from SCALE: scalelib/html_M.f90 -- KNOWN TO FAIL'''
+        theString = "write(unit,'(a)') ' <APPLET \'"
+        theRepr = WriteStmt('write',[],[])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
 
 
 class TestGotoStmt(TestCase):
