@@ -307,7 +307,7 @@ class Comments(GenStmt):
         lines = self.rawline.strip().splitlines()
         if flow.freeOutput:
             for line in lines:
-                formattedOutput += '!'+line[1:]+'\n'            
+                formattedOutput += '!'+flow.flow_comment(line[1:])
         else:
             for line in lines:
                 formattedOutput += 'C'+flow.flow_comment(line[1:])

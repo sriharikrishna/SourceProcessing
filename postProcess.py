@@ -17,7 +17,7 @@ from PyUtil.debugManager import DebugManager
 
 from PyIR.prog1 import Prog1
 
-from PyFort.flow import setFixedOrFreeFormat
+from PyFort.flow import setFixedOrFreeFormat, setLineLength
 from PyFort.fortUnit import Unit,fortUnitIterator
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
@@ -52,6 +52,10 @@ def main():
                    dest='inline',
                    help='file with definitions for inlinable routines for reverse mode post processing (defaults to ad_inline.f); requires reverse mode ( -m r )',
                    default=None) # cannot set default here because of required reverse mode
+    opt.add_option('-l','--line_len',
+                   dest='line_len',
+                   help='sets the max line length of the output file',
+                   default=None)
     opt.add_option('-m','--mode',dest='mode',
                    type='choice', choices=modeChoices,
                    help='set default options for transformation mode with MODE being one of: '+ modeChoicesHelp+ ' (default is \'f\')',
@@ -184,6 +188,9 @@ def main():
             setFixedOrFreeFormat(config.isFreeFormat)
         else:
             setFixedOrFreeFormat(config.isFreeFormat,config.freeOutput)
+
+        if config.line_len:
+            setLineLength(config.line_len)
         
         if (config.activeVariablesFile):
             UnitPostProcessor.setActiveVariablesFile(activeVariablesFile)
