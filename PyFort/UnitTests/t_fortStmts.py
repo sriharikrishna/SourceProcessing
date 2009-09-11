@@ -4,7 +4,7 @@ from Setup     import *
 from unittest  import *
 
 from fortStmts import *
-from fortStmts import _F90ExplLen,_Star,_NoInit,_Kind,_ExplKind,_PointerInit,_ImplicitDoConstruct,_LoopControl
+from fortStmts import _F90ExplLen,_Star,_NoInit,_Kind,_ExplKind,_AssignInit,_PointerInit,_ImplicitDoConstruct,_LoopControl
 from useparse  import *
 
 class C1(TestCase):
@@ -344,6 +344,27 @@ class TestImplicitStmt(TestCase):
 
         ae(kill_blanks(s1),kill_blanks(str(v)))
 
+
+class TestAssignStmt(TestCase):
+    '''test assignment statements'''
+
+    def test0(self):
+        '''character array constructor assignment'''
+        theString = "andchars = (/'&','&'/)"
+        theRepr = AssignStmt('andchars',ArrayConstructor(["'&'", "'&'"]))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test1(self):
+        '''integer array constructor assignment'''
+        theString = "a = (/2,3,5,7,11,13,17/)"
+        theRepr = AssignStmt('a',ArrayConstructor(['2', '3', '5', '7', '11', '13', '17']))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+
 class TestRealStmt(TestCase):
     'test declaration of real variables'
 
@@ -454,6 +475,27 @@ class TestCharacterDecls(TestCase):
         '''character type declaration with asterisk length specification and optional attribute (from scalelib/opnfil_I.f90)'''
         theString = 'character(len=*),intent(in),optional :: act'
         theRepr = CharacterStmt([_F90ExplLen('*')],[App('intent',['in']), 'optional'],[_NoInit('act')])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test6(self):
+        '''character type declaration with array constructor (from SCALE: scalelib/free_form_C.f90)'''
+        theString = "character(len=1),dimension(0:27),parameter :: char_array = (/'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f',' ',',','r','*','$','&','+','-','z','.','o','p'/)"
+        theRepr = CharacterStmt([_F90ExplLen('1')],
+                                [App('dimension',[Ops(':','0','27')]), 'parameter'],
+                                [_AssignInit('char_array',
+                                             ArrayConstructor(["'0'", "'1'", "'2'", "'3'", "'4'", "'5'", "'6'", "'7'", "'8'", "'9'", "'a'", "'b'", "'c'", "'d'", "'e'", "'f'", "' '", "','", "'r'", "'*'", "'$'", "'&'", "'+'", "'-'", "'z'", "'.'", "'o'", "'p'"]))])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test7(self):
+        '''character type declaration with array constructor'''
+        theString = "character(len=1),dimension(2) :: andchars = (/'&','&'/)"
+        theRepr = CharacterStmt([_F90ExplLen('1')],
+                                [App('dimension',['2'])],
+                                [_AssignInit('andchars',ArrayConstructor(["'&'","'&'"]))])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
@@ -1066,6 +1108,7 @@ class TestDataStmt(TestCase):
         self.assertEquals(theString,str(pps(theString)))
 
 suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,
+               TestAssignStmt,
                TestRealStmt,
                TestCharacterDecls,
                TestImplicitStmt,

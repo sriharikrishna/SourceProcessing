@@ -274,6 +274,19 @@ class Ops(_Exp):
     def map(self,fn):
         return Ops(self.op,fn(self.a1),fn(self.a2))
 
+class ArrayConstructor(_Exp):
+    '''assigning an entire array at once, like this: a = (/ 2, 3, 5, 7, 11, 13, 17 /)'''
+    _sons = ['elementList']
+
+    def __init__(self,elementList):
+        self.elementList = elementList
+
+    def __repr__(self):
+        return '%s(%s)' % (self.__class__.__name__,repr(self.elementList))
+
+    def __str__(self):
+        return '(/%s/)' % ','.join([str(anElement) for anElement in self.elementList])
+
 def is_id(t):
     return _id_re.match(t)
 
@@ -400,7 +413,7 @@ unary   = pred(is_unary)
 
 def atom0(scan):
     '''eta expansion, since letrec unavail in python'''
-    return disj(id,const,unaryExp,paren,formMultiParen)(scan)
+    return disj(id,const,unaryExp,paren,formMultiParen,formArrayConstructor)(scan)
 
 def atom(scan):
 
@@ -486,6 +499,13 @@ formMultiParen = seq(lit('('),
                  cslist(Exp),
                  lit(')'))
 formMultiParen = treat(formMultiParen,_makeMultiParen)
+
+formArrayConstructor = seq(lit('('),
+                       lit('/'),
+                       cslist(Exp),
+                       lit('/'),
+                       lit(')'))
+formArrayConstructor = treat(formArrayConstructor, lambda x: ArrayConstructor(x[2]))
 
 # utility list
 #
