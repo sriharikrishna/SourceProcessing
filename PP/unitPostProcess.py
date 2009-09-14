@@ -506,8 +506,9 @@ class UnitPostProcessor(object):
                      isinstance(Stmt,fs.DoStmt):
                 for aSon in Stmt._sons:
                     theSon = getattr(Stmt,aSon)
-                    newSon = self.__replaceArgs(argReps,str(theSon),inlineArgs,replacementArgs)
-                    setattr(Stmt,aSon,newSon)
+                    if theSon :
+                        newSon = self.__replaceArgs(argReps,str(theSon),inlineArgs,replacementArgs)
+                        setattr(Stmt,aSon,newSon)
                 Execs.append(Stmt.flow())
             elif hasattr(Stmt, "_sons"):
                 for aSon in Stmt._sons:
