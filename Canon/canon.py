@@ -342,10 +342,10 @@ class UnitCanonicalizer(object):
             newExecsLength = len(self.__myNewExecs)
             replacementStatement = fs.DoStmt(aDoStmt.doName,
                                              aDoStmt.doLabel,
-                                             fs._LoopControl(aDoStmt.loopControl.var,
-                                                             replacementStart,
-                                                             self.__canonicalizeExpression(aDoStmt.loopControl.end,aDoStmt),
-                                                             self.__canonicalizeExpression(aDoStmt.loopControl.stride,aDoStmt)),
+                                             fe.LoopControl(aDoStmt.loopControl.var,
+                                                            replacementStart,
+                                                            self.__canonicalizeExpression(aDoStmt.loopControl.end,aDoStmt),
+                                                            self.__canonicalizeExpression(aDoStmt.loopControl.stride,aDoStmt)),
                                              lineNumber=aDoStmt.lineNumber,
                                              label=aDoStmt.label,
                                              lead=aDoStmt.lead

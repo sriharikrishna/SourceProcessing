@@ -507,6 +507,42 @@ formArrayConstructor = seq(lit('('),
                        lit(')'))
 formArrayConstructor = treat(formArrayConstructor, lambda x: ArrayConstructor(x[2]))
 
+class LoopControl(_Exp):
+    '''loop control part of DO statements'''
+    _sons = ['var','start','end','stride']
+    # form of loop control is:
+    #  [,] scalar-integer-variable-name = scalar-integer-expression , scalar-integer-expression [, scalar-integer-expression]
+    form = seq(id,               # 0 = var
+               lit('='),         #
+               Exp,              # 2 = start
+               lit(','),         #
+               Exp,              # 4 = end
+               zo1(seq(lit(','), # 5 = stride
+                       Exp)))
+    form = treat(form, lambda x: LoopControl(x[0],x[2],x[4],x[5] and x[5][0][1] or None))
+
+    def __init__(self,var,start,end,stride):
+        self.var = var
+        self.start = start
+        self.end = end
+        self.stride = stride # optional
+
+    def __str__(self):
+        optionalStrideStr = self.stride and ','+str(self.stride) \
+                                         or ''
+        return '%s = %s,%s%s' %  (self.var,
+                                  str(self.start),
+                                  str(self.end),
+                                  optionalStrideStr)
+
+    def __repr__(self):
+        return '%s(%s,%s,%s,%s)' % (self.__class__.__name__,
+                                    repr(self.var),
+                                    repr(self.start),
+                                    repr(self.end),
+                                    repr(self.stride))
+
+
 # utility list
 #
 app_id    = disj(app,id)
