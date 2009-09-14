@@ -265,16 +265,11 @@ class UnitPostProcessor(object):
         if not hasattr(aStmt,"_sons") or (aStmt._sons == []):
             return aStmt
         
-        self.__expChanged=False
         for aSon in aStmt._sons:
             theSon = getattr(aStmt,aSon)
             newSon = self.__transformActiveTypesExpression(theSon)    
             if newSon is not theSon:
-                diff = True
                 setattr(aStmt,aSon,newSon)
-        # if statement is unchanged, leave it alone
-        #        if self.__expChanged is True:
-        #            aStmt.flow()
         return aStmt.flow()
 
     # Determines the function to be inlined (if there is one)
@@ -507,7 +502,8 @@ class UnitPostProcessor(object):
                 Stmt.rawline= \
                             self.__replaceArgs(argReps,Stmt.rawline,inlineArgs,replacementArgs)
                 Execs.append(Stmt.flow())
-            elif isinstance(Stmt,fs.WhileStmt):
+            elif isinstance(Stmt,fs.WhileStmt) or \
+                     isinstance(Stmt,fs.DoStmt):
                 for aSon in Stmt._sons:
                     theSon = getattr(Stmt,aSon)
                     newSon = self.__replaceArgs(argReps,str(theSon),inlineArgs,replacementArgs)
