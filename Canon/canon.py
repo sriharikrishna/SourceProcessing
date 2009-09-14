@@ -339,19 +339,21 @@ class UnitCanonicalizer(object):
         '''
         DebugManager.debug(self.__recursionDepth*'|\t'+'canonicalizing do statement "'+str(aDoStmt)+'"')
         self.__recursionDepth += 1
-        replacementStart = self.__canonicalizeExpression(aDoStmt.loopStart,aDoStmt)
-        newExecsLength = len(self.__myNewExecs)
-        replacementStatement = fs.DoStmt(aDoStmt.doName,
-                                         aDoStmt.doLabel,
-                                         aDoStmt.loopVar,
-                                         replacementStart,
-                                         self.__canonicalizeExpression(aDoStmt.loopEnd,aDoStmt),
-                                         self.__canonicalizeExpression(aDoStmt.loopStride,aDoStmt),
-                                         lineNumber=aDoStmt.lineNumber,
-                                         label=aDoStmt.label,
-                                         lead=aDoStmt.lead)
-        if len(self.__myNewExecs) > newExecsLength: # this is the case iff loopEnd or loopStride required hopisting
-            raise CanonError('Either loopEnd "'+str(aDoStmt.loopEnd)+'" or loopStride "'+str(aDoStmt.loopStride)+'" for DoStmt "'+str(aDoStmt)+'" requires hoisting, but the placement of the extra assignment(s) is problematic.',aDoStmt.lineNumber)
+        replacementStatement = aDoStmt
+        if aDoStmt.loopControl:
+            replacementStart = self.__canonicalizeExpression(aDoStmt.loopControl.start,aDoStmt)
+            newExecsLength = len(self.__myNewExecs)
+            replacementStatement = fs.DoStmt(aDoStmt.doName,
+                                             aDoStmt.doLabel,
+                                             fe.LoopControl(aDoStmt.loopControl.var,
+                                                            replacementStart,
+                                                            self.__canonicalizeExpression(aDoStmt.loopControl.end,aDoStmt),
+                                                            self.__canonicalizeExpression(aDoStmt.loopControl.stride,aDoStmt)),
+                                             lineNumber=aDoStmt.lineNumber,
+                                             label=aDoStmt.label,
+                                             lead=aDoStmt.lead)
+            if len(self.__myNewExecs) > newExecsLength: # this is the case iff loopControl.end or loopControl.stride required hoisting
+                raise CanonError('Either loopControl.end "'+str(aDoStmt.loopControl.end)+'" or loopControl.stride "'+str(aDoStmt.loopControl.stride)+'" for DoStmt "'+str(aDoStmt)+'" requires hoisting, but the placement of the extra assignment(s) is problematic.',aDoStmt.lineNumber)
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|_')
         self.__recursionDepth -= 1
         return replacementStatement

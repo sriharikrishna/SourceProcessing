@@ -193,7 +193,7 @@ def main():
             setLineLength(config.line_len)
         
         if (config.activeVariablesFile):
-            UnitPostProcessor.setActiveVariablesFile(activeVariablesFile)
+            UnitPostProcessor.setActiveVariablesFile(config.activeVariablesFile)
             if (os.path.exists(config.activeVariablesFile)):
                 os.remove(config.activeVariablesFile)
 

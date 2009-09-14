@@ -282,6 +282,19 @@ class Ops(_Exp):
         return Ops(self.op,fn(self.a1),fn(self.a2))
 
 
+class ArrayConstructor(_Exp):
+    '''assigning an entire array at once, like this: a = (/ 2, 3, 5, 7, 11, 13, 17 /)'''
+    _sons = ['elementList']
+
+    def __init__(self,elementList):
+        self.elementList = elementList
+
+    def __repr__(self):
+        return '%s(%s)' % (self.__class__.__name__,repr(self.elementList))
+
+    def __str__(self):
+        return '(/%s/)' % ','.join([str(anElement) for anElement in self.elementList])
+
 def is_id(t):
     return _id_re.match(t)
 
@@ -408,7 +421,7 @@ unary   = pred(is_unary)
 
 def atom0(scan):
     '''eta expansion, since letrec unavail in python'''
-    return disj(id,const,unaryExp,paren,formMultiParen)(scan)
+    return disj(id,const,unaryExp,paren,formMultiParen,formArrayConstructor)(scan)
 
 def atom(scan):
 
@@ -494,6 +507,49 @@ formMultiParen = seq(lit('('),
                  cslist(Exp),
                  lit(')'))
 formMultiParen = treat(formMultiParen,_makeMultiParen)
+
+formArrayConstructor = seq(lit('('),
+                       lit('/'),
+                       cslist(Exp),
+                       lit('/'),
+                       lit(')'))
+formArrayConstructor = treat(formArrayConstructor, lambda x: ArrayConstructor(x[2]))
+
+class LoopControl(_Exp):
+    '''loop control part of DO statements'''
+    _sons = ['var','start','end','stride']
+    # form of loop control is:
+    #  [,] scalar-integer-variable-name = scalar-integer-expression , scalar-integer-expression [, scalar-integer-expression]
+    form = seq(id,               # 0 = var
+               lit('='),         #
+               Exp,              # 2 = start
+               lit(','),         #
+               Exp,              # 4 = end
+               zo1(seq(lit(','), # 5 = stride
+                       Exp)))
+    form = treat(form, lambda x: LoopControl(x[0],x[2],x[4],x[5] and x[5][0][1] or None))
+
+    def __init__(self,var,start,end,stride):
+        self.var = var
+        self.start = start
+        self.end = end
+        self.stride = stride # optional
+
+    def __str__(self):
+        optionalStrideStr = self.stride and ','+str(self.stride) \
+                                         or ''
+        return '%s = %s,%s%s' %  (self.var,
+                                  str(self.start),
+                                  str(self.end),
+                                  optionalStrideStr)
+
+    def __repr__(self):
+        return '%s(%s,%s,%s,%s)' % (self.__class__.__name__,
+                                    repr(self.var),
+                                    repr(self.start),
+                                    repr(self.end),
+                                    repr(self.stride))
+
 
 # utility list
 #

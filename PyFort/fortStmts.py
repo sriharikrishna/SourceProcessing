@@ -224,6 +224,9 @@ init_spec = zo1(seq(disj(lit('=>'),lit('=')),Exp))
 star_range = seq(Exp,lit(':'),lit('*'))
 star_range = treat(star_range,lambda x: Ops(':',x[0],'*'))
 
+upper_bound_range = seq(lit(':'),Exp)
+upper_bound_range = treat(upper_bound_range, lambda x: Ops(':','',x[1]))
+
 lower_bound_range = seq(Exp,lit(':'))
 lower_bound_range = treat(lower_bound_range, lambda x: Ops(':',x[0],''))
 
@@ -497,7 +500,7 @@ class DrvdTypeDefn(Decl):
     
     @staticmethod
     def parse(scan,lineNumber):
-        p0    = treat(seq(lit('type'),id),lambda l: DrvdTypeDefn(l[1],scan=scan,lineNumber=lineNumber))
+        p0    = treat(seq(lit('type'),zo1(lit('::')),id),lambda l: DrvdTypeDefn(l[2],scan=scan,lineNumber=lineNumber))
         (v,r) = p0(scan)
         return v
 
@@ -676,7 +679,6 @@ class DataStmt(Decl):
     def parse(scan,lineNumber):
         # FIXME we don't cover the full range of possibilities.  In particular, here is an incomplete list of the issues:
         #  - there can be an entire comma-separated list of object-value pairs
-        #  - there can be more than one object
         #  - The values should all be constants, and NOT general expressions:
         #      '1-1' is no good, but '-1' is.  It's just that '-1' doesnt match as a constant by the scanner (it matches as a unary expression)
         #      the definition of "const" can't be fixed easily due to scanner particulars (sometimes we want the '-' and '1' to be separate tokens, sometimes not)
@@ -698,8 +700,8 @@ class DataStmt(Decl):
             #  variable
             #  data-implied-do
         formDataStmt = seq(lit(DataStmt.kw),        # 0 = stmt_name
-                           disj(_ImplicitDoConstruct.form, # 1 = object (variable or implicit do construct)
-                                id),
+                           cslist(disj(_ImplicitDoConstruct.form, # 1 = objectList (variable or implicit do construct)
+                                  id)),
                            lit('/'),           #
                            cslist(Exp),        # 3 = valueList
                            lit('/'))           #
@@ -707,26 +709,26 @@ class DataStmt(Decl):
         (theParsedStmt,rest) = formDataStmt(scan)
         return theParsedStmt
 
-    def __init__(self,object,valueList,stmt_name=kw,scan=[],lineNumber=0,label=False,lead=''):
+    def __init__(self,objectList,valueList,stmt_name=kw,scan=[],lineNumber=0,label=False,lead=''):
         Decl.__init__(self,scan,lineNumber,label,lead)
-        self.object = object
+        self.objectList = objectList
         self.valueList = valueList
         self.stmt_name = stmt_name
         if self.rawline=='':
             self.rawline=str(self)
 
     def __str__(self):
-        # put a space after the data keyword iff the object is variable
-        spaceStr = isinstance(self.object,str) and ' ' or ''
+        # put a space after the data keyword iff the first object is a variable
+        spaceStr = isinstance(self.objectList[0],str) and ' ' or ''
         return '%s%s%s / %s /' % (self.stmt_name,
                                   spaceStr,
-                                  str(self.object),
+                                  ', '.join([str(anObject) for anObject in self.objectList]),
                                   ', '.join([str(aValue) for aValue in self.valueList]))
 
     def __repr__(self):
         return self.__class__.__name__ + \
                '(' + \
-               ','.join([repr(aSon) for aSon in (self.object,self.valueList,self.stmt_name)]) + \
+               ','.join([repr(aSon) for aSon in (self.objectList,self.valueList,self.stmt_name)]) + \
                ')'
 
 class EndInterfaceStmt(DeclLeaf):
@@ -991,7 +993,12 @@ class CharacterStmt(TypeDecl):
         f90mod   = seq(lit('('),disj(lit('*'),Exp),lit(')'))
         f90mod   = treat(f90mod,lambda l: _F90Len(l[1]))
 
-        explLen  = seq(lit('('),lit('len'),lit('='),Exp,lit(')'))
+        explLen  = seq(lit('('),
+                       lit('len'),
+                       lit('='),
+                       disj(Exp,
+                            lit('*')),
+                       lit(')'))
         explLen  = treat(explLen,lambda l: _F90ExplLen(l[3]))
                 
         p1 = seq(lit(CharacterStmt.kw),
@@ -1410,7 +1417,7 @@ class PointerAssignStmt(Exec):
 
     @staticmethod
     def parse(scan,lineNumber):
-        formPointerAssignStmt = seq(id,
+        formPointerAssignStmt = seq(lv_exp,
                                     lit('=>'),
                                     Exp)
         ((lhs,assignSymbol,rhs),rst) = formPointerAssignStmt(scan)
@@ -1680,49 +1687,32 @@ class DoStmt(Exec):
     #FIXME: optional comma isn't handled
     '''
     [do-construct-name :] do [label] [loop control]
-    where loop control is:
-      [,] scalar-integer-variable-name = scalar-integer-expression , scalar-integer-expression [, scalar-integer-expression]
     '''
     kw = 'do'
     kw_str = kw
-    _sons = ['doName','doLabel','loopVar','loopStart','loopEnd','loopStride']
+    _sons = ['doName','doLabel','loopControl']
 
     @staticmethod
     def parse(scan,lineNumber):
         formDoName = seq(id,
                          lit(':'))
         formDoName = treat(formDoName, lambda x: x[0])
+        formDoStmt = seq(zo1(formDoName),        # 0 = doName
+                         lit(DoStmt.kw),         # 1 = theDoKeyword
+                         zo1(int),               # 2 = doLabel
+                         zo1(LoopControl.form))  # 3 = loopControl
+        formDoStmt = treat(formDoStmt, lambda x: DoStmt(x[0] and x[0][0] or None,
+                                                        x[2] and x[2][0] or None,
+                                                        x[3] and x[3][0] or None,
+                                                        x[1]))
+        (theParsedStmt,rest) = formDoStmt(scan)
+        return theParsedStmt 
 
-        formDoStmt = seq(zo1(formDoName),
-                         lit(DoStmt.kw),
-                         zo1(int),
-                         id,
-                         lit('='),
-                         Exp,
-                         lit(','),
-                         Exp,
-                         zo1(seq(lit(','),
-                                 Exp)))
-        try:
-            ((doName,theDoKeyword,doLabel,loopVar,equals,loopStart,comma1,loopEnd,loopStride),rest) = formDoStmt(scan)
-        except ListAssemblerException,e:
-            raise ParseError(lineNumber,scan,'Do statement')
-        doName = doName and doName[0] \
-                         or None
-        doLabel = doLabel and doLabel[0] \
-                           or None
-        loopStride = loopStride and loopStride[0][1] \
-                                 or None
-        return DoStmt(doName,doLabel,loopVar,loopStart,loopEnd,loopStride,theDoKeyword,scan,lineNumber)
-
-    def __init__(self,doName,doLabel,loopVar,loopStart,loopEnd,loopStride,doFormatStr=kw,scan=[],lineNumber=0,label=False,lead=''):
+    def __init__(self,doName,doLabel,loopControl,doFormatStr=kw,scan=[],lineNumber=0,label=False,lead=''):
         Exec.__init__(self,scan,lineNumber,label,lead)
         self.doName = doName
         self.doLabel = doLabel
-        self.loopVar = loopVar
-        self.loopStart = loopStart
-        self.loopEnd = loopEnd
-        self.loopStride = loopStride
+        self.loopControl = loopControl
         self.doFormatStr = doFormatStr
         if self.rawline=='':
             self.rawline=str(self)
@@ -1730,11 +1720,12 @@ class DoStmt(Exec):
     def __str__(self):
         doNameString = self.doName and str(self.doName)+': ' \
                                     or ''
-        doLabelString = self.doLabel and str(self.doLabel)+' ' \
+        doLabelString = self.doLabel and ' '+str(self.doLabel) \
                                       or ''
-        loopStrideString = self.loopStride and ','+str(self.loopStride) \
-                                            or ''
-        return '%s%s %s%s = %s,%s%s' % (doNameString,self.doFormatStr,doLabelString,str(self.loopVar),str(self.loopStart),str(self.loopEnd),loopStrideString)
+        loopControlString = self.loopControl and ' '+str(self.loopControl) \
+                                              or ''
+        return '%s%s%s%s' % (doNameString,self.doFormatStr,doLabelString,loopControlString)
+
 
     def get_rawline(self):
         if self.accessed:
@@ -1854,9 +1845,12 @@ class CaseRangeListStmt(Exec):
 
     @staticmethod
     def parse(scan,lineNumber):
+        formRangeItem = disj(lower_bound_range,
+                             upper_bound_range,
+                             Exp)
         formCaseRangeListStmt = seq(lit(CaseRangeListStmt.kw),
                                     lit('('),
-                                    cslist(Exp),
+                                    cslist(formRangeItem),
                                     lit(')'))
         try:
             ((caseKeyword,openPeren,caseRangeList,closePeren),rest) = formCaseRangeListStmt(scan)
@@ -1972,6 +1966,17 @@ class InquireStmt(Exec):
     kw = 'inquire'
     kw_str = kw
 
+
+class NullifyStmt(Exec):
+    kw = 'nullify'
+    kw_str = kw
+
+
+class BackspaceStmt(Exec):
+    kw = 'backspace'
+    kw_str = kw
+
+
 kwtbl = dict(blockdata       = BlockdataStmt,
              common          = CommonStmt,
              logical         = LogicalStmt,
@@ -2032,6 +2037,8 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              allocate        = AllocateStmt,
              deallocate      = DeallocateStmt,
              inquire         = InquireStmt,
+             nullify         = NullifyStmt,
+             backspace       = BackspaceStmt,
              )
 
 for kw in ('if','continue','return','else','print','use','cycle','exit','rewind','where','elsewhere','format','pointer','target'):

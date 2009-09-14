@@ -123,10 +123,10 @@ class Symtab(object):
             noRename = True
             if renameList:
                 for aRenameItem in renameList:
-                    if aRenameItem == aKey:
+                    if aRenameItem.rhs == aKey:
                         # add the local name to the symbol table
-                        self.ids[aRenameItem] = aModuleUnit.symtab.replicateEntry(aKey,'module:'+aModuleUnit.name())
-                        self.ids[aRenameItem].renameSource = aKey
+                        self.ids[aRenameItem.lhs] = aModuleUnit.symtab.replicateEntry(aKey,'module:'+aModuleUnit.name())
+                        self.ids[aRenameItem.lhs].renameSource = aKey
                         noRename = False
             if noRename:
                 self.ids[aKey] = aModuleUnit.symtab.replicateEntry(aKey,'module:'+aModuleUnit.name())

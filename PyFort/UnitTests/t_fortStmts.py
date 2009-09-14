@@ -3,8 +3,9 @@
 from Setup     import *
 from unittest  import *
 
+from fortExp import LoopControl
 from fortStmts import *
-from fortStmts import _F90ExplLen,_Star,_NoInit,_Kind,_ExplKind,_PointerInit,_ImplicitDoConstruct
+from fortStmts import _F90ExplLen,_Star,_NoInit,_Kind,_ExplKind,_AssignInit,_PointerInit,_ImplicitDoConstruct
 from useparse  import *
 
 class C1(TestCase):
@@ -344,6 +345,27 @@ class TestImplicitStmt(TestCase):
 
         ae(kill_blanks(s1),kill_blanks(str(v)))
 
+
+class TestAssignStmt(TestCase):
+    '''test assignment statements'''
+
+    def test0(self):
+        '''character array constructor assignment'''
+        theString = "andchars = (/'&','&'/)"
+        theRepr = AssignStmt('andchars',ArrayConstructor(["'&'", "'&'"]))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test1(self):
+        '''integer array constructor assignment'''
+        theString = "a = (/2,3,5,7,11,13,17/)"
+        theRepr = AssignStmt('a',ArrayConstructor(['2', '3', '5', '7', '11', '13', '17']))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+
 class TestRealStmt(TestCase):
     'test declaration of real variables'
 
@@ -450,6 +472,36 @@ class TestCharacterDecls(TestCase):
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
+    def test5(self):
+        '''character type declaration with asterisk length specification and optional attribute (from scalelib/opnfil_I.f90)'''
+        theString = 'character(len=*),intent(in),optional :: act'
+        theRepr = CharacterStmt([_F90ExplLen('*')],[App('intent',['in']), 'optional'],[_NoInit('act')])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test6(self):
+        '''character type declaration with array constructor (from SCALE: scalelib/free_form_C.f90)'''
+        theString = "character(len=1),dimension(0:27),parameter :: char_array=(/'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f',' ',',','r','*','$','&','+','-','z','.','o','p'/)"
+        theRepr = CharacterStmt([_F90ExplLen('1')],
+                                [App('dimension',[Ops(':','0','27')]), 'parameter'],
+                                [_AssignInit('char_array',
+                                             ArrayConstructor(["'0'", "'1'", "'2'", "'3'", "'4'", "'5'", "'6'", "'7'", "'8'", "'9'", "'a'", "'b'", "'c'", "'d'", "'e'", "'f'", "' '", "','", "'r'", "'*'", "'$'", "'&'", "'+'", "'-'", "'z'", "'.'", "'o'", "'p'"]))])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test7(self):
+        '''character type declaration with array constructor'''
+        theString = "character(len=1),dimension(2) :: andchars=(/'&','&'/)"
+        theRepr = CharacterStmt([_F90ExplLen('1')],
+                                [App('dimension',['2'])],
+                                [_AssignInit('andchars',ArrayConstructor(["'&'","'&'"]))])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+
 class TestDimensionStmt(TestCase):
     '''Dimension statement'''
     def test1(self):
@@ -476,58 +528,73 @@ class TestDimensionStmt(TestCase):
 class TestDoStmt(TestCase):
     '''Do statements'''
     def test1(self):
-        '''do i = 1,2'''
-        s = 'do i = 1,2'
-        r = DoStmt(None,None,'i','1','2',None)
-        self.assertEquals(repr(pps(s)),repr(r))
-        self.assertEquals(s,str(r))
+        '''simplest example with loop control: "do i = 1,2"'''
+        theString = 'do i = 1,2'
+        theRepr = DoStmt(None,None,LoopControl('i','1','2',None))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
 
     def test2(self):
-        '''do i = 1,2,1'''
-        s = 'do i = 1,2,1'
-        r = DoStmt(None,None,'i','1','2','1')
-        self.assertEquals(repr(pps(s)),repr(r))
-        self.assertEquals(s,str(r))
+        '''simplest example with loop control and stride: "do i = 1,2,1"'''
+        theString = 'do i = 1,2,1'
+        theRepr = DoStmt(None,None,LoopControl('i','1','2','1'))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
 
     def test3(self):
         '''do i = floor(x),2'''
-        s = 'do i = floor(x),2'
-        r = DoStmt(None,None,'i',App('floor',['x']),'2',None)
-        self.assertEquals(repr(pps(s)),repr(r))
-        self.assertEquals(s,str(r))
+        theString = 'do i = floor(x),2'
+        theRepr = DoStmt(None,None,LoopControl('i',App('floor',['x']),'2',None))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
 
     def test4(self):
         '''do i = floor(x)+10,2,abs(y+2)'''
-        s = 'do i = floor(x)+10,2,abs(y+2)'
-        r = DoStmt(None,
-                   None,
-                   'i',
-                   Ops('+',App('floor',['x']),'10'),
-                   '2',
-                   App('abs',[Ops('+','y','2')]))
-        self.assertEquals(repr(pps(s)),repr(r))
-        self.assertEquals(s,str(r))
+        theString = 'do i = floor(x)+10,2,abs(y+2)'
+        theRepr = DoStmt(None,
+                         None,
+                         LoopControl('i',
+                                      Ops('+',App('floor',['x']),'10'),
+                                      '2',
+                                      App('abs',[Ops('+','y','2')])))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
 
     def test5(self):
-        '''do statement with label "do 40 i = 1,2"'''
-        s = 'do 40 i = 1,2'
-        r = DoStmt(None,'40','i','1','2',None)
-        self.assertEquals(repr(pps(s)),repr(r))
-        self.assertEquals(s,str(r))
-
-    def test6(self):
-        '''do statement with label and stride "do 40 i = 1,2,1"'''
-        s = 'do 40 i = 1,2,1'
-        r = DoStmt(None,'40','i','1','2','1')
-        self.assertEquals(repr(pps(s)),repr(r))
-        self.assertEquals(s,str(r))
-
-    def test6(self):
-        '''do statement with do name'''
-        theString = 'l1000: do ic = 1,icm'
-        theRepr = DoStmt('l1000',None,'ic','1','icm',None)
+        '''do statement with label: "do 40 i = 1,2"'''
+        theString = 'do 40 i = 1,2'
+        theRepr = DoStmt(None,'40',LoopControl('i','1','2',None))
         self.assertEquals(repr(pps(theString)),repr(theRepr))
-        self.assertEquals(theString,str(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test6(self):
+        '''do statement with label and stride: "do 40 i = 1,2,1"'''
+        theString = 'do 40 i = 1,2,1'
+        theRepr = DoStmt(None,'40',LoopControl('i','1','2','1'))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test7(self):
+        '''do statement with do name: "l1000: do ic = 1,icm"'''
+        theString = 'l1000: do ic = 1,icm'
+        theRepr = DoStmt('l1000',None,LoopControl('ic','1','icm',None))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test8(self):
+        '''do statement without optional loop control'''
+        theString = 'do'
+        theRepr = DoStmt(None,None,None)
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
 
 class TestIfStmt(TestCase):
     '''If statements have two types: IfThenStmt and IfNonThenStmt'''
@@ -671,6 +738,31 @@ class TestCaseStmts(TestCase):
         r = CaseRangeListStmt([Ops(':','1','3'), Ops(':','8','9')])
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
+
+    def test3(self):
+        'case statement with only lower bound'
+        theString = 'case (1:)'
+        theRepr = CaseRangeListStmt([Ops(':','1','')])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test4(self):
+        'case statement with only upper bound'
+        theString = 'case (:39)'
+        theRepr = CaseRangeListStmt([Ops(':','','39')])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test5(self):
+        'case statement with nontrivial expression as upper bound'
+        theString = 'case (:3+9)'
+        theRepr = CaseRangeListStmt([Ops(':','',Ops('+','3','9'))])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
 
 class TestInterfaces(TestCase):
     '''stuff to do with interfaces'''
@@ -917,6 +1009,14 @@ class TestIOtmt(TestCase):
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
+    def test9(self):
+        '''write statement with problematic forward slash in string constant ()from SCALE: scalelib/html_M.f90 -- KNOWN TO FAIL'''
+        theString = "write(unit,'(a)') ' <APPLET \'"
+        theRepr = WriteStmt('write',[],[])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
 
 class TestGotoStmt(TestCase):
     '''goto statements'''
@@ -941,74 +1041,83 @@ class TestDataStmt(TestCase):
     def test0(self):
         '''simple scalar data statement'''
         theString = 'DATA TTP2 / 3.42D+02 /'
-        theRepr = DataStmt('TTP2',['3.42D+02'],'DATA')
+        theRepr = DataStmt(['TTP2'],['3.42D+02'],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test1(self):
         '''simple array data statement'''
         theString = 'data simp / 0.333333333D0, 1.333333333D0, 0.666666667D0 /'
-        theRepr = DataStmt('simp',['0.333333333D0', '1.333333333D0', '0.666666667D0'],'data')
+        theRepr = DataStmt(['simp'],['0.333333333D0', '1.333333333D0', '0.666666667D0'],'data')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test2(self):
         '''data statement with implied do construct'''
         theString = 'DATA(A1(tmp0), tmp0 = 1, 5, 1) / 3.4D-01, 5.9D-01, 1.0D00, 1.5D00, 1.3D00 /'
-        theRepr = DataStmt(_ImplicitDoConstruct(App('A1',['tmp0']),'tmp0','1','5','1'),['3.4D-01', '5.9D-01', '1.0D00', '1.5D00', '1.3D00'],'DATA')
+        theRepr = DataStmt([_ImplicitDoConstruct(App('A1',['tmp0']),'tmp0','1','5','1')],['3.4D-01', '5.9D-01', '1.0D00', '1.5D00', '1.3D00'],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test3(self):
         '''data statement with negative constant in the value list'''
         theString = 'DATA COEF / -1.D0 /'
-        theRepr = DataStmt('COEF',[Umi('1.D0')],'DATA')
+        theRepr = DataStmt(['COEF'],[Umi('1.D0')],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test4(self):
         '''long data statement from centrm with continuations removed'''
         theString = 'DATA COEF / 1.D0, 1.D0, -1.D0, 3.D0, -3.D0, 5.D0, 3.D0, -30.D0, 35.D0, 15.D0, -70.D0, 63.D0, -5.D0, 105.D0, -315.D0, 231.D0, -35.D0, 315.D0, -693.D0, 429.D0, 35.D0, -1260.D0, 6930.D0, -12012.D0, 6435.D0, 315.D0, -4620.D0, 18018.D0, -25740.D0, 12155.D0, -63.D0, 3465.D0, -30030.D0, 90090.D0, -109395.D0, 46189.D0, -693.D0, 15015.D0, -90090.D0, 218790.D0, -230945.D0, 88179.D0 /'
-        theRepr = DataStmt('COEF',['1.D0', '1.D0', Umi('1.D0'), '3.D0', Umi('3.D0'), '5.D0', '3.D0', Umi('30.D0'), '35.D0', '15.D0', Umi('70.D0'), '63.D0', Umi('5.D0'), '105.D0', Umi('315.D0'), '231.D0', Umi('35.D0'), '315.D0', Umi('693.D0'), '429.D0', '35.D0', Umi('1260.D0'), '6930.D0', Umi('12012.D0'), '6435.D0', '315.D0', Umi('4620.D0'), '18018.D0', Umi('25740.D0'), '12155.D0', Umi('63.D0'), '3465.D0', Umi('30030.D0'), '90090.D0', Umi('109395.D0'), '46189.D0', Umi('693.D0'), '15015.D0', Umi('90090.D0'), '218790.D0', Umi('230945.D0'), '88179.D0'],'DATA')
+        theRepr = DataStmt(['COEF'],['1.D0', '1.D0', Umi('1.D0'), '3.D0', Umi('3.D0'), '5.D0', '3.D0', Umi('30.D0'), '35.D0', '15.D0', Umi('70.D0'), '63.D0', Umi('5.D0'), '105.D0', Umi('315.D0'), '231.D0', Umi('35.D0'), '315.D0', Umi('693.D0'), '429.D0', '35.D0', Umi('1260.D0'), '6930.D0', Umi('12012.D0'), '6435.D0', '315.D0', Umi('4620.D0'), '18018.D0', Umi('25740.D0'), '12155.D0', Umi('63.D0'), '3465.D0', Umi('30030.D0'), '90090.D0', Umi('109395.D0'), '46189.D0', Umi('693.D0'), '15015.D0', Umi('90090.D0'), '218790.D0', Umi('230945.D0'), '88179.D0'],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test5(self):
         '''data statement with double implied do and repeat factor'''
         theString = 'DATA((x(i,j), i = 1, 2), j = 1, 3) / 6*2 /'
-        theRepr = DataStmt(_ImplicitDoConstruct(_ImplicitDoConstruct(App('x',['i', 'j']),'i','1','2',None),'j','1','3',None),[Ops('*','6','2')],'DATA')
+        theRepr = DataStmt([_ImplicitDoConstruct(_ImplicitDoConstruct(App('x',['i', 'j']),'i','1','2',None),'j','1','3',None)],[Ops('*','6','2')],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test6(self):
         '''data statement with "NULL()" in the value list'''
         theString = 'DATA START / NULL() /'
-        theRepr = DataStmt('START',[App('NULL',[])],'DATA')
+        theRepr = DataStmt(['START'],[App('NULL',[])],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test7(self):
         '''data statement with multiple objectList-valueList pairs -- KNOWN TO FAIL'''
         theString = 'DATA NAME / "JOHN DOE" /, METERS / 10*0 /'
-        theRepr = DataStmt('NAME',['"JOHN DOE"'],'DATA')
+        theRepr = DataStmt(['NAME'],['"JOHN DOE"'],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test8(self):
         '''data statement with an expression inside the implied do end'''
         theString = 'DATA((SKEW(K,J), K = 1, J-1), J = 1, 100) / 4950*1.0 /'
-        theRepr = DataStmt(_ImplicitDoConstruct(_ImplicitDoConstruct(App('SKEW',['K', 'J']),'K','1',Ops('-','J','1'),None),'J','1','100',None),[Ops('*','4950','1.0')],'DATA')
+        theRepr = DataStmt([_ImplicitDoConstruct(_ImplicitDoConstruct(App('SKEW',['K', 'J']),'K','1',Ops('-','J','1'),None),'J','1','100',None)],[Ops('*','4950','1.0')],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test9(self):
         '''data statement with implied do without optional stride'''
         theString = 'DATA(A1(tmp0), tmp0 = 1, 3) / 3.4D-01, 5.9D-01, 1.0D00 /'
-        theRepr = DataStmt(_ImplicitDoConstruct(App('A1',['tmp0']),'tmp0','1','3',None),['3.4D-01', '5.9D-01', '1.0D00'],'DATA')
+        theRepr = DataStmt([_ImplicitDoConstruct(App('A1',['tmp0']),'tmp0','1','3',None)],['3.4D-01', '5.9D-01', '1.0D00'],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
+    def test10(self):
+        '''data statement with multiple objects (from SCALE: centrm/emsh.f90'''
+        theString = 'data aoxy, flet3, flet4 / 1.5994d+1, 0.05, 0.1 /'
+        theRepr = DataStmt(['aoxy', 'flet3', 'flet4'],['1.5994d+1', '0.05', '0.1'],'data')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
 suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,
+               TestAssignStmt,
                TestRealStmt,
                TestCharacterDecls,
                TestImplicitStmt,

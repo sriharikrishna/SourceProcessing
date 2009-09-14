@@ -29,6 +29,7 @@ __intrinsics = (
     'dsqrt',
     'exp',
     'float',
+    'index',
     'int',
     'iabs',
     'len',

@@ -9,19 +9,19 @@ class TransformActiveVariables(object):
     # populates the activeVars array with the variable names of all active
     # variables
     @staticmethod
-    def getActiveDecls(file):
-        for aUnit in fortUnitIterator(file,False):
-            for aDecl in aUnit.decls:
-                if aDecl.mod[0] == '(active)':
-                    if hasattr(aDecl, 'decls'):
-                        for adecl in aDecl.decls:
-                            if isinstance(adecl, fs._NoInit):
-                                if hasattr(adecl.lhs, 'head'):
-                                    TransformActiveVariables.\
-                                        _activeVars.append(adecl.lhs.head.lower())
-                                else:
-                                    TransformActiveVariables.\
-                                        _activeVars.append(adecl.lhs.lower())
+    def getActiveDecls(file,isFreeFormat=False):
+        for aUnit in fortUnitIterator(file,isFreeFormat):
+            for aDeclStmt in aUnit.decls:
+                print "getActiveDecls: processing ",aDeclStmt
+                if hasattr(aDeclStmt,'mod') and (aDeclStmt.mod[0] == '(active)'):
+                    for aDecl in aDeclStmt.decls:
+                        if isinstance(aDecl, fs._NoInit):
+                            if hasattr(aDecl.lhs, 'head'):
+                                TransformActiveVariables.\
+                                    _activeVars.append(aDecl.lhs.head.lower())
+                            else:
+                                TransformActiveVariables.\
+                                    _activeVars.append(aDecl.lhs.lower())
 
     def __init__(self, aUnit):
         self.__myUnit = aUnit
