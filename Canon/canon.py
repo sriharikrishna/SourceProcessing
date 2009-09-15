@@ -505,12 +505,21 @@ class UnitCanonicalizer(object):
         # for function units, also create a corresponding subroutine
         if isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
             if self._keepFunctionDecl:
-                if self.__myUnit.parent is None:
-                    self.__myUnit.parent = fortUnit.Unit()
                 newUnit = function2subroutine.convertFunction(copy.deepcopy(self.__myUnit))
-                self.__myUnit.parent.ulist.append(newUnit)
+                # if the unit has no parent, then it was the original unit.
+                if self.__myUnit.parent is None:
+                    # create a parent
+                    self.__myUnit.parent = fortUnit.Unit()
+                    # append new unit & original unit (already processed)
+                    self.__myUnit.parent.ulist.append(self.__myUnit)
+                    self.__myUnit.parent.ulist.append(newUnit)
+                    # return parent
+                    self.__myUnit = self.__myUnit.parent
+                else:
+                    self.__myUnit.parent.ulist.append(newUnit)                    
             else:
-                self.__myUnit = function2subroutine.convertFunction(self.__myUnit)
+                self.__myUnit = function2subroutine.convertFunction(\
+                    self.__myUnit, self._keepFunctionDecl)
                 
         for aSubUnit in self.__myUnit.ulist:
             if isinstance(aSubUnit.uinfo,fs.SubroutineStmt) and \
@@ -532,5 +541,6 @@ class UnitCanonicalizer(object):
                     index += 1
             
         DebugManager.debug(('+'*54)+' End canonicalize unit <'+str(self.__myUnit.uinfo)+'> '+(54*'+')+'\n\n')
+
         return self.__myUnit
 

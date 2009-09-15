@@ -93,10 +93,26 @@ def updateTypeDecl(aDecl,outParam,declList):
                 resultDeclCreated = True
     return (aDecl,resultDeclCreated)
 
-def convertFunction(functionUnit):
+def convertFunction(functionUnit,keepFunctionDecl=True):
     '''converts a function unit definition to a subroutine unit definition'''
     newSubUnit = Unit(parent=functionUnit.parent,fmod=functionUnit.fmod)
     (outParam,newSubUnit.uinfo) = convertFunctionStmt(functionUnit.uinfo)
+    newSubUnit.cmnt = functionUnit.cmnt
+    newSubUnit.contains = functionUnit.contains
+    newSubUnit.ulist = functionUnit.ulist
+
+    newList = []
+    for subUnit in newSubUnit.ulist:
+        # if the unit is new, as a result of function transformation,
+        # skip processing
+        if isinstance(subUnit.uinfo,fs.SubroutineStmt) and \
+               subUnit.uinfo.name.startswith('oad_s_'):
+            if not keepFunctionDecl:
+                newList.append(subUnit)
+        else:
+            newUnit = convertFunction(subUnit)
+            newList.append(newUnit)
+    newSubUnit.ulist = newList
 
     resultDecl = createResultDecl(functionUnit.uinfo,outParam)
     if resultDecl is not None:
