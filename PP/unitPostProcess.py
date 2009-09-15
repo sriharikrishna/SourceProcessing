@@ -255,7 +255,7 @@ class UnitPostProcessor(object):
         if not hasattr(aStmt,"_sons") or (aStmt._sons == []):
             return aStmt
         
-        for aSon in aStmt._sons:
+        for aSon in aStmt.get_sons():
             theSon = getattr(aStmt,aSon)
             newSon = self.__transformActiveTypesExpression(theSon)    
             if newSon is not theSon:
