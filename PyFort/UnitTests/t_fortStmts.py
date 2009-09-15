@@ -596,6 +596,15 @@ class TestDoStmt(TestCase):
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
 
+    def test9(self):
+        '''do statement from ad_inline.f'''
+        theString = 'do cp_loop_variable_1 = ubound(x,1),lbound(x,1),-1'
+        theRepr = DoStmt(None,None,LoopControl('cp_loop_variable_1',App('ubound',['x', '1']),App('lbound',['x', '1']),Umi('1')))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+
 class TestIfStmt(TestCase):
     '''If statements have two types: IfThenStmt and IfNonThenStmt'''
 

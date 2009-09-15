@@ -255,12 +255,10 @@ class UnitPostProcessor(object):
         if not hasattr(aStmt,"_sons") or (aStmt._sons == []):
             return aStmt
         
-        self.__expChanged=False
-        for aSon in aStmt.get_sons():
+        for aSon in aStmt._sons:
             theSon = getattr(aStmt,aSon)
             newSon = self.__transformActiveTypesExpression(theSon)    
             if newSon is not theSon:
-                diff = True
                 setattr(aStmt,aSon,newSon)
         return aStmt
 
@@ -504,12 +502,15 @@ class UnitPostProcessor(object):
             elif isinstance(Stmt,fs.DeallocateStmt):
                 Stmt.rawline= \
                             self.__replaceArgs(argReps,Stmt.rawline,inlineArgs,replacementArgs)
-                Execs.append(Stmt)
-            elif isinstance(Stmt,fs.WhileStmt):
+                Execs.append(Stmt.flow())
+            elif isinstance(Stmt,fs.WhileStmt) or \
+                     isinstance(Stmt,fs.DoStmt):
                 for aSon in Stmt.get_sons():
                     theSon = getattr(Stmt,aSon)
-                    newSon = self.__replaceArgs(argReps,str(theSon),inlineArgs,replacementArgs)
-                    setattr(Stmt,aSon,newSon)
+                    if theSon :
+                    	newSon = self.__replaceArgs(argReps,str(theSon),inlineArgs,replacementArgs)
+                        setattr(Stmt,aSon,newSon)
+                Stmt.lead = stmt_lead
                 Execs.append(Stmt)
             elif hasattr(Stmt, "_sons"):
                 for aSon in Stmt.get_sons():
