@@ -217,45 +217,44 @@ def _implicit_none(self,cur):
     cur.val.symtab.implicit_none()
     return self
 
-def _unit_iface_action(self,cur):
-    unit = cur.val
-    name = self.name
-    lcl = Symtab(unit.symtab)
-    entry = self.make_unit_entry(lcl)
-    lcl.enter_name(name,entry)
-    unit.symtab.enter_name(name,entry)
-    unit.symtab = lcl
-    return self
+def _beginProcedureUnit(aProcedureDeclStmt,cur):
+    localSymtab = Symtab(cur.val.symtab)
+    DebugManager.debug('[Line '+str(aProcedureDeclStmt.lineNumber)+']: stmt2unit._beginProcedureUnit:' \
+                      +' called for procedure statement "'+str(aProcedureDeclStmt)+'"' \
+                      +' changing from current symtab "'+str(cur.val.symtab)+'"' \
+                      +' to local symtab "'+str(localSymtab)+'"')
+    entry = aProcedureDeclStmt.make_unit_entry(localSymtab)
+    localSymtab.enter_name(aProcedureDeclStmt.name,entry)
+    cur.val.symtab.enter_name(aProcedureDeclStmt.name,entry)
+    cur.val.symtab = localSymtab
+    return aProcedureDeclStmt
 
-def _end_unit_iface_action(self,cur):
-    unit = cur.val
-    unit.symtab = unit.symtab.parent
-    return self
+def _endProcedureUnit(anEndProcedureStmt,cur):
+    if cur.val.symtab.parent :
+        DebugManager.debug('[Line '+str(anEndProcedureStmt.lineNumber)+']: stmt2unit._endProcedureUnit:' \
+                          +' called on "'+str(anEndProcedureStmt)+'"' \
+                          +' ACTION: reverting from symtab "'+str(cur.val.symtab)+'"' \
+                                       +' to parent symtab "'+str(cur.val.symtab.parent)+'"')
+        cur.val.symtab = cur.val.symtab.parent
+    else :
+        raise SymtabError('stmt2unit._endProcedureUnit('+str(anEndProcedureStmt)+'):' \
+                         +' cannot revert from symtab "'+str(cur.val.symtab)+'"' \
+                         +' to parent symtab, because there is no parent symtab.',
+                          symbolName=None,
+                          entry=None,
+                          lineNumber=anEndProcedureStmt.lineNumber)
+    return anEndProcedureStmt
 
 def _beginInterface(anInterfaceStmt,cur):
-    cur.val._in_iface = True
-    localSymtab = cur.val.symtab
-    # make a symbol table local to the interface
-    interfaceSymtab = Symtab(localSymtab)
-    DebugManager.debug('[Line '+str(anInterfaceStmt.lineNumber)+']: stmt2unit._beginInterface('+str(anInterfaceStmt)+'): creating interface symtab '+str(interfaceSymtab)+' with parent symtab '+str(localSymtab))
-    sys.stderr.flush()
-    # for named interfaces, add a symbol table entry to its symtab AND the enclosing unit
-    if anInterfaceStmt.name:
-        newSymtabEntry = SymtabEntry(SymtabEntry.InterfaceEntryKind,
-                                     origin='local')
-        localSymtab.enter_name(anInterfaceStmt.name,newSymtabEntry)
-        interfaceSymtab.enter_name(anInterfaceStmt.name,newSymtabEntry)
-    # switch to the interface's symbol table for the duration of the interface
-    cur.val.symtab = interfaceSymtab
-    DebugManager.debug('\tEntering interface "'+str(anInterfaceStmt.name)+'", with symbol table '+str(interfaceSymtab))
+    currentUnit = cur.val
+    currentUnit._in_iface = True
+    DebugManager.debug('[Line '+str(anInterfaceStmt.lineNumber)+']: stmt2unit._beginInterface('+str(anInterfaceStmt)+')')
     return anInterfaceStmt
 
 def _endInterface(anEndInterfaceStmt,cur):
     currentUnit = cur.val
-    DebugManager.debug('[Line '+str(anEndInterfaceStmt.lineNumber)+']: stmt2unit._beginInterface('+str(anEndInterfaceStmt)+'): reverting from symtab '+str(currentUnit.symtab)+' to parent symtab '+str(currentUnit.symtab.parent))
     currentUnit._in_iface = False
-    # switch back to the symbol table for the unit
-    currentUnit.symtab = currentUnit.symtab.parent
+    DebugManager.debug('[Line '+str(anEndInterfaceStmt.lineNumber)+']: stmt2unit._endInterface('+str(anEndInterfaceStmt)+')')
     return anEndInterfaceStmt
 
 fs.GenStmt.unit_action        = lambda s,*rest,**kw: s
@@ -263,11 +262,13 @@ fs.GenStmt.unit_entry         = lambda s,*rest,**kw: s
 
 fs.SubroutineStmt.unit_entry      = _unit_entry
 fs.SubroutineStmt.make_unit_entry = _makeSubroutineEntry
-fs.SubroutineStmt.unit_action     = _unit_iface_action
+fs.SubroutineStmt.unit_action     = _beginProcedureUnit
+fs.EndSubroutineStmt.unit_action  = _endProcedureUnit
 
 fs.FunctionStmt.unit_entry      = _unit_entry
 fs.FunctionStmt.make_unit_entry = _makeFunctionEntry
-fs.FunctionStmt.unit_action     = _unit_iface_action
+fs.FunctionStmt.unit_action     = _beginProcedureUnit
+fs.EndFunctionStmt.unit_action  = _endProcedureUnit
 
 fs.AssignStmt.is_decl         = _is_stmt_fn
 fs.AssignStmt.unit_action     = _assign2stmtfn

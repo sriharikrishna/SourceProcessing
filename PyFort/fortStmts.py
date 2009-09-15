@@ -1596,6 +1596,23 @@ class EndModuleStmt(EndStmt):
     kw_str = 'end module'
 
 
+class EndProgramStmt(EndStmt):
+    kw    = 'endprogram'
+    kw_str = 'end program'
+
+
+class EndFunctionStmt(EndStmt):
+    'End of function block'
+    kw    = 'endfunction'
+    kw_str = 'end function'
+
+
+class EndSubroutineStmt(EndStmt):
+    'End of subroutine block'
+    kw    = 'endsubroutine'
+    kw_str = 'end subroutine'
+
+
 class DoStmt(Exec):
     #FIXME: optional comma isn't handled
     '''
@@ -1928,9 +1945,9 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              endinterface    = EndInterfaceStmt,
              endtype         = EndTypeStmt,
              endmodule       = EndModuleStmt,
-             endprogram      = EndStmt,
-             endfunction     = EndStmt,
-             endsubroutine   = EndStmt,
+             endprogram      = EndProgramStmt,
+             endfunction     = EndFunctionStmt,
+             endsubroutine   = EndSubroutineStmt,
              endblockdata    = EndStmt,
              endwhere        = EndWhereStmt,
              do              = DoStmt,
