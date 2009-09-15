@@ -494,6 +494,41 @@ class InterfaceStmt(Decl):
                               or None
         return InterfaceStmt(name,lineNumber)
 
+
+class ProcedureStmt(Decl):
+    kw = 'procedure'
+    kw_str = kw
+    _sons = ['procedureList']
+
+    @staticmethod
+    def parse(scan,lineNumber):
+        formprocedureStmt = seq(zo1(lit('module')),    #0 - module keyword (optional)
+                                lit(ProcedureStmt.kw), #1
+                                cslist(id))            #2 - procedureList
+        formprocedureStmt = treat(formprocedureStmt, lambda x : ProcedureStmt(x[0] and True or False, x[2]))
+        (theParsedStmt,rest) = formprocedureStmt(scan)
+        return theParsedStmt
+
+    def __init__(self,hasModuleKeyword,procedureList,lineNumber=0,label=False,lead=''):
+        self.lineNumber = lineNumber
+        self.label = label
+        self.lead = lead
+        self.hasModuleKeyword = hasModuleKeyword
+        self.procedureList = procedureList
+
+    def __repr__(self):
+        return '%s(%s,%s)' % (self.__class__.__name__,
+                              repr(self.hasModuleKeyword),
+                              repr(self.procedureList))
+
+    def __str__(self):
+        moduleKeywordStr = self.hasModuleKeyword and 'module ' \
+                                                  or ''
+        return '%s%s %s' % (moduleKeywordStr,
+                            self.__class__.kw_str,
+                            ','.join([str(aProcedureItem) for aProcedureItem in self.procedureList]))
+
+
 class TypePseudoStmt(GenStmt):
     '''
     type keyword signals *either* declaration or definition
@@ -1930,6 +1965,7 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              subroutine      = SubroutineStmt,
              program         = ProgramStmt,
              function        = FunctionStmt,
+             procedure       = ProcedureStmt,
              module          = ModuleStmt,
              format          = FormatStmt,
              entry           = EntryStmt,
@@ -2004,6 +2040,9 @@ def parse(scan,lineNumber):
              lscan[0]
         if kw in _types and 'function' in lscan:
             kw = 'function'
+        # special case for module procedure statements:
+        elif (kw == 'module') and (lscan[1] == 'procedure') :
+            kw = 'procedure'
 
         if not kwtbl.get(kw):
             if '=>' in scan:

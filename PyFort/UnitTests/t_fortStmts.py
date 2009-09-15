@@ -1125,6 +1125,43 @@ class TestDataStmt(TestCase):
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
 
+
+class TestProcedureStmt(TestCase):
+    '''procedure statements'''
+
+    def test0(self):
+        '''simplest procedure statement'''
+        theString = 'procedure x'
+        theRepr = ProcedureStmt(False,['x'])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test1(self):
+        '''procedure statement with multiple procedure items'''
+        theString = 'procedure x,y'
+        theRepr = ProcedureStmt(False,['x', 'y'])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test2(self):
+        '''simplest module procedure statement'''
+        theString = 'module procedure x'
+        theRepr = ProcedureStmt(True,['x'])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test3(self):
+        '''module procedure statement with multiple procedure items'''
+        theString = 'module procedure x,y'
+        theRepr = ProcedureStmt(True,['x', 'y'])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+
 suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,
                TestAssignStmt,
                TestRealStmt,
@@ -1148,6 +1185,7 @@ suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,
                TestIOtmt,
                TestGotoStmt,
                TestDataStmt,
+               TestProcedureStmt,
               )
 
 if __name__ == '__main__':
