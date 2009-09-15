@@ -418,39 +418,44 @@ class UnitCanonicalizer(object):
         else: # no new statements were inserted
             self.__myNewExecs.append(anExecStmt) # => leave anExecStmt alone
 
-    def __canonicalizeFunctionDecls(self,aDecl):
+    def __canonicalizeFunctionDecls(self,aDecl,subroutineBlock):
+        if self._keepFunctionDecl:
+            self.__myNewDecls.append(copy.deepcopy(aDecl))
         if isinstance(aDecl,fs.FunctionStmt):
             self.setFunctionBlockFlag(True)
             (self.__outParam,subroutineStmt) = function2subroutine.\
                                                convertFunctionStmt(aDecl)
-            self.__myNewDecls.append(subroutineStmt)
+            subroutineBlock.append(subroutineStmt)
             self.__resultDecl = function2subroutine.\
                          createResultDecl(aDecl,self.__outParam)
             self.setCreateResultDeclFlag(True)
         elif not self._functionBlockFlag:
-            self.__myNewDecls.append(aDecl)
+            if not self._keepFunctionDecl:
+            	self.__myNewDecls.append(aDecl)
         elif isinstance(aDecl,fs.EndStmt):
             newEndStmt = fs.EndStmt(lineNumber=aDecl.lineNumber,label=aDecl.label,lead=aDecl.lead)
             newEndStmt.rawline = 'end subroutine\n'
-            self.__myNewDecls.append(newEndStmt)
+            subroutineBlock.append(newEndStmt)
+            self.__myNewDecls.extend(subroutineBlock)
             self.setFunctionBlockFlag(False)
         elif isinstance(aDecl,fs.Comments):
             if aDecl.rawline.strip() == '':
                 pass
             else:
-                self.__myNewDecls.append(aDecl)
+                subroutineBlock.append(aDecl)
         elif self._createResultDeclFlag \
                  and not isinstance(aDecl,fs.UseStmt):
             if self.__resultDecl is not None:
-                self.__myNewDecls.append(self.__resultDecl)
+                subroutineBlock.append(self.__resultDecl)
                 self.setCreateResultDeclFlag(False)
             elif isinstance(aDecl,fs.TypeDecl):
                 (aDecl,resultDeclFlag) = function2subroutine.updateTypeDecl(\
                     copy.deepcopy(aDecl),self.__outParam,self.__myNewDecls)
                 self.setCreateResultDeclFlag(resultDeclFlag)
-            self.__myNewDecls.append(aDecl)
+            subroutineBlock.append(aDecl)
         else:
-            self.__myNewDecls.append(aDecl)
+            subroutineBlock.append(aDecl)
+        return subroutineBlock
 
     def canonicalizeUnit(self):
         '''Recursively canonicalize \p aUnit'''
@@ -472,7 +477,7 @@ class UnitCanonicalizer(object):
         
         subroutineBlock = []    
         for aDecl in self.__myUnit.decls:
-            self.__canonicalizeFunctionDecls(aDecl)
+            subroutineBlock = self.__canonicalizeFunctionDecls(aDecl,subroutineBlock)
 
        ## replace the declaration statements for the unit
         self.__myUnit.decls = self.__myNewDecls
