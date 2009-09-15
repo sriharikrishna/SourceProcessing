@@ -509,6 +509,7 @@ class UnitPostProcessor(object):
                     if theSon :
                         newSon = self.__replaceArgs(argReps,str(theSon),inlineArgs,replacementArgs)
                         setattr(Stmt,aSon,newSon)
+                Stmt.lead = stmt_lead
                 Execs.append(Stmt.flow())
             elif hasattr(Stmt, "_sons"):
                 for aSon in Stmt._sons:
