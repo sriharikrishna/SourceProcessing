@@ -118,20 +118,20 @@ class Unit(object):
 
     def printit(self,out=sys.stdout):
         if self.cmnt:
-            print >> out,self.cmnt.rawline,
+            print >> out,self.cmnt.flow(),
         if self.uinfo:
-            print >> out,self.uinfo.rawline,
+            print >> out,self.uinfo.flow(),
         for aDeclStmt in self.decls:
-            print >> out,aDeclStmt.rawline,
+            print >> out,aDeclStmt.flow(),
         for anExecStmt in self.execs:
-            print >> out,anExecStmt.rawline,
+            print >> out,anExecStmt.flow(),
         for aContainsEntry in self.contains:
-            print >> out,aContainsEntry.rawline,
+            print >> out,aContainsEntry.flow(),
         for aSubUnit in self.ulist:
             aSubUnit.printit(out)
         if self.end:
             for anEndListEntry in self.end:
-                print >> out,anEndListEntry.rawline,
+                print >> out,anEndListEntry.flow(),
 
 # end class Unit
 

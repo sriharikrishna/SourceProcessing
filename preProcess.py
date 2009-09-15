@@ -12,7 +12,7 @@ from PyUtil.l_assembler import AssemblerException as ListAssemblerException
 from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabError
 
-from PyFort.flow import free_flow
+from PyFort.flow import setFixedOrFreeFormat,setLineLength
 from PyFort.fortUnit import Unit,fortUnitIterator
 import PyFort.fortStmts as fs
 
@@ -37,12 +37,27 @@ def main():
     for k,v in modes.items():
         modeChoicesHelp+=k+" = "+v+"; "
     opt = OptionParser(usage=usage)
+    opt.add_option('--freeOutput',
+                   dest='freeOutput',
+                   help="<output_file> is in free format",
+                   action = 'store_true',
+                   default=None)
     opt.add_option('',
                    '--free',
                    dest='isFreeFormat',
                    help="input source is free format",
                    action='store_true',
                    default=False)
+    opt.add_option('',
+                   '--removeFunction',
+                   dest='removeFunction',
+                   help="remove original function definition when it is transformed to a subroutine definitions",
+                   action='store_true',
+                   default=False)
+    opt.add_option('-l','--line_len',
+                   dest='line_len',
+                   help='sets the max line length of the output file',
+                   default=None)
     opt.add_option('-m','--mode',dest='mode',
                    type='choice', choices=modeChoices,
                    help='set default options for transformation mode with MODE being one of: '+ modeChoicesHelp+ '  reverse mode  implies -H but not -S; specific settings override the mode defaults.',
@@ -127,8 +142,13 @@ def main():
         Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
 
     # set free/fixed format
-    free_flow(config.isFreeFormat) 
+    setFixedOrFreeFormat(config.isFreeFormat,config.freeOutput)
+    if config.line_len:
+        setLineLength(config.line_len)
 
+    # set remove function definition
+    if config.removeFunction:
+        UnitCanonicalizer.setKeepFunctionDef(False)
     # configure constant expression hoisting
     if config.hoistConstantsFlag:
         UnitCanonicalizer.setHoistConstantsFlag(config.hoistConstantsFlag)

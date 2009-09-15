@@ -72,6 +72,8 @@ def setWhitespace(useWhitespace):
 class _Exp(_Mutable_T):
     'base class for Expression trees'
     _sons = []
+    def get_sons(self):
+        return self._sons
     pass
 
 class App(_Exp):
@@ -100,6 +102,7 @@ class NamedParam(object):
     def __init__(self,anId,aRHS):
         self.myId = anId
         self.myRHS = aRHS
+        self.accessed = False
 
     def __repr__(self):
         return 'NamedParam(%s,%s)' % (self.myId,repr(self.myRHS))
@@ -112,6 +115,10 @@ class NamedParam(object):
             rstr+='='
         rstr+=str(self.myRHS)
         return rstr
+
+    def get_sons(self):
+        self.accessed = True
+        return self._sons
 
 class Sel(_Exp):
     'selection expressions like foo(i,j)%k'
@@ -273,6 +280,7 @@ class Ops(_Exp):
 
     def map(self,fn):
         return Ops(self.op,fn(self.a1),fn(self.a2))
+
 
 class ArrayConstructor(_Exp):
     '''assigning an entire array at once, like this: a = (/ 2, 3, 5, 7, 11, 13, 17 /)'''
