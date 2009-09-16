@@ -662,7 +662,7 @@ class _ImplicitDoConstruct(object):
 class DataStmt(Decl):
     kw = 'data'
     kw_str = kw
-    _sons = ['object','valueList']
+    _sons = ['objectList','valueList']
 
     @staticmethod
     def parse(scan,lineNumber):
