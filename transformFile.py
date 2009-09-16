@@ -8,6 +8,7 @@ from optparse import OptionParser
 from PyUtil.errors import UserError, ScanError, ParseError
 from PP.transformActiveVariables import TransformActiveVariables
 from PyFort.fortUnit import Unit,fortUnitIterator
+from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabError
 import PyFort.fortStmts as fs
 
@@ -44,7 +45,16 @@ def main():
                    help='do not remove the output file if an error was encountered (defaults to False)',
                    action='store_true',
                    default=False)
+    opt.add_option('-v',
+                   '--verbose',
+                   dest='isVerbose',
+                   help='turns on verbose debugging output',
+                   action='store_true',
+                   default=False)
     config,args = opt.parse_args()
+
+    # set verbosity
+    DebugManager.setVerbose(config.isVerbose)
 
     # Set input file
     if len(args) != 1:
