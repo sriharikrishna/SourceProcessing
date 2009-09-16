@@ -464,11 +464,13 @@ class UnitCanonicalizer(object):
         DebugManager.debug('subunits (len ='+str(len(self.__myUnit.ulist))+'):')
         newList = []
         for subUnit in self.__myUnit.ulist:
-            DebugManager.debug(str(subUnit))
+            DebugManager.debug(5*'%'+'>'+'canon.canonicalizeUnit: ' \
+                              +'canonicalizing subunit '+str(subUnit))
             # if the unit is new, as a result of function transformation,
             # skip processing
             if isinstance(subUnit.uinfo,fs.SubroutineStmt) and \
                subUnit.uinfo.name.startswith(function2subroutine.name_init):
+                DebugManager.debug(5*'%'+'>'+'\t skipping this subunit because we generated it')
                 newList.append(subUnit)
             else:
                 newUnit = UnitCanonicalizer(subUnit).canonicalizeUnit()

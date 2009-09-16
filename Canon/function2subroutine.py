@@ -6,6 +6,7 @@ from _Setup import *
 from optparse import OptionParser
 
 from PyFort.fortUnit import Unit,fortUnitIterator
+from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabError
 import PyFort.fortStmts as fs
 import PyFort.fortExp as fe
@@ -20,6 +21,10 @@ class FunToSubError(Exception):
 name_init = 'oad_s_'
 
 def createTypeDecl(type_kw,mod,outParam,lead):
+    DebugManager.debug(10*'-'+'>'+'called function2subroutine.createTypeDecl ' \
+                     + 'with type keyword "'+type_kw+'",' \
+                     +' mod = "'+str(mod)+'",' \
+                     +' outParam = "'+str(outParam)+'"')
     intentArg = fe.App('intent',['out'])
     try:
         newDecl = {
@@ -36,6 +41,10 @@ def createTypeDecl(type_kw,mod,outParam,lead):
     return newDecl
 
 def convertFunctionDecl(aDecl,oldFuncName,newFuncName):
+    DebugManager.debug(10*'-'+'>'+'called function2subroutine.convertFunctionDecl ' \
+                     + 'on declaration statement "'+str(aDecl)+'"' \
+                     +' with old function name "'+oldFuncName+'"' \
+                     +' and new function name "'+newFuncName+'"')
     newDecl = copy.deepcopy(aDecl)
     modified = False
     if hasattr(newDecl,"_sons"):
@@ -52,6 +61,7 @@ def convertFunctionDecl(aDecl,oldFuncName,newFuncName):
     return (newDecl,modified)
 
 def convertFunctionStmt(functionStmt):
+    DebugManager.debug(10*'-'+'>'+'called function2subroutine.convertFunctionStmt on '+str(functionStmt))
     if functionStmt.result is None:
         outParam = fs._NoInit(functionStmt.name.lower())
     else:
@@ -65,6 +75,9 @@ def convertFunctionStmt(functionStmt):
     return (outParam,subroutineStmt)
 
 def createResultDecl(functionStmt,outParam):
+    DebugManager.debug(10*'-'+'>'+'called function2subroutine.createResultDecl ' \
+                     + 'on function statement "'+str(functionStmt)+'"' \
+                     +' with out parameter "'+str(outParam)+'"')
     if functionStmt.ty is not None:
         (type_name,mod) = functionStmt.ty
         newDecl = createTypeDecl(type_name.kw,mod,outParam,functionStmt.lead)
@@ -72,6 +85,9 @@ def createResultDecl(functionStmt,outParam):
     return None
 
 def updateResultDecl(decl,outParam):
+    DebugManager.debug(10*'-'+'>'+'called function2subroutine.updateResultDecl ' \
+                     + 'on declaration statement "'+str(decl)+'",' \
+                     +' outParam = "'+str(outParam)+'"')
     if (str(outParam) == decl) or \
            (hasattr(decl,'lhs') and (str(outParam) == decl.lhs)):
         return True
@@ -79,6 +95,10 @@ def updateResultDecl(decl,outParam):
         return False
 
 def updateTypeDecl(aDecl,outParam,declList):
+    DebugManager.debug(10*'-'+'>'+'called function2subroutine.updateTypeDecl ' \
+                     + 'on declaration statement "'+str(aDecl)+'",' \
+                     +' outParam = "'+str(outParam)+'",' \
+                     +' declList = "'+str(declList)+'"')
     resultDeclCreated = False
     if (len(aDecl.decls) == 1) and \
            updateResultDecl(aDecl.get_decls()[0],outParam):
@@ -95,6 +115,9 @@ def updateTypeDecl(aDecl,outParam,declList):
 
 def convertFunction(functionUnit,keepFunctionDecl=True):
     '''converts a function unit definition to a subroutine unit definition'''
+    DebugManager.debug(10*'-'+'>'+'called function2subroutine.convertFunction ' \
+                     + 'on function unit statement "'+str(functionUnit)+'",' \
+                     +' with symtab "'+str(functionUnit.symtab)+'"')
     newSubUnit = Unit(parent=functionUnit.parent,fmod=functionUnit.fmod)
     (outParam,newSubUnit.uinfo) = convertFunctionStmt(functionUnit.uinfo)
     newSubUnit.cmnt = functionUnit.cmnt
