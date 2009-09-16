@@ -28,7 +28,7 @@ def process_fort_stmt(stmt_tuple,lineNumber,jlf):
     if flow.freeInput:
         linelead = m and m.end(0) or 0
         lead = linelead * ' '+_lead_re.match(jl[linelead:]).group(1)
-        raw = jl[len(lead):]
+        raw = jl[len(lead):].strip()
         init_len = len(lead)
     else:
         lead = _lead_re.match(jl[6:]).group(1)
