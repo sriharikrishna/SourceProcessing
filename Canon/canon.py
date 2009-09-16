@@ -468,7 +468,7 @@ class UnitCanonicalizer(object):
             # if the unit is new, as a result of function transformation,
             # skip processing
             if isinstance(subUnit.uinfo,fs.SubroutineStmt) and \
-               subUnit.uinfo.name.startswith('oad_s_'):
+               subUnit.uinfo.name.startswith(function2subroutine.name_init):
                 newList.append(subUnit)
             else:
                 newUnit = UnitCanonicalizer(subUnit).canonicalizeUnit()
