@@ -1047,8 +1047,8 @@ class CharacterStmt(TypeDecl):
         return CharacterStmt(mod,attrs,decls,dc,scan,lineNumber)
 
     def __init__(self,mod,attrs,decls,stmt_name=kw,scan=[],lineNumber=0,label=False,lead=''):
-        TypeDecl.__init__(self,mod,attrs,decls,scan,lineNumber,label,lead)
         self.stmt_name = stmt_name
+        TypeDecl.__init__(self,mod,attrs,decls,scan,lineNumber,label,lead)
         if self.rawline=='':
             self.rawline=str(self)
 
@@ -1111,7 +1111,7 @@ class DimensionStmt(Decl):
         return DimensionStmt(lst,dc,scan,lineNumber)
 
     def __init__(self,lst,stmt_name=kw,scan=[],lineNumber=0,label=False,lead=''):
-        Decl.__init__(scan,lineNumber,label,lead)
+        Decl.__init__(self,scan,lineNumber,label,lead)
         self.lst = lst
         self.stmt_name = stmt_name
         if self.rawline=='':
@@ -1482,10 +1482,10 @@ class CloseStmt(Exec):
 class IOStmt(Exec):
 
     def __init__(self,stmt_name,ioCtrlSpecList,itemList=[],scan=[],lineNumber=0,label=False,lead=''):
-        Exec.__init__(self,scan,lineNumber,label,lead)
         self.stmt_name = stmt_name
         self.ioCtrlSpecList=ioCtrlSpecList
         self.itemList=itemList
+        Exec.__init__(self,scan,lineNumber,label,lead)
 
 class SimpleSyntaxIOStmt(IOStmt):
 
@@ -1495,8 +1495,8 @@ class SimpleSyntaxIOStmt(IOStmt):
         ([kw,format,comma,itemList],rest) = io_stmt(scan)
         return SubClass(kw,format,itemList,scan,lineNumber)
 
-    def __init__(self,stmt_name,format,itemList=[],lineNumber=0,label=False,lead=''):
-        IOStmt.__init__(self,stmt_name,[format],itemList,lineNumber,label,lead)
+    def __init__(self,stmt_name,format,itemList=[],scan=[],lineNumber=0,label=False,lead=''):
+        IOStmt.__init__(self,stmt_name,[format],itemList,scan,lineNumber,label,lead)
         if self.rawline=='':
             self.rawline=str(self)
 
@@ -1518,6 +1518,9 @@ class ComplexSyntaxIOStmt(IOStmt):
         io_stmt = seq(lit(kw),lit('('),cslist(disj(lit('*'),NamedParmExpWithStar,Exp)),lit(')'),cslist(Exp))
         ([kw,lbracket,ioCtrlSpecList,rbracket,itemList],rest) = io_stmt(scan)
         return SubClass(kw,ioCtrlSpecList,itemList,scan,lineNumber)
+
+    def __init__(self,stmt_name,ioCtrlSpecList,itemList=[],scan=[],lineNumber=0,label=False,lead=''):
+        IOStmt.__init__(self,stmt_name,ioCtrlSpecList,itemList,scan,lineNumber,label,lead)        
 
     def __str__(self):
         return '%s(%s) %s' % (self.stmt_name,','.join([str(ioCtrl) for ioCtrl in self.ioCtrlSpecList]),','.join([str(item) for item in self.itemList]))
@@ -1542,8 +1545,8 @@ class ReadStmt(ComplexSyntaxIOStmt):
         except ListAssemblerException,e:
             return SimpleReadStmt.parse(scan,lineNumber)
 
-    def __init__(self,stmt_name=kw,ioCtrlSpecList=[],itemList=[],lineNumber=0,label=False,lead=''):
-        IOStmt.__init__(self,stmt_name,ioCtrlSpecList,itemList,lineNumber,label,lead)
+    def __init__(self,stmt_name=kw,ioCtrlSpecList=[],itemList=[],scan=[],lineNumber=0,label=False,lead=''):
+        IOStmt.__init__(self,stmt_name,ioCtrlSpecList,itemList,scan,lineNumber,label,lead)
     
 class WriteStmt(ComplexSyntaxIOStmt):
     kw = 'write'
@@ -1553,8 +1556,8 @@ class WriteStmt(ComplexSyntaxIOStmt):
     def parse(scan,lineNumber):
         return ComplexSyntaxIOStmt.parse(scan,lineNumber,WriteStmt.kw,WriteStmt)
 
-    def __init__(self,stmt_name=kw,ioCtrlSpecList=[],itemList=[],lineNumber=0,label=False,lead=''):
-        IOStmt.__init__(self,stmt_name,ioCtrlSpecList,itemList,lineNumber,label,lead)
+    def __init__(self,stmt_name=kw,ioCtrlSpecList=[],itemList=[],scan=[],lineNumber=0,label=False,lead=''):
+        ComplexSyntaxIOStmt.__init__(self,stmt_name,ioCtrlSpecList,itemList,scan,lineNumber,label,lead)
     
 class FormatStmt(Exec):
     kw = 'format'
