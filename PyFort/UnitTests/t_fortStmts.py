@@ -1161,6 +1161,14 @@ class TestProcedureStmt(TestCase):
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
 
+    def test4(self):
+        '''module procedure statement with multiple procedure items'''
+        theString = 'module procedure real_erf, double_erf'
+        theRepr = ProcedureStmt(True,['x', 'y'])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
 
 suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,
                TestAssignStmt,

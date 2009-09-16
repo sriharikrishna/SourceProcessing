@@ -40,24 +40,26 @@ def createTypeDecl(type_kw,mod,outParam,lead):
 
     return newDecl
 
-def convertFunctionDecl(aDecl,oldFuncName,newFuncName):
+def convertFunctionDecl(aDecl,oldFuncnewSubPairs):
     DebugManager.debug(10*'-'+'>'+'called function2subroutine.convertFunctionDecl ' \
                      + 'on declaration statement "'+str(aDecl)+'"' \
-                     +' with old function name "'+oldFuncName+'"' \
-                     +' and new function name "'+newFuncName+'"')
+                     +' with oldFuncnewSubPairs = "'+str(oldFuncnewSubPairs)+'"')
     newDecl = copy.deepcopy(aDecl)
     modified = False
     if hasattr(newDecl,"_sons"):
         for aSon in newDecl.get_sons():
             theSon = getattr(newDecl,aSon)
             if isinstance(theSon,list):
-                if oldFuncName in theSon:
-                    theSon.remove(oldFuncName)
-                    theSon.append(newFuncName)
-                    modified = True
-            elif theSon == oldFuncName:
-                setattr(newDecl,aSon,newFuncName)
-                modified = True
+                for anOldNewPair in oldFuncnewSubPairs :
+                    if anOldNewPair[0] in theSon:
+                        theSon.remove(anOldNewPair[0])
+                        theSon.append(anOldNewPair[1])
+                        modified = True
+            else :
+                for anOldNewPair in oldFuncnewSubPairs :
+                    if theSon == anOldNewPair[0] :
+                        setattr(newDecl,aSon,anOldNewPair[1])
+                        modified = True
     return (newDecl,modified)
 
 def convertFunctionStmt(functionStmt):
