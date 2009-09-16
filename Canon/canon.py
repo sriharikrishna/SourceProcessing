@@ -522,25 +522,33 @@ class UnitCanonicalizer(object):
             else:
                 self.__myUnit = function2subroutine.convertFunction(\
                     self.__myUnit, self._keepFunctionDecl)
-                
+
+        # build list of old function/new subroutine name pairs 
+        oldFuncnewSubPairs = []
         for aSubUnit in self.__myUnit.ulist:
             if isinstance(aSubUnit.uinfo,fs.SubroutineStmt) and \
                    aSubUnit.uinfo.name.startswith(function2subroutine.name_init):
-                oldFuncName = aSubUnit.uinfo.name.lstrip(function2subroutine.name_init)
-                index = 0
-                length = len(self.__myUnit.decls)
-                while index < length:
-                    aDecl = self.__myUnit.decls[index]
-                    (newDecl,modified) = function2subroutine.convertFunctionDecl(\
-                        aDecl,oldFuncName,aSubUnit.uinfo.name)
-                    if modified:
-                        if self._keepFunctionDecl:
-                            index += 1
-                            length += 1
-                            self.__myUnit.decls.insert(index,newDecl)
-                        else:
-                            self.__myUnit.decls[index] = newDecl
+                if aSubUnit.uinfo.name[0:6] != function2subroutine.name_init :
+                    raise CanonError('Tried to strip "'+aSubUnit.uinfo.name[0:6]+'"' \
+                                    +' from the beginning of "'+aSubUnit.uinfo.name+'"',aSubUnit.uinfo.lineNumber)
+                DebugManager.debug('searching declarations to convert old function name "'+aSubUnit.uinfo.name[6:]+'"' \
+                                  +' to new subroutine name "'+aSubUnit.uinfo.name+'"')
+                oldFuncnewSubPairs.append([aSubUnit.uinfo.name[6:],
+                                           aSubUnit.uinfo.name])
+        # iterate through decls in this unit in order to duplicate them for the new subroutinized versions 
+        index = 0
+        length = len(self.__myUnit.decls)
+        while index < length:
+            aDecl = self.__myUnit.decls[index]
+            (newDecl,modified) = function2subroutine.convertFunctionDecl(aDecl,oldFuncnewSubPairs)
+            if modified:
+                if self._keepFunctionDecl:
                     index += 1
+                    length += 1
+                    self.__myUnit.decls.insert(index,newDecl)
+                else:
+                    self.__myUnit.decls[index] = newDecl
+            index += 1
             
         DebugManager.debug(('+'*54)+' End canonicalize unit <'+str(self.__myUnit.uinfo)+'> '+(54*'+')+'\n\n')
 
