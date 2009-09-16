@@ -151,6 +151,9 @@ def main():
                 out.flush()
             for aUnit in fortUnitIterator(anInputFile,config.isFreeFormat):
                 UnitCanonicalizer(aUnit).canonicalizeUnit().printit(out)
+        if (len(inputFileList) > 1): # output the file start pragma for the subroutinized intrinsics
+            out.write('!$openad xxx file_start [OAD_subroutinizedIntrinsics.f90]\n')
+            out.flush()
         for aUnit in makeSubroutinizedIntrinsics():
             aUnit.printit(out)
         if config.outputFile: out.close()
