@@ -696,8 +696,7 @@ class UnitPostProcessor(object):
                     Execs.append(newDecl)
             else:
                 DebugManager.debug('Statement "'+str(aDecl)+'" is assumed to require no post-processing')
-
-                Decls.append(aDecl.flow())
+                Decls.append(aDecl)
                 UseStmtSeen = False
             if self._mode == 'reverse':
                 return (declList,Decls,execList,Execs,UseStmtSeen,replacementNum)
