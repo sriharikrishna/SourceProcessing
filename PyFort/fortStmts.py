@@ -786,8 +786,9 @@ class VarAttrib(Decl):
         ((dc,vlist),r) = p0(scan)
         if vlist:
             vlist = vlist[0][1]
-
-        return cls(vlist,scan,lineNumber)
+            return cls(vlist,scan,lineNumber)
+        else:
+            return cls(r,scan,lineNumber)
 
     def __init__(self,vlist,scan=[],lineNumber=0,label=False,lead=''):
         Decl.__init__(self,scan,lineNumber,label,lead)
