@@ -17,7 +17,7 @@ from PyUtil.debugManager import DebugManager
 
 from PyIR.prog1 import Prog1
 
-from PyFort.flow import free_flow
+from PyFort.flow import setFixedOrFreeFormat, setLineLength
 from PyFort.fortUnit import Unit,fortUnitIterator
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
@@ -52,6 +52,10 @@ def main():
                    dest='inline',
                    help='file with definitions for inlinable routines for reverse mode post processing (defaults to ad_inline.f); requires reverse mode ( -m r )',
                    default=None) # cannot set default here because of required reverse mode
+    opt.add_option('-l','--line_len',
+                   dest='line_len',
+                   help='sets the max line length of the output file',
+                   default=None)
     opt.add_option('-m','--mode',dest='mode',
                    type='choice', choices=modeChoices,
                    help='set default options for transformation mode with MODE being one of: '+ modeChoicesHelp+ ' (default is \'f\')',
@@ -94,9 +98,9 @@ def main():
                    dest='freeOutput',
                    help="<output_file> is in free format",
                    action = 'store_true',
-                   default=False)
+                   default=None)
     opt.add_option('--free',
-                   dest='free',
+                   dest='isFreeFormat',
                    help="<input_file> is in free format",
                    action='store_true',
                    default=False)
@@ -180,8 +184,14 @@ def main():
         UnitPostProcessor.setDerivType(config.deriv)
 
         # set free/fixed format
-        free_flow(config.free)
+        if config.freeOutput is None:
+            setFixedOrFreeFormat(config.isFreeFormat)
+        else:
+            setFixedOrFreeFormat(config.isFreeFormat,config.freeOutput)
 
+        if config.line_len:
+            setLineLength(config.line_len)
+        
         if (config.activeVariablesFile):
             UnitPostProcessor.setActiveVariablesFile(config.activeVariablesFile)
             if (os.path.exists(config.activeVariablesFile)):
@@ -197,7 +207,6 @@ def main():
             UnitPostProcessor.setMode('forward')
         if config.mode == 'r':
             UnitPostProcessor.setMode('reverse')
-            UnitPostProcessor.setFreeFlow(config.free)
             if (config.inline):
                 if (config.noInline):
                     opt.error("option --noInline conflicts with option -i")
@@ -219,8 +228,6 @@ def main():
         UnitPostProcessor.setReplacementType(config.concreteType)
         # set abstract type 
         UnitPostProcessor.setAbstractType(config.abstractType)
-        # set output format
-        UnitPostProcessor.setOutputFormat(config.freeOutput)
 
         # set verbosity
         DebugManager.setVerbose(config.verbose)
@@ -237,7 +244,7 @@ def main():
             unitStartTime=None
             if (config.timing):
                 unitStartTime=datetime.datetime.utcnow()
-            for aUnit in fortUnitIterator(inputFile,config.free):
+            for aUnit in fortUnitIterator(inputFile,config.isFreeFormat):
                 output = base + unitNumExt % unit_num + ext
                 out = open(output,'w')
                 outFileNameList.append(output)
@@ -260,7 +267,7 @@ def main():
         # SEPARATE OUTPUT INTO FILES AS SPECIFIED BY PRAGMAS
         elif config.separateOutput:
             out = None
-            for aUnit in fortUnitIterator(inputFile,config.free):
+            for aUnit in fortUnitIterator(inputFile,config.isFreeFormat):
                 # We expect to find file pragmas in the cmnt section of units exclusively
                 if aUnit.cmnt:
                     if (re.search('openad xxx file_start',aUnit.cmnt.rawline,re.IGNORECASE)):
@@ -286,7 +293,7 @@ def main():
                 outFileNameList.append(config.output)
             else:
                 out=sys.stdout
-            for aUnit in fortUnitIterator(inputFile,config.free):
+            for aUnit in fortUnitIterator(inputFile,config.isFreeFormat):
                 UnitPostProcessor(aUnit).processUnit().printit(out)
             if config.output: 
                 out.close()
@@ -320,7 +327,7 @@ def main():
         print >>sys.stderr,''
         print >>sys.stderr,"Tokens scanned ok: ", e.scanned,'\tUnable to scan: "'+e.rest+'"'
         print >>sys.stderr,''
-        if (e.rest == '&' and not config.free):
+        if (e.rest == '&' and not config.isFreeFormat):
             print >>sys.stderr,"This failure is likely due to running this script on free-formatted code without specifying the --free flag."
         else:
             print >>sys.stderr,"This failure is likely due to possibly legal but unconventional Fortran,"
@@ -356,4 +363,3 @@ if __name__ == "__main__":
     # import cProfile
     # cProfile.runctx( 'main()', globals(), locals(), filename="postProcess.profile" )
     sys.exit(main())
-

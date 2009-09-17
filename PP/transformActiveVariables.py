@@ -67,7 +67,6 @@ class TransformActiveVariables(object):
                     theSon = getattr(anExec,aSon)
                     newSon = self.__transformActiveTypes(theSon)
                     setattr(anExec,aSon,newSon)
-                    anExec.flow()
             self.__newExecs.append(anExec)
         self.__myUnit.execs = self.__newExecs
         return self.__myUnit

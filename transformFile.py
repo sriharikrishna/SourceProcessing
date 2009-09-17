@@ -12,7 +12,7 @@ from PyFort.fortUnit import Unit,fortUnitIterator
 from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabError
 import PyFort.fortStmts as fs
-from PyFort.flow import free_flow
+from PyFort.flow import setFixedOrFreeFormat, setLineLength
 
 def cleanup(config):
     import os 
@@ -36,6 +36,10 @@ def main():
                    dest='vardefs',
                    help='file with definitions for active variables',
                    default='activeVariableDefinitions.f')
+    opt.add_option('-l','--line_len',
+                   dest='line_len',
+                   help='sets the max line length of the output file',
+                   default=None)
     opt.add_option('-o',
                    '--output',
                    dest='output',
@@ -63,10 +67,14 @@ def main():
     DebugManager.setVerbose(config.isVerbose)
 
     # set free/fixed format
-    free_flow(config.isFreeFormat)
+    setFixedOrFreeFormat(config.isFreeFormat)
 
     # set symtab type defaults
     Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
+
+    # set line length
+    if config.line_len:
+        setLineLength(config.line_len)
 
     # check input/output options
     if len(args) == 0:
@@ -78,7 +86,7 @@ def main():
                      +' the following options were given: '+str(config))
     if config.outputDir :
         if not os.path.exists(config.outputDir): os.makedirs(config.outputDir)
- 
+
     currentFile = config.vardefs
     try:
         # suppress missing module warnings???
