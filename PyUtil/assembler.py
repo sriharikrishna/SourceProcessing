@@ -176,7 +176,7 @@ def vgen(a,src,mult_stmts=False):
             if mult_stmts:
                 if isinstance(v,list):
                     for elt in v:
-                        yield elt.flow()
+                        yield elt
                 else:
                     yield v
             else:
