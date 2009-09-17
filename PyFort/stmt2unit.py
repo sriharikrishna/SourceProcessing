@@ -36,6 +36,10 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
     newLength = None
     dflt_d  = default_dims(aTypeDeclStmt.attrs)
     DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: stmt2unit._processTypedeclStmt('+str(aTypeDeclStmt)+') with default dimensions '+str(dflt_d))
+    isPrivate = False
+    for anAttribute in aTypeDeclStmt.attrs :
+        if isinstance(anAttribute,str) and anAttribute.lower() == 'private' :
+            isPrivate = True
     for aDecl in aTypeDeclStmt.decls:
         DebugManager.debug('\tProcessing decl '+repr(aDecl)+' ... ',newLine=False)
         (name,newDimensions) = typesep(aDecl,dflt_d)
@@ -67,7 +71,8 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                                              type=newType,
                                              dimensions=newDimensions,
                                              length=newLength,
-                                             origin='local')
+                                             origin='local',
+                                             isPrivate=isPrivate)
                 DebugManager.debug('decl "'+str(aDecl)+'" NOT already present in symbol table => adding '+str(newSymtabEntry.debug(name)))
                 localSymtab.enter_name(name,newSymtabEntry)
         except SymtabError,e: # add lineNumber and symbol name to any SymtabError we encounter

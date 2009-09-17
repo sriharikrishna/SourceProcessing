@@ -120,6 +120,7 @@ class Symtab(object):
         'update self with all ids from module "unit" symtab, making sure to enter local names whenever there are renames. module name = "name"'
         # go through everything in the module and add it to the local symbol table, being sure to check for it in the rename list
         for aKey in aModuleUnit.symtab.ids.keys():
+            if aModuleUnit.symtab.ids[aKey].isPrivate : continue
             noRename = True
             if renameList:
                 for aRenameItem in renameList:
@@ -150,13 +151,14 @@ class Symtab(object):
         return outString
 
 class SymtabEntry(object):
-    def __init__(self,entryKind,type=None,dimensions=None,length=None,origin=None,renameSource=None):
+    def __init__(self,entryKind,type=None,dimensions=None,length=None,origin=None,renameSource=None,isPrivate=False):
         self.entryKind = entryKind
         self.type = type
         self.dimensions = dimensions
         self.length = length
         self.origin = origin
         self.renameSource = renameSource
+        self.isPrivate = isPrivate
 
     def enterEntryKind(self,newEntryKind):
         # the replacement entry kind must be an 'instance' of the existing one.
@@ -223,6 +225,7 @@ class SymtabEntry(object):
                                          ', length='+str(self.length)+\
                                          ', origin='+str(self.origin)+\
                                          ', renameSource='+str(self.renameSource)+\
+                                         ', isPrivate='+str(self.isPrivate)+\
                                          ']'
 
     class GenericEntryKind(object):
