@@ -128,15 +128,10 @@ def convertFunction(functionUnit,keepFunctionDecl=True):
 
     newList = []
     for subUnit in newSubUnit.ulist:
-        # if the unit is new, as a result of function transformation,
-        # skip processing
-        if isinstance(subUnit.uinfo,fs.SubroutineStmt) and \
-               subUnit.uinfo.name.startswith('oad_s_'):
-            if not keepFunctionDecl:
-                newList.append(subUnit)
-        else:
-            newUnit = convertFunction(subUnit)
-            newList.append(newUnit)
+        # no need to process function statements, since they have already been
+        # recursively processed in canon. => drop function stmts & keep other sub units
+        if not isinstance(subUnit.uinfo,fs.FunctionStmt):
+            newList.append(subUnit)
     newSubUnit.ulist = newList
 
     resultDecl = createResultDecl(functionUnit.uinfo,outParam)
