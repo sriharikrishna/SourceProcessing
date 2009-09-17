@@ -40,66 +40,55 @@ def makeSubroutinizedIntrinsics():
 def makeSubroutinizedMaxOrMin(newUnit,aKey,aTypeClass):
     newUnit.uinfo=fs.SubroutineStmt(makeName(aKey,aTypeClass),
                                     ["a","b","r"],
-                                    lead=flow.formatStart
-                                   ).flow()
+                                    lead=flow.formatStart)
     newUnit.decls.append(aTypeClass(None,
                                    [App('intent',['in'])],
                                    'a',
-                                   lead=flow.formatStart+'  '
-                                  ).flow())
+                                   lead=flow.formatStart+'  '))
     newUnit.decls.append(aTypeClass(None,
                                    [App('intent',['in'])],
                                    'b',
-                                   lead=flow.formatStart+'  '
-                                  ).flow())
+                                   lead=flow.formatStart+'  '))
     newUnit.decls.append(aTypeClass(None,
                                    [App('intent',['out'])],
                                    'r',
-                                   lead=flow.formatStart+'  '
-                                  ).flow())
+                                   lead=flow.formatStart+'  '))
     testExpr = (aKey=='max') and Ops('>','a','b') \
                              or Ops('<','a','b')
-    newUnit.execs.append(fs.IfThenStmt(testExpr,lead=flow.formatStart+'  ').flow())
-    newUnit.execs.append(fs.AssignStmt('r','a',lead=flow.formatStart+'    ').flow())
-    newUnit.execs.append(fs.ElseStmt(lead=flow.formatStart+'  ').flow())
-    newUnit.execs.append(fs.AssignStmt('r','b',lead=flow.formatStart+'    ').flow())
-    newUnit.execs.append(fs.EndifStmt(lead=flow.formatStart+'  ').flow())
-    newUnit.end.append(fs.EndStmt(lead=flow.formatStart).flow())
+    newUnit.execs.append(fs.IfThenStmt(testExpr,lead=flow.formatStart+'  '))
+    newUnit.execs.append(fs.AssignStmt('r','a',lead=flow.formatStart+'    '))
+    newUnit.execs.append(fs.ElseStmt(lead=flow.formatStart+'  '))
+    newUnit.execs.append(fs.AssignStmt('r','b',lead=flow.formatStart+'    '))
+    newUnit.execs.append(fs.EndifStmt(lead=flow.formatStart+'  '))
+    newUnit.end.append(fs.EndStmt(lead=flow.formatStart))
 
 def makeSubroutinizedMaxvalOrMinval(newUnit,aKey,aTypeClass):
     newUnit.uinfo = fs.SubroutineStmt(makeName(aKey,aTypeClass),
                                       ['a','l','r'],
-                                      lead=flow.formatStart
-                                     ).flow()
+                                      lead=flow.formatStart)
     newUnit.decls.append(aTypeClass(None,
                                     [App('intent',['in'])],
                                     [fs._NoInit(App('a',['l']))],
-                                    lead=flow.formatStart+'  '
-                                   ).flow())
+                                    lead=flow.formatStart+'  '))
     newUnit.decls.append(fs.IntegerStmt(None,
                                         [App('intent',['in'])],
                                         ['l'],
-                                        lead=flow.formatStart+'  '
-                                       ).flow())
+                                        lead=flow.formatStart+'  '))
     newUnit.decls.append(aTypeClass(None,
                                     [App('intent',['out'])],
                                     ['r'],
-                                    lead=flow.formatStart+'  '
-                                   ).flow())
+                                    lead=flow.formatStart+'  '))
     newUnit.decls.append(fs.IntegerStmt(None,
                                         None,
                                         [fs._NoInit(App('i',['1']))],
-                                        lead=flow.formatStart+'  '
-                                       ).flow())
+                                        lead=flow.formatStart+'  '))
     locVersion = (aKey=='maxval') and 'maxloc' \
                                    or 'minloc'
     newUnit.execs.append(fs.AssignStmt('i',
                                        App(locVersion,['a']),
-                                       lead=flow.formatStart+'    '
-                                      ).flow())
+                                       lead=flow.formatStart+'    '))
     newUnit.execs.append(fs.AssignStmt('r',
                                        App('i',['1']),
-                                       lead=flow.formatStart+'    '
-                                      ).flow())
-    newUnit.end.append(fs.EndStmt(lead=flow.formatStart).flow())
+                                       lead=flow.formatStart+'    '))
+    newUnit.end.append(fs.EndStmt(lead=flow.formatStart))
 

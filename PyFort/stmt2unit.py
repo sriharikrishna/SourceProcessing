@@ -131,9 +131,9 @@ def _assign2stmtfn(anAssignmentStmt,curr):
     newStmtFn = fs.StmtFnStmt(anAssignmentStmt.lhs.head,
                               anAssignmentStmt.lhs.args,
                               anAssignmentStmt.rhs,
-                              anAssignmentStmt.lineNumber,
-                              anAssignmentStmt.label,
-                              anAssignmentStmt.lead)
+                              lineNumber=anAssignmentStmt.lineNumber,
+                              label=anAssignmentStmt.label,
+                              lead=anAssignmentStmt.lead)
     newStmtFn.rawline = anAssignmentStmt.rawline
     newSymtabEntry = SymtabEntry(SymtabEntry.StatementFunctionEntryKind,
                                  origin='local')
