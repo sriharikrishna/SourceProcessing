@@ -152,14 +152,19 @@ def _use_module(aUseStmt,cur):
     DebugManager.debug('[Line '+str(aUseStmt.lineNumber)+']: stmt2unit._use_module() for '+str(aUseStmt)+': with symtab '+str(cur.val.symtab)+' and parent symtab '+str(cur.val.symtab.parent))
     module_unit = cur.module_handler.get_module(aUseStmt.moduleName)
     if module_unit:
+        DebugManager.debug('updating '+str(cur.val.symtab)+') with module "'+aUseStmt.moduleName+'", which has unit '+str(module_unit),newLine=False)
         try:
             if isinstance(aUseStmt,fs.UseAllStmt):
+                DebugManager.debug(' where we are using ALL')
                 cur.val.symtab.update_w_module_all(module_unit,aUseStmt.renameList)
             elif isinstance(aUseStmt,fs.UseOnlyStmt):
+                DebugManager.debug(' where we are using ONLY '+str(aUseStmt.onlyList))
                 cur.val.symtab.update_w_module_only(module_unit,aUseStmt.onlyList)
         except KeyError,e:
-            raise SymtabError('error when updating a symbol table according to use statement '+str(aUseStmt),
-                              symbolName=None,
+            raise SymtabError('KeyError for key "'+str(e)+'"' \
+                             +' while updating '+cur.val.symtab.debug() \
+                             +' according to use statement "'+str(aUseStmt)+'"',
+                              symbolName=str(e),
                               entry=None,
                               lineNumber=aUseStmt.lineNumber)
     else:

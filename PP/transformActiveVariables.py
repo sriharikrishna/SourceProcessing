@@ -2,6 +2,13 @@ from PyFort.fortUnit import fortUnitIterator
 import PyFort.fortStmts as fs
 import PyFort.fortExp as fe
 
+class TransformError(Exception):
+    '''Exception for errors that occur during active variable transformation'''
+    def __init__(self,msg,lineNumber):
+        self.msg = msg
+        self.lineNumber = lineNumber
+
+
 class TransformActiveVariables(object):
     'class to perform rudimentary tranformations of active variables on non-transformed files'
 

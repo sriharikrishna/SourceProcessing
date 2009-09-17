@@ -6,7 +6,7 @@ import sys
 from optparse import OptionParser
 
 from PyUtil.errors import UserError, ScanError, ParseError
-from PP.transformActiveVariables import TransformActiveVariables
+from PP.transformActiveVariables import TransformActiveVariables,TransformError
 from PyFort.fortUnit import Unit,fortUnitIterator
 from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabError
@@ -76,6 +76,11 @@ def main():
         currentFile = inputFile
         for aUnit in fortUnitIterator(inputFile,config.isFreeFormat):
             TransformActiveVariables(aUnit).transformFile().printit(out)
+
+    except TransformError,e :
+        print >>sys.stderr,'\nERROR: TransformError in '+currentFile+' at line '+str(e.lineNumber)+':',e.msg
+        cleanup(config)
+        return 1
     except SymtabError,e:
         print >>sys.stderr,'\nERROR: SymtabError in '+currentFile+' at line '+str(e.lineNumber)+':',e.msg
         if e.entry:
