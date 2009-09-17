@@ -152,6 +152,8 @@ def convertFunction(functionUnit,keepFunctionDecl=True):
         newSubUnit.decls.append(aDecl)
 
     if resultDecl is not None:
+        if len(functionUnit.decls) != 0:
+            resultDecl.lead = aDecl.lead
         # append declaration for new out parameter
         newSubUnit.decls.append(resultDecl)
         

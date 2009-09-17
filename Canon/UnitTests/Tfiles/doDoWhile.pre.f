@@ -9,7 +9,7 @@
             do i = oad_ctmp0,10,2
               call oad_s_bar(y,oad_ctmp1)
               do j = oad_ctmp1,100
-                y = y + (i * j)
+                y = y+(i*j)
               enddo
             enddo
           enddo

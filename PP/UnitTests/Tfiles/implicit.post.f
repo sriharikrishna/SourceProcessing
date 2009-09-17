@@ -1,7 +1,9 @@
-      module globals_mod
-      implicit none
+      MODULE globals_mod
+      IMPLICIT NONE
       SAVE
-       integer(w2f__i4) :: N
+
+      INTEGER(w2f__i4) N
       SAVE N
-       real(w2f__8) :: OpenAD_Symbol_0
+
+      REAL(w2f__8) OpenAD_Symbol_0
       END MODULE
