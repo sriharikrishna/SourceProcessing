@@ -11,6 +11,7 @@ from PyFort.fortUnit import Unit,fortUnitIterator
 from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabError
 import PyFort.fortStmts as fs
+from PyFort.flow import free_flow
 
 def cleanup(config):
     import os 
@@ -55,6 +56,9 @@ def main():
 
     # set verbosity
     DebugManager.setVerbose(config.isVerbose)
+
+    # set free/fixed format
+    free_flow(config.free)
 
     # Set input file
     if len(args) != 1:
