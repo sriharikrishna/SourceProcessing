@@ -1488,6 +1488,10 @@ class IOStmt(Exec):
         self.itemList=itemList
         Exec.__init__(self,scan,lineNumber,label,lead)
 
+    def get_itemList(self):
+        self.accessed = True
+        return self.itemList
+
 class SimpleSyntaxIOStmt(IOStmt):
 
     @staticmethod

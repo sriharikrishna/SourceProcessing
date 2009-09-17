@@ -190,7 +190,7 @@ class UnitPostProcessor(object):
         DebugManager.debug('unitPostProcessor.__processIOStmt called on: "'\
                                +str(anIOStmt)+" "+str(anIOStmt.__class__)+"'")
         newItemList=[]
-        for item in anIOStmt.itemList:
+        for item in anIOStmt.get_itemList():
             newItemList.append((self.__transformActiveTypesExpression(item)))
         anIOStmt.itemList=newItemList
         return anIOStmt
@@ -484,7 +484,7 @@ class UnitPostProcessor(object):
                 Execs.append(newStmt)
             elif isinstance(Stmt,fs.IOStmt):
                 newItemList = []
-                for item in Stmt.itemList:
+                for item in Stmt.get_itemList():
                     newItem=self.__replaceArgs(argReps,str(item),inlineArgs,replacementArgs)
                     newItemList.append(newItem)
                 Stmt.itemList = newItemList
