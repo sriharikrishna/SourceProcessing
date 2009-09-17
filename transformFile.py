@@ -2,6 +2,7 @@
 '''
 Rudimentary transformations on non-transformed files
 '''
+import os
 import sys
 from optparse import OptionParser
 
@@ -50,6 +51,10 @@ def main():
                    help='do not remove the output file if an error was encountered (defaults to False)',
                    action='store_true',
                    default=False)
+    opt.add_option('--outputDir',
+                   dest='outputDir',
+                   help='for use with >1 input file (and not with --output): output each file in this directory, keeping the same file name (defaults to the local directory)',
+                   default='')
     opt.add_option('-v',
                    '--verbose',
                    dest='isVerbose',
@@ -61,35 +66,51 @@ def main():
     # set verbosity
     DebugManager.setVerbose(config.isVerbose)
 
-    # Set input file
-    if len(args) != 1:
-        opt.error("expect exactly one argument <input_file>, given are "+str(len(args))+" which are:"+str(args)+" and the following options: "+str(config))
-    inputFile = args[0]
-    
-    # set symtab type defaults
-    Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
-
     # set free/fixed format
     setFixedOrFreeFormat(config.isFreeFormat)
+
+    # set symtab type defaults
+    Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
 
     # set line length
     if config.line_len:
         setLineLength(config.line_len)
-        
-    # set output
-    if config.output: 
-        out = open(config.output,'w')
-    else:
-        out=sys.stdout
+
+    # check input/output options
+    if len(args) == 0:
+        opt.error('expected at least one argument <input_file> ;' \
+                 +' the following options were given: '+str(config))
+    inputFileList = args
+    if config.output and len(inputFileList) > 1 :
+            opt.error('No output file can be specified when more than one input file is given.' \
+                     +' the following options were given: '+str(config))
+    if config.outputDir :
+        if not os.path.exists(config.outputDir): os.makedirs(config.outputDir)
 
     currentFile = config.vardefs
     try:
         # suppress missing module warnings???
         # AL: shouldnt be necessary now that we're putting everything in the active variables file
         TransformActiveVariables.getActiveDecls(config.vardefs,config.isFreeFormat)
-        currentFile = inputFile
-        for aUnit in fortUnitIterator(inputFile,config.isFreeFormat):
-            TransformActiveVariables(aUnit).transformFile().printit(out)
+        # only one input file
+        if len(inputFileList) == 1 :
+            currentFile = inputFileList[0]
+            if config.output :
+                out = open(config.output,'w')
+            else :
+                out = sys.stdout
+            for aUnit in fortUnitIterator(inputFileList[0],config.isFreeFormat):
+                TransformActiveVariables(aUnit).transformFile().printit(out)
+            if config.output :
+                out.close()
+        # multiple input files
+        else :
+            for anInputFile in inputFileList :
+                currentFile = anInputFile
+                out = open(os.path.join(config.outputDir,anInputFile),'w')
+                for aUnit in fortUnitIterator(anInputFile,config.isFreeFormat):
+                    TransformActiveVariables(aUnit).transformFile().printit(out)
+                out.close()
 
     except TransformError,e :
         print >>sys.stderr,'\nERROR: TransformError in '+currentFile+' at line '+str(e.lineNumber)+':',e.msg
@@ -128,8 +149,6 @@ def main():
         cleanup(config)
         return 1 
 
-    if config.output: 
-        out.close()
 
 if __name__ == "__main__":
     sys.exit(main())
