@@ -94,18 +94,16 @@ class C3(TestCase):
         ae = self.assertEquals
         c1 = Comments('C     comment 1 is free format\nC     comment 2 is long long long. it must be more than 72 characters in\nC     order to cause line break for fixed format comment\n')
         c2 = Comments('!     comment 1 is free format\n!     comment 2 is long long long. it must be more than 72 characters in\n!     order to cause line break for fixed format comment\n')
-        flow.free_flow(True)
-        c1.flow()
-        ae(c1.rawline,c2.rawline)
+        flow.setFixedOrFreeFormat(True)
+        ae(c1.flow(),c2.rawline)
 
     def test3(self):
         'test flow to fixed format on comments in free format'
         ae = self.assertEquals
         c1 = Comments('!     comment 1 is free format\n!     comment 2 is long long long. it must be more than 72 characters in order to cause line break for fixed format comment\n')
-        c2 = Comments('C     comment 1 is free format\nC     comment 2 is long long long. it must be more than 72 characters in \nC order to cause line break for fixed format comment\n')
-        flow.free_flow(False)
-        c1.flow()
-        ae(c1.rawline,c2.rawline)
+        c2 = Comments('C     comment 1 is free format\nC     comment 2 is long long long. it must be more than 72 characters in order to\nC  cause line break for fixed format comment\n')
+        flow.setFixedOrFreeFormat(False)
+        ae(c1.flow(),c2.rawline)
 
 class C4(TestCase):
     def test1(self):
@@ -1163,8 +1161,8 @@ class TestProcedureStmt(TestCase):
 
     def test4(self):
         '''module procedure statement with multiple procedure items'''
-        theString = 'module procedure real_erf, double_erf'
-        theRepr = ProcedureStmt(True,['x', 'y'])
+        theString = 'module procedure real_erf,double_erf'
+        theRepr = ProcedureStmt(True,['real_erf', 'double_erf'])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
