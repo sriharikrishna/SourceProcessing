@@ -72,6 +72,7 @@ def main():
     currentFile = config.vardefs
     try:
         # suppress missing module warnings???
+        # AL: shouldnt be necessary now that we're putting everything in the active variables file
         TransformActiveVariables.getActiveDecls(config.vardefs,config.isFreeFormat)
         currentFile = inputFile
         for aUnit in fortUnitIterator(inputFile,config.isFreeFormat):

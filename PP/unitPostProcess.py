@@ -87,9 +87,6 @@ class UnitPostProcessor(object):
         self.__inlineUnit = None
         # the file which contains all declarations of active variables
         self.__active_file = None
-        # determines whether or not the current subroutine 
-        # should be written to the active file
-        self.__write_subroutine=True
 
     # adds the active module OAD_active
     # called when a module declaration is encountered in the unit's declarations
@@ -118,9 +115,6 @@ class UnitPostProcessor(object):
         DrvdTypeDecl.decls = newDecls
         if DrvdTypeDecl.mod[0].lower() == '('+self._abstract_type+')':
             DrvdTypeDecl.mod = ['('+self._replacement_type+')']
-            DrvdTypeDecl.dblc = True
-        else:
-            DrvdTypeDecl.dblc = False
         DrvdTypeDecl.flow()
         return DrvdTypeDecl
 
@@ -679,11 +673,6 @@ class UnitPostProcessor(object):
                     Decls.append(aDecl.flow())
             elif isinstance(aDecl,fs.DrvdTypeDecl):
                 newDecl = self.__rewriteActiveType(aDecl)
-                if (self.__active_file and newDecl.dblc):
-                    if self.__write_subroutine is True:
-                        self.__active_file.write(self.__myUnit.uinfo.rawline)
-                        self.__write_subroutine = False
-                    self.__active_file.write(newDecl.rawline)
                 UseStmtSeen = False
                 Decls.append(newDecl)
             elif isinstance(aDecl,fs.StmtFnStmt):
@@ -824,9 +813,6 @@ class UnitPostProcessor(object):
             DebugManager.debug(str(subUnit))
             UnitPostProcessor(subUnit).processUnit()
 
-        if (UnitPostProcessor._activeVariablesFileName):     
-            self.__active_file = open(UnitPostProcessor._activeVariablesFileName,'a')
-
         self.__formatUnit()
 
         if self._mode == 'reverse':
@@ -840,11 +826,10 @@ class UnitPostProcessor(object):
             self.__myUnit.decls = Decls
             self.__myUnit.execs = Execs
 
-        if self.__active_file and self.__write_subroutine is False:
-            if self.__myUnit.end:
-                for anEndListEntry in self.__myUnit.end:
-                    self.__active_file.write(anEndListEntry.rawline,)
-            self.__write_subroutine = True
+        # write all declarations to _activeVariablesFileName
+        if (UnitPostProcessor._activeVariablesFileName):     
+            self.__active_file = open(UnitPostProcessor._activeVariablesFileName,'a')
+            self.__myUnit.printDecls(self.__active_file)
             self.__active_file.close()
 
         if (self.__recursionDepth is not 0):

@@ -1,3 +1,5 @@
+from PyUtil.debugManager import DebugManager
+
 from PyFort.fortUnit import fortUnitIterator
 import PyFort.fortStmts as fs
 import PyFort.fortExp as fe
@@ -19,8 +21,11 @@ class TransformActiveVariables(object):
     def getActiveDecls(file,isFreeFormat=False):
         for aUnit in fortUnitIterator(file,isFreeFormat):
             for aDeclStmt in aUnit.decls:
-                print "getActiveDecls: processing ",aDeclStmt
-                if hasattr(aDeclStmt,'mod') and (aDeclStmt.mod[0] == '(active)'):
+                if isinstance(aDeclStmt,fs.DrvdTypeDecl) and \
+                   hasattr(aDeclStmt,'mod') and \
+                   aDeclStmt.mod[0] == '(active)' :
+                    DebugManager.debug('TransformActiveVariables.getActiveDecls:'\
+                                      +'processing active variable declaration "'+str(aDeclStmt)+'"')
                     for aDecl in aDeclStmt.decls:
                         if isinstance(aDecl, fs._NoInit):
                             if hasattr(aDecl.lhs, 'head'):

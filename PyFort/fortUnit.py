@@ -133,6 +133,21 @@ class Unit(object):
             for anEndListEntry in self.end:
                 print >> out,anEndListEntry.rawline,
 
+    # print everything but the comments and executable statements to \p out
+    def printDecls(self,out=sys.stdout):
+        if self.uinfo:
+            print >> out,self.uinfo.rawline,
+        for aDeclStmt in self.decls:
+            if not isinstance(aDeclStmt,fs.Comments) :
+                print >> out,aDeclStmt.rawline,
+        for aContainsEntry in self.contains:
+            print >> out,aContainsEntry.rawline,
+        for aSubUnit in self.ulist:
+            aSubUnit.printDecls(out)
+        if self.end:
+            for anEndListEntry in self.end:
+                print >> out,anEndListEntry.rawline,
+
 # end class Unit
 
 class _curr(object):
