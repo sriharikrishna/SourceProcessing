@@ -135,18 +135,20 @@ class Unit(object):
 
     # print everything but the comments and executable statements to \p out
     def printDecls(self,out=sys.stdout):
+        if self.cmnt:
+            print >> out,self.cmnt.flow(),
         if self.uinfo:
-            print >> out,self.uinfo.rawline,
+            print >> out,self.uinfo.flow(),
         for aDeclStmt in self.decls:
             if not isinstance(aDeclStmt,fs.Comments) :
-                print >> out,aDeclStmt.rawline,
+                print >> out,aDeclStmt.flow(),
         for aContainsEntry in self.contains:
-            print >> out,aContainsEntry.rawline,
+            print >> out,aContainsEntry.flow(),
         for aSubUnit in self.ulist:
             aSubUnit.printDecls(out)
         if self.end:
             for anEndListEntry in self.end:
-                print >> out,anEndListEntry.rawline,
+                print >> out,anEndListEntry.flow(),
 
 # end class Unit
 

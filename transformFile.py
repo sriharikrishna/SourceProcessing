@@ -11,6 +11,7 @@ from PyFort.fortUnit import Unit,fortUnitIterator
 from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabError
 import PyFort.fortStmts as fs
+from PyFort.flow import setFixedOrFreeFormat, setLineLength
 
 def cleanup(config):
     import os 
@@ -34,6 +35,10 @@ def main():
                    dest='vardefs',
                    help='file with definitions for active variables',
                    default='activeVariableDefinitions.f')
+    opt.add_option('-l','--line_len',
+                   dest='line_len',
+                   help='sets the max line length of the output file',
+                   default=None)
     opt.add_option('-o',
                    '--output',
                    dest='output',
@@ -64,6 +69,14 @@ def main():
     # set symtab type defaults
     Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
 
+    # set free/fixed format
+    setFixedOrFreeFormat(config.isFreeFormat)
+
+    # set line length
+    if config.line_len:
+        setLineLength(config.line_len)
+        
+    # set output
     if config.output: 
         out = open(config.output,'w')
     else:
