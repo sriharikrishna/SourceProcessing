@@ -4,15 +4,15 @@ fixed format flow_line rather extensively tested in other test suites
 '''
 from Setup     import *
 from unittest  import *
-from flow      import setFixedOrFreeFormatting
+from flow      import setFixedOrFreeFormat
 import flow
 
 class T1(TestCase):
     def setUp(self):
-        setFixedOrFreeFormatting(True)
+        setFixedOrFreeFormat(True)
 
     def tearDown(self):
-        setFixedOrFreeFormatting(False)
+        setFixedOrFreeFormat(False)
 
     def test1(self):
         'simple uncontinued free format string'
