@@ -9,7 +9,6 @@ import PyFort.fortStmts as fs
 import PyFort.intrinsic as intrinsic
 from PyFort.fortUnit import fortUnitIterator
 from PP.templateExpansion import * 
-import PyFort.flow as flow
 import re
 import copy
 
@@ -337,9 +336,9 @@ class UnitPostProcessor(object):
 
         for anExec in function.execs:
             if anExec.is_comment():
-                match=re.search(pattern,anExec.rawline,re.IGNORECASE)
+                match=re.search(pattern,anExec.get_rawline(),re.IGNORECASE)
                 if match:
-                    cmnt = anExec.rawline[:match.start()]+anExec.rawline[match.end():]
+                    cmnt = anExec.get_rawline()[:match.start()]+anExec.get_rawline()[match.end():]
                     newExecs.append(fs.Comments(cmnt.strip()))
                 else:
                     newExecs.append(anExec)
@@ -463,8 +462,7 @@ class UnitPostProcessor(object):
             argReps = min(len(inlineArgs),len(replacementArgs))
             argReps -= 1
             if isinstance(Stmt,fs.Comments):
-                Stmt.rawline = \
-                    self.__replaceArgs(argReps,Stmt.rawline,inlineArgs,replacementArgs)
+                Stmt.set_rawline(self.__replaceArgs(argReps,Stmt.get_rawline(),inlineArgs,replacementArgs))
                 Execs.append(Stmt)
             elif isinstance(Stmt,fs.AssignStmt):
                 lhs = self.__replaceArgs(argReps,str(Stmt.get_lhs()),inlineArgs,replacementArgs)
@@ -488,15 +486,13 @@ class UnitPostProcessor(object):
                     newItem=self.__replaceArgs(argReps,str(item),inlineArgs,replacementArgs)
                     newItemList.append(newItem)
                 Stmt.itemList = newItemList
+                Stmt.lead = stmt_lead
                 Execs.append(Stmt)
-            elif isinstance(Stmt,fs.AllocateStmt):
-                Stmt.rawline= \
-                            self.__replaceArgs(argReps,Stmt.rawline,inlineArgs,replacementArgs)
+            elif isinstance(Stmt,fs.AllocateStmt) \
+              or isinstance(Stmt,fs.DeallocateStmt) :
+                Stmt.set_rawline(self.__replaceArgs(argReps,Stmt.get_rawline(),inlineArgs,replacementArgs))
+                Stmt.lead = stmt_lead
                 Execs.append(Stmt)
-            elif isinstance(Stmt,fs.DeallocateStmt):
-                Stmt.rawline= \
-                            self.__replaceArgs(argReps,Stmt.rawline,inlineArgs,replacementArgs)
-                Execs.append(Stmt.flow())
             elif isinstance(Stmt,fs.WhileStmt) or \
                      isinstance(Stmt,fs.DoStmt):
                 for aSon in Stmt.get_sons():
@@ -521,9 +517,10 @@ class UnitPostProcessor(object):
                     else:
                         newSon = self.__replaceSon(theSon,inlineArgs,replacementArgs)
                         setattr(Stmt,aSon,newSon)
-                Stmt.rawline.strip()
                 Stmt.lead = stmt_lead
                 Execs.append(Stmt)
+            else:
+                raise PostProcessError('unitPostProcess.py.__createNewExecs: don\'t know how to handle exec statement "'+Stmt+'"')
         return Execs
 
 

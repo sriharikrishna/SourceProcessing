@@ -276,6 +276,9 @@ class GenStmt(_Mappable,_Mutable_T):
     def __str__(self):
         return self.rawline
 
+    def set_rawline(self,newRawline):
+        self.rawline = newRawline
+
     # updates the rawline and returns it
     def get_rawline(self):
         return self.rawline
@@ -376,12 +379,16 @@ class NonComment(GenStmt):
         return self
 
     def get_sons(self):
+        '''returns the list of sons for this statement, and also marks the statement as accessed.'''
         self.accessed = True
         return self._sons
 
     def get_rawline(self):
+        '''returns the rawline for this statement.
+           If the statement has been changed (indicated by the flag self.accessed), then the rawline is updated before being returned.'''
         if self.accessed:
             self.rawline = str(self)
+        self.accessed = False
         return self.rawline
 
 class Decl(NonComment):
