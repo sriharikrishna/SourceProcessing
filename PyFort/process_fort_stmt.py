@@ -1,5 +1,6 @@
 from _Setup import *
 import flow
+import PyFort.fortStmts as fs
 from PyUtil.flatten import flatten
 
 import re
@@ -36,10 +37,9 @@ def process_fort_stmt(stmt_tuple,lineNumber,jlf):
         init_len = 6+len(lead)
     obj = jlf(jl[init_len:],lineNumber)
     if isinstance(obj,list):
+        obj[0].internal = intl
+        obj[0].label = label
         for anObj in obj:
-            anObj.rawline = raw
-            anObj.internal = intl
-            anObj.label = label
             anObj.lead = lead
     else:
         obj.rawline = raw
