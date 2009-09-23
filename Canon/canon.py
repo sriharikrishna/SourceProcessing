@@ -507,7 +507,8 @@ class UnitCanonicalizer(object):
         # for function units, also create a corresponding subroutine
         if isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
             if self._keepFunctionDecl:
-                newUnit = function2subroutine.convertFunction(copy.deepcopy(self.__myUnit))
+                newUnit = function2subroutine.\
+                          convertFunction(copy.deepcopy(self.__myUnit))
                 # if the unit has no parent, then it was the original unit.
                 if self.__myUnit.parent is None:
                     # create a parent
@@ -538,17 +539,29 @@ class UnitCanonicalizer(object):
         # iterate through decls in this unit in order to duplicate them for the new subroutinized versions 
         index = 0
         length = len(self.__myUnit.decls)
-        while index < length:
-            aDecl = self.__myUnit.decls[index]
-            (newDecl,modified) = function2subroutine.convertFunctionDecl(aDecl,oldFuncnewSubPairs)
-            if modified:
-                if self._keepFunctionDecl:
-                    index += 1
-                    length += 1
-                    self.__myUnit.decls.insert(index,newDecl)
-                else:
-                    self.__myUnit.decls[index] = newDecl
-            index += 1
+        interfaceBlockFlag = False
+        interfaceBlock = []
+        self.__myNewDecls = []
+        for aDecl in self.__myUnit.decls:
+            if interfaceBlockFlag:
+                interfaceBlock.append(aDecl)
+                if isinstance(aDecl,fs.EndInterfaceStmt):
+                    newInterfaceBlock = function2subroutine.\
+                                        convertInterfaceBlock(interfaceBlock,oldFuncnewSubPairs)
+                    self.__myNewDecls.extend(newInterfaceBlock)
+                    interfaceBlockFlag = False
+                    interfaceBlock = []
+            elif isinstance(aDecl,fs.InterfaceStmt):
+                interfaceBlockFlag = True
+                interfaceBlock.append(aDecl)
+            else:
+                (newDecl,modified) = function2subroutine.\
+                                     convertFunctionDecl(aDecl,oldFuncnewSubPairs)
+                self.__myNewDecls.append(aDecl)
+                if modified:
+                    self.__myNewDecls.append(newDecl)
+                    
+        self.__myUnit.decls = self.__myNewDecls
             
         DebugManager.debug(('+'*54)+' End canonicalize unit <'+str(self.__myUnit.uinfo)+'> '+(54*'+')+'\n\n')
 
