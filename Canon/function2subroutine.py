@@ -62,6 +62,31 @@ def convertFunctionDecl(aDecl,oldFuncnewSubPairs):
                         modified = True
     return (newDecl,modified)
 
+def convertInterfaceBlock(oldInterfaceBlock,oldFuncnewSubPairs):
+    newInterfaceBlock = []
+    createdNewBlock = False
+    for aDecl in oldInterfaceBlock:
+        if isinstance(aDecl,fs.ProcedureStmt):
+            for aDecl in oldInterfaceBlock:
+                (newDecl,modified) = convertFunctionDecl(aDecl,oldFuncnewSubPairs)
+                if modified:
+                    createdNewBlock = True
+                newInterfaceBlock.append(newDecl)
+            if createdNewBlock:
+                if not isinstance(newInterfaceBlock[0],fs.InterfaceStmt):
+                    raise FunToSubError("error transforming interface block in function2subroutine.convertInterfaceBlock")
+                # rename interface
+                old_name = newInterfaceBlock[0].get_name()
+                newInterfaceBlock[0].name = name_init+old_name
+                newInterfaceBlock.extend(oldInterfaceBlock)
+            return newInterfaceBlock
+    for aDecl in oldInterfaceBlock:
+        (newDecl,modified) = convertFunctionDecl(aDecl,oldFuncnewSubPairs)
+        newInterfaceBlock.append(aDecl)
+        if modified:
+            newInterfaceBlock.append(newDecl)
+    return newInterfaceBlock
+
 def convertFunctionStmt(functionStmt):
     DebugManager.debug(10*'-'+'>'+'called function2subroutine.convertFunctionStmt on '+str(functionStmt))
     if functionStmt.result is None:

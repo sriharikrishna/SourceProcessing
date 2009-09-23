@@ -535,6 +535,9 @@ class InterfaceStmt(Decl):
                               or None
         return InterfaceStmt(name,scan,lineNumber)
 
+    def get_name(self):
+        self.accessed = True
+        return self.name
 
 class ProcedureStmt(Decl):
     kw = 'procedure'
