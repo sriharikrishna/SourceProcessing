@@ -95,10 +95,8 @@ def main():
         # only one input file
         if len(inputFileList) == 1 :
             currentFile = inputFileList[0]
-            if config.output :
-                out = open(config.output,'w')
-            else :
-                out = sys.stdout
+            out = config.output and open(config.output,'w') \
+                                 or sys.stdout
             for aUnit in fortUnitIterator(inputFileList[0],config.isFreeFormat):
                 TransformActiveVariables(aUnit).transformFile().printit(out)
             if config.output :

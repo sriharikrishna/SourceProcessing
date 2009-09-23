@@ -38,11 +38,14 @@ class DebugManager(object):
             sys.stderr.flush()
 
     @staticmethod
-    def debug(debugMessage,outStream=sys.stdout,newLine=True):
+    def debug(debugMessage,outStream=sys.stdout,newLine=True,lineNumber=None):
         if (DebugManager._verbose):
             newLineStr = newLine and '\n' \
                                   or ''
-            outStream.write(debugMessage+newLineStr)
+            lineNumberStr = ''
+            if lineNumber :
+                lineNumberStr += '[Line '+str(lineNumber)+']: '
+            outStream.write(lineNumberStr+debugMessage+newLineStr)
             outStream.flush()
 
 
