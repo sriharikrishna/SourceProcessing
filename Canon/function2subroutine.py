@@ -73,6 +73,8 @@ def convertInterfaceBlock(oldInterfaceBlock,oldFuncnewSubPairs):
                     createdNewBlock = True
                 newInterfaceBlock.append(newDecl)
             if createdNewBlock:
+                if not isinstance(newInterfaceBlock[0],fs.InterfaceStmt):
+                    raise FunToSubError("error transforming interface block in function2subroutine.convertInterfaceBlock")
                 # rename interface
                 old_name = newInterfaceBlock[0].get_name()
                 newInterfaceBlock[0].name = name_init+old_name

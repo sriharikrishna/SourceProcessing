@@ -536,13 +536,11 @@ class UnitCanonicalizer(object):
                                   +' to new subroutine name "'+aSubUnit.uinfo.name+'"')
                 oldFuncnewSubPairs.append([aSubUnit.uinfo.name[6:],
                                            aSubUnit.uinfo.name])
-        # iterate through decls in this unit in order to duplicate them for the new subroutinized versions 
-        index = 0
-        length = len(self.__myUnit.decls)
         interfaceBlockFlag = False
         interfaceBlock = []
         self.__myNewDecls = []
         for aDecl in self.__myUnit.decls:
+            # accumulate an interface block and process it
             if interfaceBlockFlag:
                 interfaceBlock.append(aDecl)
                 if isinstance(aDecl,fs.EndInterfaceStmt):
@@ -554,6 +552,7 @@ class UnitCanonicalizer(object):
             elif isinstance(aDecl,fs.InterfaceStmt):
                 interfaceBlockFlag = True
                 interfaceBlock.append(aDecl)
+            # if not part of the interface block, convert decls and add them
             else:
                 (newDecl,modified) = function2subroutine.\
                                      convertFunctionDecl(aDecl,oldFuncnewSubPairs)
