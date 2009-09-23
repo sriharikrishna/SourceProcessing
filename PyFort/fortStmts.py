@@ -1336,9 +1336,6 @@ class ExitStmt(Leaf):
     kw = 'exit'
     kw_str = kw
 
-class RewindStmt(Leaf):
-    kw = 'rewind'
-    kw_str = kw
 
 class CallStmt(Exec):
     kw = 'call'
@@ -1975,6 +1972,11 @@ class NullifyStmt(Exec):
 
 class BackspaceStmt(Exec):
     kw = 'backspace'
+    kw_str = kw
+
+
+class RewindStmt(Exec):
+    kw = 'rewind'
     kw_str = kw
 
 

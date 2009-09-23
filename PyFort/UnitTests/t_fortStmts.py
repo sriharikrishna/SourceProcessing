@@ -616,7 +616,17 @@ class TestIfStmt(TestCase):
         theString = 'if (x(11).EQ.y.OR.x(12).lt.(floob*(i**k))) goto 10'
         theRepr = IfNonThenStmt(Ops('.OR.',Ops('.EQ.',App('x',['11']),'y'),Ops('.lt.',App('x',['12']),ParenExp(Ops('*','floob',ParenExp(Ops('**','i','k')))))),GotoStmt('10'))
         self.assertEquals(repr(pps(theString)),repr(theRepr))
-        self.assertEquals(theString,str(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test9(self):
+        '''if (non-then) statement from scale, with rewind stmt -- KNOWN TO FAIL (because we don't really parse rewind statements)'''
+        theString = 'if (nt4 > 0) rewind nt4'
+        theRepr = IfNonThenStmt(Ops('>','nt4','0'),RewindStmt())
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
 
 class TestWhileStmt(TestCase):
     '''While statements'''
