@@ -256,6 +256,18 @@ class GenStmt(_Mappable,_Mutable_T):
     _sons = []
 
     def __init__(self,scan,lineNumber=0,label=False,lead=''):
+        """initializes a generic statement object
+        rawline: contains a raw string version of the line without any
+          formatting (leading whitespace or line breaks)
+        lineNumber: contains the line number the statement was
+          originally on
+        label: contains a statement's numeric label, if there was one
+        lead:contains the line lead, excluding the 6 leading spaces
+          for fixed format (if input was in fixed format)
+        accessed: determines whether or not the statement has been accessed and
+          potentially modified, since the rawline is only updated
+          when a statement is accessed
+        """
         self.rawline = ' '.join(scan)
         self.lineNumber = lineNumber
         self.label = label
@@ -279,7 +291,7 @@ class GenStmt(_Mappable,_Mutable_T):
     def set_rawline(self,newRawline):
         self.rawline = newRawline
 
-    # updates the rawline and returns it
+    ## updates the rawline and returns it
     def get_rawline(self):
         return self.rawline
 
@@ -303,6 +315,9 @@ class Comments(GenStmt):
         return 'Comments(%s)' % self.rawline
 
     def flow(self):
+        """formats a comment for printing, depending on the format
+        (free or fixed) of the output, while preserving all leading
+        or trailing blank lines"""
         if self.rawline.strip() == '':
             return self.rawline
         formattedOutput = ''
@@ -341,6 +356,10 @@ class NonComment(GenStmt):
                            ','.join([repr(aSon) for aSon in self._sons]))
 
     def flow(self):
+        """formats a statement for printing by concatenating the label
+        string, the lead, the rawline (updated if necessary) and six
+        leading spaces (if fixed format), and adding the necessary line
+        breaks (depending on fixed or free format output)"""
         labelStr = self.label and ' ' + ('%-4d' % self.label) + ' ' \
                                or ''
         if not flow.freeOutput and len(labelStr) != 6:
