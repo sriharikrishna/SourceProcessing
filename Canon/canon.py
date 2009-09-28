@@ -188,7 +188,12 @@ class UnitCanonicalizer(object):
                 replacementArgs = []
                 for arg in theExpression.args:
                     replacementArgs.append(self.__canonicalizeExpression(arg,parentStmt))
-                replacementExpression = fe.App(theExpression.head,replacementArgs)
+                replacementHead = theExpression.head
+                # check whether we need to convert the function to the generic name (e.g. alog => log)
+                if (theExpression.head.lower() != getGenericName(theExpression.head)) :
+                    parentStmt.beenModified = True
+                    replacementHead = getGenericName(theExpression.head)
+                replacementExpression = fe.App(replacementHead,replacementArgs)
         # Unary operation -> recursively canonicalize the sole subexpression
         elif isinstance(theExpression,fe.Unary):
             DebugManager.debug(', which is a unary op. with exp: "'+str(theExpression.exp)+'"')
@@ -390,6 +395,11 @@ class UnitCanonicalizer(object):
         return replacementStatement
 
     def __canonicalizeExecStmt(self,anExecStmt):
+        # We were previously working with the assumption that an original statement is modified as part of the canonicalization process
+        # if and only if at least one new statement has been added.
+        # This is not true, as for example we canonicalize y = alog(x) to y = log(x)
+        # hence, we have added a flag "beenModified" which indicates that an expression should be replaced by the canonicalized version
+        anExecStmt.beenModified = False
         newExecsLength = len(self.__myNewExecs) # store the current number of execs (to determine afterwards whether we've added some)
         replacementStatement = anExecStmt
         if isinstance(anExecStmt,fs.CallStmt):
@@ -413,7 +423,8 @@ class UnitCanonicalizer(object):
         if self.__recursionDepth != 0:
             raise CanonError('Recursion depth did not resolve to zero when canonicalizing '+str(anExecStmt),anExecStmt.lineNumber)
         # determine whether a change was made
-        if len(self.__myNewExecs) > newExecsLength: # some new statements were inserted
+        if anExecStmt.beenModified or \
+           len(self.__myNewExecs) > newExecsLength: # some new statements were inserted
             self.__myNewExecs.append(replacementStatement) # => replace anExecStmt with the canonicalized version
         else: # no new statements were inserted
             self.__myNewExecs.append(anExecStmt) # => leave anExecStmt alone
