@@ -717,6 +717,7 @@ class _ImplicitDoConstruct(object):
         self.doStart = doStart
         self.doEnd = doEnd
         self.doStride = doStride # optional
+        self.internal = []
         self.rawline=str(self)
 
     def __str__(self):
