@@ -1039,10 +1039,9 @@ class TestIOtmt(TestCase):
         self.assertEquals(theString,str(theRepr))
 
     def test9(self):
-        '''write statement with problematic forward slash in string constant (from SCALE: scalelib/html_M.f90) -- KNOWN TO FAIL
-           see http://trac.mcs.anl.gov/projects/openAD/ticket/157'''
+        '''write statement with problematic forward slash in string constant (from SCALE: scalelib/html_M.f90)'''
         theString = "write(unit,'(a)') ' <APPLET \'"
-        theRepr = WriteStmt('write',[],[])
+        theRepr = WriteStmt('write',['unit',"'(a)'"],["' <APPLET '"])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))

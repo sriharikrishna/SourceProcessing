@@ -43,7 +43,7 @@ class T1(TestCase):
         ae(len(ll),1)
         a_(isinstance(ll[0],fline))
         ae(ll[0].line,'logical subroutine(x,y,  z) ')
-        ae(ll[0].rawline,'logical subroutine(x,y,  z)')
+        ae(ll[0].rawline,'logical subroutine(x,y,  z)! test it')
 
     def test3(self):
         'uncontinued free format string with ! comments'
@@ -58,7 +58,7 @@ function foo(x,y) ! test it
         ae(len(ll),1)
         a_(isinstance(ll[0],fline))
         ae(ll[0].line,'function foo(x,y) ')
-        ae(ll[0].rawline,'function foo(x,y)')
+        ae(ll[0].rawline,'function foo(x,y)! test it  ')
 
     def test4(self):
         'decl with ! comment'
