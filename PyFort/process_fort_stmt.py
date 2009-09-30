@@ -41,14 +41,17 @@ def process_fort_stmt(stmt_tuple,lineNumber,jlf):
     # rawline shouldn't be assigned, because each obj in the list already has one
     # assigned
     if isinstance(obj,list):
-        obj[0].internal = intl
+        #obj[0].internal = intl
+        obj[0].internal = []
         obj[0].label = label
         for anObj in obj:
             anObj.lead = lead
     else:
         ## assign rawline, internal comments, label, and lead to the statement obj
-        obj.rawline = raw+' '.join(intl)
-        obj.internal = intl
+        #obj.rawline = raw+' '.join(intl)
+        #obj.internal = intl
+        obj.rawline = raw
+        obj.internal = []
         obj.label = label
         obj.lead = lead
     return obj
