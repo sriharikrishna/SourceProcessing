@@ -361,6 +361,7 @@ def main():
     return 0
 
 if __name__ == "__main__":
+    # use the following to generate profile data that can be viewed e.g. with RunSnakeRun
     # import cProfile
     # cProfile.runctx( 'main()', globals(), locals(), filename="postProcess.profile" )
     sys.exit(main())
