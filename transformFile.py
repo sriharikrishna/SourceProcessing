@@ -26,11 +26,10 @@ def main():
     usage = '%prog <input_file>'
     opt = OptionParser(usage=usage)
     opt.add_option('',
-                   '--free',
-                   dest='isFreeFormat',
+                   '--inputFormat',
+                   dest='inputFormat',
                    help="input source is free format (input file and vardefs file are assumed to have the same formatting)",
-                   action='store_true',
-                   default=False)
+                   default='fixed')
     opt.add_option('-d',
                    '--vardefs',
                    dest='vardefs',
@@ -67,7 +66,7 @@ def main():
     DebugManager.setVerbose(config.isVerbose)
 
     # set free/fixed format
-    setFixedOrFreeFormat(config.isFreeFormat)
+    setFixedOrFreeFormat(config.inputFormat)
 
     # set symtab type defaults
     Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
@@ -91,13 +90,13 @@ def main():
     try:
         # suppress missing module warnings???
         # AL: shouldnt be necessary now that we're putting everything in the active variables file
-        TransformActiveVariables.getActiveDecls(config.vardefs,config.isFreeFormat)
+        TransformActiveVariables.getActiveDecls(config.vardefs,(config.inputFormat=='free'))
         # only one input file
         if len(inputFileList) == 1 :
             currentFile = inputFileList[0]
             out = config.output and open(config.output,'w') \
                                  or sys.stdout
-            for aUnit in fortUnitIterator(inputFileList[0],config.isFreeFormat):
+            for aUnit in fortUnitIterator(inputFileList[0],(config.inputFormat=='free')):
                 TransformActiveVariables(aUnit).transformFile().printit(out)
             if config.output :
                 out.close()
@@ -106,7 +105,7 @@ def main():
             for anInputFile in inputFileList :
                 currentFile = anInputFile
                 out = open(os.path.join(config.outputDir,anInputFile),'w')
-                for aUnit in fortUnitIterator(anInputFile,config.isFreeFormat):
+                for aUnit in fortUnitIterator(anInputFile,(config.inputFormat=='free')):
                     TransformActiveVariables(aUnit).transformFile().printit(out)
                 out.close()
 
@@ -132,8 +131,8 @@ def main():
         print >>sys.stderr,''
         print >>sys.stderr,"Tokens scanned ok: ", e.scanned,'\tUnable to scan: "'+e.rest+'"'
         print >>sys.stderr,''
-        if (e.rest == '&' and not config.isFreeFormat):
-            print >>sys.stderr,"This failure is likely due to running this script on free-formatted code without specifying the --free flag."
+        if (e.rest == '&' and (config.inputFormat=='fixed')):
+            print >>sys.stderr,"This failure is likely due to running this script on free-formatted code without specifying the --inputFormat=free flag."
         else:
             print >>sys.stderr,"This failure is likely due to possibly legal but unconventional Fortran,"
             print >>sys.stderr,"such as unusual spacing. Please consider modifying your source code."

@@ -9,10 +9,10 @@ import flow
 
 class T1(TestCase):
     def setUp(self):
-        setFixedOrFreeFormat(True)
+        setFixedOrFreeFormat('free')
 
     def tearDown(self):
-        setFixedOrFreeFormat(False)
+        setFixedOrFreeFormat('fixed')
 
     def test1(self):
         'simple uncontinued free format string'

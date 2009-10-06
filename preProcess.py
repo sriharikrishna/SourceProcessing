@@ -37,17 +37,15 @@ def main():
     for k,v in modes.items():
         modeChoicesHelp+=k+" = "+v+"; "
     opt = OptionParser(usage=usage)
-    opt.add_option('--freeOutput',
-                   dest='freeOutput',
-                   help="<output_file> is in free format",
-                   action = 'store_true',
+    opt.add_option('--outputFormat',
+                   dest='outputFormat',
+                   help="<output_file> is in either 'fixed' or 'free' format",
                    default=None)
     opt.add_option('',
-                   '--free',
-                   dest='isFreeFormat',
-                   help="input source is free format",
-                   action='store_true',
-                   default=False)
+                   '--inputFormat',
+                   dest='inputFormat',
+                   help="<input_file> is in either 'fixed' or 'free' format",
+                   default='fixed')
     opt.add_option('',
                    '--removeFunction',
                    dest='removeFunction',
@@ -142,7 +140,14 @@ def main():
         Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
 
     # set free/fixed format
-    setFixedOrFreeFormat(config.isFreeFormat,config.freeOutput)
+    if (config.inputFormat<>'fixed') and (config.inputFormat<>'free'):
+        opt.error("inputFormat option must be specified with either 'fixed' or 'free' as an argument")
+    if config.outputFormat == None:
+        config.outputFormat = config.inputFormat
+    elif (config.outputFormat<>'fixed') and (config.outputFormat<>'free'):
+        opt.error("outputFormat option must be specified with either 'fixed' or 'free' as an argument")
+    setFixedOrFreeFormat(config.inputFormat,config.outputFormat)
+    
     if config.line_len:
         setLineLength(config.line_len)
 
@@ -169,7 +174,7 @@ def main():
             if (len(inputFileList) > 1): # output the file start pragma
                 out.write('!$openad xxx file_start ['+anInputFile+']\n')
                 out.flush()
-            for aUnit in fortUnitIterator(anInputFile,config.isFreeFormat):
+            for aUnit in fortUnitIterator(anInputFile,(config.inputFormat=='free')):
                 UnitCanonicalizer(aUnit).canonicalizeUnit().printit(out)
         if (len(inputFileList) > 1): # output the file start pragma for the subroutinized intrinsics
             out.write('!$openad xxx file_start [OAD_subroutinizedIntrinsics.f90]\n')
@@ -201,8 +206,8 @@ def main():
         print >>sys.stderr,''
         print >>sys.stderr,"Tokens scanned ok: ", e.scanned,'\tUnable to scan: "'+e.rest+'"'
         print >>sys.stderr,''
-        if (e.rest == '&' and not config.isFreeFormat):
-            print >>sys.stderr,"This failure is likely due to running this script on free-formatted code without specifying the --free flag."
+        if (e.rest == '&' and (config.inputFormat=='fixed')):
+            print >>sys.stderr,"This failure is likely due to running this script on free-formatted code without specifying the --inputFormat=free flag."
         else:
             print >>sys.stderr,"This failure is likely due to possibly legal but unconventional Fortran,"
             print >>sys.stderr,"such as unusual spacing. Please consider modifying your source code."

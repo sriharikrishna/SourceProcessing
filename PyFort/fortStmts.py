@@ -328,7 +328,7 @@ class Comments(GenStmt):
             num_lines = self.rawline[:lead_len].count('\n')
             formattedOutput += '\n'*num_lines
         lines = self.rawline.strip().splitlines()
-        if flow.freeOutput:
+        if (flow.outputFormat == 'free'):
             for line in lines:
                 formattedOutput += '!'+flow.flow_comment(line[1:])
         else:
@@ -367,7 +367,7 @@ class NonComment(GenStmt):
         breaks (depending on fixed or free format output)"""
         labelStr = self.label and ' ' + ('%-4d' % self.label) + ' ' \
                                or ''
-        if not flow.freeOutput and len(labelStr) != 6:
+        if (flow.outputFormat=='fixed') and len(labelStr) != 6:
             labelStr = labelStr + (6 - len(labelStr)) * ' '
             formattedOutput = flow.flow_line(labelStr + self.lead + self.get_rawline()) + '\n'
         else:

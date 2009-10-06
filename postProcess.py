@@ -94,16 +94,14 @@ def main():
                    dest='concreteType',
                    help='replace abstract active string (see also --abstractType ) with concrete active type CONCRETETYPE; defaults to \'active\'',
                    default='active')
-    opt.add_option('--freeOutput',
-                   dest='freeOutput',
-                   help="<output_file> is in free format",
-                   action = 'store_true',
+    opt.add_option('--outputFormat',
+                   dest='outputFormat',
+                   help="<output_file> is in 'free' or 'fixed' format",
                    default=None)
-    opt.add_option('--free',
-                   dest='isFreeFormat',
-                   help="<input_file> is in free format",
-                   action='store_true',
-                   default=False)
+    opt.add_option('--inputFormat',
+                   dest='inputFormat',
+                   help="<input_file> is in 'free' or 'fixed' format",
+                   default='fixed')
     opt.add_option('--noCleanup',
                    dest='noCleanup',
                    help='do not remove the output file(s) if an error was encountered (defaults to False)',
@@ -184,10 +182,13 @@ def main():
         UnitPostProcessor.setDerivType(config.deriv)
 
         # set free/fixed format
-        if config.freeOutput is None:
-            setFixedOrFreeFormat(config.isFreeFormat)
-        else:
-            setFixedOrFreeFormat(config.isFreeFormat,config.freeOutput)
+        if (config.inputFormat<>'fixed') and (config.inputFormat<>'free'):
+            opt.error("inputFormat option must be specified with either 'fixed' or 'free' as an argument")
+        if config.outputFormat == None:
+            config.outputFormat = config.inputFormat
+        elif (config.outputFormat<>'fixed') and (config.outputFormat<>'free'):
+            opt.error("outputFormat option must be specified with either 'fixed' or 'free' as an argument")
+        setFixedOrFreeFormat(config.inputFormat,config.outputFormat)
 
         if config.line_len:
             setLineLength(config.line_len)
@@ -244,7 +245,7 @@ def main():
             unitStartTime=None
             if (config.timing):
                 unitStartTime=datetime.datetime.utcnow()
-            for aUnit in fortUnitIterator(inputFile,config.isFreeFormat):
+            for aUnit in fortUnitIterator(inputFile,(config.inputFormat=='free')):
                 output = base + unitNumExt % unit_num + ext
                 out = open(output,'w')
                 outFileNameList.append(output)
@@ -267,7 +268,7 @@ def main():
         # SEPARATE OUTPUT INTO FILES AS SPECIFIED BY PRAGMAS
         elif config.separateOutput:
             out = None
-            for aUnit in fortUnitIterator(inputFile,config.isFreeFormat):
+            for aUnit in fortUnitIterator(inputFile,(config.inputFormat=='free')):
                 # We expect to find file pragmas in the cmnt section of units exclusively
                 if aUnit.cmnt:
                     if (re.search('openad xxx file_start',aUnit.cmnt.rawline,re.IGNORECASE)):
@@ -293,7 +294,7 @@ def main():
                 outFileNameList.append(config.output)
             else:
                 out=sys.stdout
-            for aUnit in fortUnitIterator(inputFile,config.isFreeFormat):
+            for aUnit in fortUnitIterator(inputFile,(config.inputFormat=='free')):
                 UnitPostProcessor(aUnit).processUnit().printit(out)
             if config.output: 
                 out.close()
@@ -327,8 +328,8 @@ def main():
         print >>sys.stderr,''
         print >>sys.stderr,"Tokens scanned ok: ", e.scanned,'\tUnable to scan: "'+e.rest+'"'
         print >>sys.stderr,''
-        if (e.rest == '&' and not config.isFreeFormat):
-            print >>sys.stderr,"This failure is likely due to running this script on free-formatted code without specifying the --free flag."
+        if (e.rest == '&' and (config.inputFormat=='fixed')):
+            print >>sys.stderr,"This failure is likely due to running this script on free-formatted code without specifying the --inputFormat=free flag."
         else:
             print >>sys.stderr,"This failure is likely due to possibly legal but unconventional Fortran,"
             print >>sys.stderr,"such as unusual spacing. Please consider modifying your source code."

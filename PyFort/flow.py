@@ -73,19 +73,19 @@ formatStart = _fixedFormatStart
 line_len = _fixed_line_len
 commentInit = _fixed_comment
 
-freeInput = False
-freeOutput = False
+inputFormat = 'fixed'
+outputFormat = 'fixed'
 
 # default output format is the same as the input format
-def setFixedOrFreeFormat(free_input=False,free_output=None):
+def setFixedOrFreeFormat(input_format='fixed',output_format=None):
     '''sets input and output formats. When the output format is not specified, it defaults to be the same as the input format. When the input format is not specified, it defaults to fixed format.'''
-    global freeInput
-    global freeOutput
-    freeInput = free_input
-    freeOutput = free_output
-    if freeOutput == None:
-        freeOutput = free_input
-    _setOutputFormat(freeOutput)
+    global inputFormat
+    global outputFormat
+    inputFormat = input_format
+    outputFormat = output_format
+    if outputFormat == None:
+        outputFormat = input_format
+    _setOutputFormat(outputFormat=='free')
 
 def _setOutputFormat(switch=True):
     '''sets the output format'''

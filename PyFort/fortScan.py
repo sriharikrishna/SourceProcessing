@@ -10,7 +10,7 @@ from tokens import *
 def __str_intern(s):
     template = r"""
          (?:            # body of quote is a collection of chars
-            [^%s] |   #    non-quote or backslash OR
+            [^%s]   |   #    non-quote OR
             %s%s    |   #    repeated quote         OR
             \\.         #    backslashed anything
          )*             # 0 or more

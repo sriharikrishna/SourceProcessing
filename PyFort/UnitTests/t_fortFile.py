@@ -27,16 +27,20 @@ class file1(TestCase):
         '''Ffile string method returns the string rep of the file'''
 
         ff = self.ff
+        out = open_t('f1.out.f')
 
-        self.assertEquals(Ffile.file(self.fname).str(),''.join(ff.readlines()))
+        self.assertEquals(Ffile.file(self.fname).str(),''.join(out.readlines()))
+        out.close()
 
     def test2(self):
         '''Ffile readlines method'''
 
         ff = self.ff
+        out = open_t('f2.out.f')
 
-        self.assertEquals(Ffile.file(self.fname).readlines(),ff.readlines())
-
+        self.assertEquals(Ffile.file(self.fname).readlines(),out.readlines())
+        out.close()
+        
     def test3(self):
         '''Ffile iterlines method'''
 

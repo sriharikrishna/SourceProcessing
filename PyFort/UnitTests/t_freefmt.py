@@ -21,7 +21,7 @@ class T1(TestCase):
   logical subroutine(x,y, &
       & z)
 ''')
-        flow.setFixedOrFreeFormat(True)
+        flow.setFixedOrFreeFormat('free')
         f1 = Ffile.here(l1,True)
         ll = list(f1.lines)
         ae(len(ll),1)

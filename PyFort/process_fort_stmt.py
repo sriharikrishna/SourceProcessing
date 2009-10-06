@@ -26,7 +26,7 @@ def process_fort_stmt(stmt_tuple,lineNumber,jlf):
     label = m and int(m.group(2))
 
     # lead shouldn't include fixed flow spacing (first 6 places)
-    if flow.freeInput:
+    if (flow.inputFormat=='free'):
         linelead = m and m.end(0) or 0
         lead = linelead * ' '+_lead_re.match(jl[linelead:]).group(1)
         raw = jl[len(lead):].strip()
@@ -67,7 +67,7 @@ def format_linelead(jl):
     format, convert tabs to 8 spaces. if it's in fixed, convert them so that
     the beginning of the line is indented 6 spaces according to the fixed
     format convention """
-    if flow.freeInput:
+    if (flow.inputFormat=='free'):
         if jl[0] == '\t':
             jl = ' ' * 8 + jl[1:]
     else:
