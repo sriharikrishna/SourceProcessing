@@ -101,7 +101,7 @@ class C3(TestCase):
         'test flow to fixed format on comments in free format'
         ae = self.assertEquals
         c1 = Comments('!     comment 1 is free format\n!     comment 2 is long long long. it must be more than 72 characters in order to cause line break for fixed format comment\n')
-        c2 = Comments('C     comment 1 is free format\nC     comment 2 is long long long. it must be more than 72 characters in order to\nC  cause line break for fixed format comment\n')
+        c2 = Comments('C     comment 1 is free format\nC     comment 2 is long long long. it must be more than 72 characters in \nC order to cause line break for fixed format comment\n')
         flow.setFixedOrFreeFormat('fixed')
         ae(c1.flow(),c2.rawline)
 
