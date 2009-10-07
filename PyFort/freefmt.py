@@ -5,7 +5,7 @@ from PyUtil.chomp import chomp
 from kill_bang import *
 from PyUtil.assembler import *
 
-_cont_re = r'& \s* $'
+_cont_re = r'& (([\s]*[!].*) | \s*) $'
 _cont_re = re.compile(_cont_re,re.X)
 
 _comment_re = r'\s* !'
@@ -16,7 +16,6 @@ _comm_re    = re.compile(_comm_re,re.X)
 
 def is_cont(line):
     '''check to see if line is continued (assuming no bang comments)'''
-
     (l,r) = kill_bang_comment(line)
     return _cont_re.search(l)
 
@@ -30,7 +29,7 @@ token_cont_re = r'\s* &'
 token_cont_re = re.compile(token_cont_re,re.X)
 
 def kill_cont(l):
-    return l[:l.find('&')]
+    return l[:_cont_re.search(l).start()]
 
 def kill_token_cont(l):
     if token_cont_re.match(l):
