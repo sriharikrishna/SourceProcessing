@@ -13,7 +13,7 @@ _fixed_comment = 'C '
 def _fixed_flow_line(l,cont='+'):
     '''given a long line, write it out as a series of continued lines'''
     comment_p = fixedfmt.comment_p
-    fl1 = line_len
+    fl1 = outputLineLength
     fl2 = fl1 - 6
     l1 = chomp(l)
     if comment_p(l) or (len(l1) <= fl1):
@@ -35,7 +35,7 @@ _free_comment = '! '
 def _free_flow_line(l):
     'given a long line l, write it out as a series of continued lines'
     comment_p = freefmt.comment_p
-    fll = line_len
+    fll = outputLineLength
     fl2 = fll - 6
     cont = '&'
     l1 = chomp(l)
@@ -55,8 +55,8 @@ def _free_flow_line(l):
 def flow_comment(l):
     '''given a long comment, write it out as a series of continued lines'''
     l1 = chomp(l)
-    fl1 = line_len
-    fl2 = line_len-2
+    fl1 = outputLineLength
+    fl2 = outputLineLength-2
     rv = l1[0:fl1] + '\n'
     rem = l1[fl1:]
     while len(rem) > fl2:
@@ -70,7 +70,8 @@ def flow_comment(l):
 # the default is fixed format:
 flow_line = _fixed_flow_line
 formatStart = _fixedFormatStart
-line_len = _fixed_line_len
+outputLineLength = _fixed_line_len
+inputLineLength = 0
 commentInit = _fixed_comment
 
 inputFormat = 'fixed'
@@ -95,10 +96,15 @@ def _setOutputFormat(switch=True):
     formatStart = (switch and _freeFormatStart) or _fixedFormatStart
     global commentInit
     commentInit = (switch and _free_comment) or _fixed_comment
-    global line_len
-    if line_len == _fixed_line_len:
-        line_len = (switch and _free_line_len) or _fixed_line_len
-        
-def setLineLength(length):
-    global line_len
-    line_len = int(length)
+    if not outputLineLength in globals():
+        global outputLineLength
+        outputLineLength = (switch and _free_line_len) or _fixed_line_len
+    # if outputLineLength was previously declared global and explicitly set, do nothing
+
+def setOutputLineLength(length):
+    global outputLineLength
+    outputLineLength = length
+
+def setInputLineLength(length):
+    global inputLineLength
+    inputLineLength = length

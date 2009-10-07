@@ -17,7 +17,7 @@ from PyUtil.debugManager import DebugManager
 
 from PyIR.prog1 import Prog1
 
-from PyFort.flow import setFixedOrFreeFormat, setLineLength
+from PyFort.flow import setFixedOrFreeFormat, setOutputLineLength, setInputLineLength
 from PyFort.fortUnit import Unit,fortUnitIterator
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
@@ -52,8 +52,14 @@ def main():
                    dest='inline',
                    help='file with definitions for inlinable routines for reverse mode post processing (defaults to ad_inline.f); requires reverse mode ( -m r )',
                    default=None) # cannot set default here because of required reverse mode
-    opt.add_option('-l','--line_len',
-                   dest='line_len',
+    opt.add_option('','--inputLineLength',
+                   dest='inputLineLength',
+                   type=int,
+                   help='sets the max line length of the input file',
+                   default=None)
+    opt.add_option('','--outputLineLength',
+                   dest='outputLineLength',
+                   type=int,
                    help='sets the max line length of the output file',
                    default=None)
     opt.add_option('-m','--mode',dest='mode',
@@ -190,8 +196,19 @@ def main():
             opt.error("outputFormat option must be specified with either 'fixed' or 'free' as an argument")
         setFixedOrFreeFormat(config.inputFormat,config.outputFormat)
 
-        if config.line_len:
-            setLineLength(config.line_len)
+        if config.inputLineLength:
+            if config.inputLineLength < 72 or \
+                   config.inputLineLength > 132:
+                opt.error("inputLineLength option must be specified with a value >=72 and <=132")
+            else:
+                # figure out what this does
+                setInputLineLength(config.inputLineLength)
+        if config.outputLineLength:
+            if config.outputLineLength < 72 or \
+                   config.outputLineLength > 132:
+                opt.error("outputLineLength option must be specified with a value >=72 and <=132")
+            else:
+                setOutputLineLength(config.outputLineLength)
         
         if (config.activeVariablesFile):
             UnitPostProcessor.setActiveVariablesFile(config.activeVariablesFile)

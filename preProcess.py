@@ -12,7 +12,7 @@ from PyUtil.l_assembler import AssemblerException as ListAssemblerException
 from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabError
 
-from PyFort.flow import setFixedOrFreeFormat,setLineLength
+from PyFort.flow import setFixedOrFreeFormat,setOutputLineLength
 from PyFort.fortUnit import Unit,fortUnitIterator
 import PyFort.fortStmts as fs
 
@@ -52,8 +52,14 @@ def main():
                    help="remove original function definition when it is transformed to a subroutine definitions",
                    action='store_true',
                    default=False)
-    opt.add_option('-l','--line_len',
-                   dest='line_len',
+    opt.add_option('','--inputLineLength',
+                   dest='inputLineLength',
+                   type=int,
+                   help='sets the max line length of the input file',
+                   default=None)
+    opt.add_option('','--outputLineLength',
+                   dest='outputLineLength',
+                   type=int,
                    help='sets the max line length of the output file',
                    default=None)
     opt.add_option('-m','--mode',dest='mode',
@@ -148,8 +154,19 @@ def main():
         opt.error("outputFormat option must be specified with either 'fixed' or 'free' as an argument")
     setFixedOrFreeFormat(config.inputFormat,config.outputFormat)
     
-    if config.line_len:
-        setLineLength(config.line_len)
+    if config.inputLineLength:
+        if config.inputLineLength < 72 or \
+           config.inputLineLength > 132:
+            opt.error("inputLineLength option must be specified with a value >=72 and <=132")
+        else:
+            # figure out what this does
+            pass
+    if config.outputLineLength:
+        if config.outputLineLength < 72 or \
+           config.outputLineLength > 132:
+            opt.error("outputLineLength option must be specified with a value >=72 and <=132")
+        else:
+            setOutputLineLength(config.outputLineLength)
 
     # set remove function definition
     if config.removeFunction:

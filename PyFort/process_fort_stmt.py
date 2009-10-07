@@ -4,6 +4,7 @@ import PyFort.fortStmts as fs
 from PyUtil.flatten import flatten
 
 import re
+import sys
 _label_re = re.compile(r'(\s*)(\d+)')
 _lead_re   = re.compile(r'(\s*)')
 
@@ -35,6 +36,10 @@ def process_fort_stmt(stmt_tuple,lineNumber,jlf):
         lead = _lead_re.match(jl[6:]).group(1)
         raw = jl[6:].lstrip()
         init_len = 6+len(lead)
+    if flow.inputLineLength != 0:
+        if jl[flow.inputLineLength:] != '':
+            print >> sys.stderr, "The following text is being cut because the statement exceeded the specified line length: "+jl[flow.inputLineLength:]
+        jl = jl[:flow.inputLineLength]
     obj = jlf(jl[init_len:],lineNumber)
     ## if there were multiple statements in the line, than the obj will be a list
     # process each statement by assigning its lead,label and internal comments
