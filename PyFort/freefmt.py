@@ -29,12 +29,16 @@ token_cont_re = r'\s* &'
 token_cont_re = re.compile(token_cont_re,re.X)
 
 def kill_cont(l):
-    return l[:_cont_re.search(l).start()]
+    cont_match = _cont_re.search(l)
+    if cont_match:
+        return l[:cont_match.start()]
+    return l
 
 def kill_token_cont(l):
-    if token_cont_re.match(l):
-        return l[l.find('&')+1:]
-    return l
+    token_match = token_cont_re.match(l)
+    if token_match:
+        return l[token_match.end():]
+    return l.lstrip()
         
 def _fjoin(asm):
     '''assemble a logical line from the assembled
@@ -51,14 +55,21 @@ def _fjoin(asm):
     internal_comments = []
     (conts,prim) = asm
     current_line = []
+    initial_line = True
     for (cl,comments) in conts:
         (l,eol_comm) = kill_bang_comment(cl)
         if eol_comm:
             internal_comments.append(eol_comm)
         internal_comments.extend(comments)
-        cl = kill_cont(kill_token_cont(cl))
+        if initial_line:
+            cl = kill_cont(cl)
+            initial_line = False
+        else:
+            cl = kill_cont(kill_token_cont(cl))
         current_line.append(cl)
-    (prim,eol_comm) = kill_bang_comment(kill_token_cont(chomp(prim)))
+    if not initial_line:
+        prim = kill_token_cont(prim)
+    (prim,eol_comm) = kill_bang_comment(chomp(prim))
     if eol_comm:
         internal_comments.append(eol_comm)
     current_line.append(prim)
