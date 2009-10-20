@@ -30,6 +30,10 @@ def main():
                    dest='inputFormat',
                    help="input source is free format (input file and vardefs file are assumed to have the same formatting)",
                    default='fixed')
+    opt.add_option('--outputFormat',
+                   dest='outputFormat',
+                   help="<output_file> is in 'free' or 'fixed' format",
+                   default=None)
     opt.add_option('-d',
                    '--vardefs',
                    dest='vardefs',
@@ -71,11 +75,17 @@ def main():
     # set verbosity
     DebugManager.setVerbose(config.isVerbose)
 
-    # set free/fixed format
-    setFixedOrFreeFormat(config.inputFormat)
-
     # set symtab type defaults
     Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
+
+    # set free/fixed format
+    if (config.inputFormat<>'fixed') and (config.inputFormat<>'free'):
+        opt.error("inputFormat option must be specified with either 'fixed' or 'free' as an argument")
+    if config.outputFormat == None:
+        config.outputFormat = config.inputFormat
+    elif (config.outputFormat<>'fixed') and (config.outputFormat<>'free'):
+        opt.error("outputFormat option must be specified with either 'fixed' or 'free' as an argument")
+    setFixedOrFreeFormat(config.inputFormat,config.outputFormat)
 
     # set line length
     if config.inputLineLength:
