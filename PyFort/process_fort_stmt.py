@@ -55,7 +55,6 @@ def process_fort_stmt(stmt_tuple,lineNumber,jlf):
         ## assign rawline, internal comments, label, and lead to the statement obj
         #obj.rawline = raw+' '.join(intl)
         #obj.internal = intl
-        obj.rawline = raw
         obj.internal = []
         obj.label = label
         obj.lead = lead

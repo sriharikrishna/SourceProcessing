@@ -102,6 +102,10 @@ def s_split(self,s):
     'split semi-colon separated statements with a newline'
     return '\n'
 
+def s_white(self,s):
+    'return one space for whitespace'
+    return ' '
+
 scan1 = myscan.Scanner([
     (pointerAssignSymbol_re, s_ident),
     (id_re,      s_ident),
@@ -116,5 +120,6 @@ scan1 = myscan.Scanner([
     (flonum_re,  s_ident),
     (int_re,     s_ident),
     (semi_re,    s_split),
-    (white_re,   None),
+    (white_re,   s_white),
     ],re.I | re.X)
+
