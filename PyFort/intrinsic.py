@@ -82,6 +82,8 @@ def getGenericName(op):
         return archaicName[1:-1]
     elif (archaicName[0] == 'd' and archaicName[-1] == '1' and archaicName[1:-1] in ('max','min') ):
         return archaicName[1:-1]
+    elif (archaicName[-1] in ('0','1') and archaicName[:-1] in ('max','min') ):
+        return archaicName[:-1]
     elif (archaicName[0] == 'd' and archaicName[1:] in ('sign','abs','log','sqrt') ):
         return archaicName[1:]
     elif (archaicName[0] == 'i' and archaicName[1:] in ('abs') ):
