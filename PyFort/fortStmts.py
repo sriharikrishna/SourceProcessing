@@ -295,7 +295,7 @@ class GenStmt(_Mappable,_Mutable_T):
 
     ## updates the rawline and returns it
     def get_rawline(self):
-        return self.rawline
+        return self.rawline.strip()
 
     def get_sons(self):
         self.accessed = True
@@ -412,7 +412,7 @@ class NonComment(GenStmt):
         if self.accessed:
             self.rawline = str(self)
         self.accessed = False
-        return self.rawline
+        return self.rawline.strip()
 
 class Decl(NonComment):
     def __init__(self,lineNumber=0,label=False,lead=''):
@@ -652,7 +652,7 @@ class Leaf(Exec):
         return self.__class__.kw+' '.join(self.internal)
 
     def get_rawline(self):
-        return self.rawline
+        return self.rawline.strip()
     
 class DeclLeaf(Decl):
     "special Decl that has no components"
@@ -994,7 +994,7 @@ class StmtFnStmt(Decl):
     def get_rawline(self):
         if self.accessed:
             self.rawline = str(self)
-        return self.rawline
+        return self.rawline.strip()
 
 class ExternalStmt(Decl):
     _sons = ['procedureNames']
@@ -1441,7 +1441,7 @@ class CallStmt(Exec):
     def get_rawline(self):
         if self.accessed:
             self.rawline = str(self)
-        return self.rawline
+        return self.rawline.strip()
 
 class AssignStmt(Exec):
     _sons = ['lhs','rhs']
@@ -1478,7 +1478,7 @@ class AssignStmt(Exec):
     def get_rawline(self):
         if self.accessed:
             self.rawline = str(self)
-        return self.rawline
+        return self.rawline.strip()
 
 class PointerAssignStmt(Exec):
     _sons = ['lhs','rhs']
@@ -1836,7 +1836,7 @@ class DoStmt(Exec):
     def get_rawline(self):
         if self.accessed:
             self.rawline = str(self)
-        return self.rawline
+        return self.rawline.strip()
 
 class WhileStmt(Exec):
     #FIXME: optional construct name, label, and comma are not handled
