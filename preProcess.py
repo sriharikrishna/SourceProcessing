@@ -105,6 +105,11 @@ def main():
                    dest='recursionLimit',
                    type='int',
                    help='recursion limit for the python interpreter (default: '+str(sys.getrecursionlimit())+'; setting it too high may permit a SEGV in the interpreter)')
+    opt.add_option('--subroutinizeIntegerFunctions',
+                   dest='subroutinizeIntegerFunctions',
+                   help='should integer function calls be subroutinized (defaults to False)'
+                   action='store_true',
+                   default=False)
     opt.add_option('--timing',
                    dest='timing',
                    help='simple timing of the execution',
@@ -177,6 +182,9 @@ def main():
     # configure string hoisting
     if config.hoistStringsFlag:
         UnitCanonicalizer.setHoistStringsFlag(config.hoistStringsFlag)
+    # configure subroutinization
+    if config.subroutinizeIntegerFunctions:
+        UnitCanonicalizer.setSubroutinizeIntegerFunctions(True)
 
     # set verbosity
     DebugManager.setVerbose(config.isVerbose)
