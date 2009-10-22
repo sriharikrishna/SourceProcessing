@@ -1556,6 +1556,10 @@ class ComplexSyntaxIOStmt(IOStmt):
         scan = filter(lambda x: x != ' ',ws_scan)
         io_stmt = seq(lit(kw),lit('('),cslist(disj(lit('*'),NamedParmExpWithStar,Exp)),lit(')'),cslist(Exp))
         ([kw,lbracket,ioCtrlSpecList,rbracket,itemList],rest) = io_stmt(scan)
+        if SubClass is WriteStmt and len(rest) != 0:
+            implicit_loop = seq(lit('('),cslist(disj(NamedParmExpWithStar,Exp)),lit(')'))
+            ([lparen,loop,rparen],rest) = implicit_loop(rest)
+            return SubClass(kw,ioCtrlSpecList,itemList,lineNumber,loop)
         return SubClass(kw,ioCtrlSpecList,itemList,lineNumber)
 
     def __init__(self,stmt_name,ioCtrlSpecList,itemList=[],lineNumber=0,label=False,lead=''):
@@ -1602,9 +1606,20 @@ class WriteStmt(ComplexSyntaxIOStmt):
         scan = filter(lambda x: x != ' ',ws_scan)
         return ComplexSyntaxIOStmt.parse(scan,lineNumber,WriteStmt.kw,WriteStmt)
 
-    def __init__(self,stmt_name=kw,ioCtrlSpecList=[],itemList=[],lineNumber=0,label=False,lead=''):
+    def __init__(self,stmt_name=kw,ioCtrlSpecList=[],itemList=[],lineNumber=0,implicit_loop=[],label=False,lead=''):
+        self.implicit_loop = implicit_loop
         ComplexSyntaxIOStmt.__init__(self,stmt_name,ioCtrlSpecList,itemList,lineNumber,label,lead)
-    
+
+    def __str__(self):
+        write_stmt = '%s(%s) %s' % (self.stmt_name,
+                                       ','.join([str(ioCtrl)
+                                                 for ioCtrl in self.ioCtrlSpecList]),
+                                       ','.join([str(item) for item in self.itemList]))
+        if len(self.implicit_loop) != 0:
+            write_stmt = '%s (%s)' % (write_stmt.strip(),
+                                      ','.join([str(item) for item in self.implicit_loop]))
+        return write_stmt+' '.join(self.internal)
+
 class FormatStmt(Exec):
     kw = 'format'
     kw_str = kw
