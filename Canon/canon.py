@@ -34,6 +34,7 @@ class UnitCanonicalizer(object):
     _functionBlockFlag = False
     _createResultDeclFlag = False
     _keepFunctionDecl = True
+    _subroutinizeIntegerFunctions = False
 
     @staticmethod
     def setHoistConstantsFlag(hoistConstantsFlag):
@@ -54,6 +55,10 @@ class UnitCanonicalizer(object):
     @staticmethod
     def setKeepFunctionDef(keepFunctionDefFlag):
         UnitCanonicalizer._keepFunctionDecl = keepFunctionDefFlag
+
+    @staticmethod
+    def setSubroutinizeIntegerFunctions(flag):
+        UnitCanonicalizer._subroutinizeIntegerFunctions = flag
 
     def __init__(self,aUnit):
         self.__myUnit = aUnit
@@ -82,7 +87,7 @@ class UnitCanonicalizer(object):
             raise CanonError('UnitCanonicalizer.shouldSubroutinizeFunction: TypeInferenceError: '+errorObj.msg,parentStmt.lineNumber)
         if is_intrinsic(theApp.head):
             DebugManager.debug('UnitCanonicalizer.shouldSubroutinizeFunction: It\'s an intrinsic of type '+str(funcType))
-            return subroutinizedIntrinsics.shouldSubroutinize(theApp) and not funcType == fs.IntegerStmt
+            return subroutinizedIntrinsics.shouldSubroutinize(theApp) and (UnitCanonicalizer._subroutinizeIntegerFunctions or not funcType == fs.IntegerStmt)
         else:
             return True
 
