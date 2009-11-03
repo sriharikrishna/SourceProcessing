@@ -11,8 +11,9 @@ from PP.transformActiveVariables import TransformActiveVariables,TransformError
 from PyFort.fortUnit import Unit,fortUnitIterator
 from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabError
+from PyFort.fortFile import Ffile
 import PyFort.fortStmts as fs
-from PyFort.flow import setFixedOrFreeFormat, setInputLineLength, setOutputLineLength
+from PyFort.flow import setInputLineLength, setOutputLineLength, setOutputFormat
 
 def cleanup(config):
     import os 
@@ -84,10 +85,14 @@ def main():
            (config.inputFormat is not None):
         opt.error("inputFormat option must be specified with either 'fixed' or 'free' as an argument")
     if config.outputFormat == None:
-        config.outputFormat = config.inputFormat
+        if config.output:
+            ext = os.path.splitext(config.output)[1]
+            config.outputFormat = Ffile.get_format(ext)
+        else:
+            config.outputFormat = config.inputFormat
     elif (config.outputFormat<>'fixed') and (config.outputFormat<>'free'):
         opt.error("outputFormat option must be specified with either 'fixed' or 'free' as an argument")
-    setFixedOrFreeFormat(config.inputFormat,config.outputFormat)
+    setOutputFormat(config.outputFormat)
 
     # set line length
     if config.inputLineLength:
@@ -126,7 +131,7 @@ def main():
             currentFile = inputFileList[0]
             out = config.output and open(config.output,'w') \
                                  or sys.stdout
-            for aUnit in fortUnitIterator(inputFileList[0],config.inputFormat,config.outputFormat):
+            for aUnit in fortUnitIterator(inputFileList[0],config.inputFormat):
                 TransformActiveVariables(aUnit).transformFile().printit(out)
             if config.output :
                 out.close()
@@ -135,7 +140,7 @@ def main():
             for anInputFile in inputFileList :
                 currentFile = anInputFile
                 out = open(os.path.join(config.outputDir,anInputFile),'w')
-                for aUnit in fortUnitIterator(anInputFile,config.inputFormat,config.outputFormat):
+                for aUnit in fortUnitIterator(anInputFile,config.inputFormat):
                     TransformActiveVariables(aUnit).transformFile().printit(out)
                 out.close()
 

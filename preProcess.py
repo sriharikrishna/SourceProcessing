@@ -3,6 +3,7 @@
 canonicalization
 '''
 import sys
+import os
 import datetime
 from optparse import OptionParser
 
@@ -12,8 +13,9 @@ from PyUtil.l_assembler import AssemblerException as ListAssemblerException
 from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabError
 
-from PyFort.flow import setFixedOrFreeFormat,setOutputLineLength
+from PyFort.flow import setOutputLineLength, setOutputFormat
 from PyFort.fortUnit import Unit,fortUnitIterator
+from PyFort.fortFile import Ffile
 import PyFort.fortStmts as fs
 
 from Canon.canon import UnitCanonicalizer,CanonError
@@ -156,10 +158,14 @@ def main():
            (config.inputFormat is not None):
         opt.error("inputFormat option must be specified with either 'fixed' or 'free' as an argument")
     if config.outputFormat == None:
-        config.outputFormat = config.inputFormat
+        if config.outputFile:
+            ext = os.path.splitext(config.outputFile)[1]
+            config.outputFormat = Ffile.get_format(ext)
+        else:
+            config.outputFormat = config.inputFormat
     elif (config.outputFormat<>'fixed') and (config.outputFormat<>'free'):
         opt.error("outputFormat option must be specified with either 'fixed' or 'free' as an argument")
-    #setFixedOrFreeFormat(config.inputFormat,config.outputFormat)
+    setOutputFormat(config.outputFormat)
 
     if config.inputLineLength:
         if config.inputLineLength < 72 or \
@@ -201,7 +207,7 @@ def main():
             if (len(inputFileList) > 1): # output the file start pragma
                 out.write('!$openad xxx file_start ['+anInputFile+']\n')
                 out.flush()
-            for aUnit in fortUnitIterator(anInputFile,config.inputFormat,config.outputFormat):
+            for aUnit in fortUnitIterator(anInputFile,config.inputFormat):
                 UnitCanonicalizer(aUnit).canonicalizeUnit().printit(out)
         if (len(inputFileList) > 1): # output the file start pragma for the subroutinized intrinsics
             out.write('!$openad xxx file_start [OAD_subroutinizedIntrinsics.f90]\n')

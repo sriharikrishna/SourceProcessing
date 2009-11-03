@@ -14,7 +14,7 @@ from PyUtil.errors import UserError
 from freefmt       import freefmt
 from fixedfmt      import fixedfmt
 from process_fort_stmt import process_fort_stmt,process_fort_cmnt
-from flow import setFixedOrFreeFormat
+import flow
 import os
 
 def _ident(s):
@@ -37,7 +37,13 @@ class Ffile(object):
         self.fobj  = fobj
 
     @staticmethod
-    def file(name,c_action=cline,s_action=fline,inputFormat=None,outputFormat=None):
+    def get_format(ext):
+        if ext in ['.f90','.f95','.f03']:
+            return 'free'
+        return 'fixed'
+
+    @staticmethod
+    def file(name,c_action=cline,s_action=fline,inputFormat=None):
         import PyUtil.debugManager
         try:
           f=open(name)
@@ -48,14 +54,8 @@ class Ffile(object):
         #set formatting based on name extension
         ext = os.path.splitext(name)[1]
         if not inputFormat:
-            if ext in ['.f90','.f95','.f03']:
-                inputFormat='free'
-                setFixedOrFreeFormat('free',outputFormat)
-            else:
-                inputFormat='fixed'
-                setFixedOrFreeFormat('fixed',outputFormat)
-        else:
-            setFixedOrFreeFormat(inputFormat,outputFormat)
+            inputFormat = Ffile.get_format(ext)
+        flow.setInputFormat(inputFormat)
         return Ffile(f,inputFormat=='free',c_action,s_action)
 
     @staticmethod

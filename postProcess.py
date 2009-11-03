@@ -17,8 +17,9 @@ from PyUtil.debugManager import DebugManager
 
 from PyIR.prog1 import Prog1
 
-from PyFort.flow import setFixedOrFreeFormat, setOutputLineLength, setInputLineLength
+from PyFort.flow import setOutputLineLength, setInputLineLength, setOutputFormat
 from PyFort.fortUnit import Unit,fortUnitIterator
+from PyFort.fortFile import Ffile
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
 
@@ -193,10 +194,14 @@ def main():
                (config.inputFormat is not None):
             opt.error("inputFormat option must be specified with either 'fixed' or 'free' as an argument")
         if config.outputFormat == None:
-            config.outputFormat = config.inputFormat
+            if config.output:
+                ext = os.path.splitext(config.output)[1]
+                config.outputFormat = Ffile.get_format(ext)
+            else:
+                config.outputFormat = config.inputFormat
         elif (config.outputFormat<>'fixed') and (config.outputFormat<>'free'):
             opt.error("outputFormat option must be specified with either 'fixed' or 'free' as an argument")
-        #setFixedOrFreeFormat(config.inputFormat,config.outputFormat)
+        setOutputFormat(config.outputFormat)
 
         if config.inputLineLength:
             if config.inputLineLength < 72 or \
@@ -264,7 +269,7 @@ def main():
             unitStartTime=None
             if (config.timing):
                 unitStartTime=datetime.datetime.utcnow()
-            for aUnit in fortUnitIterator(inputFile,config.inputFormat,config.outputFormat):
+            for aUnit in fortUnitIterator(inputFile,config.inputFormat):
                 output = base + unitNumExt % unit_num + ext
                 out = open(output,'w')
                 outFileNameList.append(output)
@@ -287,7 +292,7 @@ def main():
         # SEPARATE OUTPUT INTO FILES AS SPECIFIED BY PRAGMAS
         elif config.separateOutput:
             out = None
-            for aUnit in fortUnitIterator(inputFile,config.inputFormat,config.outputFormat):
+            for aUnit in fortUnitIterator(inputFile,config.inputFormat):
                 # We expect to find file pragmas in the cmnt section of units exclusively
                 if aUnit.cmnt:
                     if (re.search('openad xxx file_start',aUnit.cmnt.rawline,re.IGNORECASE)):
@@ -313,7 +318,7 @@ def main():
                 outFileNameList.append(config.output)
             else:
                 out=sys.stdout
-            for aUnit in fortUnitIterator(inputFile,config.inputFormat,config.outputFormat):
+            for aUnit in fortUnitIterator(inputFile,config.inputFormat):
                 UnitPostProcessor(aUnit).processUnit().printit(out)
             if config.output: 
                 out.close()

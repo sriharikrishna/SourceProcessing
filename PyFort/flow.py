@@ -78,18 +78,19 @@ inputFormat = 'fixed'
 outputFormat = 'fixed'
 
 # default output format is the same as the input format
-def setFixedOrFreeFormat(input_format='fixed',output_format=None):
+def setInputFormat(input_format='fixed'):
     '''sets input and output formats. When the output format is not specified, it defaults to be the same as the input format. When the input format is not specified, it defaults to fixed format.'''
     global inputFormat
-    global outputFormat
     inputFormat = input_format
-    outputFormat = output_format
-    if outputFormat == None:
-        outputFormat = input_format
-    _setOutputFormat(outputFormat=='free')
 
-def _setOutputFormat(switch=True):
+def setOutputFormat(output_format):
     '''sets the output format'''
+    global outputFormat
+    outputFormat = output_format
+    _setFormatDefaults(output_format=='free')
+
+def _setFormatDefaults(switch=True):
+    '''sets the defaults for the given output format'''
     global flow_line
     flow_line = (switch and _free_flow_line) or _fixed_flow_line
     global formatStart
