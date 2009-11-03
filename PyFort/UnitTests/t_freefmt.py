@@ -21,7 +21,8 @@ class T1(TestCase):
   logical subroutine(x,y, &
       & z)
 ''')
-        flow.setFixedOrFreeFormat('free')
+        flow.setInputFormat('free')
+        flow.setOutputFormat('free')
         f1 = Ffile.here(l1,True)
         ll = list(f1.lines)
         ae(len(ll),1)
@@ -30,7 +31,7 @@ class T1(TestCase):
         ae(ll[0].rawline,'logical subroutine(x,y,  z)')
 
     def test2(self):
-        'continued free format string with ! comments'
+        'continued free format string with ! comments -- KNOWN TO FAIL (internal comments are not currently being preserved)'
 
         ae = self.assertEquals
         a_ = self.assert_
@@ -46,7 +47,7 @@ class T1(TestCase):
         ae(ll[0].rawline,'logical subroutine(x,y,  z)! test it')
 
     def test3(self):
-        'uncontinued free format string with ! comments'
+        'uncontinued free format string with ! comments -- KNOWN TO FAIL (internal comments are not currently being preserved)'
 
         ae = self.assertEquals
         a_ = self.assert_
