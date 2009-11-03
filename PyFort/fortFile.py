@@ -14,6 +14,8 @@ from PyUtil.errors import UserError
 from freefmt       import freefmt
 from fixedfmt      import fixedfmt
 from process_fort_stmt import process_fort_stmt,process_fort_cmnt
+from flow import setFixedOrFreeFormat
+import os
 
 def _ident(s):
     return [s]
@@ -35,7 +37,7 @@ class Ffile(object):
         self.fobj  = fobj
 
     @staticmethod
-    def file(name,free=False,c_action=cline,s_action=fline):
+    def file(name,c_action=cline,s_action=fline,inputFormat=None,outputFormat=None):
         import PyUtil.debugManager
         try:
           f=open(name)
@@ -43,7 +45,18 @@ class Ffile(object):
           msg="Error cannot open file named: "+name
           raise UserError(msg)
         PyUtil.debugManager.DebugManager.setProcessedFile(name)
-        return Ffile(f,free,c_action,s_action)
+        #set formatting based on name extension
+        ext = os.path.splitext(name)[1]
+        if not inputFormat:
+            if ext in ['.f90','.f95','.f03']:
+                inputFormat='free'
+                setFixedOrFreeFormat('free',outputFormat)
+            else:
+                inputFormat='fixed'
+                setFixedOrFreeFormat('fixed',outputFormat)
+        else:
+            setFixedOrFreeFormat(inputFormat,outputFormat)
+        return Ffile(f,inputFormat=='free',c_action,s_action)
 
     @staticmethod
     def here(str,free=False,c_action=cline,s_action=fline):

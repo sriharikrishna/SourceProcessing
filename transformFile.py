@@ -29,7 +29,7 @@ def main():
                    '--inputFormat',
                    dest='inputFormat',
                    help="input source is free format (input file and vardefs file are assumed to have the same formatting)",
-                   default='fixed')
+                   default=None)
     opt.add_option('--outputFormat',
                    dest='outputFormat',
                    help="<output_file> is in 'free' or 'fixed' format",
@@ -42,12 +42,12 @@ def main():
     opt.add_option('','--inputLineLength',
                    dest='inputLineLength',
                    type=int,
-                   help='sets the max line length of the input file',
+                   help='sets the max line length of the input file. The default line length is 72 for fixed format and 132 for free format.',
                    default=None)
     opt.add_option('','--outputLineLength',
                    dest='outputLineLength',
                    type=int,
-                   help='sets the max line length of the output file',
+                   help='sets the max line length of the output file. The default line length is 72 for fixed format and 132 for free format.',
                    default=None)
     opt.add_option('-o',
                    '--output',
@@ -79,7 +79,9 @@ def main():
     Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
 
     # set free/fixed format
-    if (config.inputFormat<>'fixed') and (config.inputFormat<>'free'):
+    if (config.inputFormat<>'fixed') and \
+           (config.inputFormat<>'free') and \
+           (config.inputFormat is not None):
         opt.error("inputFormat option must be specified with either 'fixed' or 'free' as an argument")
     if config.outputFormat == None:
         config.outputFormat = config.inputFormat
@@ -117,13 +119,14 @@ def main():
     try:
         # suppress missing module warnings???
         # AL: shouldnt be necessary now that we're putting everything in the active variables file
-        TransformActiveVariables.getActiveDecls(config.vardefs,(config.inputFormat=='free'))
+        TransformActiveVariables.getActiveDecls(config.vardefs,\
+                                                config.inputFormat,config.outputFormat)
         # only one input file
         if len(inputFileList) == 1 :
             currentFile = inputFileList[0]
             out = config.output and open(config.output,'w') \
                                  or sys.stdout
-            for aUnit in fortUnitIterator(inputFileList[0],(config.inputFormat=='free')):
+            for aUnit in fortUnitIterator(inputFileList[0],config.inputFormat,config.outputFormat):
                 TransformActiveVariables(aUnit).transformFile().printit(out)
             if config.output :
                 out.close()
@@ -132,7 +135,7 @@ def main():
             for anInputFile in inputFileList :
                 currentFile = anInputFile
                 out = open(os.path.join(config.outputDir,anInputFile),'w')
-                for aUnit in fortUnitIterator(anInputFile,(config.inputFormat=='free')):
+                for aUnit in fortUnitIterator(anInputFile,config.inputFormat,config.outputFormat):
                     TransformActiveVariables(aUnit).transformFile().printit(out)
                 out.close()
 

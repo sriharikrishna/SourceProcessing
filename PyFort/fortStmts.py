@@ -1576,7 +1576,7 @@ class SimpleReadStmt(SimpleSyntaxIOStmt):
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
-        return SimpleSyntaxIOStmt.parse(lineNumber,SimpleReadStmt.kw, SimpleReadStmt)
+        return SimpleSyntaxIOStmt.parse(ws_scan,lineNumber,SimpleReadStmt.kw, SimpleReadStmt)
 
 class ReadStmt(ComplexSyntaxIOStmt):
     kw = 'read'

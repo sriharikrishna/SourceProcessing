@@ -18,8 +18,8 @@ class TransformActiveVariables(object):
     # populates the activeVars array with the variable names of all active
     # variables
     @staticmethod
-    def getActiveDecls(file,isFreeFormat=False):
-        for aUnit in fortUnitIterator(file,isFreeFormat):
+    def getActiveDecls(file,inputFormat=None,outputFormat=None):
+        for aUnit in fortUnitIterator(file,inputFormat,outputFormat):
             for aDeclStmt in aUnit.decls:
                 if isinstance(aDeclStmt,fs.DrvdTypeDecl) and \
                    hasattr(aDeclStmt,'mod') and \

@@ -45,7 +45,7 @@ def main():
                    '--inputFormat',
                    dest='inputFormat',
                    help="<input_file> is in either 'fixed' or 'free' format",
-                   default='fixed')
+                   default=None)
     opt.add_option('',
                    '--removeFunction',
                    dest='removeFunction',
@@ -55,12 +55,12 @@ def main():
     opt.add_option('','--inputLineLength',
                    dest='inputLineLength',
                    type=int,
-                   help='sets the max line length of the input file',
+                   help='sets the max line length of the input file. The default line length is 72 for fixed format and 132 for free format.',
                    default=None)
     opt.add_option('','--outputLineLength',
                    dest='outputLineLength',
                    type=int,
-                   help='sets the max line length of the output file',
+                   help='sets the max line length of the output file. The default line length is 72 for fixed format and 132 for free format.',
                    default=None)
     opt.add_option('-m','--mode',dest='mode',
                    type='choice', choices=modeChoices,
@@ -151,14 +151,16 @@ def main():
         Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
 
     # set free/fixed format
-    if (config.inputFormat<>'fixed') and (config.inputFormat<>'free'):
+    if (config.inputFormat<>'fixed') and \
+           (config.inputFormat<>'free') and \
+           (config.inputFormat is not None):
         opt.error("inputFormat option must be specified with either 'fixed' or 'free' as an argument")
     if config.outputFormat == None:
         config.outputFormat = config.inputFormat
     elif (config.outputFormat<>'fixed') and (config.outputFormat<>'free'):
         opt.error("outputFormat option must be specified with either 'fixed' or 'free' as an argument")
-    setFixedOrFreeFormat(config.inputFormat,config.outputFormat)
-    
+    #setFixedOrFreeFormat(config.inputFormat,config.outputFormat)
+
     if config.inputLineLength:
         if config.inputLineLength < 72 or \
            config.inputLineLength > 132:
@@ -199,7 +201,7 @@ def main():
             if (len(inputFileList) > 1): # output the file start pragma
                 out.write('!$openad xxx file_start ['+anInputFile+']\n')
                 out.flush()
-            for aUnit in fortUnitIterator(anInputFile,(config.inputFormat=='free')):
+            for aUnit in fortUnitIterator(anInputFile,config.inputFormat,config.outputFormat):
                 UnitCanonicalizer(aUnit).canonicalizeUnit().printit(out)
         if (len(inputFileList) > 1): # output the file start pragma for the subroutinized intrinsics
             out.write('!$openad xxx file_start [OAD_subroutinizedIntrinsics.f90]\n')

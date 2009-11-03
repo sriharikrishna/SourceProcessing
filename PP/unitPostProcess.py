@@ -773,7 +773,7 @@ class UnitPostProcessor(object):
         # may be None if so set in postProcess.py
         if not UnitPostProcessor._inlineFile:
             return
-        for aUnit in fortUnitIterator(UnitPostProcessor._inlineFile,False):
+        for aUnit in fortUnitIterator(UnitPostProcessor._inlineFile):
             newUnit = UnitPostProcessor.__getInlineSubroutine(aUnit)
             UnitPostProcessor._inlineFileUnits.append(newUnit)
 

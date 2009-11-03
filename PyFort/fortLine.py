@@ -26,13 +26,14 @@ class fline(anyFortLine):
     '''
     def __init__(self,line,lineNumber):
         self.line = line
+        self.rawline = line
         self.lineNumber = lineNumber
 
 class cline(anyFortLine):
     '''a comment (or blank) line'''
     def __init__(self,dta,lineNumber):
         self.lineNumber = lineNumber
-#       self.rawline = ''.join(flatten(dta))
+        self.rawline = ''.join(flatten(dta))
 
     def comment_list(self):
         return self.rawline.splitlines()

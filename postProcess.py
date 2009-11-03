@@ -55,12 +55,12 @@ def main():
     opt.add_option('','--inputLineLength',
                    dest='inputLineLength',
                    type=int,
-                   help='sets the max line length of the input file',
+                   help='sets the max line length of the input file. The default line length is 72 for fixed format and 132 for free format.',
                    default=None)
     opt.add_option('','--outputLineLength',
                    dest='outputLineLength',
                    type=int,
-                   help='sets the max line length of the output file',
+                   help='sets the max line length of the output file. The default line length is 72 for fixed format and 132 for free format.',
                    default=None)
     opt.add_option('-m','--mode',dest='mode',
                    type='choice', choices=modeChoices,
@@ -107,7 +107,7 @@ def main():
     opt.add_option('--inputFormat',
                    dest='inputFormat',
                    help="<input_file> is in 'free' or 'fixed' format",
-                   default='fixed')
+                   default=None)
     opt.add_option('--noCleanup',
                    dest='noCleanup',
                    help='do not remove the output file(s) if an error was encountered (defaults to False)',
@@ -188,13 +188,15 @@ def main():
         UnitPostProcessor.setDerivType(config.deriv)
 
         # set free/fixed format
-        if (config.inputFormat<>'fixed') and (config.inputFormat<>'free'):
+        if (config.inputFormat<>'fixed') and \
+               (config.inputFormat<>'free') and \
+               (config.inputFormat is not None):
             opt.error("inputFormat option must be specified with either 'fixed' or 'free' as an argument")
         if config.outputFormat == None:
             config.outputFormat = config.inputFormat
         elif (config.outputFormat<>'fixed') and (config.outputFormat<>'free'):
             opt.error("outputFormat option must be specified with either 'fixed' or 'free' as an argument")
-        setFixedOrFreeFormat(config.inputFormat,config.outputFormat)
+        #setFixedOrFreeFormat(config.inputFormat,config.outputFormat)
 
         if config.inputLineLength:
             if config.inputLineLength < 72 or \
@@ -262,7 +264,7 @@ def main():
             unitStartTime=None
             if (config.timing):
                 unitStartTime=datetime.datetime.utcnow()
-            for aUnit in fortUnitIterator(inputFile,(config.inputFormat=='free')):
+            for aUnit in fortUnitIterator(inputFile,config.inputFormat,config.outputFormat):
                 output = base + unitNumExt % unit_num + ext
                 out = open(output,'w')
                 outFileNameList.append(output)
@@ -285,7 +287,7 @@ def main():
         # SEPARATE OUTPUT INTO FILES AS SPECIFIED BY PRAGMAS
         elif config.separateOutput:
             out = None
-            for aUnit in fortUnitIterator(inputFile,(config.inputFormat=='free')):
+            for aUnit in fortUnitIterator(inputFile,config.inputFormat,config.outputFormat):
                 # We expect to find file pragmas in the cmnt section of units exclusively
                 if aUnit.cmnt:
                     if (re.search('openad xxx file_start',aUnit.cmnt.rawline,re.IGNORECASE)):
@@ -311,7 +313,7 @@ def main():
                 outFileNameList.append(config.output)
             else:
                 out=sys.stdout
-            for aUnit in fortUnitIterator(inputFile,(config.inputFormat=='free')):
+            for aUnit in fortUnitIterator(inputFile,config.inputFormat,config.outputFormat):
                 UnitPostProcessor(aUnit).processUnit().printit(out)
             if config.output: 
                 out.close()

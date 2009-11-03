@@ -211,9 +211,10 @@ class _curr(object):
         self.val  = None # no need for Unit(p), as this must be last
         return u
 
-def fortUnitIterator(fileName,free):
+def fortUnitIterator(fileName,inputFormat=None,outputFormat=None):
     return vgen(install_pat(_curr(module_handler.ourModuleHandler)),
-                buf_iter(Ffile.file(fileName,free,parse_cmnt,parse_stmts).lines))
+                buf_iter(Ffile.file(fileName,parse_cmnt,parse_stmts,\
+                                    inputFormat,outputFormat).lines))
 
 if __name__ == '__main__':
     from _Setup.testit import *

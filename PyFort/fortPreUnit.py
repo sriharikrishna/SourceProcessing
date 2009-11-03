@@ -61,7 +61,9 @@ unit        = disj(seq(zo1(cblk),baseunit),cblk)
 unitlist    = plus(unit)
 
 def fortPreUnitIterator(fileName,free):
-    return vgen(unit,buf_iter(Ffile.file(fileName,free,parse_cmnt,parse_stmts).lines))
+    if free: inputFormat = 'free'
+    else: inputFormat = 'fixed'
+    return vgen(unit,buf_iter(Ffile.file(fileName,parse_cmnt,parse_stmts,inputFormat).lines))
 
 if __name__ == '__main__':
     from _Setup.utest import *
