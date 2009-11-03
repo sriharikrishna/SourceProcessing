@@ -649,11 +649,8 @@ class Leaf(Exec):
         return '%s()' % self.__class__.__name__
 
     def __str__(self):
-        return self.__class__.kw+' '.join(self.internal)
+        return self.__class__.kw_str+' '.join(self.internal)
 
-    def get_rawline(self):
-        return self.rawline.strip()
-    
 class DeclLeaf(Decl):
     "special Decl that has no components"
 
@@ -845,10 +842,18 @@ class VarAttrib(Decl):
 class PrivateStmt(VarAttrib):
     kw     = 'private'
     kw_str = kw
+    _sons = ['vlist']
+    
+    def __init__(self,vlist,lineNumber=0):
+        VarAttrib.__init__(self,vlist,lineNumber)
 
 class PublicStmt(VarAttrib):
     kw     = 'public'
     kw_str = kw
+    _sons = ['vlist']
+
+    def __init__(self,vlist,lineNumber=0):
+        VarAttrib.__init__(self,vlist,lineNumber)
 
 class ContainsStmt(DeclLeaf):
     kw     = 'contains'
@@ -990,11 +995,6 @@ class StmtFnStmt(Decl):
     def get_body(self):
         self.accessed = True
         return self.body
-
-    def get_rawline(self):
-        if self.accessed:
-            self.rawline = str(self)
-        return self.rawline.strip()
 
 class ExternalStmt(Decl):
     _sons = ['procedureNames']
@@ -1438,11 +1438,6 @@ class CallStmt(Exec):
         self.accessed
         return self.args
 
-    def get_rawline(self):
-        if self.accessed:
-            self.rawline = str(self)
-        return self.rawline.strip()
-
 class AssignStmt(Exec):
     _sons = ['lhs','rhs']
 
@@ -1474,11 +1469,6 @@ class AssignStmt(Exec):
     def get_rhs(self):
         self.accessed = True
         return self.rhs
-
-    def get_rawline(self):
-        if self.accessed:
-            self.rawline = str(self)
-        return self.rawline.strip()
 
 class PointerAssignStmt(Exec):
     _sons = ['lhs','rhs']
@@ -1549,6 +1539,9 @@ class PrintStmt(SimpleSyntaxIOStmt):
         scan = filter(lambda x: x != ' ',ws_scan)
         return SimpleSyntaxIOStmt.parse(scan,lineNumber,PrintStmt.kw, PrintStmt)
 
+    def __init__(self,kw,format,itemList,lineNumber=0):
+        SimpleSyntaxIOStmt.__init__(self,kw,format,itemList,lineNumber)
+
 class ComplexSyntaxIOStmt(IOStmt):
 
     @staticmethod
@@ -1572,11 +1565,15 @@ class SimpleReadStmt(SimpleSyntaxIOStmt):
     ''' the version that only has format but not a full ioCtrlSpecList; its parse method
     is only called as a fallback on failure of ReadStmt.parse '''
     kw = 'read'
-
+    kw_str = kw
+    
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
         return SimpleSyntaxIOStmt.parse(ws_scan,lineNumber,SimpleReadStmt.kw, SimpleReadStmt)
+
+    def __init__(self,kw,format,itemList,lineNumber=0):
+        SimpleSyntaxIOStmt.__init__(self,kw,format,itemList,lineNumber)
 
 class ReadStmt(ComplexSyntaxIOStmt):
     kw = 'read'
@@ -1698,6 +1695,7 @@ class ElseifStmt(Exec):
     
 class ElseStmt(Leaf):
     kw = 'else'
+    kw_str = kw
 
 class WhereStmt(Exec):
     ''' WHERE ( logical-expression ) array-assignment-statement'''
@@ -1832,11 +1830,6 @@ class DoStmt(Exec):
         return '%s%s%s%s' % (doNameString,self.doFormatStr,doLabelString,loopControlString)\
                +' '.join(self.internal)
 
-
-    def get_rawline(self):
-        if self.accessed:
-            self.rawline = str(self)
-        return self.rawline.strip()
 
 class WhileStmt(Exec):
     #FIXME: optional construct name, label, and comma are not handled
