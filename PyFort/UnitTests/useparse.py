@@ -10,12 +10,12 @@ def scan(s):
     (v,rst) = scan1.scan(s)
     if rst:
         raise ScanError(lineNumber=0,aFortLine=s,scanned=v,rest=rst)
-    return v
+    return filter(lambda x: x != ' ',v)
 
 def ep(s):
     (v,rst) = Exp(scan(s))
     if rst:
-        raise "incomplete Exp parse: '%s', rst = %s" % (s,rst)
+        raise Exception("incomplete Exp parse: '%s', rst = %s" % (s,rst))
     return v
 
 def pps(s):

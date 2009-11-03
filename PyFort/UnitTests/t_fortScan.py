@@ -10,9 +10,9 @@ class C1(TestCase):
         p1 = preclip('''
        f(i) = 'This is a '' str' // 'another string' // gl(3.14_www)
 ''')
-        ok = ['f', '(', 'i', ')', '=',
-              "'This is a '' str'", '//',
-              "'another string'", '//', 'gl', '(', '3.14_www', ')']
+        ok = [' ','f', '(', 'i', ')',' ','=',' ',
+              "'This is a '' str'",' ', '//',' ',
+              "'another string'",' ','//',' ','gl','(', '3.14_www', ')',' ']
         (v,rm) = scan1.scan(p1)
         ae(v,ok)
         a_(not rm)
@@ -88,22 +88,23 @@ class scanit(TestCase):
         'scan quoted strings, int & float constants w kinds'
         self.assertEquals(scan1.scan(  \
             'f(3) = "foo bar" // "bazme""" // floob(3_iii ** 4.2e-2_w2f)'),
-            (['f', '(', '3', ')', '=', '"foo bar"',
-              '//', '"bazme"""', '//', 'floob',
-              '(', '3_iii', '**', '4.2e-2_w2f', ')'], ''))
+            (['f', '(', '3', ')',' ','=',' ','"foo bar"',' ',
+              '//',' ','"bazme"""',' ','//',' ','floob',
+              '(', '3_iii',' ','**',' ','4.2e-2_w2f', ')'], ''))
 
     def test2(self):
         'scan declarations, :: style'
         ae = self.assertEquals
         ae(scan1.scan('integer,dimension(10) :: xx,yy,zz'),
-           (['integer', ',', 'dimension', '(', '10', ')',
-             '::', 'xx', ',', 'yy', ',', 'zz'], ''))
+           (['integer', ',', 'dimension', '(', '10', ')',' ',
+             '::',' ','xx', ',', 'yy', ',', 'zz'], ''))
 
     def test3(self):
         'new style int, float constants'
         ae         = self.assertEquals
         (scanin,r) = scan1.scan('3 3_2 4.2E-22 3.191D0_9 55_w2i .004_w2f')
-        ae(scanin,['3', '3_2', '4.2E-22', '3.191D0_9', '55_w2i', '.004_w2f'])
+        ae(scanin,['3',' ','3_2',' ','4.2E-22',' ','3.191D0_9',' ',
+                   '55_w2i',' ','.004_w2f'])
         ae(r,'')
 
 class C4(TestCase):
@@ -111,7 +112,8 @@ class C4(TestCase):
         'upper case logicals and comparisons'
         ae         = self.assertEquals
         (scanin,r) = scan1.scan('IF (X .LT. 5) Y = 10.e0')
-        ae(scanin,['IF','(','X','.LT.','5',')','Y','=','10.e0'])
+        ae(scanin,['IF',' ','(','X',' ','.LT.',' ','5',')',' ','Y',' ','=',
+                   ' ','10.e0'])
         ae(r,'')
 
     def test2(self):
@@ -134,8 +136,8 @@ class C4(TestCase):
 
         p1         = 'X.LT.1.OR.Y .GT. 3..AND.0.2.GE.3.14'
 
-        tlp1       = ['X', '.LT.', '1', '.OR.', 'Y',
-                      '.GT.', '3.', '.AND.', '0.2', '.GE.', '3.14']
+        tlp1       = ['X', '.LT.', '1', '.OR.', 'Y',' ',
+                      '.GT.',' ','3.', '.AND.', '0.2', '.GE.', '3.14']
 
         (scanin,r) = scan1.scan(p1)
         ae(scanin,tlp1)
@@ -147,7 +149,7 @@ class C4(TestCase):
         a_ = self.assert_
         
         p1   = 'xxx .neqv. (yyy .eqv. zzz)'
-        t1p1 = ['xxx','.neqv.','(','yyy','.eqv.','zzz',')']
+        t1p1 = ['xxx',' ','.neqv.',' ','(','yyy',' ','.eqv.',' ','zzz',')']
         (s,r) = scan1.scan(p1)
 
         ae(s,t1p1)
@@ -158,8 +160,9 @@ class C4(TestCase):
         a_ = self.assert_
 
         p1    = 'xxx <= yyy==z + (x >= 4 * 3 /= 5 / 6 // 7'
-        t1p1  = ['xxx', '<=', 'yyy', '==', 'z', '+', '(', 'x', '>=',
-                 '4', '*', '3', '/=', '5', '/', '6', '//', '7']
+        t1p1  = ['xxx',' ', '<=',' ', 'yyy', '==', 'z',' ','+',' ','(', 'x',
+                 ' ','>=',' ','4',' ','*',' ','3',' ','/=',' ','5',' ','/',
+                 ' ','6',' ','//',' ','7']
         (s,r) = scan1.scan(p1)
         ae(s,t1p1)
         a_(not r)

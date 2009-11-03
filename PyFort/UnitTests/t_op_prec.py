@@ -13,7 +13,7 @@ def mkexp(e):
 
 def scan(s):
     import fortScan as fs
-    return fs.scan1.scan(s)[0]
+    return filter(lambda x: x != ' ',fs.scan1.scan(s)[0])
 
 
 class C1(TestCase):

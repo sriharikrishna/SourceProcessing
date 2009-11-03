@@ -10,7 +10,7 @@ class C1(TestCase):
     def test1(self):
         'parse file f3.f'
 
-        f1   = Ffile.file(fname_t('f3.f'),free=False,c_action=parse_cmnt,s_action=parse_stmts)
+        f1   = Ffile.file(fname_t('f3.f'),c_action=parse_cmnt,s_action=parse_stmts)
         ok_s = (fs.Comments,
                 fs.SubroutineStmt,
                 fs.Comments,
@@ -33,7 +33,6 @@ class C1(TestCase):
                 fs.EndStmt,
                 )
         for (l,c) in izip(f1.lines,ok_s):
-            print l
             a_(isinstance(l,c))
 
 s1 = makeSuite(C1)
