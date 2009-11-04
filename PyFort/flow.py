@@ -71,6 +71,7 @@ def flow_comment(l):
 flow_line = _fixed_flow_line
 formatStart = _fixedFormatStart
 outputLineLength = _fixed_line_len
+outputLineLengthSet = False
 inputLineLength = 0
 commentInit = _fixed_comment
 
@@ -97,14 +98,17 @@ def _setFormatDefaults(switch=True):
     formatStart = (switch and _freeFormatStart) or _fixedFormatStart
     global commentInit
     commentInit = (switch and _free_comment) or _fixed_comment
-    if not outputLineLength in globals():
+    global outputLineLengthSet
+    # if outputLineLength was previously explicitly set, do nothing
+    if not outputLineLengthSet:
         global outputLineLength
         outputLineLength = (switch and _free_line_len) or _fixed_line_len
-    # if outputLineLength was previously declared global and explicitly set, do nothing
 
 def setOutputLineLength(length):
     global outputLineLength
+    global outputLineLengthSet
     outputLineLength = length
+    outputLineLengthSet = True
 
 def setInputLineLength(length):
     global inputLineLength
