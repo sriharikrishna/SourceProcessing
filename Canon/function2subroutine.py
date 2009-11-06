@@ -127,18 +127,19 @@ def updateTypeDecl(aDecl,outParam,declList):
                      +' outParam = "'+str(outParam)+'",' \
                      +' declList = "'+str(declList)+'"')
     resultDeclCreated = False
-    if (len(aDecl.decls) == 1) and \
-           updateResultDecl(aDecl.get_decls()[0],outParam):
-        aDecl = createTypeDecl(aDecl.kw,aDecl.get_mod(),outParam,aDecl.lead)
+    declCopy = copy.deepcopy(aDecl)
+    if (len(declCopy.decls) == 1) and \
+           updateResultDecl(declCopy.get_decls()[0],outParam):
+        declCopy = createTypeDecl(declCopy.kw,declCopy.get_mod(),outParam,declCopy.lead)
         resultDeclCreated = True
     else:
-        for decl in aDecl.get_decls():
+        for decl in declCopy.get_decls():
             if updateResultDecl(decl,outParam):
-                newDecl = createTypeDecl(aDecl.kw,aDecl.get_mod(),outParam,aDecl.lead)
-                aDecl.decls.remove(decl)
+                newDecl = createTypeDecl(declCopy.kw,declCopy.get_mod(),outParam,declCopy.lead)
+                declCopy.decls.remove(decl)
                 declList.append(newDecl)
                 resultDeclCreated = True
-    return (aDecl,resultDeclCreated)
+    return (declCopy,resultDeclCreated)
 
 def convertFunction(functionUnit,keepFunctionDecl=True):
     '''converts a function unit definition to a subroutine unit definition'''

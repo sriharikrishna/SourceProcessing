@@ -436,7 +436,7 @@ class UnitCanonicalizer(object):
 
     def __canonicalizeFunctionDecls(self,aDecl,subroutineBlock):
         if self._keepFunctionDecl:
-            self.__myNewDecls.append(copy.deepcopy(aDecl))
+            self.__myNewDecls.append(aDecl)
         if isinstance(aDecl,fs.FunctionStmt):
             self.setFunctionBlockFlag(True)
             (self.__outParam,subroutineStmt) = function2subroutine.\
@@ -466,7 +466,7 @@ class UnitCanonicalizer(object):
                 self.setCreateResultDeclFlag(False)
             elif isinstance(aDecl,fs.TypeDecl):
                 (aDecl,resultDeclFlag) = function2subroutine.updateTypeDecl(\
-                    copy.deepcopy(aDecl),self.__outParam,self.__myNewDecls)
+                    aDecl,self.__outParam,self.__myNewDecls)
                 self.setCreateResultDeclFlag(resultDeclFlag)
             subroutineBlock.append(aDecl)
         else:
@@ -524,7 +524,7 @@ class UnitCanonicalizer(object):
         if isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
             if self._keepFunctionDecl:
                 newUnit = function2subroutine.\
-                          convertFunction(copy.deepcopy(self.__myUnit))
+                          convertFunction(self.__myUnit)
                 # if the unit has no parent, then it was the original unit.
                 if self.__myUnit.parent is None:
                     # create a parent
