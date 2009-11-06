@@ -11,4 +11,3 @@
         AVERAGE = SUM/3.0
         RETURN
       end subroutine oad_s_average
-

@@ -5,6 +5,6 @@
           call oad_s_foo(y,oad_ctmp0)
           if (oad_ctmp0.eq.0) then
             y = 0
-          endif
+          end if
         end subroutine
 

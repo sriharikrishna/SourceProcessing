@@ -9,4 +9,3 @@
         bar = x*2
         return
       end subroutine oad_s_bar
-
