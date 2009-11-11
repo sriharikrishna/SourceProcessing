@@ -682,63 +682,37 @@ class CommonStmt(Decl):
 
 class _ImplicitDoConstruct(object):
     '''implicit do construct for DATA statements'''
-                # data-implied-do object is one of
-                #  array-element
-                #  scalar-structure-component
-                #  data-implied-do
-    form = seq(lit('('),    #
-                        app,         # 1 = app
-                        lit(','),    #
-                        id,          # 3 = auxVariable
-                        lit('='),    #
-                        Exp,         # 5 = doStart
-                        lit(','),    #
-                        Exp,         # 7 = doEnd
-                        zo1(seq(lit(','), # 8 = doStride
-                                Exp)),
-                        lit(')'))    #
-    form = treat(form, lambda x: _ImplicitDoConstruct(x[1],x[3],x[5],x[7],x[8] and x[8][0][1] or None))
+    # data-implied-do object is one of
+    #  array-element
+    #  scalar-structure-component
+    #  data-implied-do
+    form = seq(lit('('),         # 0
+               app,              # 1 = app
+               lit(','),         # 2
+               LoopControl.form, # 3 = loopControl
+               lit(')'))         # 4
+    form = treat(form, lambda x: _ImplicitDoConstruct(x[1],x[3]))
 
-        #  form of data-implied-do:
-        # ( data-implied-do-object-list , named-scalar-integer-variable = scalar-integer-expression , scalar-integer-expression [ , scalar-integer-expression ] )
-    form = seq(lit('('),    #
-                        disj(app,    # 1 = object
-                             form),
-                        lit(','),    #
-                        id,          # 3 = auxVariable
-                        lit('='),    #
-                        Exp,         # 5 = doStart
-                        lit(','),    #
-                        Exp,         # 7 = doEnd
-                        zo1(seq(lit(','), # 8 = doStride
-                                Exp)),
-                        lit(')'))    #
-    form = treat(form, lambda x: _ImplicitDoConstruct(x[1],x[3],x[5],x[7],x[8] and x[8][0][1] or None))
+    #  form of data-implied-do:
+    # ( data-implied-do-object-list , named-scalar-integer-variable = scalar-integer-expression , scalar-integer-expression [ , scalar-integer-expression ] )
+    form = seq(lit('('),         # 0
+               disj(app,         # 1 = object
+                    form),
+               lit(','),         # 2
+               LoopControl.form, # 3 = loopControl
+               lit(')'))         # 4
+    form = treat(form, lambda x: _ImplicitDoConstruct(x[1],x[3]))
 
-    def __init__(self,object,auxVariable,doStart,doEnd,doStride):
+    def __init__(self,object,loopControl):
         self.object = object
-        self.auxVariable = auxVariable
-        self.doStart = doStart
-        self.doEnd = doEnd
-        self.doStride = doStride # optional
-        self.internal = []
-        self.rawline=str(self)
+        self.loopControl = loopControl
 
     def __str__(self):
-        optionalDoStrideStr = self.doStride and ', '+str(self.doStride) \
-                                             or ''
-        return '(%s, %s = %s, %s%s)' %  (str(self.object),
-                                         self.auxVariable,
-                                         str(self.doStart),
-                                         str(self.doEnd),
-                                         optionalDoStrideStr)\
-                                         +' '.join(self.internal)
+        return '(%s, %s)' % (str(self.object),str(self.loopControl))
 
     def __repr__(self):
-        return self.__class__.__name__ + \
-               '(' + \
-               ','.join([repr(aSon) for aSon in (self.object,self.auxVariable,self.doStart,self.doEnd,self.doStride)]) + \
-               ')'
+        return '%s(%s,%s)' % (self.__class__.__name__,repr(self.object),repr(self.loopControl))
+
 
 class DataStmt(Decl):
     kw = 'data'

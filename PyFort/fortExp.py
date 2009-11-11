@@ -282,19 +282,6 @@ class Ops(_Exp):
         return Ops(self.op,fn(self.a1),fn(self.a2))
 
 
-class ArrayConstructor(_Exp):
-    '''assigning an entire array at once, like this: a = (/ 2, 3, 5, 7, 11, 13, 17 /)'''
-    _sons = ['elementList']
-
-    def __init__(self,elementList):
-        self.elementList = elementList
-
-    def __repr__(self):
-        return '%s(%s)' % (self.__class__.__name__,repr(self.elementList))
-
-    def __str__(self):
-        return '(/%s/)' % ','.join([str(anElement) for anElement in self.elementList])
-
 def is_id(t):
     return _id_re.match(t)
 
@@ -421,7 +408,7 @@ unary   = pred(is_unary)
 
 def atom0(scan):
     '''eta expansion, since letrec unavail in python'''
-    return disj(id,const,unaryExp,paren,formMultiParen,formArrayConstructor)(scan)
+    return disj(id,const,unaryExp,paren,formMultiParen,ArrayConstructor.form)(scan)
 
 def atom(scan):
 
@@ -508,15 +495,8 @@ formMultiParen = seq(lit('('),
                  lit(')'))
 formMultiParen = treat(formMultiParen,_makeMultiParen)
 
-formArrayConstructor = seq(lit('('),
-                       lit('/'),
-                       cslist(Exp),
-                       lit('/'),
-                       lit(')'))
-formArrayConstructor = treat(formArrayConstructor, lambda x: ArrayConstructor(x[2]))
-
 class LoopControl(_Exp):
-    '''loop control part of DO statements'''
+    '''loop control part of DO statements, data-implied-do, and array constructor'''
     _sons = ['var','start','end','stride']
     # form of loop control is:
     #  [,] scalar-integer-variable-name = scalar-integer-expression , scalar-integer-expression [, scalar-integer-expression]
@@ -549,6 +529,56 @@ class LoopControl(_Exp):
                                     repr(self.start),
                                     repr(self.end),
                                     repr(self.stride))
+
+
+class ArrayConstructorImpliedDo(_Exp) :
+    _sons = ['valueList','loopControl']
+
+    # form: ( ac-value-list , ac-do-variable = scalar-integer-expression , &
+    #         scalar-integer-expression [ , scalar-integer-expression
+    form = seq(lit('('),         #
+               Exp,              # 1
+               lit(','),         #
+               LoopControl.form, # 3
+               lit(')'))
+    form = treat(form, lambda x: ArrayConstructorImpliedDo(x[1],x[3]))
+
+    def __init__(self,valueList,loopControl) :
+        self.valueList = valueList
+        self.loopControl = loopControl
+
+    def __repr__(self) :
+        return '%s(%s,%s)' % (self.__class__.__name__,
+                              repr(self.valueList),
+                              repr(self.loopControl))
+
+    def __str__(self):
+       #return '( %s ,%s )' % (','.join([str(aValue) for aValue in self.valueList]),
+       #                       str(loopControl))
+        return '( %s,%s )' % (str(self.valueList), str(self.loopControl))
+
+
+class ArrayConstructor(_Exp):
+    '''assigning an entire array at once, like this: a = (/ 2, 3, 5, 7, 11, 13, 17 /)'''
+    _sons = ['valueList']
+
+    formValue = disj(Exp,
+                     ArrayConstructorImpliedDo.form)
+    form = seq(lit('('),          # 0
+               lit('/'),          # 1
+               cslist(formValue), # 2 = valueList
+               lit('/'),          # 3
+               lit(')'))          # 4
+    form = treat(form, lambda x: ArrayConstructor(x[2]))
+
+    def __init__(self,valueList):
+        self.valueList = valueList
+
+    def __repr__(self):
+        return '%s(%s)' % (self.__class__.__name__,repr(self.valueList))
+
+    def __str__(self):
+        return '(/' + ','.join([str(aValue) for aValue in self.valueList]) + '/)'
 
 
 # utility list

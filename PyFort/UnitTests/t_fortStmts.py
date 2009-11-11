@@ -365,6 +365,17 @@ class TestAssignStmt(TestCase):
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
 
+    def test2(self):
+        '''array slice array constructor assignment (from SCALE)'''
+        theString = "e_mid(1:ngrp) = (/( (elnmg(i)+elnmg(i+1))*0.5,i = 1,ngrp )/)"
+        theRepr = AssignStmt(App('e_mid',[Ops(':','1','ngrp')]),
+                             ArrayConstructor([ArrayConstructorImpliedDo(Ops('*',ParenExp(Ops('+',App('elnmg',['i']),
+                                                                                                  App('elnmg',[Ops('+','i','1')]))),'0.5'),
+                                                                         LoopControl('i','1','ngrp',None))]))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
 
 class TestRealStmt(TestCase):
     'test declaration of real variables'
@@ -1085,8 +1096,8 @@ class TestDataStmt(TestCase):
 
     def test2(self):
         '''data statement with implied do construct'''
-        theString = 'DATA(A1(tmp0), tmp0 = 1, 5, 1) / 3.4D-01, 5.9D-01, 1.0D00, 1.5D00, 1.3D00 /'
-        theRepr = DataStmt([_ImplicitDoConstruct(App('A1',['tmp0']),'tmp0','1','5','1')],['3.4D-01', '5.9D-01', '1.0D00', '1.5D00', '1.3D00'],'DATA')
+        theString = 'DATA(A1(tmp0), tmp0 = 1,5,1) / 3.4D-01, 5.9D-01, 1.0D00, 1.5D00, 1.3D00 /'
+        theRepr = DataStmt([_ImplicitDoConstruct(App('A1',['tmp0']),LoopControl('tmp0','1','5','1'))],['3.4D-01', '5.9D-01', '1.0D00', '1.5D00', '1.3D00'],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
@@ -1106,8 +1117,12 @@ class TestDataStmt(TestCase):
 
     def test5(self):
         '''data statement with double implied do and repeat factor'''
-        theString = 'DATA((x(i,j), i = 1, 2), j = 1, 3) / 6*2 /'
-        theRepr = DataStmt([_ImplicitDoConstruct(_ImplicitDoConstruct(App('x',['i', 'j']),'i','1','2',None),'j','1','3',None)],[Ops('*','6','2')],'DATA')
+        theString = 'DATA((x(i,j), i = 1,2), j = 1,3) / 6*2 /'
+        theRepr = DataStmt([_ImplicitDoConstruct(_ImplicitDoConstruct(App('x',['i', 'j']),
+                                                                      LoopControl('i','1','2',None)),
+                                                 LoopControl('j','1','3',None))],
+                           [Ops('*','6','2')],
+                           'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
@@ -1127,15 +1142,15 @@ class TestDataStmt(TestCase):
 
     def test8(self):
         '''data statement with an expression inside the implied do end'''
-        theString = 'DATA((SKEW(K,J), K = 1, J-1), J = 1, 100) / 4950*1.0 /'
-        theRepr = DataStmt([_ImplicitDoConstruct(_ImplicitDoConstruct(App('SKEW',['K', 'J']),'K','1',Ops('-','J','1'),None),'J','1','100',None)],[Ops('*','4950','1.0')],'DATA')
+        theString = 'DATA((SKEW(K,J), K = 1,J-1), J = 1,100) / 4950*1.0 /'
+        theRepr = DataStmt([_ImplicitDoConstruct(_ImplicitDoConstruct(App('SKEW',['K', 'J']),LoopControl('K','1',Ops('-','J','1'),None)),LoopControl('J','1','100',None))],[Ops('*','4950','1.0')],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test9(self):
         '''data statement with implied do without optional stride'''
-        theString = 'DATA(A1(tmp0), tmp0 = 1, 3) / 3.4D-01, 5.9D-01, 1.0D00 /'
-        theRepr = DataStmt([_ImplicitDoConstruct(App('A1',['tmp0']),'tmp0','1','3',None)],['3.4D-01', '5.9D-01', '1.0D00'],'DATA')
+        theString = 'DATA(A1(tmp0), tmp0 = 1,3) / 3.4D-01, 5.9D-01, 1.0D00 /'
+        theRepr = DataStmt([_ImplicitDoConstruct(App('A1',['tmp0']),LoopControl('tmp0','1','3',None))],['3.4D-01', '5.9D-01', '1.0D00'],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
