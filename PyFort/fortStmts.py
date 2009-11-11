@@ -1365,13 +1365,62 @@ class UseOnlyStmt(UseStmt):
 class EntryStmt(Decl):
     pass
 
-class CycleStmt(Leaf):
-    kw = 'cycle'
-    kw_str = kw
 
 class ExitStmt(Leaf):
     kw = 'exit'
     kw_str = kw
+
+
+class EnddoStmt(Exec):
+    kw = 'enddo'
+    kw_str = 'end do'
+    _sons = ['doConstructName']
+
+    @staticmethod
+    def parse(ws_scan,lineNumber) :
+        scan = filter(lambda x: x != ' ',ws_scan)
+        form = seq(lit(EnddoStmt.kw), # 0 = stmt_name
+                   zo1(id))           # 1 = doConstructName
+        form = treat(form, lambda x: EnddoStmt(x[1] and x[1][0] or None,
+                                               x[0]))
+        (theParsedStmt,rest) = form(scan)
+        return theParsedStmt 
+
+    def __init__(self,doConstructName,stmt_name=kw_str,lineNumber=0,label=False,lead='') :
+        self.doConstructName = doConstructName
+        self.stmt_name = stmt_name
+        Exec.__init__(self,lineNumber,label,lead)
+
+    def __str__(self) :
+        optionalDoConstructStr = self.doConstructName and ' '+self.doConstructName \
+                                                       or '' 
+        return '%s%s' % (self.stmt_name,optionalDoConstructStr)
+
+
+class CycleStmt(Exec) :
+    kw = 'cycle'
+    kw_str = kw
+    _sons = ['doConstructName']
+
+    @staticmethod
+    def parse(ws_scan,lineNumber) :
+        scan = filter(lambda x: x != ' ',ws_scan)
+        form = seq(lit(CycleStmt.kw), # 0 = stmt_name
+                   zo1(id))           # 1 = doConstructName
+        form = treat(form, lambda x: CycleStmt(x[1] and x[1][0] or None,
+                                               x[0]))
+        (theParsedStmt,rest) = form(scan)
+        return theParsedStmt 
+
+    def __init__(self,doConstructName,stmt_name=kw,lineNumber=0,label=False,lead='') :
+        self.doConstructName = doConstructName
+        self.stmt_name = stmt_name
+        Exec.__init__(self,lineNumber,label,lead)
+
+    def __str__(self) :
+        optionalDoConstructStr = self.doConstructName and ' '+self.doConstructName \
+                                                       or '' 
+        return '%s%s' % (self.stmt_name,optionalDoConstructStr)
 
 
 class CallStmt(Exec):
@@ -1841,9 +1890,6 @@ class WhileStmt(Exec):
     def __str__(self):
         return 'do while (%s)' % str(self.testExpression)+' '.join(self.internal)
 
-class EnddoStmt(Leaf):
-    kw = 'enddo'
-    kw_str = 'end do'
 
 class ContinueStmt(Leaf):
     kw = 'continue'

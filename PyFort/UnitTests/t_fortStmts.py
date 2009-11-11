@@ -8,28 +8,6 @@ from fortStmts import *
 from fortStmts import _F90ExplLen,_Star,_NoInit,_Kind,_ExplKind,_AssignInit,_PointerInit,_ImplicitDoConstruct
 from useparse  import *
 
-class C1(TestCase):
-    '''Test that appropriate instances are created for
-    some simple statements
-    '''
-
-    def test3(self):
-        'endif stmt as "end if"'
-        ae = self.assertEquals
-        a_ = self.assert_
-
-        s  = 'end if'
-        a_(isinstance(pps(s),EndifStmt))
-
-    def test4(self):
-        'endif stmt as "endif"'
-        ae = self.assertEquals
-        a_ = self.assert_
-
-        s  = 'endif'
-        a_(isinstance(pps(s),EndifStmt))
-
-
 class C2(TestCase):
     '''assignment statement'''
 
@@ -372,6 +350,64 @@ class TestAssignStmt(TestCase):
                              ArrayConstructor([ArrayConstructorImpliedDo(Ops('*',ParenExp(Ops('+',App('elnmg',['i']),
                                                                                                   App('elnmg',[Ops('+','i','1')]))),'0.5'),
                                                                          LoopControl('i','1','ngrp',None))]))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+
+class TestCycleStmt(TestCase):
+    '''test cycle statements'''
+
+    def test0(self):
+        '''cycle statement without do construct name'''
+        theString = 'CYCLE'
+        theRepr = CycleStmt(None,'CYCLE')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test1(self):
+        '''cycle statement with do construct name'''
+        theString = 'cycle l120'
+        theRepr = CycleStmt('l120','cycle')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+
+class TestEndStmt(TestCase):
+    '''Test various end statements'''
+
+    def test0(self):
+        'endif stmt as "end if"'
+        theString = 'end if'
+        theRepr = EndifStmt()
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test1(self):
+        'endif stmt as "endif"'
+        theString = 'endif'
+        theRepr = EndifStmt()
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+       # the following check will fail, because we don't store
+       # the formatting of "endif" for this type of statement
+       #self.assertEquals(theString,str(pps(theString)))
+
+    def test2(self):
+        'end do statement without do construct name'''
+        theString = 'ENDDO'
+        theRepr = EnddoStmt(None,'ENDDO')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test3(self):
+        'end do statement with do construct name'''
+        theString = 'enddo l120'
+        theRepr = EnddoStmt('l120','enddo')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
@@ -1207,8 +1243,10 @@ class TestProcedureStmt(TestCase):
         self.assertEquals(theString,str(pps(theString)))
 
 
-suite = asuite(C1,C2,C3,C4,C5,C6,C8,C9,
+suite = asuite(C2,C3,C4,C5,C6,C8,C9,
                TestAssignStmt,
+               TestCycleStmt,
+               TestEndStmt,
                TestRealStmt,
                TestCharacterDecls,
                TestImplicitStmt,
