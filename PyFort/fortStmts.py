@@ -678,7 +678,24 @@ class BlockdataStmt(PUstart):
     pass
 
 class CommonStmt(Decl):
-    pass
+    kw = 'common'
+    kw_str = kw
+
+    @classmethod
+    def parse(cls,ws_scan,lineNumber):
+        scan = filter(lambda x: x != ' ',ws_scan)
+        stmt = seq(lit(CommonStmt.kw),lit('/'),id,lit('/'),cslist(Exp))
+        ([common,slash1,name,slash2,declList],rm) = stmt(scan)
+        return cls(name,declList,lineNumber)
+
+    def __init__(self,name,declList=[],lineNumber=0,label=False,lead=''):
+        self.declList = declList
+        self.name = name
+        Decl.__init__(self,lineNumber,label,lead)
+
+    def __str__(self):
+        return self.kw + '/%s/ %s' % \
+              (self.name,','.join(str(item) for item in self.declList))
 
 class _ImplicitDoConstruct(object):
     '''implicit do construct for DATA statements'''
