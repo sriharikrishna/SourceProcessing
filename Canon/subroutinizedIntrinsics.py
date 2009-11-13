@@ -1,3 +1,5 @@
+from PyUtil.debugManager import DebugManager
+
 from PyFort.fortUnit import Unit
 from PyFort.fortExp import App,Ops
 import PyFort.fortStmts as fs
@@ -10,6 +12,7 @@ class SubroutinizeError(Exception):
         self.msg  = msg
 
 def shouldSubroutinize(aFunction):
+    DebugManager.debug('subroutinizedIntrinsics.shouldSubroutinize called on "'+str(aFunction)+'"')
     return intrinsic.getGenericName(aFunction.head) in ('max','maxval','min','minval')
 
 _requiredSubroutinizedIntrinsics=[]
