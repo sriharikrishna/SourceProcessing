@@ -133,9 +133,9 @@ def identifierType(anId,localSymtab,lineNumber):
 def intrinsicType(anIntrinsicApp,localSymtab,lineNumber):
     if anIntrinsicApp.head.lower() in ['aimag','alog','real']:
         return (fortStmts.RealStmt, [])
-    elif anIntrinsicApp.head.lower() == 'int':
+    elif anIntrinsicApp.head.lower() in ['int','idint']:
         return (fortStmts.IntegerStmt, [])
-    elif anIntrinsicApp.head.lower() in ['dble','dabs','dexp','dlog','dsqrt']:
+    elif anIntrinsicApp.head.lower() in ['dble','dabs','dexp','dlog','dsqrt','dmod']:
         return (fortStmts.DoubleStmt, [])
     elif anIntrinsicApp.head.lower() == 'cmplx':
         return (fortStmts.ComplexStmt, [])
