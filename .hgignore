@@ -1,4 +1,5 @@
 syntax: glob
+PyFort/UnitTests/__tmp.f
 Regression
 *.swp
 *.pyc
