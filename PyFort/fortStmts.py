@@ -1587,10 +1587,33 @@ class ComplexSyntaxIOStmt(IOStmt):
     @staticmethod
     def parse(ws_scan,lineNumber,kw,SubClass):
         scan = filter(lambda x: x != ' ',ws_scan)
-        io_stmt = seq(lit(kw),lit('('),cslist(disj(lit('*'),NamedParmExpWithStar,Exp)),lit(')'),cslist(Exp))
+        io_stmt = seq(lit(kw),lit('('),cslist(disj(lit('*'),NamedParmExpWithStar,Exp)),lit(')'),
+                      cslist(Exp))
         ([kw,lbracket,ioCtrlSpecList,rbracket,itemList],rest) = io_stmt(scan)
         if SubClass is WriteStmt and len(rest) > 0:
-            return WriteStmt(kw,ioCtrlSpecList,itemList,rest,lineNumber=lineNumber)
+            scan = filter(lambda x: x != ' ',ws_scan)
+            try:
+                formImplicitLoop = seq(lit('('),
+                                       cslist(disj(NamedParmExp,Exp,ImplicitLoopSubExp.form)),
+                                       lit(')'))
+                formImplicitLoop = treat(formImplicitLoop, lambda x: x[1])
+                formWriteStmt = seq(lit(kw),                # 0: kw
+                                    lit('('),               # 1
+                                    cslist(disj(lit('*'),NamedParmExpWithStar,Exp)), # 2: ioCtrlSpecList
+                                    lit(')'),               # 3
+                                    cslist(Exp),            # 4: itemList
+                                    formImplicitLoop)       # 5: implicitLoop
+                formWriteStmt = treat(formWriteStmt,
+                                      lambda x: WriteStmt(x[0],
+                                                          x[2],
+                                                          x[4],
+                                                          x[5] or [],
+                                                          lineNumber=lineNumber))
+                (theParsedStmt,rest) = formWriteStmt(scan)
+                theParsedStmt.rest = rest
+                return theParsedStmt 
+            except:
+                return WriteStmt(kw,ioCtrlSpecList,itemList,rest=rest,lineNumber=lineNumber)
         return SubClass(kw,ioCtrlSpecList,itemList,lineNumber=lineNumber)
 
     def __init__(self,stmt_name,ioCtrlSpecList,itemList=[],lineNumber=0,label=False,lead=''):
@@ -1643,14 +1666,19 @@ class WriteStmt(ComplexSyntaxIOStmt):
 
     # rest is a temp. fix. implicit loops in WriteStmts should be
     # fully parsed in ComplexSyntaxIOStmt
-    def __init__(self,stmt_name=kw,ioCtrlSpecList=[],itemList=[],rest=[],lineNumber=0,label=False,lead=''):
+    def __init__(self,stmt_name=kw,ioCtrlSpecList=[],itemList=[],implicitLoop=[],rest=[],lineNumber=0,label=False,lead=''):
+        self.implicitLoop = implicitLoop
         self.rest = rest
         ComplexSyntaxIOStmt.__init__(self,stmt_name,ioCtrlSpecList,itemList,lineNumber,label,lead)
 
     def __str__(self):
-        sub_str = ComplexSyntaxIOStmt.__str__(self)
-        return sub_str+''.join(self.rest)
-    
+        exp = ComplexSyntaxIOStmt.__str__(self)
+        if len(self.implicitLoop) > 0:
+            exp += "(%s)" % ','.join(str(item) for item in self.implicitLoop)
+        if len(self.rest) > 0:
+            exp += ''.join(self.rest)
+        return exp
+
 class FormatStmt(Exec):
     kw = 'format'
     kw_str = kw

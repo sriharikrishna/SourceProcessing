@@ -191,8 +191,27 @@ class UnitPostProcessor(object):
         newItemList=[]
         for item in anIOStmt.get_itemList():
             newItemList.append((self.__transformActiveTypesExpression(item)))
+        if isinstance(anIOStmt,fs.WriteStmt):
+            newImplicitLoop=[]
+            for item in anIOStmt.implicitLoop:
+                if isinstance(item,fe.ImplicitLoopSubExp):
+                    item.explist = self.__processImplicitLoopSubExp(item.explist)
+                    newImplicitLoop.append(item)
+                else:
+                    newImplicitLoop.append(self.__transformActiveTypesExpression(item))
+            anIOStmt.implicitLoop = newImplicitLoop
         anIOStmt.itemList=newItemList
         return anIOStmt
+
+    def __processImplicitLoopSubExp(self,explist):
+        newItems = []
+        for item in explist:
+            if isinstance(item,list):
+                item = self.__processImplicitLoopSubExp(item)
+                newItems.append(item)
+            else:
+                newItems.append(self.__transformActiveTypesExpression(item))
+        return newItems
         
     # Does active type transformations on a StmtFnStmt; 
     # reconstructs it as an AssignStmt if StmtFnStmt.name is "__value__"

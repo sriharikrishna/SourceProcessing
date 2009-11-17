@@ -191,6 +191,7 @@ class MultiParenExp(_Exp):
         return 'MultiParenExp(%s)' % (repr(self.expList),)
 
     def __str__(self):
+        print ','.join([str(e) for e in self.expList])
         return '(%s)' % (','.join([str(e) for e in self.expList]))
 
     def map(self,fn):
@@ -494,6 +495,44 @@ formMultiParen = seq(lit('('),
                  cslist(Exp),
                  lit(')'))
 formMultiParen = treat(formMultiParen,_makeMultiParen)
+
+multiParen = seq(lit('('),
+                 cslist(disj(NamedParmExp,Exp)),
+                 lit(')'))
+multiParen = seq(lit('('),
+                 cslist(disj(NamedParmExp,Exp,multiParen)),
+                 lit(')'))
+multiParen = treat(multiParen, lambda x: x)
+
+class ImplicitLoopSubExp(_Exp):
+
+    form = seq(lit('('),cslist(disj(NamedParmExp,Exp,multiParen)),
+               lit(')'))
+
+    form = treat(form, lambda x: ImplicitLoopSubExp(x[1]))
+
+    def __init__(self,explist):
+        self.explist = explist
+
+    def __mkstr__(self,itemlist):        
+        string = ''
+        for item in itemlist:
+            if isinstance(item,list):
+                string += self.__mkstr__(item)
+            elif item == '(' or item == ')':
+                if len(string) > 0 and string[-1] == ',':
+                    string = string[:-1]+item
+                else:
+                    string += item
+                if item == ')':
+                    string += ","
+            else:
+                string += str(item)+','
+        return string
+
+    def __str__(self):
+        string = self.__mkstr__(self.explist)
+        return '(%s)' % string[:len(string)-1]
 
 class LoopControl(_Exp):
     '''loop control part of DO statements, data-implied-do, and array constructor'''
