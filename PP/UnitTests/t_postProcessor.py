@@ -88,6 +88,18 @@ class C1(TestCase):
         'test inline replacement of nested __value__ and __deriv__ in decl and execution statements: nested_inline.f'
         compareFiles(self.assertEquals,'nested_inline.f','nested_inline.post.f',free=False)
 
+    def test7(self):
+        'test replacement of __value__ and __deriv__ in simple I/O statements: ioSimple.f'
+        compareFiles(self.assertEquals,'ioSimple.f','ioSimple.post.f',free=False)
+
+    def test8(self):
+        'test replacement of __value__ and __deriv__ in expressions in I/O statements : ioExpr.f'
+        compareFiles(self.assertEquals,'ioExpr.f','ioExpr.post.f',free=False)
+
+    def test9(self):
+        'test replacement of __value__ and __deriv__ in implicit do loops in I/O statements : ioImplDo.f'
+        compareFiles(self.assertEquals,'ioImplDo.f','ioImplDo.post.f',free=False)
+
 suite = asuite(C1)
 
 if __name__ == "__main__":
