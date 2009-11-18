@@ -191,7 +191,7 @@ class UnitPostProcessor(object):
         newItemList=[]
         for item in anIOStmt.get_itemList(): 
             newItemList.append((self.__transformActiveTypesExpression(item)))
-        if isinstance(anIOStmt,fs.WriteStmt):
+        if isinstance(anIOStmt,fs.ComplexSyntaxIOStmt):
             if anIOStmt.implicitLoop != []:
                 newImplicitLoop=[]
                 for item in anIOStmt.implicitLoop.implicitLoop:
