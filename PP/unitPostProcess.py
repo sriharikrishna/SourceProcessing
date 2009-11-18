@@ -189,7 +189,7 @@ class UnitPostProcessor(object):
         DebugManager.debug('unitPostProcessor.__processIOStmt called on: "'\
                                +str(anIOStmt)+" "+str(anIOStmt.__class__)+"'")
         newItemList=[]
-        for item in anIOStmt.get_itemList():
+        for item in anIOStmt.get_itemList(): 
             newItemList.append((self.__transformActiveTypesExpression(item)))
         if isinstance(anIOStmt,fs.WriteStmt):
             if anIOStmt.implicitLoop != []:
@@ -203,30 +203,33 @@ class UnitPostProcessor(object):
                         new = self.__transformActiveTypesExpression(item)
                         newImplicitLoop.append(new)
                 anIOStmt.implicitLoop.implicitLoop = newImplicitLoop
-            if len(anIOStmt.rest) > 0 and '__value__' in anIOStmt.rest:
+            if len(anIOStmt.rest) > 0 and '__value__' in anIOStmt.rest: 
                 anIOStmt.rest = self.__processList(anIOStmt.rest)
         anIOStmt.itemList=newItemList
         return anIOStmt
 
     def __processList(self,itemlist):
         newlist = []
-        paren_ct = 0
         index = 0
         try:
             value_index = itemlist.index('__value__')
             newlist += itemlist[:value_index]
             sublist = itemlist[value_index:]
+            sublist.pop(index) # remove __value__
+            sublist.pop(index) # remove (
+            paren_ct = 1 # for the opening paren
             for item in sublist:
-                index += 1
                 if item == ')':
                     paren_ct -= 1
                     if paren_ct == 0:
                         break
                 if item == '(':
                     paren_ct += 1
+                index += 1
+            sublist.pop(index) # remove )  
             sublist.insert(index,'%v')
-            newlist += sublist[1:index]+self.__processList(sublist[index:])
-        except:
+            newlist += sublist[:index]+self.__processList(sublist[index:])
+        except :
             newlist += itemlist
         return newlist
 
