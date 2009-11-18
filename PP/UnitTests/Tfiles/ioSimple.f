@@ -44,6 +44,6 @@ C
 C     **** Statements ****
 C
 C$OPENAD XXX Template ad_template.f
-      read(*,*) __value__(X(1)), __value__(AGLOBAL))
-      write(*,*) __value__(X(1)), __value__(AGLOBAL))
+      read(*,*) __value__(X(1)), __value__(AGLOBAL)
+      write(*,*) __value__(X(1)), __value__(AGLOBAL)
       END SUBROUTINE
