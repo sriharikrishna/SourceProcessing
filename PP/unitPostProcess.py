@@ -192,22 +192,50 @@ class UnitPostProcessor(object):
         for item in anIOStmt.get_itemList():
             newItemList.append((self.__transformActiveTypesExpression(item)))
         if isinstance(anIOStmt,fs.WriteStmt):
-            newImplicitLoop=[]
-            for item in anIOStmt.implicitLoop:
-                if isinstance(item,fe.ImplicitLoopSubExp):
-                    item.explist = self.__processImplicitLoopSubExp(item.explist)
-                    newImplicitLoop.append(item)
-                else:
-                    newImplicitLoop.append(self.__transformActiveTypesExpression(item))
-            anIOStmt.implicitLoop = newImplicitLoop
+            if anIOStmt.implicitLoop != []:
+                newImplicitLoop=[]
+                for item in anIOStmt.implicitLoop.implicitLoop:
+                    if isinstance(item,fs._ImplicitLoopConstruct):
+                        new = self.__processImplicitLoopConstruct(item.implicitLoop)
+                        item.implicitLoop = new
+                        newImplicitLoop.append(item)
+                    else:
+                        new = self.__transformActiveTypesExpression(item)
+                        newImplicitLoop.append(new)
+                anIOStmt.implicitLoop.implicitLoop = newImplicitLoop
+            if len(anIOStmt.rest) > 0 and '__value__' in anIOStmt.rest:
+                anIOStmt.rest = self.__processList(anIOStmt.rest)
         anIOStmt.itemList=newItemList
         return anIOStmt
 
-    def __processImplicitLoopSubExp(self,explist):
+    def __processList(self,itemlist):
+        newlist = []
+        paren_ct = 0
+        index = 0
+        try:
+            value_index = itemlist.index('__value__')
+            newlist += itemlist[:value_index]
+            sublist = itemlist[value_index:]
+            for item in sublist:
+                index += 1
+                if item == ')':
+                    paren_ct -= 1
+                    if paren_ct == 0:
+                        break
+                if item == '(':
+                    paren_ct += 1
+            sublist.insert(index,'%v')
+            newlist += sublist[1:index]+self.__processList(sublist[index:])
+        except:
+            newlist += itemlist
+        return newlist
+
+    def __processImplicitLoopConstruct(self,loop):
         newItems = []
-        for item in explist:
-            if isinstance(item,list):
-                item = self.__processImplicitLoopSubExp(item)
+        for item in loop:
+            if isinstance(item,fs._ImplicitLoopConstruct):
+                newLoop = self.__processImplicitLoopConstruct(item.implicitLoop)
+                item.implicitLoop = newLoop
                 newItems.append(item)
             else:
                 newItems.append(self.__transformActiveTypesExpression(item))
