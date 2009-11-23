@@ -5,7 +5,7 @@ from unittest  import *
 
 from fortExp import LoopControl
 from fortStmts import *
-from fortStmts import _F90ExplLen,_Star,_NoInit,_Kind,_ExplKind,_AssignInit,_PointerInit,_ImplicitDoConstruct
+from fortStmts import _F90Len,_F90ExplLen,_Star,_NoInit,_Kind,_ExplKind,_AssignInit,_PointerInit,_ImplicitDoConstruct
 from useparse  import *
 
 class C2(TestCase):
@@ -345,11 +345,16 @@ class TestAssignStmt(TestCase):
 
     def test2(self):
         '''array slice array constructor assignment (from SCALE)'''
-        theString = "e_mid(1:ngrp) = (/( (elnmg(i)+elnmg(i+1))*0.5,i = 1,ngrp )/)"
+        theString = "e_mid(1:ngrp) = (/((elnmg(i)+elnmg(i+1))*0.5,i=1,ngrp)/)"
+        #theRepr = AssignStmt(App('e_mid',[Ops(':','1','ngrp')]),
+        #                     ArrayConstructor([ArrayConstructorImpliedDo(Ops('*',ParenExp(Ops('+',App('elnmg',['i']),
+        #                                                                                          App('elnmg',[Ops('+','i','1')]))),'0.5'),
+        #                                                                 LoopControl('i','1','ngrp',None))]))
         theRepr = AssignStmt(App('e_mid',[Ops(':','1','ngrp')]),
-                             ArrayConstructor([ArrayConstructorImpliedDo(Ops('*',ParenExp(Ops('+',App('elnmg',['i']),
-                                                                                                  App('elnmg',[Ops('+','i','1')]))),'0.5'),
-                                                                         LoopControl('i','1','ngrp',None))]))
+                             ArrayConstructor([MultiParenExp(
+                                 [Ops('*',ParenExp(Ops('+',App('elnmg',['i']),
+                                                      App('elnmg',[Ops('+','i','1')]))),'0.5'),
+                                 NamedParam('i','1'),'ngrp'])]))
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
@@ -503,9 +508,17 @@ class TestCharacterDecls(TestCase):
 
         ss = 'character(len=AAA+9),dimension(3) :: gack(*,*)*5,floob,foo*2,bar(2)'
         v = pps(ss)
+        #ae(repr(v).lower(),
+        #   repr(CharacterStmt(
+        #    [_F90ExplLen(Ops('+','aaa','9'))],
+        #    [App('dimension',['3'])],
+        #    [_NoInit(Ops('*',App('gack',['*', '*']),'5')),
+        #     _NoInit('floob'),
+        #     _NoInit(Ops('*','foo','2')),
+        #     _NoInit(App('bar',['2']))])).lower())
         ae(repr(v).lower(),
            repr(CharacterStmt(
-            [_F90ExplLen(Ops('+','aaa','9'))],
+            [_F90Len(NamedParam('len',Ops('+','aaa','9')))],
             [App('dimension',['3'])],
             [_NoInit(Ops('*',App('gack',['*', '*']),'5')),
              _NoInit('floob'),
@@ -530,7 +543,11 @@ class TestCharacterDecls(TestCase):
     def test6(self):
         '''character type declaration with array constructor (from SCALE: scalelib/free_form_C.f90)'''
         theString = "character(len=1),dimension(0:27),parameter :: char_array=(/'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f',' ',',','r','*','$','&','+','-','z','.','o','p'/)"
-        theRepr = CharacterStmt([_F90ExplLen('1')],
+        #theRepr = CharacterStmt([_F90ExplLen('1')],
+        #                        [App('dimension',[Ops(':','0','27')]), 'parameter'],
+        #                        [_AssignInit('char_array',
+        #                                     ArrayConstructor(["'0'", "'1'", "'2'", "'3'", "'4'", "'5'", "'6'", "'7'", "'8'", "'9'", "'a'", "'b'", "'c'", "'d'", "'e'", "'f'", "' '", "','", "'r'", "'*'", "'$'", "'&'", "'+'", "'-'", "'z'", "'.'", "'o'", "'p'"]))])
+        theRepr = CharacterStmt([_F90Len(NamedParam('len','1'))],
                                 [App('dimension',[Ops(':','0','27')]), 'parameter'],
                                 [_AssignInit('char_array',
                                              ArrayConstructor(["'0'", "'1'", "'2'", "'3'", "'4'", "'5'", "'6'", "'7'", "'8'", "'9'", "'a'", "'b'", "'c'", "'d'", "'e'", "'f'", "' '", "','", "'r'", "'*'", "'$'", "'&'", "'+'", "'-'", "'z'", "'.'", "'o'", "'p'"]))])
@@ -541,7 +558,10 @@ class TestCharacterDecls(TestCase):
     def test7(self):
         '''character type declaration with array constructor'''
         theString = "character(len=1),dimension(2) :: andchars=(/'&','&'/)"
-        theRepr = CharacterStmt([_F90ExplLen('1')],
+        #theRepr = CharacterStmt([_F90ExplLen('1')],
+        #                        [App('dimension',['2'])],
+        #                        [_AssignInit('andchars',ArrayConstructor(["'&'","'&'"]))])
+        theRepr = CharacterStmt([_F90Len(NamedParam('len','1'))],
                                 [App('dimension',['2'])],
                                 [_AssignInit('andchars',ArrayConstructor(["'&'","'&'"]))])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
@@ -759,8 +779,9 @@ class TestFunctionStmt(TestCase):
 
     def test3(self):
         '''function statement with type real (with modifier)'''
-        s = 'real(kind = 16) function foo(x)'
-        r = FunctionStmt((RealStmt,[_ExplKind('16')]),'foo',['x'],None)
+        s = 'real(kind=16) function foo(x)'
+        #r = FunctionStmt((RealStmt,[_ExplKind('16')]),'foo',['x'],None)
+        r = FunctionStmt((RealStmt,[_Kind(NamedParam('kind','16'))]),'foo',['x'],None)
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
@@ -773,8 +794,9 @@ class TestFunctionStmt(TestCase):
         
     def test5(self):
         '''function statement with type real (with modifier) and result specifier'''
-        s = 'real(kind = 16) function foo(x) result(y)'
-        r = FunctionStmt((RealStmt,[_ExplKind('16')]),'foo',['x'],'y')
+        s = 'real(kind=16) function foo(x) result(y)'
+        #r = FunctionStmt((RealStmt,[_ExplKind('16')]),'foo',['x'],'y')
+        r = FunctionStmt((RealStmt,[_Kind(NamedParam('kind','16'))]),'foo',['x'],'y')
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 

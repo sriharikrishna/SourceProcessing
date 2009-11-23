@@ -24,7 +24,7 @@ class file1(TestCase):
         self.ff.close()
 
     def test1(self):
-        '''Ffile string method returns the string rep of the file'''
+        '''Ffile string method returns the string rep of the file -- KNOWN TO FAIL (fortFile methods need to be updated for new rawline parsing)'''
 
         ff = self.ff
         out = open_t('f1.out.f')
@@ -33,7 +33,7 @@ class file1(TestCase):
         out.close()
 
     def test2(self):
-        '''Ffile readlines method'''
+        '''Ffile readlines method -- KNOWN TO FAIL (fortFile methods need to be updated for new rawline parsing)'''
 
         ff = self.ff
         out = open_t('f2.out.f')
@@ -42,7 +42,7 @@ class file1(TestCase):
         out.close()
         
     def test3(self):
-        '''Ffile iterlines method'''
+        '''Ffile iterlines method -- KNOWN TO FAIL (fortFile methods need to be updated for new rawline parsing)'''
 
         ff = self.ff
         ll = Ffile.file(self.fname).iterlines()
@@ -63,7 +63,7 @@ class fileops(TestCase):
         pass
 
     def test1(self):
-        '''write Ffile to a file'''
+        '''write Ffile to a file -- KNOWN TO FAIL (fortFile methods need to be updated for new rawline parsing)'''
         import os
 
         fname = '__tmp.f'
@@ -101,7 +101,7 @@ c
     f     = file(fname)
 
     def test1(self):
-        "'here' docs"
+        "'here' docs -- KNOWN TO FAIL (fortFile methods need to be updated for new rawline parsing)"
         ff = heretst.ff
         f  = heretst.f
         ae = self.assertEquals
@@ -113,7 +113,7 @@ class maptest(TestCase):
     fname = fname_t('f2.f')
 
     def test1(self):
-        'map operation, join short continuation lines'
+        'map operation, join short continuation lines -- KNOWN TO FAIL (fortFile methods need to be updated for new rawline parsing)'
 
         ae   = self.assertEquals
         ok   = open_t('f2.f.map_ok.1').read()
@@ -124,7 +124,7 @@ class maptest(TestCase):
         ae(res,ok)
 
     def test2(self):
-        'map operation, filter comments'
+        'map operation, filter comments -- KNOWN TO FAIL (fortFile methods need to be updated for new rawline parsing)'
 
         ae = self.assertEquals
         ok = open_t('f2.f.map_ok.2').read()
