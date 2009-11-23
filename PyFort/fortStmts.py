@@ -1582,74 +1582,18 @@ class PrintStmt(SimpleSyntaxIOStmt):
     def __init__(self,kw,format,itemList,lineNumber=0):
         SimpleSyntaxIOStmt.__init__(self,kw,format,itemList,lineNumber)
 
-class _ImplicitLoopConstruct(object):
-
-    '''implicit loop construct for WRITE statements'''
-    form = seq(lit('('),                       # 0
-               cslist(disj(NamedParmExp,Exp)), # 1
-               lit(')'))                       # 2
-    form = treat(form, lambda x: _ImplicitLoopConstruct(x[1]))
-    form = seq(lit('('),                  # 0
-               cslist(disj(NamedParmExp,  # 1
-                           Exp,form)),
-               lit(')'))                  # 2
-    form = treat(form, lambda x: _ImplicitLoopConstruct(x[1]))
-    form = seq(lit('('),
-               cslist(disj(NamedParmExp,Exp,form)),
-               lit(')'))
-    form = treat(form, lambda x: _ImplicitLoopConstruct(x[1]))
-    form = seq(lit('('),
-               cslist(disj(NamedParmExp,Exp,form)),
-               lit(')'))
-    form = treat(form, lambda x: _ImplicitLoopConstruct(x[1]))
-
-    def __init__(self,implicitLoop):
-        self.implicitLoop = implicitLoop
-
-    def __str__(self):
-        if len(self.implicitLoop) > 0:
-
-            string = '(%s)' % ','.join(str(item) for item in self.implicitLoop)
-        else:
-            string = ''
-        return string
-
-    def __repr__(self):
-        return '%s(%s)' % (self.__class__.__name__,repr(self.implicitLoop))
-
-
-    
-
 class ComplexSyntaxIOStmt(IOStmt):
 
     @staticmethod
     def parse(ws_scan,lineNumber,kw,SubClass):
         scan = filter(lambda x: x != ' ',ws_scan)
-        io_stmt = seq(lit(kw),lit('('),cslist(disj(lit('*'),NamedParmExpWithStar,Exp)),lit(')'),
+        io_stmt = seq(lit(kw),
+                      lit('('),
+                      cslist(disj(lit('*'),NamedParmExpWithStar,Exp)),
+                      lit(')'),
                       cslist(Exp))
         ([kw,lbracket,ioCtrlSpecList,rbracket,itemList],rest) = io_stmt(scan)
-        if len(rest) > 0:
-            scan = filter(lambda x: x != ' ',ws_scan)
-            try:
-                formStmt = seq(lit(kw),                # 0: kw
-                                    lit('('),               # 1
-                                    cslist(disj(lit('*'),
-                                                NamedParmExpWithStar,
-                                                Exp)), # 2: ioCtrlSpecList
-                                    lit(')'),               # 3
-                                    cslist(Exp),            # 4: itemList
-                                    _ImplicitLoopConstruct.form) # 5: implicitLoop
-                formStmt = treat(formStmt,
-                                      lambda x: SubClass(x[0],
-                                                          x[2],
-                                                          x[4],
-                                                          x[5] or [],
-                                                          lineNumber=lineNumber))
-                (theParsedStmt,rest) = formStmt(scan)
-                theParsedStmt.rest = rest
-                return theParsedStmt 
-            except:
-                return SubClass(kw,ioCtrlSpecList,itemList,rest=rest,lineNumber=lineNumber)
+
         return SubClass(kw,ioCtrlSpecList,itemList,lineNumber=lineNumber)
 
     def __init__(self,stmt_name,ioCtrlSpecList,itemList=[],lineNumber=0,label=False,lead=''):
@@ -1688,19 +1632,9 @@ class ReadStmt(ComplexSyntaxIOStmt):
         except ListAssemblerException,e:
             return SimpleReadStmt.parse(scan,lineNumber)
 
-    def __init__(self,stmt_name=kw,ioCtrlSpecList=[],itemList=[],implicitLoop=[],rest=[],lineNumber=0,label=False,lead=''):
-        self.implicitLoop = implicitLoop
-        self.rest = rest
+    def __init__(self,stmt_name=kw,ioCtrlSpecList=[],itemList=[],lineNumber=0,label=False,lead=''):
         IOStmt.__init__(self,stmt_name,ioCtrlSpecList,itemList,lineNumber,label,lead)
     
-    def __str__(self):
-        exp = ComplexSyntaxIOStmt.__str__(self)
-        if isinstance(self.implicitLoop,_ImplicitLoopConstruct):
-            exp += str(self.implicitLoop)
-        if len(self.rest) > 0:
-            exp += ''.join(self.rest)
-        return exp
-
 class WriteStmt(ComplexSyntaxIOStmt):
     kw = 'write'
     kw_str = kw
@@ -1712,18 +1646,8 @@ class WriteStmt(ComplexSyntaxIOStmt):
 
     # rest is a temp. fix. implicit loops in WriteStmts should be
     # fully parsed in ComplexSyntaxIOStmt
-    def __init__(self,stmt_name=kw,ioCtrlSpecList=[],itemList=[],implicitLoop=[],rest=[],lineNumber=0,label=False,lead=''):
-        self.implicitLoop = implicitLoop
-        self.rest = rest
+    def __init__(self,stmt_name=kw,ioCtrlSpecList=[],itemList=[],lineNumber=0,label=False,lead=''):
         ComplexSyntaxIOStmt.__init__(self,stmt_name,ioCtrlSpecList,itemList,lineNumber,label,lead)
-
-    def __str__(self):
-        exp = ComplexSyntaxIOStmt.__str__(self)
-        if isinstance(self.implicitLoop,_ImplicitLoopConstruct):
-            exp += str(self.implicitLoop)
-        if len(self.rest) > 0:
-            exp += ''.join(self.rest)
-        return exp
 
 class FormatStmt(Exec):
     kw = 'format'

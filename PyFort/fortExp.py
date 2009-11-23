@@ -184,6 +184,8 @@ class Zslice(_Exp):
 
 class MultiParenExp(_Exp):
     'parenthesized expression with a comma-separated list like (a,b)'
+    _sons = ['expList']
+    
     def __init__(self,expList):
         self.expList = expList
 
@@ -408,7 +410,7 @@ unary   = pred(is_unary)
 
 def atom0(scan):
     '''eta expansion, since letrec unavail in python'''
-    return disj(id,const,unaryExp,paren,formMultiParen,ArrayConstructor.form)(scan)
+    return disj(NamedParmExp,id,const,unaryExp,paren,formMultiParen,ArrayConstructor.form)(scan)
 
 def atom(scan):
 

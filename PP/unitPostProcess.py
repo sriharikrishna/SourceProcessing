@@ -152,7 +152,12 @@ class UnitPostProcessor(object):
                     setattr(replacementExpression,aSon,newSon)
             elif isinstance(replacementExpression,fs._NoInit):
                 replacementExpression = fs._NoInit(self.__transformActiveTypesExpression(replacementExpression.lhs))
-
+            elif isinstance(replacementExpression,list):
+                newList = []
+                for item in replacementExpression:
+                    newItem = self.__transformActiveTypesExpression(item)
+                    newList.append(self.__transformActiveTypesExpression(item))
+                replacementExpression = newList
 
         self.__recursionDepth -= 1
         if self.__recursionDepth == self.__inquiryRecursionLevel:
@@ -189,61 +194,11 @@ class UnitPostProcessor(object):
         DebugManager.debug('unitPostProcessor.__processIOStmt called on: "'\
                                +str(anIOStmt)+" "+str(anIOStmt.__class__)+"'")
         newItemList=[]
-        for item in anIOStmt.get_itemList(): 
+        for item in anIOStmt.get_itemList():
             newItemList.append((self.__transformActiveTypesExpression(item)))
-        if isinstance(anIOStmt,fs.ComplexSyntaxIOStmt):
-            if anIOStmt.implicitLoop != []:
-                newImplicitLoop=[]
-                for item in anIOStmt.implicitLoop.implicitLoop:
-                    if isinstance(item,fs._ImplicitLoopConstruct):
-                        new = self.__processImplicitLoopConstruct(item.implicitLoop)
-                        item.implicitLoop = new
-                        newImplicitLoop.append(item)
-                    else:
-                        new = self.__transformActiveTypesExpression(item)
-                        newImplicitLoop.append(new)
-                anIOStmt.implicitLoop.implicitLoop = newImplicitLoop
-            if len(anIOStmt.rest) > 0 and '__value__' in anIOStmt.rest: 
-                anIOStmt.rest = self.__processList(anIOStmt.rest)
         anIOStmt.itemList=newItemList
         return anIOStmt
 
-    def __processList(self,itemlist):
-        newlist = []
-        index = 0
-        try:
-            value_index = itemlist.index('__value__')
-            newlist += itemlist[:value_index]
-            sublist = itemlist[value_index:]
-            sublist.pop(index) # remove __value__
-            sublist.pop(index) # remove (
-            paren_ct = 1 # for the opening paren
-            for item in sublist:
-                if item == ')':
-                    paren_ct -= 1
-                    if paren_ct == 0:
-                        break
-                if item == '(':
-                    paren_ct += 1
-                index += 1
-            sublist.pop(index) # remove )  
-            sublist.insert(index,'%v')
-            newlist += sublist[:index]+self.__processList(sublist[index:])
-        except :
-            newlist += itemlist
-        return newlist
-
-    def __processImplicitLoopConstruct(self,loop):
-        newItems = []
-        for item in loop:
-            if isinstance(item,fs._ImplicitLoopConstruct):
-                newLoop = self.__processImplicitLoopConstruct(item.implicitLoop)
-                item.implicitLoop = newLoop
-                newItems.append(item)
-            else:
-                newItems.append(self.__transformActiveTypesExpression(item))
-        return newItems
-        
     # Does active type transformations on a StmtFnStmt; 
     # reconstructs it as an AssignStmt if StmtFnStmt.name is "__value__"
     # PARAMS:
