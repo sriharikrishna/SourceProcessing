@@ -2121,6 +2121,51 @@ class RewindStmt(Exec):
     kw = 'rewind'
     kw_str = kw
 
+    @staticmethod
+    def parse(ws_scan,lineNumber):
+        scan = filter(lambda x: x != ' ',ws_scan)
+        try:
+            parenUnitSpec = seq(lit('('),
+                                 id,
+                                 lit(')'))
+            formRewindStmt = seq(lit(RewindStmt.kw),
+                                 disj(id,parenUnitSpec))
+            ((rewindKeyword,unitSpec),rest) = formRewindStmt(scan)
+            return RewindStmt(unitSpec,lineNumber=lineNumber)
+        except:
+            formUnitSpec = seq(lit('unit'),
+                               lit('='),
+                               id)
+            formErrLabel = seq(lit(','),
+                               lit('err'),
+                               lit('='),
+                               int)
+            formIOCheck = seq(lit(','),
+                              lit('iostat'),
+                              lit('='),
+                              int)
+            formRewindStmt = seq(lit(RewindStmt.kw), # 0
+                                 lit('('),           # 1
+                                 formUnitSpec,       # 2
+                                 zo1(formErrLabel),  # 3
+                                 zo1(formIOCheck),   # 4
+                                 lit(')'))           # 5
+            formRewindStmt = treat(formRewindStmt, lambda x: RewindStmt(x[2],
+                                                                        x[3] or None,
+                                                                        x[4] or None,
+                                                                        lineNumber))
+            (theParsedStmt,rest) = formRewindStmt(scan)
+            return theParsedStmt
+    def __init__(self,unitSpec,errLabel='',IOCheck='',lineNumber=0,label=False,lead='',internal=[]):
+        self.unitSpec = unitSpec
+        self.errLabel = errLabel
+        self.IOCheck = IOCheck
+        Exec.__init__(self,lineNumber,label,lead,internal)
+
+    def __str__(self):
+        return '%s %s%s%s' % (self.kw,self.unitSpec,self.errLabel,self.IOCheck)+\
+               ''.join(self.internal)
+
 
 kwtbl = dict(blockdata       = BlockdataStmt,
              common          = CommonStmt,

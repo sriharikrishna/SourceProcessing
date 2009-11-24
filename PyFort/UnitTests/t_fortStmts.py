@@ -702,8 +702,8 @@ class TestIfStmt(TestCase):
 
     def test9(self):
         '''if (non-then) statement from scale, with rewind stmt -- KNOWN TO FAIL (because we don't really parse rewind statements)'''
-        theString = 'if (nt4 > 0) rewind nt4'
-        theRepr = IfNonThenStmt(Ops('>','nt4','0'),RewindStmt())
+        theString = 'if (nt4>0) rewind nt4'
+        theRepr = IfNonThenStmt(Ops('>','nt4','0'),RewindStmt('nt4'))
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
