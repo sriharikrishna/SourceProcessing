@@ -2121,20 +2121,6 @@ class RewindStmt(Exec):
     kw = 'rewind'
     kw_str = kw
 
-    @staticmethod
-    def parse(ws_scan,lineNumber):
-        scan = filter(lambda x: x != ' ',ws_scan)
-        formRewindStmt = seq(lit(RewindStmt.kw),id)
-        ((rewindKeyword,unitID),rest) = formRewindStmt(scan)
-        return RewindStmt(unitID,lineNumber)
-
-    def __init__(self,unitID,lineNumber=0,label=False,lead='',internal=[]):
-        self.unitID = unitID
-        Exec.__init__(self,lineNumber,label,lead,internal)
-
-    def __str__(self):
-        return '%s %s' % (self.kw,self.unitID)+''.join(self.internal)
-
 
 kwtbl = dict(blockdata       = BlockdataStmt,
              common          = CommonStmt,
