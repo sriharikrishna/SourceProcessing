@@ -348,8 +348,9 @@ def comment_bl(*comlines):
 
 class NonComment(GenStmt):
 
-    def __init__(self,lineNumber=0,label=False,lead=''):
+    def __init__(self,lineNumber=0,label=False,lead='',internal=[]):
         GenStmt.__init__(self,lineNumber,label,lead)
+        self.internal = internal
         self.rawline = str(self)
             
     def __repr__(self):
@@ -357,7 +358,7 @@ class NonComment(GenStmt):
                            ','.join([repr(aSon) for aSon in self._sons]))
 
     def __str__(self):
-        return self.rawline+' '.join(self.internal)
+        return self.rawline+''.join(self.internal)
 
     def flow(self):
         """formats a statement for printing by concatenating the label
@@ -415,8 +416,8 @@ class NonComment(GenStmt):
         return self.rawline.strip()
 
 class Decl(NonComment):
-    def __init__(self,lineNumber=0,label=False,lead=''):
-        NonComment.__init__(self,lineNumber,label,lead)
+    def __init__(self,lineNumber=0,label=False,lead='',internal=[]):
+        NonComment.__init__(self,lineNumber,label,lead,internal)
 
     def is_decl(self,unit=_non): return True
 
@@ -452,11 +453,11 @@ class TypeDecl(Decl):
         ((typ,mod),attrs,dc,decls) = v
         return cls(mod,attrs,decls,lineNumber)
 
-    def __init__(self,mod,attrs,decls,lineNumber=0,label=False,lead=''):
+    def __init__(self,mod,attrs,decls,lineNumber=0,label=False,lead='',internal=[]):
         self.mod   = mod
         self.attrs = attrs
         self.decls = decls
-        Decl.__init__(self,lineNumber,label,lead)
+        Decl.__init__(self,lineNumber,label,lead,internal)
 
     def __repr__(self):
         return '%s(%s,%s,%s)' % (self.__class__.__name__,
@@ -475,7 +476,7 @@ class TypeDecl(Decl):
                                  modstr,
                                  attr_str,
                                  ','.join([str(d) for d in self.decls]))\
-                                 +' '.join(self.internal)
+                                 +''.join(self.internal)
 
     def get_mod(self):
         self.accessed = True
@@ -519,15 +520,15 @@ class DrvdTypeDefn(Decl):
     kw_str = 'derivedDefn'
     kw     = kw_str
 
-    def __init__(self,name,lineNumber=0,label=False,lead=''):
+    def __init__(self,name,lineNumber=0,label=False,lead='',internal=[]):
         self.name = name
-        Decl.__init__(self,lineNumber,label,lead)
+        Decl.__init__(self,lineNumber,label,lead,internal)
 
     def __repr__(self):
         return 'DrvdTypeDefn(%s)' % repr(self.name)
 
     def __str__(self):
-        return 'type %s' % str(self.name)+' '.join(self.internal)
+        return 'type %s' % str(self.name)+''.join(self.internal)
     
     @staticmethod
     def parse(ws_scan,lineNumber):
@@ -540,18 +541,18 @@ class InterfaceStmt(Decl):
     kw = 'interface'
     kw_str = kw
 
-    def __init__(self,l,lineNumber=0,label=False,lead=''):
+    def __init__(self,l,lineNumber=0,label=False,lead='',internal=[]):
         self.name = l
-        Decl.__init__(self,lineNumber,label,lead)
+        Decl.__init__(self,lineNumber,label,lead,internal)
 
     def __repr__(self):
         return 'InterfaceStmt(%s)' % self.name
 
     def __str__(self):
         if self.name:
-            return 'interface %s' % self.name+' '.join(self.internal)
+            return 'interface %s' % self.name+''.join(self.internal)
         else:
-            return 'interface'+' '.join(self.internal)
+            return 'interface'+''.join(self.internal)
 
     @staticmethod
     def parse(ws_scan,lineNumber):
@@ -582,10 +583,10 @@ class ProcedureStmt(Decl):
         (theParsedStmt,rest) = formprocedureStmt(scan)
         return theParsedStmt
 
-    def __init__(self,hasModuleKeyword,procedureList,lineNumber=0,label=False,lead=''):
+    def __init__(self,hasModuleKeyword,procedureList,lineNumber=0,label=False,lead='',internal=[]):
         self.hasModuleKeyword = hasModuleKeyword
         self.procedureList = procedureList
-        Decl.__init__(self,lineNumber,label,lead)
+        Decl.__init__(self,lineNumber,label,lead,internal)
 
     def __repr__(self):
         return '%s(%s,%s)' % (self.__class__.__name__,
@@ -598,7 +599,7 @@ class ProcedureStmt(Decl):
         return '%s%s %s' % (moduleKeywordStr,
                             self.__class__.kw_str,
                             ','.join([str(aProcedureItem) for aProcedureItem in self.procedureList]))\
-                           +' '.join(self.internal)
+                           +''.join(self.internal)
 
 
 class TypePseudoStmt(GenStmt):
@@ -625,8 +626,8 @@ class TargetStmt(Decl):
 
 class Exec(NonComment):
     ''' base class for all executable statements'''
-    def __init__(self,lineNumber=0,label=False,lead=''):
-        NonComment.__init__(self,lineNumber,label,lead)
+    def __init__(self,lineNumber=0,label=False,lead='',internal=[]):
+        NonComment.__init__(self,lineNumber,label,lead,internal)
         
     def is_exec(self,unit=_non): return True
 
@@ -642,14 +643,14 @@ class Leaf(Exec):
         scan = filter(lambda x: x != ' ',ws_scan)
         return cls(lineNumber)
 
-    def __init__(self,lineNumber=0,label=False,lead='',*dc):
-        Exec.__init__(self,lineNumber,label,lead)
+    def __init__(self,lineNumber=0,label=False,lead='',internal=[],*dc):
+        Exec.__init__(self,lineNumber,label,lead,internal)
             
     def __repr__(self):
         return '%s()' % self.__class__.__name__
 
     def __str__(self):
-        return self.__class__.kw_str+' '.join(self.internal)
+        return self.__class__.kw_str+''.join(self.internal)
 
 class DeclLeaf(Decl):
     "special Decl that has no components"
@@ -659,11 +660,11 @@ class DeclLeaf(Decl):
         scan = filter(lambda x: x != ' ',ws_scan)
         return cls(lineNumber)
 
-    def __init__(self,lineNumber=0,label=False,lead='',*dc,**dc2):
-        Decl.__init__(self,lineNumber,label,lead)
+    def __init__(self,lineNumber=0,label=False,lead='',internal=[],*dc,**dc2):
+        Decl.__init__(self,lineNumber,label,lead,internal)
 
     def __repr__(self): return '%s()' % self.__class__.__name__
-    def __str__(self): return '%s' % self.__class__.kw_str+' '.join(self.internal)
+    def __str__(self): return '%s' % self.__class__.kw_str+''.join(self.internal)
 
 class PUend(Leaf):
     pass
@@ -688,14 +689,15 @@ class CommonStmt(Decl):
         ([common,slash1,name,slash2,declList],rm) = stmt(scan)
         return cls(name,declList,lineNumber)
 
-    def __init__(self,name,declList=[],lineNumber=0,label=False,lead=''):
+    def __init__(self,name,declList=[],lineNumber=0,label=False,lead='',internal=[]):
         self.declList = declList
         self.name = name
-        Decl.__init__(self,lineNumber,label,lead)
+        Decl.__init__(self,lineNumber,label,lead,internal)
 
     def __str__(self):
         return self.kw + '/%s/ %s' % \
-              (self.name,','.join(str(item) for item in self.declList))
+              (self.name,','.join(str(item) for item in self.declList))+ \
+              ''.join(self.internal)
 
 class _ImplicitDoConstruct(object):
     '''implicit do construct for DATA statements'''
@@ -770,11 +772,11 @@ class DataStmt(Decl):
         (theParsedStmt,rest) = formDataStmt(scan)
         return theParsedStmt
 
-    def __init__(self,objectList,valueList,stmt_name=kw,lineNumber=0,label=False,lead=''):
+    def __init__(self,objectList,valueList,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[]):
         self.objectList = objectList
         self.valueList = valueList
         self.stmt_name = stmt_name
-        Decl.__init__(self,lineNumber,label,lead)
+        Decl.__init__(self,lineNumber,label,lead,internal)
 
     def __str__(self):
         # put a space after the data keyword iff the first object is a variable
@@ -783,7 +785,7 @@ class DataStmt(Decl):
                                   spaceStr,
                                   ', '.join([str(anObject) for anObject in self.objectList]),
                                   ', '.join([str(aValue) for aValue in self.valueList]))\
-                                  +' '.join(self.internal)
+                                  +''.join(self.internal)
 
     def __repr__(self):
         return self.__class__.__name__ + \
@@ -816,9 +818,9 @@ class VarAttrib(Decl):
         else:
             return cls(r,lineNumber)
 
-    def __init__(self,vlist,lineNumber=0,label=False,lead=''):
+    def __init__(self,vlist,lineNumber=0,label=False,lead='',internal=[]):
         self.vlist = vlist
-        Decl.__init__(self,lineNumber,label,lead)
+        Decl.__init__(self,lineNumber,label,lead,internal)
 
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__, repr(self.vlist))
@@ -828,23 +830,23 @@ class VarAttrib(Decl):
         rem   = ''
         if self.vlist:
             rem = ' :: %s' % ','.join([str(v) for v in self.vlist])
-        return s_key+rem+' '.join(self.internal)
+        return s_key+rem+''.join(self.internal)
 
 class PrivateStmt(VarAttrib):
     kw     = 'private'
     kw_str = kw
     _sons = ['vlist']
     
-    def __init__(self,vlist,lineNumber=0):
-        VarAttrib.__init__(self,vlist,lineNumber)
+    def __init__(self,vlist,lineNumber=0,internal=[]):
+        VarAttrib.__init__(self,vlist,lineNumber,internal)
 
 class PublicStmt(VarAttrib):
     kw     = 'public'
     kw_str = kw
     _sons = ['vlist']
 
-    def __init__(self,vlist,lineNumber=0):
-        VarAttrib.__init__(self,vlist,lineNumber)
+    def __init__(self,vlist,lineNumber=0,internal=[]):
+        VarAttrib.__init__(self,vlist,lineNumber,internal)
 
 class ContainsStmt(DeclLeaf):
     kw     = 'contains'
@@ -904,9 +906,9 @@ class ImplicitStmt(Decl):
 
         return v
 
-    def __init__(self,lst,lineNumber=0,label=False,lead=''):
+    def __init__(self,lst,lineNumber=0,label=False,lead='',internal=[]):
         self.lst  = lst 
-        Decl.__init__(self,lineNumber,label,lead)
+        Decl.__init__(self,lineNumber,label,lead,internal)
 
     def __repr__(self):
         return 'ImplicitStmt(%s)' % repr(self.lst)
@@ -917,10 +919,10 @@ class ImplicitStmt(Decl):
             (typ,explst) = elt
             return '%s (%s)' % (typestr2(typ),
                                 ','.join([str(l).replace(' ','') \
-                                          for l in explst]))+' '.join(self.internal)
+                                          for l in explst]))+''.join(self.internal)
             
         return 'implicit %s' % ', '.join([_helper(e) for e in self.lst])\
-               +' '.join(self.internal)
+               +''.join(self.internal)
 
 class EquivalenceStmt(Decl):
     pass
@@ -943,15 +945,15 @@ class ParameterStmt(Decl):
         (v,r) = p0(scan)
         return v
    
-    def __init__(self,namedParamList,lineNumber=0,label=False,lead=''):
+    def __init__(self,namedParamList,lineNumber=0,label=False,lead='',internal=[]):
         self.namedParamList = namedParamList
-        Decl.__init__(self,lineNumber,label,lead)
+        Decl.__init__(self,lineNumber,label,lead,internal)
 
     def __repr__(self):
         return 'ParamterStmt(%s)' % ','.join([repr(aNamedParam) for aNamedParam in self.namedParamList])
 
     def __str__(self):
-        return 'parameter (%s)' % ','.join([itemstr(aNamedParam) for aNamedParam in self.namedParamList])+' '.join(self.internal)
+        return 'parameter (%s)' % ','.join([itemstr(aNamedParam) for aNamedParam in self.namedParamList])+''.join(self.internal)
 
 class SaveStmt(Decl):
     pass
@@ -959,11 +961,11 @@ class SaveStmt(Decl):
 class StmtFnStmt(Decl):
     _sons = ['args','body']
 
-    def __init__(self,name,args,body,lineNumber=0,label=False,lead=''):
+    def __init__(self,name,args,body,lineNumber=0,label=False,lead='',internal=[]):
         self.name = name
         self.args = args
         self.body = body
-        Decl.__init__(self,lineNumber,label,lead)
+        Decl.__init__(self,lineNumber,label,lead,internal)
 
     def __repr__(self):
         return 'StmtFnStmt(%s,%s,%s)' % (repr(self.name),
@@ -973,7 +975,7 @@ class StmtFnStmt(Decl):
         return '%s(%s) = %s' % (str(self.name),
                                 ','.join([str(l) for l in self.args]),
                                 str(self.body))\
-                                +' '.join(self.internal)
+                                +''.join(self.internal)
 
     def get_name(self):
         self.accessed = True
@@ -1001,9 +1003,9 @@ class ExternalStmt(Decl):
         ((externalKeyword,doubleColon,procedureNames),rest) = formExternalStmt(scan)
         return ExternalStmt(procedureNames,lineNumber)
 
-    def __init__(self,procedureNames,lineNumber=0,label=False,lead=''):
+    def __init__(self,procedureNames,lineNumber=0,label=False,lead='',internal=[]):
         self.procedureNames = procedureNames
-        Decl.__init__(self,lineNumber,label,lead)
+        Decl.__init__(self,lineNumber,label,lead,internal)
 
     def __repr__(self):
         return self.__class__.__name__+'('+repr(self.procedureNames)+')'
@@ -1012,7 +1014,7 @@ class ExternalStmt(Decl):
         return self.kw+' '+','.join([str(aProcedureName)
                                      for aProcedureName in
                                      self.procedureNames])\
-                                     +' '.join(self.internal)
+                                     +''.join(self.internal)
 
 class AllocatableStmt(Decl):
     _sons = ['lst']
@@ -1028,16 +1030,16 @@ class AllocatableStmt(Decl):
         ((allocatableKeyword,doubleColon,lst),rest) = formAllocatableStmt(scan)
         return AllocatableStmt(lst,lineNumber)
 
-    def __init__(self,lst,lineNumber=0,label=False,lead=''):
+    def __init__(self,lst,lineNumber=0,label=False,lead='',internal=[]):
         self.lst = lst
-        Decl.__init__(self,lineNumber,label,lead)
+        Decl.__init__(self,lineNumber,label,lead,internal)
 
     def __repr__(self):
         return self.__class__.__name__+'('+repr(self.lst)+')'
 
     def __str__(self):
         return self.kw+' '+','.join([str(aName) for aName in self.lst])\
-               +' '.join(self.internal)
+               +''.join(self.internal)
 
 class CharacterStmt(TypeDecl):
     kw = 'character'
@@ -1075,9 +1077,9 @@ class CharacterStmt(TypeDecl):
 
         return CharacterStmt(mod,attrs,decls,dc,lineNumber)
 
-    def __init__(self,mod,attrs,decls,stmt_name=kw,lineNumber=0,label=False,lead=''):
+    def __init__(self,mod,attrs,decls,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[]):
         self.stmt_name = stmt_name
-        TypeDecl.__init__(self,mod,attrs,decls,lineNumber,label,lead)
+        TypeDecl.__init__(self,mod,attrs,decls,lineNumber,label,lead,internal)
 
     def __repr__(self):
         return 'CharacterStmt(%s,%s,%s)' % (repr(self.mod),repr(self.attrs),repr(self.decls))
@@ -1094,7 +1096,7 @@ class CharacterStmt(TypeDecl):
         return '%s%s%s :: %s' % (self.stmt_name,modstr,
                                  attr_str,
                                  ','.join([str(d) for d in self.decls]))\
-                                 +' '.join(self.internal)
+                                 +''.join(self.internal)
 
 class IntrinsicStmt(Decl):
     pass
@@ -1139,17 +1141,17 @@ class DimensionStmt(Decl):
         ((dc,lst),rest) = p1(scan)
         return DimensionStmt(lst,dc,lineNumber)
 
-    def __init__(self,lst,stmt_name=kw,lineNumber=0,label=False,lead=''):
+    def __init__(self,lst,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[]):
         self.lst = lst
         self.stmt_name = stmt_name
-        Decl.__init__(self,lineNumber,label,lead)
+        Decl.__init__(self,lineNumber,label,lead,internal)
 
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__,repr(self.lst))
 
     def __str__(self):
         return '%s %s' % (self.stmt_name,','.join([str(l) for l in self.lst]))\
-               +' '.join(self.internal)
+               +''.join(self.internal)
 
 class IntentStmt(Decl):
     pass
@@ -1179,11 +1181,11 @@ class SubroutineStmt(PUstart):
 
         return SubroutineStmt(name,args,lineNumber=lineNumber)
 
-    def __init__(self,name,args,stmt_name=kw,lineNumber=0,label=False,lead=''):
+    def __init__(self,name,args,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[]):
         self.name = name
         self.args = args
         self.stmt_name = stmt_name
-        PUstart.__init__(self,lineNumber,label,lead)
+        PUstart.__init__(self,lineNumber,label,lead,internal)
 
     def __repr__(self):
         return '%s(%s,%s)' % (self.__class__.__name__,
@@ -1192,7 +1194,7 @@ class SubroutineStmt(PUstart):
     def __str__(self):
         return '%s %s(%s)' % (self.stmt_name,self.name,
                                       ','.join([str(d) for d in self.args]))\
-                                      +' '.join(self.internal)
+                                      +''.join(self.internal)
 
 class ProgramStmt(PUstart):
     kw = 'program'
@@ -1207,16 +1209,16 @@ class ProgramStmt(PUstart):
         ((dc,name),rest) = p1(scan)
         return ProgramStmt(name,dc,lineNumber=lineNumber)
 
-    def __init__(self,name,stmt_name=kw,lineNumber=0,label=False,lead=''):
+    def __init__(self,name,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[]):
         self.name = name
         self.stmt_name = stmt_name 
-        PUstart.__init__(self,lineNumber,label,lead)
+        PUstart.__init__(self,lineNumber,label,lead,internal)
 
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__,repr(self.name))
 
     def __str__(self):
-        return '%s %s' % (self.stmt_name,self.name)+' '.join(self.internal)
+        return '%s %s' % (self.stmt_name,self.name)+''.join(self.internal)
 
 class FunctionStmt(PUstart):
     kw = 'function'
@@ -1244,7 +1246,7 @@ class FunctionStmt(PUstart):
                               or None
         return FunctionStmt(type,name,args,result,lineNumber)
 
-    def __init__(self,ty,name,args,result,lineNumber=0,label=False,lead=''):
+    def __init__(self,ty,name,args,result,lineNumber=0,label=False,lead='',internal=[]):
         '''
         typ = None
 
@@ -1257,7 +1259,7 @@ class FunctionStmt(PUstart):
         self.name = name
         self.args = args
         self.result = result
-        PUstart.__init__(self,lineNumber,label,lead)
+        PUstart.__init__(self,lineNumber,label,lead,internal)
 
     def __repr__(self):
         typeRepr = self.ty and '('+self.ty[0].__name__+','+repr(self.ty[1])+')' \
@@ -1277,7 +1279,7 @@ class FunctionStmt(PUstart):
                                         str(self.name),
                                         ','.join([str(l) for l in self.args]),
                                         resultStr)\
-                                        +' '.join(self.internal)
+                                        +''.join(self.internal)
 
 class ModuleStmt(PUstart):
     kw = 'module'
@@ -1292,15 +1294,15 @@ class ModuleStmt(PUstart):
         ((dc,name),rest) = p1(scan)
         return ModuleStmt(name,lineNumber)
 
-    def __init__(self,name,lineNumber=0,label=False,lead=''):
+    def __init__(self,name,lineNumber=0,label=False,lead='',internal=[]):
         self.name = name 
-        PUstart.__init__(self,lineNumber,label,lead)
+        PUstart.__init__(self,lineNumber,label,lead,internal)
 
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__,
                               repr(self.name))
     def __str__(self):
-        return 'module %s' % self.name+' '.join(self.internal)
+        return 'module %s' % self.name+''.join(self.internal)
 
 class UseStmt(Decl):
     kw     = 'use'
@@ -1351,11 +1353,11 @@ class UseStmt(Decl):
 class UseAllStmt(UseStmt):
     _sons  = ['renameList']
 
-    def __init__(self,moduleName,renameList,stmt_name=UseStmt.kw,lineNumber=0,label=False,lead=''):
+    def __init__(self,moduleName,renameList,stmt_name=UseStmt.kw,lineNumber=0,label=False,lead='',internal=[]):
         self.moduleName = moduleName
         self.renameList = renameList
         self.stmt_name = stmt_name
-        UseStmt.__init__(self,lineNumber,label,lead)
+        UseStmt.__init__(self,lineNumber,label,lead,internal)
 
     def __str__(self):
         renameListStr = self.renameList and ', '+\
@@ -1363,21 +1365,21 @@ class UseAllStmt(UseStmt):
                                   for aRenameItem in self.renameList]) \
                                          or ''
         return self.stmt_name+' '+str(self.moduleName)+renameListStr\
-               +' '.join(self.internal)
+               +''.join(self.internal)
 
 class UseOnlyStmt(UseStmt):
     _sons  = ['onlyList']
 
-    def __init__(self,moduleName,onlyList,stmt_name=UseStmt.kw,lineNumber=0,label=False,lead=''):
+    def __init__(self,moduleName,onlyList,stmt_name=UseStmt.kw,lineNumber=0,label=False,lead='',internal=[]):
         self.moduleName = moduleName
         self.onlyList = onlyList
         self.stmt_name = stmt_name
-        UseStmt.__init__(self,lineNumber,label,lead)
+        UseStmt.__init__(self,lineNumber,label,lead,internal)
 
     def __str__(self):
         return self.stmt_name+' '+str(self.moduleName)+', only: '+\
                ','.join([str(anOnlyItem) for anOnlyItem in self.onlyList])\
-               +' '.join(self.internal)
+               +''.join(self.internal)
 
 class EntryStmt(Decl):
     pass
@@ -1403,15 +1405,15 @@ class EnddoStmt(Exec):
         (theParsedStmt,rest) = form(scan)
         return theParsedStmt 
 
-    def __init__(self,doConstructName,stmt_name=kw_str,lineNumber=0,label=False,lead='') :
+    def __init__(self,doConstructName,stmt_name=kw_str,lineNumber=0,label=False,lead='',internal=[]):
         self.doConstructName = doConstructName
         self.stmt_name = stmt_name
-        Exec.__init__(self,lineNumber,label,lead)
+        Exec.__init__(self,lineNumber,label,lead,internal)
 
     def __str__(self) :
         optionalDoConstructStr = self.doConstructName and ' '+self.doConstructName \
                                                        or '' 
-        return '%s%s' % (self.stmt_name,optionalDoConstructStr)
+        return '%s%s' % (self.stmt_name,optionalDoConstructStr)+''.join(self.internal)
 
 
 class CycleStmt(Exec) :
@@ -1429,15 +1431,15 @@ class CycleStmt(Exec) :
         (theParsedStmt,rest) = form(scan)
         return theParsedStmt 
 
-    def __init__(self,doConstructName,stmt_name=kw,lineNumber=0,label=False,lead='') :
+    def __init__(self,doConstructName,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[]):
         self.doConstructName = doConstructName
         self.stmt_name = stmt_name
-        Exec.__init__(self,lineNumber,label,lead)
+        Exec.__init__(self,lineNumber,label,lead,internal)
 
     def __str__(self) :
         optionalDoConstructStr = self.doConstructName and ' '+self.doConstructName \
                                                        or '' 
-        return '%s%s' % (self.stmt_name,optionalDoConstructStr)
+        return '%s%s' % (self.stmt_name,optionalDoConstructStr)+''.join(self.internal)
 
 
 class CallStmt(Exec):
@@ -1455,11 +1457,11 @@ class CallStmt(Exec):
         else:
             return CallStmt(a,[],dc,lineNumber)
 
-    def __init__(self,head,args,stmt_name=kw,lineNumber=0,label=False,lead=''):
+    def __init__(self,head,args,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[]):
         self.head = head
         self.args = args
         self.stmt_name = stmt_name
-        Exec.__init__(self,lineNumber,label,lead)
+        Exec.__init__(self,lineNumber,label,lead,internal)
         
     def __repr__(self):
         return 'CallStmt(%s,%s)' % (repr(self.head),
@@ -1468,7 +1470,7 @@ class CallStmt(Exec):
     def __str__(self):
         return '%s %s(%s)' % (self.stmt_name,str(self.head),
                                 ','.join([str(l) for l in self.args]))\
-                                +' '.join(self.internal)
+                                +''.join(self.internal)
 
     def get_head(self):
         self.accessed = True
@@ -1491,16 +1493,16 @@ class AssignStmt(Exec):
         ((r),rst) = Exp(rst)
         return AssignStmt(l,r,lineNumber)
 
-    def __init__(self,lhs,rhs,lineNumber=0,label=False,lead=''):
+    def __init__(self,lhs,rhs,lineNumber=0,label=False,lead='',internal=[]):
         self.lhs  = lhs
         self.rhs  = rhs
-        Exec.__init__(self,lineNumber,label,lead)
+        Exec.__init__(self,lineNumber,label,lead,internal)
 
     def __repr__(self):
         return 'AssignStmt(%s,%s)' % (repr(self.lhs),repr(self.rhs))
 
     def __str__(self):
-        return '%s = %s' % (str(self.lhs),str(self.rhs))+' '.join(self.internal)
+        return '%s = %s' % (str(self.lhs),str(self.rhs))+''.join(self.internal)
 
     def get_lhs(self):
         self.accessed = True
@@ -1522,16 +1524,16 @@ class PointerAssignStmt(Exec):
         ((lhs,assignSymbol,rhs),rst) = formPointerAssignStmt(scan)
         return PointerAssignStmt(lhs,rhs,lineNumber)
 
-    def __init__(self,lhs,rhs,lineNumber=0,label=False,lead=''):
+    def __init__(self,lhs,rhs,lineNumber=0,label=False,lead='',internal=[]):
         self.lhs  = lhs
         self.rhs  = rhs
-        Exec.__init__(self,lineNumber,label,lead)
+        Exec.__init__(self,lineNumber,label,lead,internal)
 
     def __repr__(self):
         return 'PointerAssignStmt(%s,%s)' % (repr(self.lhs),repr(self.rhs))
 
     def __str__(self):
-        return '%s => %s' % (str(self.lhs),str(self.rhs))+' '.join(self.internal)
+        return '%s => %s' % (str(self.lhs),str(self.rhs))+''.join(self.internal)
 
 class OpenStmt(Exec):
     kw = 'open'
@@ -1543,11 +1545,11 @@ class CloseStmt(Exec):
 
 class IOStmt(Exec):
 
-    def __init__(self,stmt_name,ioCtrlSpecList,itemList=[],lineNumber=0,label=False,lead=''):
+    def __init__(self,stmt_name,ioCtrlSpecList,itemList=[],lineNumber=0,label=False,lead='',internal=[]):
         self.stmt_name = stmt_name
         self.ioCtrlSpecList=ioCtrlSpecList
         self.itemList=itemList
-        Exec.__init__(self,lineNumber,label,lead)
+        Exec.__init__(self,lineNumber,label,lead,internal)
 
     def get_itemList(self):
         self.accessed = True
@@ -1562,13 +1564,13 @@ class SimpleSyntaxIOStmt(IOStmt):
         ([kw,format,comma,itemList],rest) = io_stmt(scan)
         return SubClass(kw,format,itemList,lineNumber)
 
-    def __init__(self,stmt_name,format,itemList=[],lineNumber=0,label=False,lead=''):
-        IOStmt.__init__(self,stmt_name,[format],itemList,lineNumber,label,lead)
+    def __init__(self,stmt_name,format,itemList=[],lineNumber=0,label=False,lead='',internal=[]):
+        IOStmt.__init__(self,stmt_name,[format],itemList,lineNumber,label,lead,internal)
 
     def __str__(self):
         return '%s %s,%s' % (self.stmt_name,self.ioCtrlSpecList[0],\
                              ','.join([str(item) for item in self.itemList]))\
-                             +' '.join(self.internal)
+                             +''.join(self.internal)
 
 class PrintStmt(SimpleSyntaxIOStmt):
     kw = 'print'
@@ -1579,8 +1581,8 @@ class PrintStmt(SimpleSyntaxIOStmt):
         scan = filter(lambda x: x != ' ',ws_scan)
         return SimpleSyntaxIOStmt.parse(scan,lineNumber,PrintStmt.kw, PrintStmt)
 
-    def __init__(self,kw,format,itemList,lineNumber=0):
-        SimpleSyntaxIOStmt.__init__(self,kw,format,itemList,lineNumber)
+    def __init__(self,kw,format,itemList,lineNumber=0,internal=[]):
+        SimpleSyntaxIOStmt.__init__(self,kw,format,itemList,lineNumber,internal)
 
 class ComplexSyntaxIOStmt(IOStmt):
 
@@ -1596,15 +1598,15 @@ class ComplexSyntaxIOStmt(IOStmt):
 
         return SubClass(kw,ioCtrlSpecList,itemList,lineNumber=lineNumber)
 
-    def __init__(self,stmt_name,ioCtrlSpecList,itemList=[],lineNumber=0,label=False,lead=''):
-        IOStmt.__init__(self,stmt_name,ioCtrlSpecList,itemList,lineNumber,label,lead)        
+    def __init__(self,stmt_name,ioCtrlSpecList,itemList=[],lineNumber=0,label=False,lead='',internal=[]):
+        IOStmt.__init__(self,stmt_name,ioCtrlSpecList,itemList,lineNumber,label,lead,internal)
 
     def __str__(self):
         return '%s(%s) %s' % (self.stmt_name,
                               ','.join([str(ioCtrl)
                                         for ioCtrl in self.ioCtrlSpecList]),
                               ','.join([str(item) for item in self.itemList]))\
-                              +' '.join(self.internal)
+                              +''.join(self.internal)
 
 class SimpleReadStmt(SimpleSyntaxIOStmt):
     ''' the version that only has format but not a full ioCtrlSpecList; its parse method
@@ -1617,8 +1619,8 @@ class SimpleReadStmt(SimpleSyntaxIOStmt):
         scan = filter(lambda x: x != ' ',ws_scan)
         return SimpleSyntaxIOStmt.parse(ws_scan,lineNumber,SimpleReadStmt.kw, SimpleReadStmt)
 
-    def __init__(self,kw,format,itemList,lineNumber=0):
-        SimpleSyntaxIOStmt.__init__(self,kw,format,itemList,lineNumber)
+    def __init__(self,kw,format,itemList,lineNumber=0,internal=[]):
+        SimpleSyntaxIOStmt.__init__(self,kw,format,itemList,lineNumber,internal)
 
 class ReadStmt(ComplexSyntaxIOStmt):
     kw = 'read'
@@ -1632,8 +1634,8 @@ class ReadStmt(ComplexSyntaxIOStmt):
         except ListAssemblerException,e:
             return SimpleReadStmt.parse(scan,lineNumber)
 
-    def __init__(self,stmt_name=kw,ioCtrlSpecList=[],itemList=[],lineNumber=0,label=False,lead=''):
-        IOStmt.__init__(self,stmt_name,ioCtrlSpecList,itemList,lineNumber,label,lead)
+    def __init__(self,stmt_name=kw,ioCtrlSpecList=[],itemList=[],lineNumber=0,label=False,lead='',internal=[]):
+        IOStmt.__init__(self,stmt_name,ioCtrlSpecList,itemList,lineNumber,label,lead,internal)
     
 class WriteStmt(ComplexSyntaxIOStmt):
     kw = 'write'
@@ -1646,8 +1648,8 @@ class WriteStmt(ComplexSyntaxIOStmt):
 
     # rest is a temp. fix. implicit loops in WriteStmts should be
     # fully parsed in ComplexSyntaxIOStmt
-    def __init__(self,stmt_name=kw,ioCtrlSpecList=[],itemList=[],lineNumber=0,label=False,lead=''):
-        ComplexSyntaxIOStmt.__init__(self,stmt_name,ioCtrlSpecList,itemList,lineNumber,label,lead)
+    def __init__(self,stmt_name=kw,ioCtrlSpecList=[],itemList=[],lineNumber=0,label=False,lead='',internal=[]):
+        ComplexSyntaxIOStmt.__init__(self,stmt_name,ioCtrlSpecList,itemList,lineNumber,label,lead,internal)
 
 class FormatStmt(Exec):
     kw = 'format'
@@ -1681,27 +1683,27 @@ class IfStmt(Exec):
 class IfThenStmt(IfStmt):
     _sons = ['test']
 
-    def __init__(self,test,ifFormatStr=IfStmt.kw,thenFormatStr='then',lineNumber=0,label=False,lead=''):
+    def __init__(self,test,ifFormatStr=IfStmt.kw,thenFormatStr='then',lineNumber=0,label=False,lead='',internal=[]):
         self.test = test
         self.ifFormatStr = ifFormatStr
         self.thenFormatStr = thenFormatStr
-        IfStmt.__init__(self,lineNumber,label,lead)
+        IfStmt.__init__(self,lineNumber,label,lead,internal)
 
     def __repr__(self):
         return 'IfThenStmt(%s)' % (repr(self.test),)
 
     def __str__(self):
         return '%s (%s) %s' % (self.ifFormatStr,str(self.test),self.thenFormatStr)\
-               +' '.join(self.internal)
+               +''.join(self.internal)
 
 class IfNonThenStmt(IfStmt):
     _sons = ['test','stmt']
 
-    def __init__(self,test,stmt,ifFormatStr=IfStmt.kw,lineNumber=0,label=False,lead=''):
+    def __init__(self,test,stmt,ifFormatStr=IfStmt.kw,lineNumber=0,label=False,lead='',internal=[]):
         self.test = test
         self.stmt = stmt
         self.ifFormatStr = ifFormatStr
-        IfStmt.__init__(self,lineNumber,label,lead)
+        IfStmt.__init__(self,lineNumber,label,lead,internal)
 
     def __repr__(self):
         return 'IfNonThenStmt(%s,%s)' % (repr(self.test),
@@ -1709,7 +1711,7 @@ class IfNonThenStmt(IfStmt):
 
     def __str__(self):
         return '%s (%s) %s' % (self.ifFormatStr,str(self.test),str(self.stmt))\
-               +' '.join(self.internal)
+               +''.join(self.internal)
 
 
 class ElseifStmt(Exec):
@@ -1725,18 +1727,18 @@ class ElseifStmt(Exec):
         ((dc0,dc1,e,dc2,dc3),rest) = prefix(scan)
         return ElseifStmt(e,dc0,dc3,lineNumber)
 
-    def __init__(self,e,stmt_name=kw,stmt_name2='then',lineNumber=0,label=False,lead=''):
+    def __init__(self,e,stmt_name=kw,stmt_name2='then',lineNumber=0,label=False,lead='',internal=[]):
         self.test = e
         self.stmt_name = stmt_name
         self.stmt_name2 = stmt_name2
-        Exec.__init__(self,lineNumber,label,lead)
+        Exec.__init__(self,lineNumber,label,lead,internal)
 
     def __repr__(self):
         return 'ElseifStmt(%s)' % (repr(self.test),)
 
     def __str__(self):
         return '%s (%s) %s' % (self.stmt_name,str(self.test),self.stmt_name2)\
-               +' '.join(self.internal)
+               +''.join(self.internal)
     
 class ElseStmt(Leaf):
     kw = 'else'
@@ -1766,10 +1768,10 @@ class WhereStmt(Exec):
                                  or None
         return WhereStmt(conditional,assignment,lineNumber)
 
-    def __init__(self,conditional,assignment,lineNumber=0,label=False,lead=''):
+    def __init__(self,conditional,assignment,lineNumber=0,label=False,lead='',internal=[]):
         self.conditional = conditional
         self.assignment = assignment
-        Exec.__init__(self,lineNumber,label,lead)
+        Exec.__init__(self,lineNumber,label,lead,internal)
 
     def __str__(self):
         assignStr = self.assignment and ' '+str(self.assignment) \
@@ -1777,7 +1779,7 @@ class WhereStmt(Exec):
         return '%s (%s)%s' % (self.kw,
                                str(self.conditional),
                                assignStr)\
-                               +' '.join(self.internal)
+                               +''.join(self.internal)
 
 class ElsewhereStmt(Leaf):
     kw = 'elsewhere'
@@ -1858,12 +1860,12 @@ class DoStmt(Exec):
         (theParsedStmt,rest) = formDoStmt(scan)
         return theParsedStmt 
 
-    def __init__(self,doName,doLabel,loopControl,doFormatStr=kw,lineNumber=0,label=False,lead=''):
+    def __init__(self,doName,doLabel,loopControl,doFormatStr=kw,lineNumber=0,label=False,lead='',internal=[]):
         self.doName = doName
         self.doLabel = doLabel
         self.loopControl = loopControl
         self.doFormatStr = doFormatStr
-        Exec.__init__(self,lineNumber,label,lead)
+        Exec.__init__(self,lineNumber,label,lead,internal)
 
     def __str__(self):
         doNameString = self.doName and str(self.doName)+': ' \
@@ -1873,7 +1875,7 @@ class DoStmt(Exec):
         loopControlString = self.loopControl and ' '+str(self.loopControl) \
                                               or ''
         return '%s%s%s%s' % (doNameString,self.doFormatStr,doLabelString,loopControlString)\
-               +' '.join(self.internal)
+               +''.join(self.internal)
 
 
 class WhileStmt(Exec):
@@ -1895,13 +1897,13 @@ class WhileStmt(Exec):
         ((theDoWhileKeyword,openPeren,theTestExpression,closePeren),rest) = formWhileStmt(scan)
         return WhileStmt(theTestExpression,theDoWhileKeyword,lineNumber)
 
-    def __init__(self,testExpression,stmt_name=kw_str,lineNumber=0,label=False,lead=''):
+    def __init__(self,testExpression,stmt_name=kw_str,lineNumber=0,label=False,lead='',internal=[]):
         self.testExpression = testExpression
         self.stmt_name = stmt_name 
-        Exec.__init__(self,lineNumber,label,lead)
+        Exec.__init__(self,lineNumber,label,lead,internal)
 
     def __str__(self):
-        return 'do while (%s)' % str(self.testExpression)+' '.join(self.internal)
+        return 'do while (%s)' % str(self.testExpression)+''.join(self.internal)
 
 
 class ContinueStmt(Leaf):
@@ -1931,13 +1933,13 @@ class SelectCaseStmt(Exec):
             raise ParseError(lineNumber,scan,'Select Case statement')
         return SelectCaseStmt(caseExpression,selectCaseKeyword,lineNumber)
 
-    def __init__(self,caseExpression,stmt_name=kw_str,lineNumber=0,label=False,lead=''):
+    def __init__(self,caseExpression,stmt_name=kw_str,lineNumber=0,label=False,lead='',internal=[]):
         self.caseExpression = caseExpression
         self.stmt_name = stmt_name
-        Exec.__init__(self,lineNumber,label,lead)
+        Exec.__init__(self,lineNumber,label,lead,internal)
 
     def __str__(self):
-        return '%s (%s)' % (self.stmt_name,str(self.caseExpression))+' '.join(self.internal)
+        return '%s (%s)' % (self.stmt_name,str(self.caseExpression))+''.join(self.internal)
 
 class EndSelectCaseStmt(Leaf):
     #FIXME: optional case construct name 
@@ -1966,11 +1968,11 @@ class CaseDefaultStmt(Exec):
             raise ParseError(lineNumber,scan,'case default statement')
         return CaseDefaultStmt(lineNumber)
 
-    def __init__(self,lineNumber=0,label=False,lead=''):
-        Exec.__init__(self,lineNumber,label,lead)
+    def __init__(self,lineNumber=0,label=False,lead='',internal=[]):
+        Exec.__init__(self,lineNumber,label,lead,internal)
 
     def __str__(self):
-        return 'case default'+' '.join(self.internal)
+        return 'case default'+''.join(self.internal)
 
 class CaseRangeListStmt(Exec):
     #FIXME: optional case construct name 
@@ -1997,15 +1999,15 @@ class CaseRangeListStmt(Exec):
             raise ParseError(lineNumber,scan,'case range list statement')
         return CaseRangeListStmt(caseRangeList,caseKeyword,lineNumber)
 
-    def __init__(self,caseRangeList,stmt_name=kw,lineNumber=0,label=False,lead=''):
+    def __init__(self,caseRangeList,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[]):
         self.caseRangeList = caseRangeList
         self.stmt_name = stmt_name
-        Exec.__init__(self,lineNumber,label,lead)
+        Exec.__init__(self,lineNumber,label,lead,internal)
 
     def __str__(self):
         return '%s (%s)' % (self.stmt_name,
                             ','.join([str(range) for range in self.caseRangeList]))\
-                            +' '.join(self.internal)
+                            +''.join(self.internal)
 
 class GotoStmt(Exec):
     kw = 'goto'
@@ -2026,13 +2028,13 @@ class GotoStmt(Exec):
         ((gotoFormatStr,targetLabel),rest) = disj(withSpace,noSpace)(scan)
         return GotoStmt(targetLabel,gotoFormatStr,lineNumber)
 
-    def __init__(self,targetLabel,gotoFormatStr=kw,lineNumber=0,label=False,lead=''):
+    def __init__(self,targetLabel,gotoFormatStr=kw,lineNumber=0,label=False,lead='',internal=[]):
         self.targetLabel = targetLabel
         self.gotoFormatStr = gotoFormatStr
-        Exec.__init__(self,lineNumber,label,lead)
+        Exec.__init__(self,lineNumber,label,lead,internal)
         
     def __str__(self):
-        return self.gotoFormatStr+' '+self.targetLabel+' '.join(self.internal)
+        return self.gotoFormatStr+' '+self.targetLabel+''.join(self.internal)
 
 class AllocateStmt(Exec):
     '''
@@ -2062,11 +2064,11 @@ class AllocateStmt(Exec):
             (theParsedStmt,rest) = formAllocateStmt(scan)
             return theParsedStmt
 
-    def __init__(self,argList,statVariable=None,statFormatStr='stat',allocateFormatStr=kw,lineNumber=0,label=False,lead=''):
+    def __init__(self,argList,statVariable=None,statFormatStr='stat',allocateFormatStr=kw,lineNumber=0,label=False,lead='',internal=[]):
         self.argList = argList
         self.statVariable = statVariable
         self.allocateFormatStr = allocateFormatStr
-        Exec.__init__(self,lineNumber,label,lead)
+        Exec.__init__(self,lineNumber,label,lead,internal)
 
     def __str__(self):
         statVarStr = self.statVariable and ',stat='+self.statVariable \
@@ -2074,7 +2076,7 @@ class AllocateStmt(Exec):
         return '%s(%s%s)' % (self.allocateFormatStr,
                              ','.join([str(arg) for arg in self.argList]),
                              statVarStr)\
-                             +' '.join(self.internal)
+                             +''.join(self.internal)
 
 class DeallocateStmt(Exec):
     kw = 'deallocate'
@@ -2091,14 +2093,14 @@ class DeallocateStmt(Exec):
         ((deallocKeyword,oParen,argList,cParen),rest) = formDeallocateStmt(scan)
         return DeallocateStmt(argList,deallocKeyword,lineNumber)
 
-    def __init__(self,argList,deallocateFormatStr=kw,lineNumber=0,label=False,lead=''):
+    def __init__(self,argList,deallocateFormatStr=kw,lineNumber=0,label=False,lead='',internal=[]):
         self.argList = argList
         self.deallocateFormatStr = deallocateFormatStr
-        Exec.__init__(self,lineNumber,label,lead)
+        Exec.__init__(self,lineNumber,label,lead,internal)
 
     def __str__(self):
         return '%s(%s)' % (self.kw,','.join([str(arg) for arg in self.argList]))\
-               +' '.join(self.internal)
+               +''.join(self.internal)
 
 class InquireStmt(Exec):
     kw = 'inquire'

@@ -286,7 +286,8 @@ class UnitCanonicalizer(object):
                                              self.__canonicalizeExpression(anAssignStmt.get_rhs(),anAssignStmt),
                                              lineNumber=anAssignStmt.lineNumber,
                                              label=anAssignStmt.label,
-                                             lead=anAssignStmt.lead)
+                                             lead=anAssignStmt.lead,
+                                             internal=anAssignStmt.internal)
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|_')
         self.__recursionDepth -= 1
         return replacementStatement

@@ -53,7 +53,7 @@ def process_fort_stmt(stmt_tuple,lineNumber,jlf):
             anObj.lead = lead
     else:
         ## assign rawline, internal comments, label, and lead to the statement obj
-        #obj.rawline = raw+' '.join(intl)
+        #obj.rawline = obj.rawline+''.join(intl)
         #obj.internal = intl
         obj.internal = []
         obj.label = label

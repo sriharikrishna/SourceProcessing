@@ -495,7 +495,7 @@ class UnitPostProcessor(object):
                 Execs.append(Stmt)
             elif isinstance(Stmt,fs.AllocateStmt) \
               or isinstance(Stmt,fs.DeallocateStmt) :
-                Stmt.set_rawline(self.__replaceArgs(argReps,Stmt.get_rawline(),inlineArgs,replacementArgs))
+                Stmt.set_rawline(self.__replaceArgs(argReps,Stmt.get_rawline(),inlineArgs,replacementArgs)+''.join(Stmt.internal))
                 Stmt.lead = stmt_lead
                 Execs.append(Stmt)
             elif isinstance(Stmt,fs.WhileStmt) or \

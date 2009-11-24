@@ -3,7 +3,7 @@
         integer :: k
         integer,parameter :: r1 = 12211, m1 = 2147483563
         integer,parameter :: a1 = 40014, q1 = 53668
-        integer,parameter :: r2 =  3791, m2 = 2147483399
+        integer,parameter :: r2 = 3791, m2 = 2147483399
         integer,parameter :: a2 = 40692, q2 = 52774
         k      = s1/q1
         s1     = a1*(s1-k*q1) - k*r1

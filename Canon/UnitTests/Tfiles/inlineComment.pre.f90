@@ -3,6 +3,6 @@
         external foo
         real :: oad_ctmp0
         call oad_s_foo(y,oad_ctmp0)
-        y = oad_ctmp0 ! we better save this comment!
+        y = oad_ctmp0! we better save this comment!
       end subroutine head
 
