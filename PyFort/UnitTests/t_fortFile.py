@@ -24,31 +24,40 @@ class file1(TestCase):
         self.ff.close()
 
     def test1(self):
-        '''Ffile string method returns the string rep of the file -- KNOWN TO FAIL (fortFile methods need to be updated for new rawline parsing)'''
+        '''Ffile string method returns the string rep of the file -- KNOWN TO FAIL https://trac.mcs.anl.gov/projects/openAD/ticket/187'''
 
         ff = self.ff
-        out = open_t('f1.out.f')
+        out = open_t('f1.f')
 
         self.assertEquals(Ffile.file(self.fname).str(),''.join(out.readlines()))
         out.close()
 
     def test2(self):
-        '''Ffile readlines method -- KNOWN TO FAIL (fortFile methods need to be updated for new rawline parsing)'''
+        '''Ffile readlines method -- KNOWN TO FAIL https://trac.mcs.anl.gov/projects/openAD/ticket/187'''
 
         ff = self.ff
-        out = open_t('f2.out.f')
+        out = open_t('f2.f')
 
         self.assertEquals(Ffile.file(self.fname).readlines(),out.readlines())
         out.close()
         
     def test3(self):
-        '''Ffile iterlines method -- KNOWN TO FAIL (fortFile methods need to be updated for new rawline parsing)'''
+        '''Ffile iterlines method -- KNOWN TO FAIL https://trac.mcs.anl.gov/projects/openAD/ticket/187'''
 
         ff = self.ff
         ll = Ffile.file(self.fname).iterlines()
 
         for (v1,v2) in izip(ll,ff):
             self.assertEquals(v1,v2)
+
+    def test4(self):
+        '''lead, comments and continuations are correctly removed from rawlines'''
+        ff = self.ff
+        out = open_t('f4.out.f')
+        self.assertEquals(''.join(l.rawline+'\n'
+                                    for l in Ffile.file(self.fname).lines),
+                          ''.join(out.readlines()))
+        out.close()
 
 class fileops(TestCase):
     def setUp(self):
@@ -63,7 +72,7 @@ class fileops(TestCase):
         pass
 
     def test1(self):
-        '''write Ffile to a file -- KNOWN TO FAIL (fortFile methods need to be updated for new rawline parsing)'''
+        '''write Ffile to a file -- KNOWN TO FAIL https://trac.mcs.anl.gov/projects/openAD/ticket/187'''
         import os
 
         fname = '__tmp.f'
@@ -101,7 +110,7 @@ c
     f     = file(fname)
 
     def test1(self):
-        "'here' docs -- KNOWN TO FAIL (fortFile methods need to be updated for new rawline parsing)"
+        "'here' docs -- KNOWN TO FAIL https://trac.mcs.anl.gov/projects/openAD/ticket/187"
         ff = heretst.ff
         f  = heretst.f
         ae = self.assertEquals
@@ -113,7 +122,7 @@ class maptest(TestCase):
     fname = fname_t('f2.f')
 
     def test1(self):
-        'map operation, join short continuation lines -- KNOWN TO FAIL (fortFile methods need to be updated for new rawline parsing)'
+        'map operation, join short continuation lines -- KNOWN TO FAIL https://trac.mcs.anl.gov/projects/openAD/ticket/187'''
 
         ae   = self.assertEquals
         ok   = open_t('f2.f.map_ok.1').read()
@@ -124,7 +133,7 @@ class maptest(TestCase):
         ae(res,ok)
 
     def test2(self):
-        'map operation, filter comments -- KNOWN TO FAIL (fortFile methods need to be updated for new rawline parsing)'
+        'map operation, filter comments -- KNOWN TO FAIL https://trac.mcs.anl.gov/projects/openAD/ticket/187'''
 
         ae = self.assertEquals
         ok = open_t('f2.f.map_ok.2').read()
