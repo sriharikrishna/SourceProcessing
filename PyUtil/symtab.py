@@ -165,7 +165,7 @@ class SymtabEntry(object):
         # for example, we can replace a procedureKind with a functionKind,
         # but we cannot replace a variableKind with a functionKind
         if not isinstance(newEntryKind(),self.entryKind):
-            raise SymtabError('SymtabEntry.enterEntryKind: replace kind '+str(self.entryKind)+' with '+str(newEntryKind)+' !!!!',entry=self)
+            raise SymtabError('name clash between symbols with kind '+str(self.entryKind)+' and kind '+str(newEntryKind)+' ',entry=self)
         self.entryKind = newEntryKind
 
     def enterType(self,newType):
