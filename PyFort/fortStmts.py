@@ -681,6 +681,7 @@ class BlockdataStmt(PUstart):
 class CommonStmt(Decl):
     kw = 'common'
     kw_str = kw
+    _sons = ['declList']
 
     @classmethod
     def parse(cls,ws_scan,lineNumber):
@@ -925,8 +926,30 @@ class ImplicitStmt(Decl):
                +''.join(self.internal)
 
 class EquivalenceStmt(Decl):
-    pass
+    kw = 'equivalence'
+    _sons = ['nlists']
 
+    @staticmethod
+    def parse(ws_scan,lineNumber):
+        scan = filter(lambda x: x != ' ',ws_scan)
+        nlist = seq(lit('('),
+                    cslist(Exp),
+                    lit(')'))
+        stmt = seq(lit(EquivalenceStmt.kw),cslist(nlist))
+        ([equivalence,nlists],rm) = stmt(scan)
+        return EquivalenceStmt(declList,lineNumber)
+
+    
+    def __init__(self,nlists,lineNumber=0,label=False,lead='',internal=[]):
+        self.nlists = nlists
+        Decl.__init__(self,lineNumber,label,lead,internal)
+
+    def __str__(self):
+        declStrList = []
+        for nlist in self.nlists:
+            declStrList.append('('+','.join(str(item) for item in nlist[1])+')')
+        return '%s %s' % (self.kw,','.join(declStrList))
+        
 aNamedParam = seq(id,lit('='),Exp)
 
 class ParameterStmt(Decl):
@@ -1625,7 +1648,8 @@ class SimpleReadStmt(SimpleSyntaxIOStmt):
 class ReadStmt(ComplexSyntaxIOStmt):
     kw = 'read'
     kw_str = kw
-
+    _sons = ['ioCtrlSpecList','itemList']
+    
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
@@ -1640,6 +1664,7 @@ class ReadStmt(ComplexSyntaxIOStmt):
 class WriteStmt(ComplexSyntaxIOStmt):
     kw = 'write'
     kw_str = kw
+    _sons = ['ioCtrlSpecList','itemList']
 
     @staticmethod
     def parse(ws_scan,lineNumber):
