@@ -937,7 +937,7 @@ class EquivalenceStmt(Decl):
                     lit(')'))
         stmt = seq(lit(EquivalenceStmt.kw),cslist(nlist))
         ([equivalence,nlists],rm) = stmt(scan)
-        return EquivalenceStmt(declList,lineNumber)
+        return EquivalenceStmt(nlists,lineNumber)
 
     
     def __init__(self,nlists,lineNumber=0,label=False,lead='',internal=[]):
