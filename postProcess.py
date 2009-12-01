@@ -304,6 +304,11 @@ def main():
                         outputDirectory = config.pathPrefix+head+config.pathSuffix
                         if not os.path.exists(outputDirectory): os.makedirs(outputDirectory)
                         newOutputFile = os.path.join(outputDirectory,fileName+config.filenameSuffix+fileExtension)
+                        if config.outputFormat == None:
+                            config.outputFormat = Ffile.get_format(fileExtension)
+                        elif (config.outputFormat<>'fixed') and (config.outputFormat<>'free'):
+                            opt.error("outputFormat option must be specified with either 'fixed' or 'free' as an argument")
+                        setOutputFormat(config.outputFormat)
                         outFileNameList.append(newOutputFile)
                         out = open(newOutputFile,'w')
                 elif not out:

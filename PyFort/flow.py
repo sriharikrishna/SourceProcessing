@@ -32,12 +32,11 @@ def _fixed_flow_line(l,cont='+'):
 _free_line_len = 80
 _free_comment = '! '
 
-def _free_flow_line(l):
+def _free_flow_line(l,cont='&'):
     'given a long line l, write it out as a series of continued lines'
     comment_p = freefmt.comment_p
     fll = outputLineLength
     fl2 = fll - 6
-    cont = '&'
     l1 = chomp(l)
     if comment_p(l) or (len(l1) <= fll):
         return l
