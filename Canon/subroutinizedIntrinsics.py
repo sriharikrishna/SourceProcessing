@@ -11,9 +11,11 @@ class SubroutinizeError(Exception):
     def __init__(self,msg):
         self.msg  = msg
 
+_subroutinizable=['max','maxval','min','minval']
+
 def shouldSubroutinize(aFunction):
     DebugManager.debug('subroutinizedIntrinsics.shouldSubroutinize called on "'+str(aFunction)+'"')
-    return intrinsic.getGenericName(aFunction.head) in ('max','maxval','min','minval')
+    return intrinsic.getGenericName(aFunction.head) in _subroutinizable
 
 _requiredSubroutinizedIntrinsics=[]
 
@@ -22,76 +24,101 @@ def markRequired(key,typeClass):
         _requiredSubroutinizedIntrinsics.append((key,typeClass))
 
 call_prefix  = 'oad_s_'
+typeList=[fs.RealStmt,fs.DoubleStmt,fs.IntegerStmt]
 
-def makeName(intrName,typeClass):
-    return call_prefix + intrName + (intrinsic.isPolymorphic(intrName) and '_'+typeClass.kw.lower()[0] or '')    
+def getModuleName():
+    return 'OAD_intrinsics'
 
-def makeSubroutinizedIntrinsics():
-    ''' this is just a starter and currently works only for max/min '''
-    subroutinizedIntrinsics=[]
-    for (key,typeClass) in _requiredSubroutinizedIntrinsics:
-        newUnit = Unit()
-        if key in ('max','min'):
-            makeSubroutinizedMaxOrMin(newUnit,key,typeClass)
-        elif key in ('maxval','minval'):
-            makeSubroutinizedMaxvalOrMinval(newUnit,key,typeClass)
-        else:
-            raise SubroutinizeError('subroutinizedIntrinsics.makeSubroutinizedIntrinsics: I DONT KNOW HOW TO SUBROUTINIZE FUNCTION WITH KEY '+key)
-        subroutinizedIntrinsics.append(newUnit)
-    return subroutinizedIntrinsics
+def makeName(intrName):
+    return call_prefix + intrName     
 
-def makeSubroutinizedMaxOrMin(newUnit,aKey,aTypeClass):
-    newUnit.uinfo=fs.SubroutineStmt(makeName(aKey,aTypeClass),
+def __makeNameImpl(intrName,typeClass):
+    return makeName(intrName)+'_'+typeClass.kw[0]     
+
+def makeSubroutinizedIntrinsics(onlyRequired):
+    ''' this is incomplete '''
+    keyList=_subroutinizable
+    if onlyRequired:
+        uniq=set([k for k,t in _requiredSubroutinizedIntrinsics])
+        keyList=[k for k in uniq] 
+    newUnit=Unit()
+    newUnit.uinfo=fs.ModuleStmt(getModuleName())
+    for k in keyList:
+        nameList=[]
+        newUnit.decls.append(fs.InterfaceStmt(call_prefix+k,lead='  '))
+        for t in typeList:
+            if (onlyRequired and (k,t) not in _requiredSubroutinizedIntrinsics):
+                continue
+            nameList.append(__makeNameImpl(k,t))
+        newUnit.decls.append(fs.ProcedureStmt('module',nameList,lead='    '))
+        newUnit.decls.append(fs.EndInterfaceStmt(lead='  '))
+    newUnit.decls.append(fs.ContainsStmt(lead='  '))
+    for k in keyList:
+        for t in typeList:
+            if (onlyRequired and (k,t) not in _requiredSubroutinizedIntrinsics):
+                continue
+            newSUnit=Unit()
+            if (k in ['max','min']) : 
+                makeSubroutinizedMaxOrMin(newSUnit,k,t,'    ')
+            else:
+                makeSubroutinizedMaxvalOrMinval(newSUnit,k,t,'    ')
+            newUnit.ulist.append(newSUnit)            
+    newUnit.end.append(fs.EndModuleStmt())
+    return [newUnit]
+
+def makeSubroutinizedMaxOrMin(newUnit,aKey,aTypeClass,indent):
+    newUnit.uinfo=fs.SubroutineStmt(__makeNameImpl(aKey,aTypeClass),
                                     ["a","b","r"],
-                                    lead=flow.formatStart)
+                                    lead=indent)
     newUnit.decls.append(aTypeClass(None,
                                    [App('intent',['in'])],
                                    'a',
-                                   lead=flow.formatStart+'  '))
+                                   lead=indent+'  '))
     newUnit.decls.append(aTypeClass(None,
                                    [App('intent',['in'])],
                                    'b',
-                                   lead=flow.formatStart+'  '))
+                                   lead=indent+'  '))
     newUnit.decls.append(aTypeClass(None,
                                    [App('intent',['out'])],
                                    'r',
-                                   lead=flow.formatStart+'  '))
+                                   lead=indent+'  '))
     testExpr = (aKey=='max') and Ops('>','a','b') \
                              or Ops('<','a','b')
-    newUnit.execs.append(fs.IfThenStmt(testExpr,lead=flow.formatStart+'  '))
-    newUnit.execs.append(fs.AssignStmt('r','a',lead=flow.formatStart+'    '))
-    newUnit.execs.append(fs.ElseStmt(lead=flow.formatStart+'  '))
-    newUnit.execs.append(fs.AssignStmt('r','b',lead=flow.formatStart+'    '))
-    newUnit.execs.append(fs.EndifStmt(lead=flow.formatStart+'  '))
-    newUnit.end.append(fs.EndStmt(lead=flow.formatStart))
+    newUnit.execs.append(fs.IfThenStmt(testExpr,lead=indent+'  '))
+    newUnit.execs.append(fs.AssignStmt('r','a',lead=indent+'    '))
+    newUnit.execs.append(fs.ElseStmt(lead=indent+'  '))
+    newUnit.execs.append(fs.AssignStmt('r','b',lead=indent+'    '))
+    newUnit.execs.append(fs.EndifStmt(lead=indent+'  '))
+    newUnit.end.append(fs.EndSubroutineStmt(lead=indent))
 
-def makeSubroutinizedMaxvalOrMinval(newUnit,aKey,aTypeClass):
-    newUnit.uinfo = fs.SubroutineStmt(makeName(aKey,aTypeClass),
+def makeSubroutinizedMaxvalOrMinval(newUnit,aKey,aTypeClass,indent):
+    newUnit.uinfo = fs.SubroutineStmt(__makeNameImpl(aKey,aTypeClass),
                                       ['a','l','r'],
-                                      lead=flow.formatStart)
+                                      lead=indent)
     newUnit.decls.append(aTypeClass(None,
                                     [App('intent',['in'])],
-                                    [fs._NoInit(App('a',['l']))],
-                                    lead=flow.formatStart+'  '))
+                                    [fs._NoInit(fs.App('a',['l']))],
+                                    lead=indent+'  '))
     newUnit.decls.append(fs.IntegerStmt(None,
                                         [App('intent',['in'])],
                                         ['l'],
-                                        lead=flow.formatStart+'  '))
+                                        lead=indent+'  '))
     newUnit.decls.append(aTypeClass(None,
                                     [App('intent',['out'])],
                                     ['r'],
-                                    lead=flow.formatStart+'  '))
+                                    lead=indent+'  '))
     newUnit.decls.append(fs.IntegerStmt(None,
                                         None,
                                         [fs._NoInit(App('i',['1']))],
-                                        lead=flow.formatStart+'  '))
+                                        lead=indent+'  '))
     locVersion = (aKey=='maxval') and 'maxloc' \
                                    or 'minloc'
     newUnit.execs.append(fs.AssignStmt('i',
                                        App(locVersion,['a']),
-                                       lead=flow.formatStart+'    '))
+                                       lead=indent+'    '))
     newUnit.execs.append(fs.AssignStmt('r',
                                        App('i',['1']),
-                                       lead=flow.formatStart+'    '))
-    newUnit.end.append(fs.EndStmt(lead=flow.formatStart))
+                                       lead=indent+'    '))
+    newUnit.end.append(fs.EndSubroutineStmt(lead=indent))
+
 

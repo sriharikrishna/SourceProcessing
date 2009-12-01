@@ -5,6 +5,8 @@ canonicalization
 import sys
 import os
 import datetime
+import tempfile
+import shutil
 from optparse import OptionParser
 
 from PyUtil.errors import UserError, ScanError, ParseError
@@ -19,7 +21,7 @@ from PyFort.fortFile import Ffile
 import PyFort.fortStmts as fs
 
 from Canon.canon import UnitCanonicalizer,CanonError
-from Canon.subroutinizedIntrinsics import makeSubroutinizedIntrinsics,SubroutinizeError
+from Canon.subroutinizedIntrinsics import makeSubroutinizedIntrinsics,SubroutinizeError,getModuleName
 
 sys.setrecursionlimit(1500)
 
@@ -199,8 +201,15 @@ def main():
     DebugManager.setQuiet(config.noWarnings)
 
     try: 
-        if config.outputFile: out = open(config.outputFile,'w')
-        else: out = sys.stdout
+        if config.outputFile:
+            out = open(config.outputFile,'w')
+        else:
+            out = sys.stdout
+            if (len(inputFileList) > 1): # output the file start pragma for the subroutinized intrinsics
+                out.write('!$openad xxx file_start ['+getModuleName()+'.f90]\n')
+                out.flush()
+            for aUnit in makeSubroutinizedIntrinsics(False):
+                aUnit.printit(out)
         currentInputFile = '<none>'
         for anInputFile in inputFileList:
             currentInputFile = anInputFile
@@ -209,12 +218,20 @@ def main():
                 out.flush()
             for aUnit in fortUnitIterator(anInputFile,config.inputFormat):
                 UnitCanonicalizer(aUnit).canonicalizeUnit().printit(out)
-        if (len(inputFileList) > 1): # output the file start pragma for the subroutinized intrinsics
-            out.write('!$openad xxx file_start [OAD_subroutinizedIntrinsics.f90]\n')
-            out.flush()
-        for aUnit in makeSubroutinizedIntrinsics():
-            aUnit.printit(out)
-        if config.outputFile: out.close()
+        if config.outputFile:
+            out.close()
+            fName=tempfile.mktemp()
+            out = open(fName,'w')
+            if (len(inputFileList) > 1): # output the file start pragma for the subroutinized intrinsics
+                out.write('!$openad xxx file_start ['+getModuleName()+'.f90]\n')
+                out.flush()
+            for aUnit in makeSubroutinizedIntrinsics(True):
+                aUnit.printit(out)
+            oFile=open(config.outputFile)
+            out.write(oFile.read())
+            oFile.close
+            out.close()
+            shutil.move(fName,config.outputFile)
         if (config.timing):
             print 'SourceProcessing: timing: '+str(datetime.datetime.utcnow()-startTime)
     except CanonError,e:

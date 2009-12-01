@@ -133,7 +133,7 @@ def identifierType(anId,localSymtab,lineNumber):
 def intrinsicType(anIntrinsicApp,localSymtab,lineNumber):
     if anIntrinsicApp.head.lower() in ['aimag','alog','real']:
         return (fortStmts.RealStmt, [])
-    elif anIntrinsicApp.head.lower() in ['int','idint']:
+    elif anIntrinsicApp.head.lower() in ['int','idint','size']:
         return (fortStmts.IntegerStmt, [])
     elif anIntrinsicApp.head.lower() in ['dble','dabs','dexp','dlog','dsqrt','dmod']:
         return (fortStmts.DoubleStmt, [])
@@ -211,3 +211,14 @@ def isArrayReference(theApp,localSymtab,lineNumber):
         return False
     return True
 
+def canonicalTypeClass(typeClass,modList):
+   if modList:
+      if (typeClass==fortStmts.RealStmt):
+         if (isinstance(modList[0],fortStmts._Kind)):
+            if (modList[0].mod=='8'):
+               return (True,fortStmts.DoublePrecisionStmt)
+            if (modList[0].mod=='4'):
+               return (True,fortStmts.RealStmt)
+   else:
+      return (True,typeClass)
+   return (False,None)

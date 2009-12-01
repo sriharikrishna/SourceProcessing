@@ -8,7 +8,7 @@ from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
 
 from PyFort.intrinsic import is_intrinsic,getGenericName
-from PyFort.typeInference import TypeInferenceError,expressionType,functionType,isArrayReference
+from PyFort.typeInference import TypeInferenceError,expressionType,functionType,isArrayReference,canonicalTypeClass
 import PyFort.flow as flow
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
@@ -60,7 +60,7 @@ class UnitCanonicalizer(object):
     def setSubroutinizeIntegerFunctions(flag):
         UnitCanonicalizer._subroutinizeIntegerFunctions = flag
 
-    def __init__(self,aUnit):
+    def __init__(self,aUnit,srModuleUsed=False):
         self.__myUnit = aUnit
         self.__myNewDecls = []
         self.__myNewExecs = []
@@ -68,6 +68,7 @@ class UnitCanonicalizer(object):
         self.__recursionDepth = 0
         self.__outParam = ''
         self.__resultDecl = None
+        self.__SRmoduleUsed = srModuleUsed
 
     def shouldSubroutinizeFunction(self,theApp,parentStmt):
         '''
@@ -109,7 +110,7 @@ class UnitCanonicalizer(object):
                                         SymtabEntry(SymtabEntry.VariableEntryKind,
                                                     type=(varTypeClass,varModifierList),
                                                     origin='temp'))
-        return (theNewTemp,varTypeClass)
+        return (theNewTemp,varTypeClass,varModifierList)
 
     def __canonicalizeIntrinsicEllipsisRec(self,head,args):
         if (len(args)==2):
@@ -123,16 +124,20 @@ class UnitCanonicalizer(object):
         DebugManager.debug(self.__recursionDepth*'|\t'+'converting function call "'+str(theFuncCall)+'" to a subroutine call')
         self.__recursionDepth += 1
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|  creating new temp for the result of the subroutine that replaces "'+str(theFuncCall)+'":',newLine=False)
-        (theNewTemp,newTempType) = self.__newTemp(theFuncCall,parentStmt)
+        (theNewTemp,newTempType,newTempTypeMods) = self.__newTemp(theFuncCall,parentStmt)
         newArgs = [theNewTemp]
         newSubName=''
         if is_intrinsic(theFuncCall.head):
             funcName=getGenericName(theFuncCall.head)
             if funcName in ('maxval','minval'):
                 newArgs = [fe.App('size',[theFuncCall.args[0],'1']), theNewTemp]
-            newSubName = subroutinizedIntrinsics.makeName(funcName,
-                                                          newTempType)
-            subroutinizedIntrinsics.markRequired(funcName,newTempType)
+            newSubName = subroutinizedIntrinsics.makeName(funcName)
+            (d,t)=canonicalTypeClass(newTempType,newTempTypeMods)
+            if (d): 
+                subroutinizedIntrinsics.markRequired(funcName,t)
+            else:
+                for t in subroutinizedIntrinsics.typeList:
+                    subroutinizedIntrinsics.markRequired(funcName,t)
             if funcName in ('max','min') and len(theFuncCall.args)>2 :
                 self.__recursionDepth -= 1
                 return self.__canonicalizeFuncCall(self.__canonicalizeIntrinsicEllipsisRec(theFuncCall.head,theFuncCall.args),parentStmt)
@@ -158,7 +163,7 @@ class UnitCanonicalizer(object):
             DebugManager.debug('it is a function call to be subroutinized')
             return self.__canonicalizeFuncCall(theExpression,parentStmt)
         # Anything else: create an assignment to a temporary and return that temporary
-        (theNewTemp,newTempType) = self.__newTemp(theExpression,parentStmt)
+        (theNewTemp,newTempType,newTempTypeMods) = self.__newTemp(theExpression,parentStmt)
         self.__myNewExecs.append(self.__canonicalizeAssignStmt(fs.AssignStmt(theNewTemp,
                                                                              theExpression,
                                                                              lineNumber=parentStmt.lineNumber,
@@ -479,6 +484,26 @@ class UnitCanonicalizer(object):
         DebugManager.debug(('+'*55)+' Begin canonicalize unit <'+str(self.__myUnit.uinfo)+'> '+(55*'+'))
         DebugManager.debug('local '+self.__myUnit.symtab.debug())
         DebugManager.debug('subunits (len ='+str(len(self.__myUnit.ulist))+'):')
+        if (not self.__SRmoduleUsed):
+            aUseIdx=None
+            lead=''
+            for i,d in enumerate(self.__myUnit.decls):
+                if (isinstance(d,fs.UseStmt)
+                    or
+                    isinstance(d,fs.ImplicitStmt)
+                    or
+                    isinstance(d,fs.ImplicitNone)):
+                    aUseIdx=i
+                    lead=d.lead
+                    break
+            if (aUseIdx is None) and self.__myUnit.execs:
+                aUseIdx=0
+            if (not aUseIdx is None) : 
+                self.__myUnit.decls.insert(aUseIdx,
+                                           fs.UseAllStmt(moduleName=subroutinizedIntrinsics.getModuleName(),
+                                                         renameList=None,
+                                                         lead=lead))
+                self.__SRmoduleUsed=True;
         newList = []
         for subUnit in self.__myUnit.ulist:
             DebugManager.debug(5*'%'+'>'+'canon.canonicalizeUnit: ' \
@@ -490,7 +515,7 @@ class UnitCanonicalizer(object):
                 DebugManager.debug(5*'%'+'>'+'\t skipping this subunit because we generated it')
                 newList.append(subUnit)
             else:
-                newUnit = UnitCanonicalizer(subUnit).canonicalizeUnit()
+                newUnit = UnitCanonicalizer(subUnit,self.__SRmoduleUsed).canonicalizeUnit()
                 newList.append(newUnit)
         self.__myUnit.ulist = newList
         
