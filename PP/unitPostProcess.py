@@ -9,7 +9,7 @@ import PyFort.fortStmts as fs
 import PyFort.intrinsic as intrinsic
 from PyFort.fortUnit import fortUnitIterator
 from PP.templateExpansion import *
-from PyFort.flow import setOutputFormat, outputFormat
+import PyFort.flow as flow
 from PyFort.fortFile import Ffile
 import re
 import copy
@@ -807,15 +807,15 @@ class UnitPostProcessor(object):
 
         # write all declarations to _activeVariablesFileName
         if (UnitPostProcessor._activeVariablesFileName):
-            currentOutputFormat = outputFormat
+            currentOutputFormat = flow.outputFormat
             (base,activeOutputFormat) = os.path.splitext(UnitPostProcessor._activeVariablesFileName)
             # set active variables file output format
-            setOutputFormat(Ffile.get_format(activeOutputFormat))
+            flow.setOutputFormat(Ffile.get_format(activeOutputFormat))
             self.__active_file = open(UnitPostProcessor._activeVariablesFileName,'a')
             self.__myUnit.printDecls(self.__active_file)
             self.__active_file.close()
             # restore original output format
-            setOutputFormat(currentOutputFormat)
+            flow.setOutputFormat(currentOutputFormat)
 
         if (self.__recursionDepth is not 0):
             raise PostProcessError('Recursion error in unitPostProcess: final recursion depth is not zero')

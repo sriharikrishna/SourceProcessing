@@ -18,6 +18,7 @@ from PyUtil.debugManager import DebugManager
 from PyIR.prog1 import Prog1
 
 from PyFort.flow import setOutputLineLength, setInputLineLength, setOutputFormat
+import PyFort.flow as flow
 from PyFort.fortUnit import Unit,fortUnitIterator
 from PyFort.fortFile import Ffile
 import PyFort.fortExp as fe
@@ -197,11 +198,12 @@ def main():
             if config.output:
                 ext = os.path.splitext(config.output)[1]
                 config.outputFormat = Ffile.get_format(ext)
-            else:
+                setOutputFormat(config.outputFormat)
+            elif not config.separateOutput:
                 config.outputFormat = config.inputFormat
+                setOutputFormat(config.outputFormat)
         elif (config.outputFormat<>'fixed') and (config.outputFormat<>'free'):
             opt.error("outputFormat option must be specified with either 'fixed' or 'free' as an argument")
-        setOutputFormat(config.outputFormat)
 
         if config.inputLineLength:
             if config.inputLineLength < 72 or \
@@ -292,6 +294,9 @@ def main():
         # SEPARATE OUTPUT INTO FILES AS SPECIFIED BY PRAGMAS
         elif config.separateOutput:
             out = None
+            setFormat = False
+            if config.outputFormat == None:
+                setFormat = True
             for aUnit in fortUnitIterator(inputFile,config.inputFormat):
                 # We expect to find file pragmas in the cmnt section of units exclusively
                 if aUnit.cmnt:
@@ -304,11 +309,9 @@ def main():
                         outputDirectory = config.pathPrefix+head+config.pathSuffix
                         if not os.path.exists(outputDirectory): os.makedirs(outputDirectory)
                         newOutputFile = os.path.join(outputDirectory,fileName+config.filenameSuffix+fileExtension)
-                        if config.outputFormat == None:
+                        if setFormat:
                             config.outputFormat = Ffile.get_format(fileExtension)
-                        elif (config.outputFormat<>'fixed') and (config.outputFormat<>'free'):
-                            opt.error("outputFormat option must be specified with either 'fixed' or 'free' as an argument")
-                        setOutputFormat(config.outputFormat)
+                            setOutputFormat(config.outputFormat)
                         outFileNameList.append(newOutputFile)
                         out = open(newOutputFile,'w')
                 elif not out:
