@@ -43,6 +43,7 @@ def makeSubroutinizedIntrinsics(onlyRequired):
         keyList=[k for k in uniq] 
     newUnit=Unit()
     newUnit.uinfo=fs.ModuleStmt(getModuleName())
+    empty=True
     for k in keyList:
         nameList=[]
         newUnit.decls.append(fs.InterfaceStmt(call_prefix+k,lead='  '))
@@ -50,9 +51,11 @@ def makeSubroutinizedIntrinsics(onlyRequired):
             if (onlyRequired and (k,t) not in _requiredSubroutinizedIntrinsics):
                 continue
             nameList.append(__makeNameImpl(k,t))
+            empty=False
         newUnit.decls.append(fs.ProcedureStmt('module',nameList,lead='    '))
         newUnit.decls.append(fs.EndInterfaceStmt(lead='  '))
-    newUnit.decls.append(fs.ContainsStmt(lead='  '))
+    if not empty: 
+        newUnit.decls.append(fs.ContainsStmt(lead='  '))
     for k in keyList:
         for t in typeList:
             if (onlyRequired and (k,t) not in _requiredSubroutinizedIntrinsics):
