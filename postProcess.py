@@ -204,6 +204,8 @@ def main():
                 setOutputFormat(config.outputFormat)
         elif (config.outputFormat<>'fixed') and (config.outputFormat<>'free'):
             opt.error("outputFormat option must be specified with either 'fixed' or 'free' as an argument")
+        else:
+            setOutputFormat(config.outputFormat)
 
         if config.inputLineLength:
             if config.inputLineLength < 72 or \
