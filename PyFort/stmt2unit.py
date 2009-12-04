@@ -76,8 +76,10 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                 DebugManager.debug('decl "'+str(aDecl)+'" NOT already present in symbol table => adding '+str(newSymtabEntry.debug(name)))
                 localSymtab.enter_name(name,newSymtabEntry)
             unitSymbolEntry,sTable=localSymtab.lookup_name_level(curr.val.name())
-            if (unitSymbolEntry and unitSymbolEntry.genericInfo and unitSymbolEntry.genericInfo.genericName):
+            if (unitSymbolEntry and unitSymbolEntry.entryKind==SymtabEntry.FunctionEntryKind and  unitSymbolEntry.genericInfo and unitSymbolEntry.genericInfo.genericName):
                 argsTypeDict=localSymtab.lookup_name(unitSymbolEntry.genericInfo.genericName).genericInfo.resolvableTo[curr.val.name()]
+                if (argsTypeDict is None):
+                    raise SymtabError('no arguments set for specific '+curr.val.name()+' under generic '+ unitSymbolEntry.genericInfo.genericName+' entry: '+localSymtab.lookup_name(unitSymbolEntry.genericInfo.genericName).debug(unitSymbolEntry.genericInfo.genericName))
                 if name.lower() in argsTypeDict:
                     argsTypeDict[name.lower()]=localSymtab.lookup_name_local(name).type
                     DebugManager.debug('recorded type in '+str(id(argsTypeDict))+str(argsTypeDict))
@@ -275,7 +277,7 @@ def _endProcedureUnit(anEndProcedureStmt,cur):
     if cur.val.symtab.parent :
         DebugManager.debug('[Line '+str(anEndProcedureStmt.lineNumber)+']: stmt2unit._endProcedureUnit:' \
                           +' called on "'+str(anEndProcedureStmt)+'"' \
-                          +' ACTION: reverting from symtab "'+str(cur.val.symtab)+'"' \
+                          +' ACTION: on unit '+str(cur.val)+' reverting from symtab "'+str(cur.val.symtab)+'"' \
                                        +' to parent symtab "'+str(cur.val.symtab.parent)+'"')
         cur.val.symtab = cur.val.symtab.parent
     else :
@@ -288,13 +290,15 @@ def _endProcedureUnit(anEndProcedureStmt,cur):
     return anEndProcedureStmt
 
 def _beginInterface(anInterfaceStmt,cur):
-    cur.val.symtab.enter_name(anInterfaceStmt.name,SymtabEntry(SymtabEntry.InterfaceEntryKind))
+    if (anInterfaceStmt.name): 
+        cur.val.symtab.enter_name(anInterfaceStmt.name,SymtabEntry(SymtabEntry.InterfaceEntryKind))
     currentUnit = cur.val
     currentUnit._in_iface = True
     DebugManager.debug('[Line '+str(anInterfaceStmt.lineNumber)+']: stmt2unit._beginInterface('+str(anInterfaceStmt)+')')
-    # collect all the procedurenames in a mock symtab...
-    localSymtab = Symtab(cur.val.symtab)
-    cur.val.symtab = localSymtab
+    if (anInterfaceStmt.name): 
+        # collect all the procedurenames in a mock symtab...
+        localSymtab = Symtab(cur.val.symtab)
+        cur.val.symtab = localSymtab
     # local attribute added on to convey the name to _endInterface
     cur.val.ifName=anInterfaceStmt.name
     return anInterfaceStmt
@@ -325,35 +329,36 @@ def _endInterface(anEndInterfaceStmt,cur):
     # get all the procedurenames from the mock symtab...
     mockSymtab=cur.val.symtab
     ifName=cur.val.ifName
-    cur.val.symtab = cur.val.symtab.parent
-    theSymtabEntry = cur.val.symtab.lookup_name(ifName)
-    for name in mockSymtab.ids.keys():
-        theSymtabEntry.addResolveName(name)
-    for name in mockSymtab.ids.keys():
-        try:
-            theSymtabEntry = cur.val.symtab.lookup_name(name)
-            if not theSymtabEntry:
-                newSymtabEntry = SymtabEntry(SymtabEntry.ProcedureEntryKind)
-                newSymtabEntry.genericInfo=GenericInfo()
-                newSymtabEntry.genericInfo.genericName=ifName.lower()
-                cur.val.symtab.enter_name(name,newSymtabEntry)
-                DebugManager.debug('\tmodule procedure NOT already present in symbol table -- adding '+newSymtabEntry.debug(name))
-            else:
-                DebugManager.debug('\tmodule procedure already has SymtabEntry'+theSymtabEntry.debug(name))
-                # if the entry has a type, we know it's a function
-                newEntryKind = theSymtabEntry.type and SymtabEntry.FunctionEntryKind \
-                                                    or SymtabEntry.ProcedureEntryKind
-                theSymtabEntry.enterEntryKind(newEntryKind)
-                if (theSymtabEntry.genericInfo):
-                    if(theSymtabEntry.genericInfo.genericName!=ifName.lower()):
-                        raise SymtabError('mismatched generic name')
-                else :
+    if (ifName) : 
+        cur.val.symtab = cur.val.symtab.parent
+        theSymtabEntry = cur.val.symtab.lookup_name(ifName)
+        for name in mockSymtab.ids.keys():
+            theSymtabEntry.addResolveName(name)
+        for name in mockSymtab.ids.keys():
+            try:
+                theSymtabEntry = cur.val.symtab.lookup_name(name)
+                if not theSymtabEntry:
+                    newSymtabEntry = SymtabEntry(SymtabEntry.ProcedureEntryKind)
                     newSymtabEntry.genericInfo=GenericInfo()
                     newSymtabEntry.genericInfo.genericName=ifName.lower()
-        except SymtabError,e: # add lineNumber and symbol name to any SymtabError we encounter
-            e.lineNumber = e.lineNumber or aProcedureStmt.lineNumber
-            e.symbolName = e.symbolName or aProcedureName
-            raise e
+                    cur.val.symtab.enter_name(name,newSymtabEntry)
+                    DebugManager.debug('\tmodule procedure NOT already present in symbol table -- adding '+newSymtabEntry.debug(name))
+                else:
+                    DebugManager.debug('\tmodule procedure already has SymtabEntry'+theSymtabEntry.debug(name))
+                    # if the entry has a type, we know it's a function
+                    newEntryKind = theSymtabEntry.type and SymtabEntry.FunctionEntryKind \
+                                                        or SymtabEntry.ProcedureEntryKind
+                    theSymtabEntry.enterEntryKind(newEntryKind)
+                    if (theSymtabEntry.genericInfo):
+                        if(theSymtabEntry.genericInfo.genericName!=ifName.lower()):
+                            raise SymtabError('mismatched generic name')
+                    else :
+                        newSymtabEntry.genericInfo=GenericInfo()
+                        newSymtabEntry.genericInfo.genericName=ifName.lower()
+            except SymtabError,e: # add lineNumber and symbol name to any SymtabError we encounter
+                e.lineNumber = e.lineNumber or aProcedureStmt.lineNumber
+                e.symbolName = e.symbolName or aProcedureName
+                raise e
     currentUnit = cur.val
     currentUnit._in_iface = False
     DebugManager.debug('[Line '+str(anEndInterfaceStmt.lineNumber)+']: stmt2unit._endInterface('+str(anEndInterfaceStmt)+')')
