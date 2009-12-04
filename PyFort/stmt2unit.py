@@ -3,7 +3,7 @@
 
 from _Setup import *
 
-from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
+from PyUtil.symtab import Symtab,SymtabEntry,SymtabError, GenericInfo
 from PyUtil.debugManager import DebugManager
 
 import fortStmts     as fs
@@ -75,6 +75,12 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                                              isPrivate=isPrivate)
                 DebugManager.debug('decl "'+str(aDecl)+'" NOT already present in symbol table => adding '+str(newSymtabEntry.debug(name)))
                 localSymtab.enter_name(name,newSymtabEntry)
+            unitSymbolEntry,sTable=localSymtab.lookup_name_level(curr.val.name())
+            if (unitSymbolEntry and unitSymbolEntry.genericInfo and unitSymbolEntry.genericInfo.genericName):
+                argsTypeDict=localSymtab.lookup_name(unitSymbolEntry.genericInfo.genericName).genericInfo.resolvableTo[curr.val.name()]
+                if name.lower() in argsTypeDict:
+                    argsTypeDict[name.lower()]=localSymtab.lookup_name_local(name).type
+                    DebugManager.debug('recorded type in '+str(id(argsTypeDict))+str(argsTypeDict))
         except SymtabError,e: # add lineNumber and symbol name to any SymtabError we encounter
             e.lineNumber = e.lineNumber or aTypeDeclStmt.lineNumber
             e.symbolName = e.symbolName or name
@@ -192,13 +198,39 @@ def _unit_entry(self,cur):
        3. The parent of the unit (if there is one)
     '''
     currentSymtab = cur.val.symtab
-    entry = self.make_unit_entry(currentSymtab)
-    currentSymtab.enter_name(self.name,entry)
-    DebugManager.debug('[Line '+str(self.lineNumber)+']: new unit symtab entry '+entry.debug(self.name))
-    if currentSymtab.parent:
-        parentSymtabEntry = currentSymtab.replicateEntry(self.name,str(cur.val.uinfo)+self.name)
-        currentSymtab.parent.enter_name(self.name,parentSymtabEntry)
-        DebugManager.debug('[Line '+str(self.lineNumber)+']: new PARENT unit symtab entry '+parentSymtabEntry.debug(self.name))
+    if (currentSymtab.parent and (self.name in currentSymtab.parent.ids))  :
+        # this must be the definition of a previously  declared module procedure
+        mpSymTabEntry=currentSymtab.parent.ids[self.name]
+        if (mpSymTabEntry.entryKind!=SymtabEntry.ProcedureEntryKind
+            or
+            mpSymTabEntry.genericInfo is None):
+            raise SymtabError('parent symbol is not a module procedure')
+        entry = self.make_unit_entry(currentSymtab)
+        mpSymTabEntry.entryKind=entry.entryKind
+        mpSymTabEntry.type=entry.type
+        entry.genericInfo=mpSymTabEntry.genericInfo
+        currentSymtab.enter_name(self.name,entry)
+        # if it is a function  - collect argument information
+        if (isinstance(self,fs.FunctionStmt)) :
+            genSymTabEntry=currentSymtab.parent.lookup_name(mpSymTabEntry.genericInfo.genericName)
+            if (genSymTabEntry is None):
+                raise SymtabError('cannot find generic with name '+mpSymTabEntry.genericInfo.genericName)
+            argsTypeDict={}
+            for arg in self.args:
+                argsTypeDict[arg.lower()]=None # don't know the type yet
+            genSymTabEntry.genericInfo.resolvableTo[self.name.lower()]=argsTypeDict
+            DebugManager.debug('\tstmt2unit._unit_entry(): argsTypeDict : '+str(id(argsTypeDict)))
+            DebugManager.debug('\tstmt2unit._unit_entry() parent symboltable entry: '+mpSymTabEntry.debug(self.name)+' \n\t\tgeneric entry '+genSymTabEntry.debug(mpSymTabEntry.genericInfo.genericName)+' with argstypedict: '+str(id(argsTypeDict))+'\n\t\tself entry: '+entry.debug(self.name))
+        else :
+            DebugManager.debug('\tstmt2unit._unit_entry() parent symboltable entry '+mpSymTabEntry.debug(self.name)+' self entry '+entry.debug(self.name))
+    else: 
+        entry = self.make_unit_entry(currentSymtab)
+        currentSymtab.enter_name(self.name,entry)
+        DebugManager.debug('[Line '+str(self.lineNumber)+']: new unit symtab entry '+entry.debug(self.name))
+        if currentSymtab.parent:
+            parentSymtabEntry = currentSymtab.replicateEntry(self.name,str(cur.val.uinfo)+self.name)
+            currentSymtab.parent.enter_name(self.name,parentSymtabEntry)
+            DebugManager.debug('[Line '+str(self.lineNumber)+']: new PARENT unit symtab entry '+parentSymtabEntry.debug(self.name))
     DebugManager.debug('[Line '+str(self.lineNumber)+']: stmt2unit._unit_entry() for '+str(self)+': with symtab '+str(currentSymtab)+' with parent symtab '+str(currentSymtab.parent))
     return self
 
@@ -256,12 +288,72 @@ def _endProcedureUnit(anEndProcedureStmt,cur):
     return anEndProcedureStmt
 
 def _beginInterface(anInterfaceStmt,cur):
+    cur.val.symtab.enter_name(anInterfaceStmt.name,SymtabEntry(SymtabEntry.InterfaceEntryKind))
     currentUnit = cur.val
     currentUnit._in_iface = True
     DebugManager.debug('[Line '+str(anInterfaceStmt.lineNumber)+']: stmt2unit._beginInterface('+str(anInterfaceStmt)+')')
+    # collect all the procedurenames in a mock symtab...
+    localSymtab = Symtab(cur.val.symtab)
+    cur.val.symtab = localSymtab
+    # local attribute added on to convey the name to _endInterface
+    cur.val.ifName=anInterfaceStmt.name
     return anInterfaceStmt
 
+def _processProcedureStmt(aProcedureStmt,curr):
+    localSymtab = curr.val.symtab
+    DebugManager.debug('[Line '+str(aProcedureStmt.lineNumber)+']: stmt2unit._processProcedureStmt: called on "'+str(aProcedureStmt)+'" with localSymtab '+str(localSymtab))
+    for aProcedureName in aProcedureStmt.procedureList:
+        try:
+            theSymtabEntry = localSymtab.lookup_name(aProcedureName)
+            if not theSymtabEntry:
+                newSymtabEntry = SymtabEntry(SymtabEntry.ProcedureEntryKind)
+                localSymtab.enter_name(aProcedureName,newSymtabEntry)
+                DebugManager.debug('\t_processProcedureStmt: module procedure NOT already present in symbol table -- adding '+newSymtabEntry.debug(aProcedureName))
+            else:
+                DebugManager.debug('\t_processProcedureStmt: module procedure already has SymtabEntry'+theSymtabEntry.debug(aProcedureName))
+                # if the entry has a type, we know it's a function
+                newEntryKind = theSymtabEntry.type and SymtabEntry.FunctionEntryKind \
+                                                    or SymtabEntry.ProcedureEntryKind
+                theSymtabEntry.enterEntryKind(newEntryKind)
+        except SymtabError,e: # add lineNumber and symbol name to any SymtabError we encounter
+            e.lineNumber = e.lineNumber or aProcedureStmt.lineNumber
+            e.symbolName = e.symbolName or aProcedureName
+            raise e
+    return aProcedureStmt
+
 def _endInterface(anEndInterfaceStmt,cur):
+    # get all the procedurenames from the mock symtab...
+    mockSymtab=cur.val.symtab
+    ifName=cur.val.ifName
+    cur.val.symtab = cur.val.symtab.parent
+    theSymtabEntry = cur.val.symtab.lookup_name(ifName)
+    for name in mockSymtab.ids.keys():
+        theSymtabEntry.addResolveName(name)
+    for name in mockSymtab.ids.keys():
+        try:
+            theSymtabEntry = cur.val.symtab.lookup_name(name)
+            if not theSymtabEntry:
+                newSymtabEntry = SymtabEntry(SymtabEntry.ProcedureEntryKind)
+                newSymtabEntry.genericInfo=GenericInfo()
+                newSymtabEntry.genericInfo.genericName=ifName.lower()
+                cur.val.symtab.enter_name(name,newSymtabEntry)
+                DebugManager.debug('\tmodule procedure NOT already present in symbol table -- adding '+newSymtabEntry.debug(name))
+            else:
+                DebugManager.debug('\tmodule procedure already has SymtabEntry'+theSymtabEntry.debug(name))
+                # if the entry has a type, we know it's a function
+                newEntryKind = theSymtabEntry.type and SymtabEntry.FunctionEntryKind \
+                                                    or SymtabEntry.ProcedureEntryKind
+                theSymtabEntry.enterEntryKind(newEntryKind)
+                if (theSymtabEntry.genericInfo):
+                    if(theSymtabEntry.genericInfo.genericName!=ifName.lower()):
+                        raise SymtabError('mismatched generic name')
+                else :
+                    newSymtabEntry.genericInfo=GenericInfo()
+                    newSymtabEntry.genericInfo.genericName=ifName.lower()
+        except SymtabError,e: # add lineNumber and symbol name to any SymtabError we encounter
+            e.lineNumber = e.lineNumber or aProcedureStmt.lineNumber
+            e.symbolName = e.symbolName or aProcedureName
+            raise e
     currentUnit = cur.val
     currentUnit._in_iface = False
     DebugManager.debug('[Line '+str(anEndInterfaceStmt.lineNumber)+']: stmt2unit._endInterface('+str(anEndInterfaceStmt)+')')
@@ -295,5 +387,5 @@ fs.ImplicitNone.unit_action   = _implicit_none
 fs.ImplicitStmt.unit_action   = _implicit
 
 fs.InterfaceStmt.unit_action  = _beginInterface
-
+fs.ProcedureStmt.unit_action  = _processProcedureStmt
 fs.EndInterfaceStmt.unit_action = _endInterface

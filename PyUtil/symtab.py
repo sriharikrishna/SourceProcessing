@@ -10,6 +10,15 @@ from PyUtil.debugManager import DebugManager
 from PyFort.fortExp import App
 from PyFort.fortStmts import _PointerInit,_Kind
 
+class GenericInfo(object):
+    def __init__(self):
+        self.resolvableTo = {}
+        self.genericName=None
+
+    def debug(self):
+        outString = 'generic info '+str(self)+':'+str(self.resolvableTo)+':'+str(self.genericName)
+        return outString
+
 class SymtabError(Exception):
     def __init__(self,msg,symbolName=None,entry=None,lineNumber=None):
         self.msg = msg
@@ -114,6 +123,8 @@ class Symtab(object):
         theNewEntry.length = theLocalEntry.length
         # set the origin
         theNewEntry.updateOrigin(localOrigin)
+        # keep a ref to the same generic Info:
+        theNewEntry.genericInfo=theLocalEntry.genericInfo
         return theNewEntry
 
     def update_w_module_all(self,aModuleUnit,renameList):
@@ -159,6 +170,7 @@ class SymtabEntry(object):
         self.origin = origin
         self.renameSource = renameSource
         self.isPrivate = isPrivate
+        self.genericInfo = None
 
     def enterEntryKind(self,newEntryKind):
         # the replacement entry kind must be an 'instance' of the existing one.
@@ -218,6 +230,12 @@ class SymtabEntry(object):
         else:
             self.origin = anOriginStr
 
+    def addResolveName(self,resolvesTo):
+        if (self.genericInfo is None):
+            self.genericInfo=GenericInfo()
+        if not resolvesTo.lower in self.genericInfo.resolvableTo :
+            self.genericInfo.resolvableTo[resolvesTo.lower()]=None
+
     def debug(self,name='<symbol name unknown>'):
         return '[SymtabEntry "'+name+'" -> entryKind='+str(self.entryKind)+\
                                          ', type='+str(self.type)+\
@@ -226,6 +244,7 @@ class SymtabEntry(object):
                                          ', origin='+str(self.origin)+\
                                          ', renameSource='+str(self.renameSource)+\
                                          ', isPrivate='+str(self.isPrivate)+\
+                                         ', genericInfo='+((self.genericInfo and str(self.genericInfo.debug())) or 'None')+\
                                          ']'
 
     class GenericEntryKind(object):
