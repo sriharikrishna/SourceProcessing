@@ -248,7 +248,7 @@ def canonicalTypeClass(typeClass,modList):
       if (typeClass==fortStmts.RealStmt):
          if (isinstance(modList[0],fortStmts._Kind)):
             if (modList[0].mod=='8'):
-               return (True,fortStmts.DoublePrecisionStmt)
+               return (True,fortStmts.DoubleStmt)
             if (modList[0].mod=='4'):
                return (True,fortStmts.RealStmt)
    else:
