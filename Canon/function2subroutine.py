@@ -50,7 +50,7 @@ def convertFunctionDecl(aDecl,oldFuncnewSubPairs):
         for aSon in newDecl.get_sons():
             theSon = getattr(newDecl,aSon)
             if isinstance(theSon,list):
-                if isinstance(newDecl,fs.PublicStmt):
+                if isinstance(newDecl,fs.VarAttrib):
                     newSon = []
                     for anOldNewPair in oldFuncnewSubPairs :
                         if anOldNewPair[0] in theSon:
