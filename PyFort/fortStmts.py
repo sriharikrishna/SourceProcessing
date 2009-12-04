@@ -579,7 +579,7 @@ class ProcedureStmt(Decl):
         formprocedureStmt = seq(zo1(lit('module')),    #0 - module keyword (optional)
                                 lit(ProcedureStmt.kw), #1
                                 cslist(id))            #2 - procedureList
-        formprocedureStmt = treat(formprocedureStmt, lambda x : ProcedureStmt(x[0] and True or False, x[2]))
+        formprocedureStmt = treat(formprocedureStmt, lambda x : ProcedureStmt(x[0] and True or False, x[2],lineNumber))
         (theParsedStmt,rest) = formprocedureStmt(scan)
         return theParsedStmt
 

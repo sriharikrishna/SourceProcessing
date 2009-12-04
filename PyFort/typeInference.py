@@ -116,6 +116,13 @@ def identifierType(anId,localSymtab,lineNumber):
     if symtabEntry and symtabEntry.type:
         returnType = symtabEntry.type
         DebugManager.debug('with symtab entry '+symtabEntry.debug(anId)+' -> returning type '+str(returnType))
+    elif symtabEntry and symtabEntry.entryKind==SymtabEntry.InterfaceEntryKind and symtabEntry.genericInfo:
+       if len(symtabEntry.genericInfo.resolvableTo)==1:
+          specificName=(symtabEntry.genericInfo.resolvableTo.keys())[0]
+          returnType=identifierType(specificName,containingSymtab,lineNumber)
+          DebugManager.debug('with symtab entry '+containingSymtab.lookup_name_level(specificName)[0].debug(specificName)+' -> returning type '+str(returnType))
+       else :
+          return None
     # an entry exists with no type -> try to type implicitly
     elif symtabEntry:
         symtabEntry.enterType(containingSymtab.implicit[anId[0]])
@@ -143,6 +150,26 @@ def intrinsicType(anIntrinsicApp,localSymtab,lineNumber):
         return typemerge([expressionType(anArg,localSymtab,lineNumber) for anArg in anIntrinsicApp.args],
                          (None,None))
 
+def genericFunctionType(aFunctionApp,localSymtab,lineNumber):
+    # find the symbol:
+    symtabEntry=localSymtab.lookup_name(aFunctionApp.head)
+    # find a match for the signature:
+    for sName in symtabEntry.genericInfo.resolvableTo.keys():
+       signature=symtabEntry.genericInfo.resolvableTo[sName]
+       # we don't cover optional arguments here - yet
+       if len(signature)!=len(aFunctionApp.args):
+          continue
+       matched=True
+       for formal,actual in zip(signature.keys(),aFunctionApp.args):
+          if signature[formal]!=expressionType(actual,localSymtab,lineNumber) :
+             matched=False
+             break
+       if (not matched):
+          continue
+       return localSymtab.lookup_name(sName).type
+    raise TypeInferenceError('typeInference.genericFunctionType: could not resolve generic "'+aFunctionApp.head+'"',lineNumber)
+   
+
 def functionType(aFunctionApp,localSymtab,lineNumber):
     DebugManager.debug('typeInference.functionType called on '+str(aFunctionApp)+'...',newLine=False)
     # example: bbb(3)(2:14)
@@ -156,6 +183,9 @@ def functionType(aFunctionApp,localSymtab,lineNumber):
     # nonintrinsics: Look for it in the symbol table or for implicit type
     else:
         returnType = identifierType(aFunctionApp.head,localSymtab,lineNumber)
+        if (returnType is None) :
+           # this must be a generic
+           returnType=genericFunctionType(aFunctionApp,localSymtab,lineNumber)
         DebugManager.debug(' It is an NONINTRINSIC of type '+str(returnType))
     return returnType
 
@@ -167,8 +197,9 @@ def selectionType(aSelectionExpression,localSymtab,lineNumber):
 def expressionType(anExpression,localSymtab,lineNumber):
     DebugManager.debug('typeInference.expressionType: determining type of expression '+str(anExpression)+'...',newLine=False)
     if isinstance(anExpression,str) and is_const(anExpression):
-        DebugManager.debug(' it\'s a CONSTANT')
-        return constantType(anExpression,lineNumber)
+        rType=constantType(anExpression,lineNumber)
+        DebugManager.debug(' it\'s a '+str(rType)+' constant')
+        return rType
     elif isinstance(anExpression,str) and _id_re.match(anExpression):
         DebugManager.debug(' it\'s an IDENTIFIER')
         return identifierType(anExpression,localSymtab,lineNumber)
@@ -205,9 +236,10 @@ def isArrayReference(theApp,localSymtab,lineNumber):
     if (not theSymtabEntry.dimensions or theSymtabEntry.dimensions == ()) and \
        (not theSymtabEntry.length or theSymtabEntry.length == 1):
 #       now we know that its NOT a scalar variable, but rather a function.  so we update the symbol table with this information.
-        DebugManager.debug('typeInference.isArrayReference: Application Expression "'+str(theApp)+\
-                           '" for something that we thought was a scalar variable => assuming it\'s a function and updating the symbol table to reflect this')
-        theSymtabEntry.enterEntryKind(SymtabEntry.FunctionEntryKind)
+        if (theSymtabEntry.entryKind!=SymtabEntry.InterfaceEntryKind) : 
+           DebugManager.debug('typeInference.isArrayReference: Application Expression "'+str(theApp)+\
+                              '" for something that we thought was a scalar variable => assuming it\'s a function and updating the symbol table to reflect this')
+           theSymtabEntry.enterEntryKind(SymtabEntry.FunctionEntryKind)
         return False
     return True
 
