@@ -140,7 +140,7 @@ def identifierType(anId,localSymtab,lineNumber):
 def intrinsicType(anIntrinsicApp,localSymtab,lineNumber):
     if anIntrinsicApp.head.lower() in ['aimag','alog','real']:
         return (fortStmts.RealStmt, [])
-    elif anIntrinsicApp.head.lower() in ['int','idint','size']:
+    elif anIntrinsicApp.head.lower() in ['int','idint','size','lbound','ubound']:
         return (fortStmts.IntegerStmt, [])
     elif anIntrinsicApp.head.lower() in ['dble','dabs','dexp','dlog','dsqrt','dmod']:
         return (fortStmts.DoubleStmt, [])

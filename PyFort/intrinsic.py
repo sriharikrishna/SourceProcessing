@@ -35,6 +35,7 @@ __intrinsics = (
     'index',
     'int',
     'iabs',
+    'lbound',
     'len',
     'len_trim',
     'log',
