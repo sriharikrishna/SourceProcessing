@@ -405,6 +405,47 @@ class UnitCanonicalizer(object):
         self.__recursionDepth -= 1
         return replacementStatement
 
+    def __canonicalizeIOExpression(self,exp,parentStmt,paramName=None):
+        '''
+        Canonicalize an expression from an IO statement by hoisting any function calls
+        '''
+        DebugManager.debug(self.__recursionDepth*'|\t'+'canonicalizing an IO statement"'+str(anIOStmt)+'"')
+        self.__recursionDepth += 1
+        newExp = exp
+        if isinstance(exp,fe.App):
+            if not isArrayReference(exp,self.__myUnit.symtab,parentStmt.lineNumber):
+                newExp = self.__hoistExpression(exp,parentStmt,paramName)
+        elif isinstance(exp,fe.Ops):
+            newExp = fe.Ops(exp.op,
+                            self.__canonicalizeIOExpression(exp.a1,parentStmt),
+                            self.__canonicalizeIOExpression(exp.a2,parentStmt))
+        elif isinstance(exp,fe.Unary):
+            newExp = exp.__init__(self.__canonicalizeIOExpression(exp.exp,parentStmt))
+        elif isinstance(exp,fe.MultiParenExp):
+            newList = []
+            for item in exp.expList:
+                newList.append(self.__canonicalizeIOExpression(item,parentStmt))
+            newExp = fe.MultiParenExp(newList)
+        DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|_')
+        self.__recursionDepth -= 1
+        return newExp
+
+    def __canonicalizeIOStmt(self,anIOStmt):
+        '''
+        Canonicalize an IOStmt by canonicalizing the ioCtrlSpecList and the itemList. Returns a canonicalized IO statement that replaces anIOStmt.
+        '''
+        DebugManager.debug(self.__recursionDepth*'|\t'+'canonicalizing an IO statement"'+str(anIOStmt)+'"')
+        self.__recursionDepth += 1
+        replacementStmt = anIOStmt
+        for item in replacementStmt.get_itemList():
+            newExp = self.__canonicalizeIOExpression(item,replacementStmt)
+            index = replacementStmt.itemList.index(item)
+            replacementStmt.itemList.insert(index,newExp)
+            replacementStmt.itemList.remove(item)
+        DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|_')
+        self.__recursionDepth -= 1
+        return replacementStmt
+
     def __canonicalizeExecStmt(self,anExecStmt):
         # We were previously working with the assumption that an original statement is modified as part of the canonicalization process
         # if and only if at least one new statement has been added.
@@ -429,6 +470,8 @@ class UnitCanonicalizer(object):
             replacementStatement = self.__canonicalizeWhileStmt(anExecStmt)
         elif isinstance(anExecStmt,fs.SelectCaseStmt):
             replacementStatement = self.__canonicalizeSelectCaseStmt(anExecStmt)
+        elif isinstance(anExecStmt,fs.IOStmt):
+            replacementStatement = self.__canonicalizeIOStmt(anExecStmt)
         else:
             DebugManager.debug('Statement "'+str(anExecStmt)+'" is assumed to require no canonicalization')
         if self.__recursionDepth != 0:
