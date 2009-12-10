@@ -409,7 +409,7 @@ class UnitCanonicalizer(object):
         '''
         Canonicalize an expression from an IO statement by hoisting any function calls
         '''
-        DebugManager.debug(self.__recursionDepth*'|\t'+'canonicalizing an IO statement"'+str(anIOStmt)+'"')
+        DebugManager.debug(self.__recursionDepth*'|\t'+'canonicalizing an IO statement"'+str(parentStmt)+'"')
         self.__recursionDepth += 1
         newExp = exp
         if isinstance(exp,fe.App):
