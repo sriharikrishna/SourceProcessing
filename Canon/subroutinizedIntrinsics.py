@@ -5,6 +5,7 @@ from PyFort.fortExp import App,Ops
 import PyFort.fortStmts as fs
 import PyFort.intrinsic as intrinsic
 import PyFort.flow as flow
+from PyUtil.symtab import Symtab 
 
 class SubroutinizeError(Exception):
     '''exception for errors that occur during the subroutinization of intrinsics'''
@@ -33,7 +34,25 @@ def makeName(intrName):
     return call_prefix + intrName     
 
 def __makeNameImpl(intrName,typeClass):
-    return makeName(intrName)+'_'+typeClass.kw[0]     
+    return makeName(intrName)+'_'+typeClass.kw[0]
+
+def __skipThisType(onlyRequired,key,typeClass):
+    return ((onlyRequired
+             and
+             (((key,typeClass) not in _requiredSubroutinizedIntrinsics)
+              or 
+              (Symtab.getRealTypeDefault()[0]==fs.DoubleStmt
+               and
+               typeClass==fs.RealStmt
+               and
+               (key, fs.DoubleStmt) in _requiredSubroutinizedIntrinsics)))
+            or
+            (not onlyRequired
+             and
+             Symtab.getRealTypeDefault()[0]==fs.DoubleStmt
+             and
+             typeClass==fs.RealStmt))
+   
 
 def makeSubroutinizedIntrinsics(onlyRequired):
     ''' this is incomplete '''
@@ -48,7 +67,7 @@ def makeSubroutinizedIntrinsics(onlyRequired):
         nameList=[]
         newUnit.decls.append(fs.InterfaceStmt(call_prefix+k,lead='  '))
         for t in typeList:
-            if (onlyRequired and (k,t) not in _requiredSubroutinizedIntrinsics):
+            if (__skipThisType(onlyRequired,k,t)) : 
                 continue
             nameList.append(__makeNameImpl(k,t))
             empty=False
@@ -58,7 +77,7 @@ def makeSubroutinizedIntrinsics(onlyRequired):
         newUnit.decls.append(fs.ContainsStmt(lead='  '))
     for k in keyList:
         for t in typeList:
-            if (onlyRequired and (k,t) not in _requiredSubroutinizedIntrinsics):
+            if (__skipThisType(onlyRequired,k,t)) : 
                 continue
             newSUnit=Unit()
             if (k in ['max','min']) : 
@@ -80,7 +99,7 @@ def makeSubroutinizedMaxOrMin(newUnit,aKey,aTypeClass,indent):
     newUnit.decls.append(aTypeClass(None,
                                    [App('intent',['in'])],
                                    'b',
-                                   lead=indent+'  '))
+                                    lead=indent+'  '))
     newUnit.decls.append(aTypeClass(None,
                                    [App('intent',['out'])],
                                    'r',

@@ -32,6 +32,12 @@ class Symtab(object):
         Symtab._default_real = defaultReal
         Symtab._default_int = defaultInt
 
+    @staticmethod
+    def getRealTypeDefault():
+        if (Symtab._default_real is None): 
+            raise SymtabError('Symtab.getRealTypeDefault: no type set!')
+        return Symtab._default_real
+
     def __init__(self,parent=None):
         self.ids    = cDict()
         self.parent = parent
