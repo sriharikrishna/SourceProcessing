@@ -444,11 +444,13 @@ class UnitCanonicalizer(object):
         DebugManager.debug(self.__recursionDepth*'|\t'+'canonicalizing an IO statement"'+str(anIOStmt)+'"')
         self.__recursionDepth += 1
         replacementStmt = anIOStmt
-        for item in replacementStmt.get_itemList():
+        for item in replacementStmt.itemList:
             newExp = self.__canonicalizeIOExpression(item,replacementStmt)
-            index = replacementStmt.itemList.index(item)
-            replacementStmt.itemList.insert(index,newExp)
-            replacementStmt.itemList.remove(item)
+            if newExp != item:
+                index = replacementStmt.itemList.index(item)
+                replacementStmt.itemList.insert(index,newExp)
+                replacementStmt.itemList.remove(item)
+                replacementStmt.accessed = True
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|_')
         self.__recursionDepth -= 1
         return replacementStmt
