@@ -143,11 +143,12 @@ class UnitCanonicalizer(object):
                 return self.__canonicalizeFuncCall(self.__canonicalizeIntrinsicEllipsisRec(theFuncCall.head,theFuncCall.args),parentStmt)
         else:
             newSubName = subroutinizedIntrinsics.call_prefix + theFuncCall.head
-        self.__myNewExecs.append(self.__canonicalizeSubCallStmt(fs.CallStmt(newSubName,
-                                                                            theFuncCall.args + newArgs,
-                                                                            lineNumber=parentStmt.lineNumber,
-                                                                            label=False,
-                                                                            lead=parentStmt.lead)))
+        self.__myNewExecs.append(self.__canonicalizeSubCallStmt(\
+            fs.CallStmt(newSubName,
+                        theFuncCall.args+newArgs,
+                        lineNumber=parentStmt.lineNumber,
+                        label=False,
+                        lead=parentStmt.lead)))
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|_')
         self.__recursionDepth -= 1
         return theNewTemp
@@ -419,8 +420,14 @@ class UnitCanonicalizer(object):
             newExp = fe.Ops(exp.op,
                             self.__canonicalizeIOExpression(exp.a1,parentStmt),
                             self.__canonicalizeIOExpression(exp.a2,parentStmt))
-        elif isinstance(exp,fe.Unary):
-            newExp = exp.__init__(self.__canonicalizeIOExpression(exp.exp,parentStmt))
+        elif isinstance(exp,fe.ParenExp):
+            newExp = fe.ParenExp(self.__canonicalizeIOExpression(exp.exp,parentStmt))
+        elif isinstance(exp,fe.Umi):
+            newExp = fe.Umi(self.__canonicalizeIOExpression(exp.exp,parentStmt))
+        elif isinstance(exp,fe.Upl):
+            newExp = fe.Upl(self.__canonicalizeIOExpression(exp.exp,parentStmt))
+        elif isinstance(exp,fe.Not):
+            newExp = fe.Not(self.__canonicalizeIOExpression(exp.exp,parentStmt))
         elif isinstance(exp,fe.MultiParenExp):
             newList = []
             for item in exp.expList:

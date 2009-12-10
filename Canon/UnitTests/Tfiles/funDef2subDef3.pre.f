@@ -1,10 +1,14 @@
       program functionComment
       use OAD_intrinsics
         real :: x(2)
+        real :: oad_ctmp0
+        real :: oad_ctmp1
 
         x(1) = 1.5D0
         x(2) = -3.6D0
-        print *,f(x(1)) + f(x(2))
+        call oad_s_f(x(1),oad_ctmp0)
+        call oad_s_f(x(2),oad_ctmp1)
+        print *,oad_ctmp0+oad_ctmp1
       end program functionComment
 
       function f(x)
