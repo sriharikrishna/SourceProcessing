@@ -1,10 +1,12 @@
       subroutine asub(t,a)
+      use OAD_intrinsics
         real,intent(in) :: t
         real,intent(out) :: a
         a = t
       end subroutine asub
 
       program canonicalizeSubunit
+      use OAD_intrinsics
         real :: v
 
         v = 1

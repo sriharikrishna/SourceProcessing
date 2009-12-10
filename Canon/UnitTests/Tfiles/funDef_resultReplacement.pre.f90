@@ -1,4 +1,5 @@
       real(double) function fltrn() result(z)
+      use OAD_intrinsics
 
         integer :: k
         integer,parameter :: r1 = 12211, m1 = 2147483563
@@ -22,6 +23,7 @@
         z = z/m1
       end function fltrn
       subroutine oad_s_fltrn(z)
+      use OAD_intrinsics
 
         integer :: k
         integer,parameter :: r1 = 12211, m1 = 2147483563

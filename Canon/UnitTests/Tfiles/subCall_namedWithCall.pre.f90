@@ -1,4 +1,5 @@
       program subCall_simpleNamed
+      use OAD_intrinsics
         real :: v
         real :: oad_ctmp0
         

@@ -1,4 +1,5 @@
         subroutine head(y)
+      use OAD_intrinsics
           real :: y
           external foo
           real :: oad_ctmp0

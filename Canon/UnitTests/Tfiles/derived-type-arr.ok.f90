@@ -1,4 +1,5 @@
       subroutine bar(a)
+      use OAD_intrinsics
         type baz
            integer :: f1
         end type
