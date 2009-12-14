@@ -34,6 +34,7 @@ class TransformActiveVariables(object):
                             else:
                                 TransformActiveVariables.\
                                     _activeVars.append(aDecl.lhs.lower())
+        DebugManager.debug('TransformActiveVariables: finished populating list of active variables: '+str(TransformActiveVariables._activeVars))
 
     def __init__(self, aUnit):
         self.__myUnit = aUnit
@@ -43,8 +44,7 @@ class TransformActiveVariables(object):
     # recursively transforms an expression if it contains a variable in
     # the activeVars array by adding %v to it
     def __transformActiveTypes(self,Exp):
-        DebugManager.debug('TransformActiveVariables.__transformActiveTypes called on "'+str(Exp)+'"' \
-                         +' with self._activeVars = '+str(self._activeVars))
+        DebugManager.debug('TransformActiveVariables.__transformActiveTypes called on "'+str(Exp)+'"')
         if isinstance(Exp,list) :
             Exp = [self.__transformActiveTypes(s) for s in Exp]
         elif isinstance(Exp,str) :
@@ -68,9 +68,17 @@ class TransformActiveVariables(object):
         
     # transforms all exec statements in the file if they contain a variable
     # in the activeVars array and returns the unit
-    def transformFile(self):
+    def transformUnit(self):
+        DebugManager.debug(('+'*55)+' transforming active varioables in unit <'+str(self.__myUnit.uinfo)+'> '+(55*'+'))
+        DebugManager.debug('local '+self.__myUnit.symtab.debug())
+        DebugManager.debug('subunits (len = '+str(len(self.__myUnit.ulist))+'):')
+
+        for subUnit in self.__myUnit.ulist :
+            DebugManager.debug(str(subUnit))
+            TransformActiveVariables(subUnit).transformUnit()
+
         for anExec in self.__myUnit.execs:
-            DebugManager.debug('TransformActiveVariables.transformFile: '\
+            DebugManager.debug('TransformActiveVariables.transformUnit: '\
                               +'processing exec statement "'+str(anExec)+'"',
                                lineNumber=anExec.lineNumber)
             if isinstance(anExec,fs.AllocateStmt) or \
@@ -80,6 +88,6 @@ class TransformActiveVariables(object):
                     theSon = getattr(anExec,aSon)
                     newSon = self.__transformActiveTypes(theSon)
                     setattr(anExec,aSon,newSon)
-            DebugManager.debug('TransformActiveVariables.transformFile: resulting exec statement: "'+str(anExec)+'"')
-        DebugManager.debug('TransformActiveVariables.transformFile: finished transforming exec statements for this unit.  execs = '+str(self.__myUnit.execs))
+            DebugManager.debug('TransformActiveVariables.transformUnit: resulting exec statement: "'+str(anExec)+'"')
+        DebugManager.debug('TransformActiveVariables.transformUnit: finished transforming exec statements for this unit.  execs = '+str(self.__myUnit.execs))
         return self.__myUnit

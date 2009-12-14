@@ -132,7 +132,7 @@ def main():
             out = config.output and open(config.output,'w') \
                                  or sys.stdout
             for aUnit in fortUnitIterator(inputFileList[0],config.inputFormat):
-                TransformActiveVariables(aUnit).transformFile().printit(out)
+                TransformActiveVariables(aUnit).transformUnit().printit(out)
             if config.output :
                 out.close()
         # multiple input files
@@ -141,7 +141,7 @@ def main():
                 currentFile = anInputFile
                 out = open(os.path.join(config.outputDir,anInputFile),'w')
                 for aUnit in fortUnitIterator(anInputFile,config.inputFormat):
-                    TransformActiveVariables(aUnit).transformFile().printit(out)
+                    TransformActiveVariables(aUnit).transformUnit().printit(out)
                 out.close()
 
     except TransformError,e :
