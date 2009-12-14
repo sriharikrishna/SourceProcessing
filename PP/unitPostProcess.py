@@ -806,16 +806,18 @@ class UnitPostProcessor(object):
             self.__myUnit.execs = Execs
 
         # write all declarations to _activeVariablesFileName
-        if (UnitPostProcessor._activeVariablesFileName):
-            currentOutputFormat = flow.outputFormat
-            (base,activeOutputFormat) = os.path.splitext(UnitPostProcessor._activeVariablesFileName)
-            # set active variables file output format
-            flow.setOutputFormat(Ffile.get_format(activeOutputFormat))
-            self.__active_file = open(UnitPostProcessor._activeVariablesFileName,'a')
-            self.__myUnit.printDecls(self.__active_file)
-            self.__active_file.close()
-            # restore original output format
-            flow.setOutputFormat(currentOutputFormat)
+        if UnitPostProcessor._activeVariablesFileName :
+            if not (isinstance(self.__myUnit.uinfo,fs.FunctionStmt) or
+                    isinstance(self.__myUnit.uinfo,fs.SubroutineStmt)) :
+                currentOutputFormat = flow.outputFormat
+                (base,activeOutputFormat) = os.path.splitext(UnitPostProcessor._activeVariablesFileName)
+                # set active variables file output format
+                flow.setOutputFormat(Ffile.get_format(activeOutputFormat))
+                self.__active_file = open(UnitPostProcessor._activeVariablesFileName,'a')
+                self.__myUnit.printDecls(self.__active_file)
+                self.__active_file.close()
+                # restore original output format
+                flow.setOutputFormat(currentOutputFormat)
 
         if (self.__recursionDepth is not 0):
             raise PostProcessError('Recursion error in unitPostProcess: final recursion depth is not zero')
