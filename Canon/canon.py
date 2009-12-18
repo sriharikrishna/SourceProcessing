@@ -68,6 +68,7 @@ class UnitCanonicalizer(object):
         self.__recursionDepth = 0
         self.__outParam = ''
         self.__resultDecl = None
+        self.__processedFunctions = []
         self.__SRmoduleUsed = srModuleUsed
 
     def shouldSubroutinizeFunction(self,theApp,parentStmt):
@@ -531,6 +532,79 @@ class UnitCanonicalizer(object):
             subroutineBlock.append(aDecl)
         return subroutineBlock
 
+    def __createFuncSubPairs(self):
+        oldFuncnewSubPairs = []
+        for aSubUnit in self.__myUnit.ulist:
+            if isinstance(aSubUnit.uinfo,fs.SubroutineStmt) and \
+                   aSubUnit.uinfo.name.startswith(function2subroutine.name_init):
+                if aSubUnit.uinfo.name[0:6] != function2subroutine.name_init :
+                    raise CanonError('Tried to strip "'+aSubUnit.uinfo.name[0:6]+'"' \
+                                    +' from the beginning of "'+aSubUnit.uinfo.name+'"',aSubUnit.uinfo.lineNumber)
+                DebugManager.debug('searching declarations to convert old function name "'+aSubUnit.uinfo.name[6:]+'"' \
+                                  +' to new subroutine name "'+aSubUnit.uinfo.name+'"')
+                oldFuncnewSubPairs.append([aSubUnit.uinfo.name[6:],
+                                           aSubUnit.uinfo.name])
+        return oldFuncnewSubPairs
+        
+    def __processInterfaceBlocks(self,oldFuncnewSubPairs):
+        interfaceBlockFlag = False
+        interfaceBlock = []
+        self.__myNewDecls = []
+        for aDecl in self.__myUnit.decls:
+            # accumulate an interface block and process it
+            if interfaceBlockFlag:
+                interfaceBlock.append(aDecl)
+                if isinstance(aDecl,fs.EndInterfaceStmt):
+                    newInterfaceBlock = function2subroutine.\
+                                        convertInterfaceBlock(interfaceBlock,oldFuncnewSubPairs)
+                    self.__myNewDecls.extend(newInterfaceBlock)
+                    interfaceBlockFlag = False
+                    interfaceBlock = []
+            elif isinstance(aDecl,fs.InterfaceStmt):
+                interfaceBlockFlag = True
+                interfaceBlock.append(aDecl)
+            # if not part of the interface block, convert decls and add them
+            else:
+                (newDecl,modified) = function2subroutine.\
+                                     convertFunctionDecl(aDecl,oldFuncnewSubPairs)
+                self.__myNewDecls.append(aDecl)
+                if modified:
+                    self.__myNewDecls.append(newDecl)
+
+    def __createNewSubroutine(self,aUnit):
+        if isinstance(aUnit.uinfo,fs.FunctionStmt):
+            self.__processedFunctions.append(aUnit.uinfo.name)
+            if self._keepFunctionDecl:
+                newUnit = function2subroutine.\
+                          convertFunction(aUnit)
+                # if the unit has no parent, then it was the original unit.
+                if aUnit.parent is None:
+                    # create a parent
+                    aUnit.parent = fortUnit.Unit()
+                    # append new unit & original unit (already processed)
+                    aUnit.parent.ulist.append(aUnit)
+                    aUnit.parent.ulist.append(newUnit)
+                    # return parent
+                    aUnit = self.__myUnit.parent
+                else:
+                    aUnit.parent.ulist.append(newUnit)                    
+            else:
+                aUnit = function2subroutine.convertFunction(\
+                    aUnit, self._keepFunctionDecl)
+        return aUnit
+
+    def __canonicalizeExecStmts(self,execList):
+        DebugManager.debug('canonicalizing executable statements:')
+        for anExecStmt in execList:
+            DebugManager.debug('[Line '+str(anExecStmt.lineNumber)+']:')
+            try:
+                self.__canonicalizeExecStmt(anExecStmt)
+            except TypeInferenceError,e:
+                raise CanonError('Caught TypeInferenceError: '+e.msg,anExecStmt.lineNumber)
+            except SymtabError,e: # add a lineNumber to SymtabErrors that don't have one
+                e.lineNumber = e.lineNumber or anExecStmt.lineNumber
+                raise e        
+
     def canonicalizeUnit(self):
         '''Recursively canonicalize \p aUnit'''
         DebugManager.debug(('+'*55)+' Begin canonicalize unit <'+str(self.__myUnit.uinfo)+'> '+(55*'+'))
@@ -563,8 +637,11 @@ class UnitCanonicalizer(object):
             # if the unit is new, as a result of function transformation,
             # skip processing
             if isinstance(subUnit.uinfo,fs.SubroutineStmt) and \
-               subUnit.uinfo.name.startswith(function2subroutine.name_init):
+                     subUnit.uinfo.name.startswith(function2subroutine.name_init):
                 DebugManager.debug(5*'%'+'>'+'\t skipping this subunit because we generated it')
+                newList.append(subUnit)
+            elif subUnit.uinfo.name in self.__processedFunctions:
+                DebugManager.debug(5*'%'+'>'+'\t skipping this subunit because we already processed it')
                 newList.append(subUnit)
             else:
                 newUnit = UnitCanonicalizer(subUnit,self.__SRmoduleUsed).canonicalizeUnit()
@@ -579,16 +656,7 @@ class UnitCanonicalizer(object):
         self.__myUnit.decls = self.__myNewDecls
         self.__myNewDecls = []
         
-        DebugManager.debug('canonicalizing executable statements:')
-        for anExecStmt in self.__myUnit.execs:
-            DebugManager.debug('[Line '+str(anExecStmt.lineNumber)+']:')
-            try:
-                self.__canonicalizeExecStmt(anExecStmt)
-            except TypeInferenceError,e:
-                raise CanonError('Caught TypeInferenceError: '+e.msg,anExecStmt.lineNumber)
-            except SymtabError,e: # add a lineNumber to SymtabErrors that don't have one
-                e.lineNumber = e.lineNumber or anExecStmt.lineNumber
-                raise e
+        self.__canonicalizeExecStmts(self.__myUnit.execs)
 
         # set the leading whitespace for the new declarations and add them to the unit
         for aDecl in self.__myNewDecls:
@@ -599,60 +667,12 @@ class UnitCanonicalizer(object):
         self.__myUnit.execs = self.__myNewExecs
 
         # for function units, also create a corresponding subroutine
-        if isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
-            if self._keepFunctionDecl:
-                newUnit = function2subroutine.\
-                          convertFunction(self.__myUnit)
-                # if the unit has no parent, then it was the original unit.
-                if self.__myUnit.parent is None:
-                    # create a parent
-                    self.__myUnit.parent = fortUnit.Unit()
-                    # append new unit & original unit (already processed)
-                    self.__myUnit.parent.ulist.append(self.__myUnit)
-                    self.__myUnit.parent.ulist.append(newUnit)
-                    # return parent
-                    self.__myUnit = self.__myUnit.parent
-                else:
-                    self.__myUnit.parent.ulist.append(newUnit)                    
-            else:
-                self.__myUnit = function2subroutine.convertFunction(\
-                    self.__myUnit, self._keepFunctionDecl)
-
+        self.__createNewSubroutine(self.__myUnit)
+        
         # build list of old function/new subroutine name pairs 
-        oldFuncnewSubPairs = []
-        for aSubUnit in self.__myUnit.ulist:
-            if isinstance(aSubUnit.uinfo,fs.SubroutineStmt) and \
-                   aSubUnit.uinfo.name.startswith(function2subroutine.name_init):
-                if aSubUnit.uinfo.name[0:6] != function2subroutine.name_init :
-                    raise CanonError('Tried to strip "'+aSubUnit.uinfo.name[0:6]+'"' \
-                                    +' from the beginning of "'+aSubUnit.uinfo.name+'"',aSubUnit.uinfo.lineNumber)
-                DebugManager.debug('searching declarations to convert old function name "'+aSubUnit.uinfo.name[6:]+'"' \
-                                  +' to new subroutine name "'+aSubUnit.uinfo.name+'"')
-                oldFuncnewSubPairs.append([aSubUnit.uinfo.name[6:],
-                                           aSubUnit.uinfo.name])
-        interfaceBlockFlag = False
-        interfaceBlock = []
-        self.__myNewDecls = []
-        for aDecl in self.__myUnit.decls:
-            # accumulate an interface block and process it
-            if interfaceBlockFlag:
-                interfaceBlock.append(aDecl)
-                if isinstance(aDecl,fs.EndInterfaceStmt):
-                    newInterfaceBlock = function2subroutine.\
-                                        convertInterfaceBlock(interfaceBlock,oldFuncnewSubPairs)
-                    self.__myNewDecls.extend(newInterfaceBlock)
-                    interfaceBlockFlag = False
-                    interfaceBlock = []
-            elif isinstance(aDecl,fs.InterfaceStmt):
-                interfaceBlockFlag = True
-                interfaceBlock.append(aDecl)
-            # if not part of the interface block, convert decls and add them
-            else:
-                (newDecl,modified) = function2subroutine.\
-                                     convertFunctionDecl(aDecl,oldFuncnewSubPairs)
-                self.__myNewDecls.append(aDecl)
-                if modified:
-                    self.__myNewDecls.append(newDecl)
+        oldFuncnewSubPairs = self.__createFuncSubPairs()
+        # accumulate an interface block and process it
+        self.__processInterfaceBlocks(oldFuncnewSubPairs)
                     
         self.__myUnit.decls = self.__myNewDecls
             
