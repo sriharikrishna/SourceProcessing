@@ -667,7 +667,7 @@ class UnitCanonicalizer(object):
         self.__myUnit.execs = self.__myNewExecs
 
         # for function units, also create a corresponding subroutine
-        self.__createNewSubroutine(self.__myUnit)
+        self.__myUnit = self.__createNewSubroutine(self.__myUnit)
         
         # build list of old function/new subroutine name pairs 
         oldFuncnewSubPairs = self.__createFuncSubPairs()
