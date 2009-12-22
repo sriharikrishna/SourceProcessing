@@ -149,7 +149,7 @@ def updateTypeDecl(aDecl,outParam,declList):
                 resultDeclCreated = True
     return (declCopy,resultDeclCreated)
 
-def convertFunction(functionUnit,keepFunctionDecl=True):
+def convertFunction(functionUnit,newExecs,newDecls,keepFunctionDecl=True):
     '''converts a function unit definition to a subroutine unit definition'''
     DebugManager.debug(10*'-'+'>'+'called function2subroutine.convertFunction ' \
                      + 'on function unit statement "'+str(functionUnit)+'",' \
@@ -175,7 +175,7 @@ def convertFunction(functionUnit,keepFunctionDecl=True):
         funTypeFound = False
 
     # iterate over decls for functionUnit
-    for aDecl in functionUnit.decls:
+    for aDecl in newDecls:
         if not funTypeFound and isinstance(aDecl,fs.TypeDecl):
             (aDecl,funTypeFound) = updateTypeDecl(aDecl,outParam,newSubUnit.decls)
         newSubUnit.decls.append(aDecl)
@@ -187,7 +187,7 @@ def convertFunction(functionUnit,keepFunctionDecl=True):
         newSubUnit.decls.append(resultDecl)
         
     # iterate over execs for functionUnit
-    for anExec in functionUnit.execs:
+    for anExec in newExecs:
         newSubUnit.execs.append(anExec)
 
     # iterate over end stmts for functionUnit

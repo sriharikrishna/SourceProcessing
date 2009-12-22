@@ -571,12 +571,12 @@ class UnitCanonicalizer(object):
                 if modified:
                     self.__myNewDecls.append(newDecl)
 
-    def __createNewSubroutine(self,aUnit):
+    def __createNewSubroutine(self,aUnit,subroutineDecls):
         if isinstance(aUnit.uinfo,fs.FunctionStmt):
             self.__processedFunctions.append(aUnit.uinfo.name)
             if self._keepFunctionDecl:
                 newUnit = function2subroutine.\
-                          convertFunction(aUnit)
+                          convertFunction(aUnit,self.__myNewExecs,subroutineDecls)
                 # if the unit has no parent, then it was the original unit.
                 if aUnit.parent is None:
                     # create a parent
@@ -590,7 +590,7 @@ class UnitCanonicalizer(object):
                     aUnit.parent.ulist.append(newUnit)                    
             else:
                 aUnit = function2subroutine.convertFunction(\
-                    aUnit, self._keepFunctionDecl)
+                    aUnit,self.__myNewExecs,declList,self._keepFunctionDecl)
         return aUnit
 
     def __canonicalizeExecStmts(self,execList):
@@ -653,7 +653,11 @@ class UnitCanonicalizer(object):
             subroutineBlock = self.__canonicalizeFunctionDecls(aDecl,subroutineBlock)
 
        ## replace the declaration statements for the unit
-        self.__myUnit.decls = self.__myNewDecls
+        if not isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
+            self.__myUnit.decls = self.__myNewDecls
+            subroutineDecls = []
+        else:
+            subroutineDecls = self.__myNewDecls
         self.__myNewDecls = []
         
         self.__canonicalizeExecStmts(self.__myUnit.execs)
@@ -661,19 +665,22 @@ class UnitCanonicalizer(object):
         # set the leading whitespace for the new declarations and add them to the unit
         for aDecl in self.__myNewDecls:
             aDecl.lead = self.__myUnit.uinfo.lead+'  '
-        self.__myUnit.decls.extend(self.__myNewDecls)
+        if not isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
+            self.__myUnit.decls.extend(self.__myNewDecls)
+        subroutineDecls.extend(self.__myNewDecls)
 
         # replace the executable statements for the unit
-        self.__myUnit.execs = self.__myNewExecs
+        if not isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
+            self.__myUnit.execs = self.__myNewExecs
 
         # for function units, also create a corresponding subroutine
-        self.__myUnit = self.__createNewSubroutine(self.__myUnit)
+        self.__myUnit = self.__createNewSubroutine(self.__myUnit,subroutineDecls)
         
         # build list of old function/new subroutine name pairs 
         oldFuncnewSubPairs = self.__createFuncSubPairs()
         # accumulate an interface block and process it
         self.__processInterfaceBlocks(oldFuncnewSubPairs)
-                    
+
         self.__myUnit.decls = self.__myNewDecls
             
         DebugManager.debug(('+'*54)+' End canonicalize unit <'+str(self.__myUnit.uinfo)+'> '+(54*'+')+'\n\n')
