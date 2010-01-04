@@ -6,6 +6,7 @@ from _Setup import *
 
 from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
+from PyUtil.argreplacement import replaceArgs
 
 from PyFort.intrinsic import is_intrinsic,getGenericName
 from PyFort.typeInference import TypeInferenceError,expressionType,functionType,isArrayReference,canonicalTypeClass
@@ -457,27 +458,6 @@ class UnitCanonicalizer(object):
         self.__recursionDepth -= 1
         return replacementStmt
 
-    def __replaceArgs(self,argReps,string,inlineArgs,replacementArgs):
-        while argReps >= 0:
-            string = self.__replaceArg(string,\
-                                       str(inlineArgs[argReps]),\
-                                       str(replacementArgs[argReps]))
-            argReps -= 1
-        return string
-    
-    # Replace every instance of one particular argument in a string
-    def __replaceArg(self,string,inlineArg,replacementArg):
-        strList = string.split(inlineArg)
-        i = 1
-        while i < len(strList):
-            if (strList[i-1])[-1:].isalnum() or (strList[i])[:1].isalnum():
-                strList[i-1] = strList[i-1]+inlineArg+strList[i]
-                strList.pop(i)
-            else:
-                i += 1
-        newStr = replacementArg.join(strList)
-        return newStr
-
     def __expandStmtFunExp(self,anExp):
         newSon = anExp
         if isinstance(anExp,fe.App):
@@ -488,7 +468,7 @@ class UnitCanonicalizer(object):
                 if anExp.head == stmtFnStmt.name:
                     newSon = stmtFnStmt.body
                     # replace args
-                    newSon = self.__replaceArgs(len(anExp.args)-1,str(newSon),stmtFnStmt.args,newArgs)
+                    newSon = replaceArgs(len(anExp.args)-1,str(newSon),stmtFnStmt.args,newArgs)
                 else:
                     newSon = fe.App(anExp.head,newArgs)
         elif isinstance(anExp,fe.Ops):

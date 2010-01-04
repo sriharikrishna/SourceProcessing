@@ -2,6 +2,7 @@ from _Setup import *
 
 from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
+from PyUtil.argreplacement import replaceArgs, replaceSon
 
 from PyFort.typeInference import TypeInferenceError,expressionType,functionType,isArrayReference
 import PyFort.fortExp as fe
@@ -356,89 +357,6 @@ class UnitPostProcessor(object):
         function.execs = newExecs
         return function        
 
-    # Replaces inline args with the given args (as determined from a comment)
-    # During inlining of a subroutine function in reverse mode
-    # used on a string (AssignStmts, etc)
-    # PARAMS:
-    # argReps -- the number of times to loop through looking at arguments (the
-    # number of arguments to look at); equal to the minimum of the number of
-    # inlineArgs and number of replacementArgs
-    # string -- the string in which arguments must be replaced
-    # inlineArgs -- arguments from the inline file (args to be replaced)
-    # replacementArgs -- arguments from the input file being processed
-    # RETURNS: a modified strings with all inlineArgs replaced by the 
-    # appropriate argument from replacementArgs
-    def __replaceArgs(self,argReps,string,inlineArgs,replacementArgs):
-        while argReps >= 0:
-            string = self.__replaceArg(string,\
-                                       str(inlineArgs[argReps]),\
-                                       str(replacementArgs[argReps]))
-            argReps -= 1
-        return string
-    
-    # Replace every instance of one particular argument in a string
-    def __replaceArg(self,string,inlineArg,replacementArg):
-        strList = string.split(inlineArg)
-        i = 1
-        while i < len(strList):
-            if (strList[i-1])[-1:].isalnum() or (strList[i])[:1].isalnum():
-                strList[i-1] = strList[i-1]+inlineArg+strList[i]
-                strList.pop(i)
-            else:
-                i += 1
-        newStr = replacementArg.join(strList)
-        return newStr
-
-    # Replaces inline args with the given args (as determined from a comment)
-    # During inlining of a subroutine function in reverse mode
-    # called on _son attributes
-    # PARAMS:
-    # arg -- the expression to be modified (is one of the sons of a statement)
-    # inlineArgs -- arguments from the inline file (args to be replaced)
-    # replacementArgs -- arguments from the input file being processed
-    # RETURNS: a modified expression to replace the old son in the statement
-    # being processed
-    def __replaceSon(self,arg,inlineArgs,replacementArgs):
-        newSon = arg
-        if isinstance(arg,fe.Sel):
-            try:
-                index = inlineArgs.index(arg.head)
-                head = replacementArgs[index]
-                newSon = fe.Sel(head,arg.proj)
-            except:
-                pass
-        elif isinstance(arg,fe.App):
-            head = arg.head
-            args = arg.args
-            newArgs = []
-            i = 0
-            while i < len(arg.args):
-                anArg = arg.args[i]
-                if isinstance(anArg,fe.App) or isinstance(anArg,fe.Sel):
-                    newArgs.append(self.__replaceSon(anArg,inlineArgs,replacementArgs))
-                else:
-                    try:
-                        index = inlineArgs.index(anArg)
-                        newArg = replacementArgs[index]
-                        newArgs.append(newArg)
-                    except:
-                        newArgs.append(anArg)
-                i += 1
-            if len(newArgs) != 0:
-                args = newArgs
-            try:
-                index = inlineArgs.index(arg.head)
-                head = replacementArgs[index]
-            except:
-                pass
-            newSon = fe.App(head,newArgs)
-        else:
-            try:
-                index = inlineArgs.index(arg)
-                newSon = replacementArgs[index]
-            except:
-                pass
-        return newSon
 
     # Given new exec statement args (as determined from inline comment)
     # replace inline args in given inline file subroutine with new args
@@ -469,35 +387,35 @@ class UnitPostProcessor(object):
             argReps = min(len(inlineArgs),len(replacementArgs))
             argReps -= 1
             if isinstance(Stmt,fs.Comments):
-                Stmt.set_rawline(self.__replaceArgs(argReps,Stmt.get_rawline(),inlineArgs,replacementArgs))
+                Stmt.set_rawline(replaceArgs(argReps,Stmt.get_rawline(),inlineArgs,replacementArgs))
                 Execs.append(Stmt)
             elif isinstance(Stmt,fs.AssignStmt):
-                lhs = self.__replaceArgs(argReps,str(Stmt.get_lhs()),inlineArgs,replacementArgs)
-                rhs = self.__replaceArgs(argReps,str(Stmt.get_rhs()),inlineArgs,replacementArgs)
+                lhs = replaceArgs(argReps,str(Stmt.get_lhs()),inlineArgs,replacementArgs)
+                rhs = replaceArgs(argReps,str(Stmt.get_rhs()),inlineArgs,replacementArgs)
                 newStmt = fs.AssignStmt(lhs,rhs,lead=stmt_lead)
                 Execs.append(newStmt)
             elif isinstance(Stmt,fs.StmtFnStmt):
-                name=self.__replaceArgs\
+                name=replaceArgs\
                       (argReps,str(Stmt.get_name()),inlineArgs,replacementArgs)
                 newArgs = []
                 for arg in Stmt.get_args():
-                    newArgs.append(self.__replaceArgs\
+                    newArgs.append(replaceArgs\
                                    (argReps,str(arg),inlineArgs,replacementArgs))
-                body=self.__replaceArgs\
+                body=replaceArgs\
                       (argReps,str(Stmt.get_body()),inlineArgs,replacementArgs)
                 newStmt = fs.StmtFnStmt(name,newArgs,body,lead=stmt_lead)
                 Execs.append(newStmt)
             elif isinstance(Stmt,fs.IOStmt):
                 newItemList = []
                 for item in Stmt.get_itemList():
-                    newItem=self.__replaceArgs(argReps,str(item),inlineArgs,replacementArgs)
+                    newItem=replaceArgs(argReps,str(item),inlineArgs,replacementArgs)
                     newItemList.append(newItem)
                 Stmt.itemList = newItemList
                 Stmt.lead = stmt_lead
                 Execs.append(Stmt)
             elif isinstance(Stmt,fs.AllocateStmt) \
               or isinstance(Stmt,fs.DeallocateStmt) :
-                Stmt.set_rawline(self.__replaceArgs(argReps,Stmt.get_rawline(),inlineArgs,replacementArgs)+''.join(Stmt.internal))
+                Stmt.set_rawline(replaceArgs(argReps,Stmt.get_rawline(),inlineArgs,replacementArgs)+''.join(Stmt.internal))
                 Stmt.lead = stmt_lead
                 Execs.append(Stmt)
             elif isinstance(Stmt,fs.WhileStmt) or \
@@ -505,7 +423,7 @@ class UnitPostProcessor(object):
                 for aSon in Stmt.get_sons():
                     theSon = getattr(Stmt,aSon)
                     if theSon :
-                    	newSon = self.__replaceArgs(argReps,str(theSon),inlineArgs,replacementArgs)
+                    	newSon = replaceArgs(argReps,str(theSon),inlineArgs,replacementArgs)
                         setattr(Stmt,aSon,newSon)
                 Stmt.lead = stmt_lead
                 Execs.append(Stmt)
@@ -518,11 +436,11 @@ class UnitPostProcessor(object):
                         index = 0
                         while index < len(theSon):
                             arg = theSon[index]
-                            newSon = self.__replaceSon(arg,inlineArgs,replacementArgs)
+                            newSon = replaceSon(arg,inlineArgs,replacementArgs)
                             theSon[index] = newSon
                             index += 1
                     else:
-                        newSon = self.__replaceSon(theSon,inlineArgs,replacementArgs)
+                        newSon = replaceSon(theSon,inlineArgs,replacementArgs)
                         setattr(Stmt,aSon,newSon)
                 Stmt.lead = stmt_lead
                 Execs.append(Stmt)
