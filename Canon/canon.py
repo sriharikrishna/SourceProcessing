@@ -69,6 +69,7 @@ class UnitCanonicalizer(object):
         self.__outParam = ''
         self.__resultDecl = None
         self.__processedFunctions = []
+        self.__stmtFunctionStmts = []
         self.__SRmoduleUsed = srModuleUsed
 
     def shouldSubroutinizeFunction(self,theApp,parentStmt):
@@ -456,6 +457,68 @@ class UnitCanonicalizer(object):
         self.__recursionDepth -= 1
         return replacementStmt
 
+    def __replaceArgs(self,argReps,string,inlineArgs,replacementArgs):
+        while argReps >= 0:
+            string = self.__replaceArg(string,\
+                                       str(inlineArgs[argReps]),\
+                                       str(replacementArgs[argReps]))
+            argReps -= 1
+        return string
+    
+    # Replace every instance of one particular argument in a string
+    def __replaceArg(self,string,inlineArg,replacementArg):
+        strList = string.split(inlineArg)
+        i = 1
+        while i < len(strList):
+            if (strList[i-1])[-1:].isalnum() or (strList[i])[:1].isalnum():
+                strList[i-1] = strList[i-1]+inlineArg+strList[i]
+                strList.pop(i)
+            else:
+                i += 1
+        newStr = replacementArg.join(strList)
+        return newStr
+
+    def __expandStmtFunExp(self,anExp):
+        newSon = anExp
+        if isinstance(anExp,fe.App):
+            for stmtFnStmt in self.__stmtFunctionStmts:
+                newArgs = []
+                for anArg in anExp.args:
+                    newArgs.append(self.__expandStmtFunExp(anArg))
+                if anExp.head == stmtFnStmt.name:
+                    newSon = stmtFnStmt.body
+                    # replace args
+                    newSon = self.__replaceArgs(len(anExp.args)-1,str(newSon),stmtFnStmt.args,newArgs)
+                else:
+                    newSon = fe.App(anExp.head,newArgs)
+        elif isinstance(anExp,fe.Ops):
+            newSon = fe.Ops(anExp.op,
+                            self.__expandStmtFunExp(anExp.a1),
+                            self.__expandStmtFunExp(anExp.a2))
+        elif isinstance(anExp,fe.ParenExp):
+            newSon = fe.ParenExp(self.__expandStmtFunExp(anExp.exp))
+        elif isinstance(anExp,fe.Umi):
+            newSon = fe.Umi(self.__expandStmtFunExp(anExp.exp))
+        elif isinstance(anExp,fe.Upl):
+            newSon = fe.Upl(self.__expandStmtFunExp(anExp.exp))
+        elif isinstance(anExp,fe.Not):
+            newSon = fe.Not(self.__expandStmtFunExp(anExp.exp))
+        elif isinstance(anExp,fe.MultiParenExp):
+            newList = []
+            for item in anExp.expList:
+                newList.append(self.__expandStmtFunExp(item))
+                newSon = fe.MultiParenExp(newList)
+        return newSon
+        
+
+    def __expandStmtFunction(self,anExecStmt):
+        if hasattr(anExecStmt,'_sons'):
+            for aSon in anExecStmt.get_sons():
+                theSon = getattr(anExecStmt,aSon)
+                newSon = self.__expandStmtFunExp(theSon)
+                setattr(anExecStmt,aSon,newSon)
+        return anExecStmt
+
     def __canonicalizeExecStmt(self,anExecStmt):
         # We were previously working with the assumption that an original statement is modified as part of the canonicalization process
         # if and only if at least one new statement has been added.
@@ -464,6 +527,7 @@ class UnitCanonicalizer(object):
         anExecStmt.beenModified = False
         newExecsLength = len(self.__myNewExecs) # store the current number of execs (to determine afterwards whether we've added some)
         replacementStatement = anExecStmt
+        replacementStatement = self.__expandStmtFunction(replacementStatement)
         if isinstance(anExecStmt,fs.CallStmt):
             replacementStatement = self.__canonicalizeSubCallStmt(anExecStmt)
         elif isinstance(anExecStmt,fs.AssignStmt):
@@ -494,6 +558,8 @@ class UnitCanonicalizer(object):
             self.__myNewExecs.append(anExecStmt) # => leave anExecStmt alone
 
     def __canonicalizeFunctionDecls(self,aDecl,subroutineBlock):
+        if isinstance(aDecl,fs.StmtFnStmt):
+            self.__stmtFunctionStmts.append(aDecl)
         if self._keepFunctionDecl:
             self.__myNewDecls.append(aDecl)
         if isinstance(aDecl,fs.FunctionStmt):
