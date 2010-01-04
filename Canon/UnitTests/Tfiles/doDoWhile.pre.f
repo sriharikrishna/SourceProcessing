@@ -5,7 +5,7 @@
           external foo,bar
           real :: oad_ctmp0
           real :: oad_ctmp1
-          do while (y .lt. 0)
+          do while (y.lt.0)
             call oad_s_foo(y,oad_ctmp0)
             do i = oad_ctmp0,10,2
               call oad_s_bar(y,oad_ctmp1)

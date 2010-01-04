@@ -8,18 +8,12 @@
         integer,parameter :: a2 = 40692, q2 = 52774
         k = s1/q1
         s1 = a1*(s1-k*q1)-k*r1
-        if (s1.lt.0) then
-          s1 = s1+m1
-        end if
+        if (s1.lt.0) s1 = s1+m1
         k = s2/q2
         s2 = a2*(s2-k*q2)-k*r2
-        if (s2.lt.0) then
-          s2 = s2+m2
-        end if
+        if (s2.lt.0) s2 = s2+m2
         z = s1-s2
-        if (z.lt.1) then
-          z = z+m1-1
-        end if
+        if (z.lt.1) z = z+m1-1
         z = z/m1
       end function fltrn
       subroutine oad_s_fltrn(z)
