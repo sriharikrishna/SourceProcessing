@@ -3,7 +3,11 @@ to use these expressions, be sure to re.compile with re.X
 '''
 
 import re
-import myscan
+import sys
+if sys.version_info[1] == 4:
+    from sre import Scanner
+else:
+    from re import Scanner
 
 from tokens import *
 
@@ -106,7 +110,7 @@ def s_white(self,s):
     'return one space for whitespace'
     return ' '
 
-scan1 = myscan.Scanner([
+scan1 = Scanner([
     (pointerAssignSymbol_re, s_ident),
     (id_re,      s_ident),
     (conc_re,    s_ident),
@@ -122,4 +126,3 @@ scan1 = myscan.Scanner([
     (semi_re,    s_split),
     (white_re,   s_white),
     ],re.I | re.X)
-
