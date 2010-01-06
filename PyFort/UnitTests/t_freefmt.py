@@ -31,7 +31,7 @@ class T1(TestCase):
         ae(ll[0].rawline,'logical subroutine(x,y,  z)')
 
     def test2(self):
-        'continued free format string with ! comments -- KNOWN TO FAIL (internal comments are not currently being preserved)'
+        'continued free format string with ! comments -- KNOWN TO FAIL (internal comments are not currently being preserved, see https://trac.mcs.anl.gov/projects/openAD/ticket/187)'
 
         ae = self.assertEquals
         a_ = self.assert_
@@ -47,7 +47,7 @@ class T1(TestCase):
         ae(ll[0].rawline,'logical subroutine(x,y,  z)! test it')
 
     def test3(self):
-        'uncontinued free format string with ! comments -- KNOWN TO FAIL (internal comments are not currently being preserved)'
+        'uncontinued free format string with ! comments -- KNOWN TO FAIL (internal comments are not currently being preserved, see https://trac.mcs.anl.gov/projects/openAD/ticket/187)'
 
         ae = self.assertEquals
         a_ = self.assert_
