@@ -105,9 +105,9 @@ class UnitPostProcessor(object):
         newDecls = []
         for decl in DrvdTypeDecl.get_decls():
             newDecls.append(self.__transformActiveTypesExpression(decl))
-        DrvdTypeDecl.decls = newDecls
+        DrvdTypeDecl.set_decls(newDecls)
         if DrvdTypeDecl.get_mod()[0].lower() == '('+self._abstract_type+')':
-            DrvdTypeDecl.mod = ['('+self._replacement_type+')']
+            DrvdTypeDecl.set_mod(['('+self._replacement_type+')'])
         return DrvdTypeDecl
 
     # Transforms active types for an expression recursively
@@ -152,7 +152,7 @@ class UnitPostProcessor(object):
                 for aSon in replacementExpression.get_sons():
                     theSon = getattr(replacementExpression,aSon)
                     newSon = self.__transformActiveTypesExpression(theSon)
-                    setattr(replacementExpression,aSon,newSon)
+                    replacementExpression.set_son(aSon,newSon)
             elif isinstance(replacementExpression,fs._NoInit):
                 replacementExpression = fs._NoInit(self.__transformActiveTypesExpression(replacementExpression.lhs))
             elif isinstance(replacementExpression,list):
@@ -199,7 +199,7 @@ class UnitPostProcessor(object):
         newItemList=[]
         for item in anIOStmt.get_itemList():
             newItemList.append((self.__transformActiveTypesExpression(item)))
-        anIOStmt.itemList=newItemList
+        anIOStmt.set_itemList(newItemList)
         return anIOStmt
 
     # Does active type transformations on a StmtFnStmt; 
@@ -260,7 +260,7 @@ class UnitPostProcessor(object):
             theSon = getattr(aStmt,aSon)
             newSon = self.__transformActiveTypesExpression(theSon)    
             if newSon is not theSon:
-                setattr(aStmt,aSon,newSon)
+                aStmt.set_son(aSon,newSon)
         return aStmt
 
     # Determines the function to be inlined (if there is one)
@@ -410,7 +410,7 @@ class UnitPostProcessor(object):
                 for item in Stmt.get_itemList():
                     newItem=replaceArgs(argReps,str(item),inlineArgs,replacementArgs)
                     newItemList.append(newItem)
-                Stmt.itemList = newItemList
+                Stmt.set_itemList(newItemList)
                 Stmt.lead = stmt_lead
                 Execs.append(Stmt)
             elif isinstance(Stmt,fs.AllocateStmt) \
@@ -424,7 +424,7 @@ class UnitPostProcessor(object):
                     theSon = getattr(Stmt,aSon)
                     if theSon :
                     	newSon = replaceArgs(argReps,str(theSon),inlineArgs,replacementArgs)
-                        setattr(Stmt,aSon,newSon)
+                        Stmt.set_son(aSon,newSon)
                 Stmt.lead = stmt_lead
                 Execs.append(Stmt)
             elif hasattr(Stmt, "_sons"):
@@ -437,11 +437,13 @@ class UnitPostProcessor(object):
                         while index < len(theSon):
                             arg = theSon[index]
                             newSon = replaceSon(arg,inlineArgs,replacementArgs)
-                            theSon[index] = newSon
+                            if newSon is not arg:
+                                theSon[index] = newSon
+                                Stmt.modified = True
                             index += 1
                     else:
                         newSon = replaceSon(theSon,inlineArgs,replacementArgs)
-                        setattr(Stmt,aSon,newSon)
+                        Stmt.set_son(aSon,newSon)
                 Stmt.lead = stmt_lead
                 Execs.append(Stmt)
             else:

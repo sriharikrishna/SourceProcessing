@@ -273,7 +273,7 @@ class GenStmt(_Mappable,_Mutable_T):
         self.label = label
         self.lead = lead
         self.internal = internal
-        self.accessed = False
+        self.modified = False
 
     @classmethod
     def parse(cls,ws_scan,lineNumber):
@@ -298,7 +298,6 @@ class GenStmt(_Mappable,_Mutable_T):
         return self.rawline.strip()
 
     def get_sons(self):
-        self.accessed = True
         return self._sons
 
 class Skip(GenStmt):
@@ -352,6 +351,7 @@ class NonComment(GenStmt):
         GenStmt.__init__(self,lineNumber,label,lead)
         self.internal = internal
         self.rawline = str(self)
+        self.modified = False
             
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__,
@@ -404,15 +404,20 @@ class NonComment(GenStmt):
 
     def get_sons(self):
         '''returns the list of sons for this statement, and also marks the statement as accessed.'''
-        self.accessed = True
         return self._sons
+
+    def set_son(self,theSon,newSon):
+        oldSon = getattr(self,theSon)
+        if newSon is not oldSon:
+            setattr(self,theSon,newSon)
+            self.modified = True
 
     def get_rawline(self):
         '''returns the rawline for this statement.
-           If the statement has been changed (indicated by the flag self.accessed), then the rawline is updated before being returned.'''
-        if self.accessed:
+           If the statement has been changed (indicated by the flag self.modified), then the rawline is updated before being returned.'''
+        if self.modified:
             self.rawline = str(self)
-        self.accessed = False
+        self.modified = False
         return self.rawline.strip()
 
 class Decl(NonComment):
@@ -438,7 +443,7 @@ class TypeDecl(Decl):
     ## This is the first appearance of the kw and kw_str members; the kw is a string with no spaces (like 'doubleprecision').
     kw = '__unknown__'
     ## the kw_str may have spaces (like with 'double precision').
-    kw_str = kw
+    kw_str = ''
     mod = None
     decls = []
 
@@ -479,16 +484,26 @@ class TypeDecl(Decl):
                                  +''.join(self.internal)
 
     def get_mod(self):
-        self.accessed = True
         return self.mod
 
+    def set_mod(self,newMod):
+        if self.mod != newMod:
+            self.mod = newMod
+            self.modified = True
+
     def get_attrs(self):
-        self.accessed = True
         return self.attrs
+
+    def set_attrs(self,newAttrs):
+        self.attrs = newAttrs
+        self.modified = True
     
     def get_decls(self):
-        self.accessed = True
         return self.decls
+
+    def set_decls(self,newDecls):
+        self.decls = newDecls
+        self.modified = True
 
 class DrvdTypeDecl(TypeDecl):
     '''
@@ -565,8 +580,12 @@ class InterfaceStmt(Decl):
         return InterfaceStmt(name,lineNumber)
 
     def get_name(self):
-        self.accessed = True
         return self.name
+
+    def set_name(self,newName):
+        if self.name != newName:
+            self.name = newName
+            self.modified = True
 
 class ProcedureStmt(Decl):
     kw = 'procedure'
@@ -1001,16 +1020,27 @@ class StmtFnStmt(Decl):
                                 +''.join(self.internal)
 
     def get_name(self):
-        self.accessed = True
         return self.name
 
+    def set_name(self,newName):
+        if self.name != newName:
+            self.name = newName
+            self.modified = True
+
     def get_args(self):
-        self.accessed = True
         return self.args
 
+    def set_args(self,newArgs):
+        self.args = newArgs
+        self.modified = True
+
     def get_body(self):
-        self.accessed = True
         return self.body
+
+    def set_body(self,newBody):
+        if self.body != newBody:
+            self.body = newBody
+            self.modified = True
 
 class ExternalStmt(Decl):
     _sons = ['procedureNames']
@@ -1175,6 +1205,13 @@ class DimensionStmt(Decl):
     def __str__(self):
         return '%s %s' % (self.stmt_name,','.join([str(l) for l in self.lst]))\
                +''.join(self.internal)
+
+    def get_lst(self):
+        return self.lst
+
+    def set_lst(self,newLst):
+        self.lst = newLst
+        self.modified = True
 
 class IntentStmt(Decl):
     pass
@@ -1517,12 +1554,19 @@ class CallStmt(Exec):
                                 +''.join(self.internal)
 
     def get_head(self):
-        self.accessed = True
         return self.head
 
+    def set_head(self,newHead):
+        if self.head != newHead:
+            self.head = newHead
+            self.modified = True
+
     def get_args(self):
-        self.accessed
         return self.args
+
+    def set_args(self,newArgs):
+        self.args = newArgs
+        self.modified = True
 
 class AssignStmt(Exec):
     _sons = ['lhs','rhs']
@@ -1549,12 +1593,20 @@ class AssignStmt(Exec):
         return '%s = %s' % (str(self.lhs),str(self.rhs))+''.join(self.internal)
 
     def get_lhs(self):
-        self.accessed = True
         return self.lhs
 
+    def set_lhs(self,newLhs):
+        if lhs != newLhs:
+            self.lhs = newLhs
+            self.modified = True
+
     def get_rhs(self):
-        self.accessed = True
         return self.rhs
+
+    def set_rhs(self,newRhs):
+        if rhs != newRhs:
+            self.rhs = newRhs
+            self.modified = True
 
 class PointerAssignStmt(Exec):
     _sons = ['lhs','rhs']
@@ -1596,8 +1648,11 @@ class IOStmt(Exec):
         Exec.__init__(self,lineNumber,label,lead,internal)
 
     def get_itemList(self):
-        self.accessed = True
         return self.itemList
+
+    def set_itemList(self,newItemList):
+        self.itemList = newItemList
+        self.modified = True
 
 class SimpleSyntaxIOStmt(IOStmt):
 

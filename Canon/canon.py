@@ -453,7 +453,7 @@ class UnitCanonicalizer(object):
                 index = replacementStmt.itemList.index(item)
                 replacementStmt.itemList.insert(index,newExp)
                 replacementStmt.itemList.remove(item)
-                replacementStmt.accessed = True
+                replacementStmt.modified = True
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|_')
         self.__recursionDepth -= 1
         return replacementStmt
@@ -496,7 +496,7 @@ class UnitCanonicalizer(object):
             for aSon in anExecStmt.get_sons():
                 theSon = getattr(anExecStmt,aSon)
                 newSon = self.__expandStmtFunExp(theSon)
-                setattr(anExecStmt,aSon,newSon)
+                anExecStmt.set_son(aSon,newSon)
         return anExecStmt
 
     def __canonicalizeExecStmt(self,anExecStmt):

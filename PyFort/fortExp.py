@@ -74,6 +74,9 @@ class _Exp(_Mutable_T):
     _sons = []
     def get_sons(self):
         return self._sons
+    def set_son(self,theSon,newSon):
+        setattr(self,theSon,newSon)
+        self.modified = True
     pass
 
 class App(_Exp):
@@ -119,6 +122,10 @@ class NamedParam(object):
     def get_sons(self):
         self.accessed = True
         return self._sons
+
+    def set_son(self,theSon,newSon):
+        setattr(self,theSon,newSon)
+        self.modified = True
 
 class Sel(_Exp):
     'selection expressions like foo(i,j)%k'

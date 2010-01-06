@@ -62,7 +62,7 @@ class TransformActiveVariables(object):
                 for aSon in Exp.get_sons() :
                     theSon = getattr(Exp,aSon)
                     newSon = self.__transformActiveTypes(theSon)
-                    setattr(Exp,aSon,newSon)
+                    Exp.set_son(aSon,newSon)
         DebugManager.debug('TransformActiveVariables.__transformActiveTypes returning '+str(Exp))
         return Exp
         
@@ -87,7 +87,7 @@ class TransformActiveVariables(object):
                 for aSon in anExec.get_sons() :
                     theSon = getattr(anExec,aSon)
                     newSon = self.__transformActiveTypes(theSon)
-                    setattr(anExec,aSon,newSon)
+                    anExec.set_son(aSon,newSon)
             DebugManager.debug('TransformActiveVariables.transformUnit: resulting exec statement: "'+str(anExec)+'"')
         DebugManager.debug('TransformActiveVariables.transformUnit: finished transforming exec statements for this unit.  execs = '+str(self.__myUnit.execs))
         return self.__myUnit

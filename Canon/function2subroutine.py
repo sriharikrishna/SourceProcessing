@@ -56,17 +56,18 @@ def convertFunctionDecl(aDecl,oldFuncnewSubPairs):
                         if anOldNewPair[0] in theSon:
                             newSon.append(anOldNewPair[1])
                             modified = True
-                    setattr(newDecl,aSon,newSon)
+                    newDecl.set_son(aSon,newSon)
                 else:
                     for anOldNewPair in oldFuncnewSubPairs :
                         if anOldNewPair[0] in theSon:
                             theSon.remove(anOldNewPair[0])
                             theSon.append(anOldNewPair[1])
+                            aDecl.modified = True
                             modified = True                    
             else :
                 for anOldNewPair in oldFuncnewSubPairs :
                     if theSon == anOldNewPair[0] :
-                        setattr(newDecl,aSon,anOldNewPair[1])
+                        newDecl.set_son(aSon,anOldNewPair[1])
                         modified = True
     return (newDecl,modified)
 
@@ -85,7 +86,7 @@ def convertInterfaceBlock(oldInterfaceBlock,oldFuncnewSubPairs):
                     raise FunToSubError("error transforming interface block in function2subroutine.convertInterfaceBlock")
                 # rename interface
                 old_name = newInterfaceBlock[0].get_name()
-                newInterfaceBlock[0].name = name_init+old_name
+                newInterfaceBlock[0].set_name(name_init+old_name)
                 newInterfaceBlock.extend(oldInterfaceBlock)
             return newInterfaceBlock
     for aDecl in oldInterfaceBlock:
@@ -145,6 +146,7 @@ def updateTypeDecl(aDecl,outParam,declList):
             if updateResultDecl(decl,outParam):
                 newDecl = createTypeDecl(declCopy.kw,declCopy.get_mod(),outParam,declCopy.lead)
                 declCopy.decls.remove(decl)
+                declCopy.modified = True
                 declList.append(newDecl)
                 resultDeclCreated = True
     return (declCopy,resultDeclCreated)
