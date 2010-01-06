@@ -1192,7 +1192,7 @@ class TestDataStmt(TestCase):
         self.assertEquals(theString,str(theRepr))
 
     def test7(self):
-        '''data statement with multiple objectList-valueList pairs -- KNOWN TO FAIL
+        '''data statement with multiple objectList-valueList pairs -- KNOWN TO FAIL (see http://trac.mcs.anl.gov/projects/openAD/ticket/13)
            (see http://trac.mcs.anl.gov/projects/openAD/ticket/13)'''
         theString = 'DATA NAME / "JOHN DOE" /, METERS / 10*0 /'
         theRepr = DataStmt(['NAME'],['"JOHN DOE"'],'DATA')
