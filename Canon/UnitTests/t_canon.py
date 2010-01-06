@@ -62,7 +62,7 @@ class C1(TestCase):
         compareFiles(self.assertEquals,'inlineComment.f90','inlineComment.pre.f90',free=True)
 
     def test5(self):
-        'preserve inline comments for statements that have been altered during canonicalization -- KNOWN TO FAIL'
+        'preserve inline comments for statements that have been altered during canonicalization -- KNOWN TO FAIL (see https://trac.mcs.anl.gov/projects/openAD/ticket/187)'
         compareFiles(self.assertEquals,'inlineComment.f90','inlineComment.pre.f90',free=True)
 
     def test6(self):
