@@ -1266,6 +1266,34 @@ class TestProcedureStmt(TestCase):
         self.assertEquals(theString,str(pps(theString)))
 
 
+class TestExitStmt(TestCase):
+    '''exit statements'''
+
+    def test0(self):
+        '''plain exit statement'''
+        theString = "exit"
+        theRepr = ExitStmt(None)
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test1(self):
+        '''plain exit statement (all caps)'''
+        theString = "EXIT"
+        theRepr = ExitStmt(None,stmt_name='EXIT')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test2(self):
+        '''exit statement with optional do construct name'''
+        theString = "exit l1000"
+        theRepr = ExitStmt('l1000')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+
 class TestRewindStmt(TestCase):
     '''rewind statements'''
 
@@ -1304,6 +1332,7 @@ suite = asuite(C2,C3,C4,C5,C6,C8,C9,
                TestGotoStmt,
                TestDataStmt,
                TestProcedureStmt,
+               TestExitStmt,
                TestRewindStmt,
               )
 

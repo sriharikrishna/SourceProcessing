@@ -1408,9 +1408,30 @@ class EntryStmt(Decl):
     pass
 
 
-class ExitStmt(Leaf):
+class ExitStmt(Exec):
     kw = 'exit'
     kw_str = kw
+    _sons = ['optionalDoConstructName']
+
+    @staticmethod
+    def parse(ws_scan,lineNumber) :
+        scan = filter(lambda x: x != ' ',ws_scan)
+        form = seq(lit(ExitStmt.kw), # 0 = stmt_name
+                   zo1(id))          # 1 = optionalDoConstructName
+        form = treat(form, lambda x: ExitStmt(x[1] and x[1][0] or None,
+                                              x[0]))
+        (theParsedStmt,rest) = form(scan)
+        return theParsedStmt 
+
+    def __init__(self,optionalDoConstructName,stmt_name=kw_str,lineNumber=0,label=False,lead='',internal=[]):
+        self.optionalDoConstructName = optionalDoConstructName
+        self.stmt_name = stmt_name
+        Exec.__init__(self,lineNumber,label,lead,internal)
+
+    def __str__(self) :
+        optionalDoConstructStr = self.optionalDoConstructName and ' '+self.optionalDoConstructName \
+                                                               or '' 
+        return '%s%s' % (self.stmt_name,optionalDoConstructStr)+''.join(self.internal)
 
 
 class EnddoStmt(Exec):
