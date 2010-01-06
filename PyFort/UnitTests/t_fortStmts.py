@@ -1266,6 +1266,18 @@ class TestProcedureStmt(TestCase):
         self.assertEquals(theString,str(pps(theString)))
 
 
+class TestRewindStmt(TestCase):
+    '''rewind statements'''
+
+    def test0(self):
+        '''rewind statement from centrm/pxlib_read_M.f90 -- KNOWN TO FAIL (see https://trac.mcs.anl.gov/projects/openAD/ticket/202)'''
+        theString = "rewind ['(', 'linpxs', ')']"
+        theRepr = ProcedureStmt(False,['x'])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+
 suite = asuite(C2,C3,C4,C5,C6,C8,C9,
                TestAssignStmt,
                TestCycleStmt,
@@ -1292,6 +1304,7 @@ suite = asuite(C2,C3,C4,C5,C6,C8,C9,
                TestGotoStmt,
                TestDataStmt,
                TestProcedureStmt,
+               TestRewindStmt,
               )
 
 if __name__ == '__main__':
