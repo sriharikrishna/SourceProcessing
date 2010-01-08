@@ -43,25 +43,29 @@ class TransformActiveVariables(object):
 
     # recursively transforms an expression if it contains a variable in
     # the activeVars array by adding %v to it
-    def __transformActiveTypes(self,Exp):
+    def __transformActiveTypes(self,Exp,parentStmt):
         DebugManager.debug('TransformActiveVariables.__transformActiveTypes called on "'+str(Exp)+'"')
         if isinstance(Exp,list) :
-            Exp = [self.__transformActiveTypes(s) for s in Exp]
+            Exp = [self.__transformActiveTypes(s,parentStmt) for s in Exp]
         elif isinstance(Exp,str) :
             if Exp.lower() in self._activeVars :
                 Exp = fe.Sel(Exp,"v")
+                parentStmt.modified = True
         elif Exp in self._activeVars:
             Exp = fe.Sel(Exp,"v")
+            parentStmt.modified = True
         elif isinstance(Exp,fe.App):
             if Exp.head.lower() in self._activeVars:
                 Exp = fe.Sel(Exp,"v")
+                parentStmt.modified = True
             else:
-                Exp.args[0] = self.__transformActiveTypes(Exp.args[0])
+                Exp.args[0] = self.__transformActiveTypes(Exp.args[0],parentStmt)
+                parentStmt.modified = True
         else:
             if hasattr(Exp, "_sons"):
                 for aSon in Exp.get_sons() :
                     theSon = getattr(Exp,aSon)
-                    newSon = self.__transformActiveTypes(theSon)
+                    newSon = self.__transformActiveTypes(theSon,parentStmt)
                     Exp.set_son(aSon,newSon)
         DebugManager.debug('TransformActiveVariables.__transformActiveTypes returning '+str(Exp))
         return Exp
@@ -86,7 +90,7 @@ class TransformActiveVariables(object):
             if hasattr(anExec, "_sons"):
                 for aSon in anExec.get_sons() :
                     theSon = getattr(anExec,aSon)
-                    newSon = self.__transformActiveTypes(theSon)
+                    newSon = self.__transformActiveTypes(theSon,anExec)
                     anExec.set_son(aSon,newSon)
             DebugManager.debug('TransformActiveVariables.transformUnit: resulting exec statement: "'+str(anExec)+'"')
         DebugManager.debug('TransformActiveVariables.transformUnit: finished transforming exec statements for this unit.  execs = '+str(self.__myUnit.execs))

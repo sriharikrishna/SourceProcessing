@@ -62,7 +62,7 @@ def convertFunctionDecl(aDecl,oldFuncnewSubPairs):
                         if anOldNewPair[0] in theSon:
                             theSon.remove(anOldNewPair[0])
                             theSon.append(anOldNewPair[1])
-                            aDecl.modified = True
+                            newDecl.modified = True
                             modified = True                    
             else :
                 for anOldNewPair in oldFuncnewSubPairs :
