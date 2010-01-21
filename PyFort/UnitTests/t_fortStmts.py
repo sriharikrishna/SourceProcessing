@@ -403,16 +403,16 @@ class TestEndStmt(TestCase):
 
     def test2(self):
         'end do statement without do construct name'''
-        theString = 'ENDDO'
-        theRepr = EnddoStmt(None,'ENDDO')
+        theString = 'end do '
+        theRepr = EnddoStmt(None,'end do')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
 
     def test3(self):
         'end do statement with do construct name'''
-        theString = 'enddo l120'
-        theRepr = EnddoStmt('l120','enddo')
+        theString = 'end do  l120'
+        theRepr = EnddoStmt('l120','end do')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
@@ -542,7 +542,7 @@ class TestCharacterDecls(TestCase):
 
     def test6(self):
         '''character type declaration with array constructor (from SCALE: scalelib/free_form_C.f90)'''
-        theString = "character(len=1),dimension(0:27),parameter :: char_array=(/'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f',' ',',','r','*','$','&','+','-','z','.','o','p'/)"
+        theString = "character(len=1),dimension(0:27),parameter :: char_array = (/'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f',' ',',','r','*','$','&','+','-','z','.','o','p'/)"
         #theRepr = CharacterStmt([_F90ExplLen('1')],
         #                        [App('dimension',[Ops(':','0','27')]), 'parameter'],
         #                        [_AssignInit('char_array',
@@ -557,7 +557,7 @@ class TestCharacterDecls(TestCase):
 
     def test7(self):
         '''character type declaration with array constructor'''
-        theString = "character(len=1),dimension(2) :: andchars=(/'&','&'/)"
+        theString = "character(len=1),dimension(2) :: andchars = (/'&','&'/)"
         #theRepr = CharacterStmt([_F90ExplLen('1')],
         #                        [App('dimension',['2'])],
         #                        [_AssignInit('andchars',ArrayConstructor(["'&'","'&'"]))])
@@ -897,7 +897,7 @@ class TestUseStmts(TestCase):
 
     def test2(self):
         'use statement with renames'
-        theString = 'USE S_LIB, pressure=>x_pres,altiude=>x_alt'
+        theString = 'USE S_LIB, pressure => x_pres,altiude => x_alt'
         theRepr = UseAllStmt('S_LIB',
                              [_PointerInit('pressure','x_pres'), _PointerInit('altiude','x_alt')],
                              'USE')
@@ -914,7 +914,7 @@ class TestUseStmts(TestCase):
 
     def test4(self):
         'use statement with only list including renames'
-        theString = 'use months, only: january=>jan,may,june=>jun'
+        theString = 'use months, only: january => jan,may,june => jun'
         theRepr = UseOnlyStmt('months',
                               [_PointerInit('january','jan'), 'may', _PointerInit('june','jun')],
                               'use')

@@ -196,9 +196,8 @@ def convertFunction(functionUnit,newExecs,newDecls,keepFunctionDecl=True):
     for endStmt in functionUnit.end:
         newEndStmts = []
         if isinstance(endStmt,fs.EndStmt):
-            newEndStmt=fs.EndStmt(lineNumber=endStmt.lineNumber,\
+            newEndStmt=fs.EndSubroutineStmt(newSubUnit.uinfo.name,lineNumber=endStmt.lineNumber,\
                                   label=endStmt.label,lead=endStmt.lead)
-            newEndStmt.rawline="end subroutine "+newSubUnit.uinfo.name+'\n'
             newEndStmts.append(newEndStmt)
         else:
             newEndStmts.append(endStmt)

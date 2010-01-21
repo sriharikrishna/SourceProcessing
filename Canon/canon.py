@@ -554,8 +554,7 @@ class UnitCanonicalizer(object):
             if not self._keepFunctionDecl:
             	self.__myNewDecls.append(aDecl)
         elif isinstance(aDecl,fs.EndStmt):
-            newEndStmt = fs.EndStmt(lineNumber=aDecl.lineNumber,label=aDecl.label,lead=aDecl.lead)
-            newEndStmt.rawline = 'end subroutine\n'
+            newEndStmt = fs.EndSubroutineStmt(lineNumber=aDecl.lineNumber,label=aDecl.label,lead=aDecl.lead)
             subroutineBlock.append(newEndStmt)
             self.__myNewDecls.extend(subroutineBlock)
             self.setFunctionBlockFlag(False)

@@ -228,13 +228,14 @@ class TemplateExpansion(object):
             if isinstance(endStmt,fs.EndStmt):
                 match = re.search("template",endStmt.rawline,re.IGNORECASE)
                 if match:
-                    newEndStmt=fs.EndStmt(lineNumber=endStmt.lineNumber,\
-                                          label=endStmt.label,lead=endStmt.lead)
-                    newEndStmt.rawline=endStmt.rawline
-                    newEndStmt.rawline = \
-                        newEndStmt.rawline[:match.start(0)] + \
-                        self.__myUnit.uinfo.name + \
-                        newEndStmt.rawline[match.end(0):]
+                    newEndStmt=endStmt.__class__(self.__myUnit.uinfo.name,\
+                                                 lineNumber=endStmt.lineNumber,\
+                                                 label=endStmt.label,lead=endStmt.lead)
+                    #newEndStmt.rawline=endStmt.rawline
+                    #newEndStmt.rawline = \
+                    #    newEndStmt.rawline[:match.start(0)] + \
+                    #    self.__myUnit.uinfo.name + \
+                    #    newEndStmt.rawline[match.end(0):]
                     newEndStmts.append(newEndStmt)
                 else: 
                     newEndStmts.append(endStmt)
