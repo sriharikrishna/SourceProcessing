@@ -417,7 +417,9 @@ class UnitCanonicalizer(object):
         self.__recursionDepth += 1
         newExp = exp
         if isinstance(exp,fe.App):
-            if not isArrayReference(exp,self.__myUnit.symtab,parentStmt.lineNumber):
+            if ((not isArrayReference(exp,self.__myUnit.symtab,parentStmt.lineNumber))
+                and
+                (not functionType(exp,self.__myUnit.symtab,parentStmt.lineNumber)[0]== fs.IntegerStmt)):
                 newExp = self.__hoistExpression(exp,parentStmt,paramName)
         elif isinstance(exp,fe.Ops):
             newExp = fe.Ops(exp.op,
