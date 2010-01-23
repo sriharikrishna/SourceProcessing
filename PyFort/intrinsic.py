@@ -53,6 +53,7 @@ __intrinsics = (
     'present',
     'read',
     'real',
+    'shape',
     'sign',
     'sin',
     'sinh',
@@ -71,6 +72,7 @@ __inquiry = (
     'associated',
     'allocated',
     'present',
+    'shape',
     'size',
     )
 
