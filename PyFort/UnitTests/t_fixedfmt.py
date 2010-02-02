@@ -83,7 +83,7 @@ class C2(TestCase):
         ll   = vgen(stmt,buf_iter(f1))
         lll  = list(ll)
         ae(len(lll),5)
-        ae(lll[2],['      x = 5.0\n', []])
+        ae(lll[2],['        x = 5.0\n', []])
 
     def test3(self):
         'fjoin'
@@ -94,7 +94,7 @@ class C2(TestCase):
         lll  = list(ll)
         (r,jl,ic) = lll[1]
         a_(ic)
-        ae(jl,'      x = x +5 + 2 * x + sin(x+2.0)')
+        ae(jl,'        x = x + 5 + 2 * x + sin(x+2.0)')
 
     def test4(self):
         'cblk'

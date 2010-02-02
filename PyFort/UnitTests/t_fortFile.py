@@ -15,7 +15,7 @@ class C1(TestCase):
         a_(ff,'fortFile object is screwed')
         for l in ff.lines: print l
 
-class file1(TestCase):
+class fixedfile(TestCase):
     def setUp(self):
         self.fname = fname_t('f1.f')
         self.ff    = open_t('f1.f')
@@ -24,38 +24,80 @@ class file1(TestCase):
         self.ff.close()
 
     def test1(self):
-        '''Ffile string method returns the string rep of the file -- KNOWN TO FAIL https://trac.mcs.anl.gov/projects/openAD/ticket/187'''
-
+        '''Ffile object removes leads, internal comments, and line continuations from the rawline (fixed format test)'''
         ff = self.ff
-        out = open_t('f1.f')
+        out = open_t('f1.out.f')
 
-        self.assertEquals(Ffile.file(self.fname).str(),''.join(out.readlines()))
+        self.assertEquals(''.join([l.rawline+'\n' for l in Ffile.file(self.fname).lines]),
+                          ''.join(out.readlines()))
         out.close()
 
     def test2(self):
-        '''Ffile readlines method -- KNOWN TO FAIL https://trac.mcs.anl.gov/projects/openAD/ticket/187'''
+        '''Test that Ffile object preserves the correct leads (fixed format test)'''
+        out = open_t('f1.formatted.f')
 
-        ff = self.ff
-        out = open_t('f2.f')
+        self.assertEquals(''.join([l.lead+l.rawline+'\n' for l in Ffile.file(self.fname).lines]),
+                          ''.join(out.readlines()))
 
-        self.assertEquals(Ffile.file(self.fname).readlines(),out.readlines())
         out.close()
-        
+
     def test3(self):
-        '''Ffile iterlines method -- KNOWN TO FAIL https://trac.mcs.anl.gov/projects/openAD/ticket/187'''
+        '''Test that embedded comments are preserved (fixed format test) -- KNOWN TO FAIL (internal comments are not currently being preserved, see https://trac.mcs.anl.gov/projects/openAD/ticket/187)'''
+        out = open_t('f1.comments.f')
 
+        lines = []
+        for l in Ffile.file(self.fname).lines:
+            line = l.rawline+'\n'
+            if len(l.internal) > 0:
+                internal = '\n'.join(l.internal)
+                lines.append(line+internal+'\n')
+            else:
+                lines.append(line)
+
+        self.assertEquals(''.join(lines),
+                          ''.join(out.readlines()))
+        out.close()
+
+class freefile(TestCase):
+    def setUp(self):
+        self.fname = fname_t('f1.f90')
+        self.ff    = open_t('f1.f90')
+
+    def tearDown(self):
+        self.ff.close()
+
+    def test1(self):
+        '''Ffile object removes leads, internal comments, and line continuations from the rawline (free format test)'''
         ff = self.ff
-        ll = Ffile.file(self.fname).iterlines()
+        out = open_t('f1.out.f90')
 
-        for (v1,v2) in izip(ll,ff):
-            self.assertEquals(v1,v2)
+        self.assertEquals(''.join([l.rawline+'\n' for l in Ffile.file(self.fname).lines]),
+                          ''.join(out.readlines()))
+        out.close()
 
-    def test4(self):
-        '''lead, comments and continuations are correctly removed from rawlines'''
-        ff = self.ff
-        out = open_t('f4.out.f')
-        self.assertEquals(''.join(l.rawline+'\n'
-                                    for l in Ffile.file(self.fname).lines),
+    def test2(self):
+        '''Test that Ffile object preserves the correct leads (free format test)'''
+        out = open_t('f1.formatted.f90')
+
+        self.assertEquals(''.join([l.lead+l.rawline+'\n' for l in Ffile.file(self.fname).lines]),
+                          ''.join(out.readlines()))
+
+        out.close()
+
+    def test3(self):
+        '''Test that embedded comments are preserved (free format test) -- KNOWN TO FAIL (internal comments are not currently being preserved, see https://trac.mcs.anl.gov/projects/openAD/ticket/187)'''
+        out = open_t('f1.comments.f90')
+
+        lines = []
+        for l in Ffile.file(self.fname).lines:
+            line = l.rawline+'\n'
+            if len(l.internal) > 0:
+                internal = ''.join(l.internal)
+                lines.append(line+internal)
+            else:
+                lines.append(line)
+
+        self.assertEquals(''.join(lines),
                           ''.join(out.readlines()))
         out.close()
 
@@ -63,7 +105,7 @@ class fileops(TestCase):
     def setUp(self):
 
         fname     = fname_t('f1.f')
-        f         = file(fname)
+        f         = file(fname_t('f1.formatted.f'))
         self.ff   = Ffile.file(fname)
         self.fstr = f.read()
         f.close()
@@ -72,7 +114,7 @@ class fileops(TestCase):
         pass
 
     def test1(self):
-        '''write Ffile to a file -- KNOWN TO FAIL https://trac.mcs.anl.gov/projects/openAD/ticket/187'''
+        '''write Ffile to a file'''
         import os
 
         fname = '__tmp.f'
@@ -88,7 +130,7 @@ class fileops(TestCase):
 class heretst(TestCase):
     p1 = '''
       subroutine foo(x)
-      x = x +
+      x = x + 
 c
 c embedded continuation lines
 c
@@ -106,23 +148,26 @@ c
 '''
     p1    = preclip(p1)
     ff    = Ffile.here(p1)
-    fname = fname_t('f1.f')
+    fname = fname_t('f1.out.f')
     f     = file(fname)
 
     def test1(self):
-        "'here' docs -- KNOWN TO FAIL https://trac.mcs.anl.gov/projects/openAD/ticket/187"
+        '''"here" docs'''
         ff = heretst.ff
         f  = heretst.f
         ae = self.assertEquals
-        for (here,ffi) in izip(f,ff.iterlines()):
+        for (here,ffi) in izip(f,
+                               (l.rawline+'\n'
+                                for l in ff.lines
+                                for ll in l.rawline.splitlines(True))):
             ae(here,ffi)
-
+            
 class maptest(TestCase):
 
     fname = fname_t('f2.f')
 
     def test1(self):
-        'map operation, join short continuation lines -- KNOWN TO FAIL https://trac.mcs.anl.gov/projects/openAD/ticket/187'''
+        '''map operation, join short continuation lines'''
 
         ae   = self.assertEquals
         ok   = open_t('f2.f.map_ok.1').read()
@@ -133,20 +178,20 @@ class maptest(TestCase):
         ae(res,ok)
 
     def test2(self):
-        'map operation, filter comments -- KNOWN TO FAIL https://trac.mcs.anl.gov/projects/openAD/ticket/187'''
+        '''map operation, filter comments'''
 
         ae = self.assertEquals
         ok = open_t('f2.f.map_ok.2').read()
         ff   = Ffile.file(maptest.fname)
         lex1 = ((fl.cline,lambda l:[]),
-                (fl.fline,lambda l:[ l.lead + l.line ]))
+                (fl.fline,lambda l:[ l.line ]))
         res  = ''.join(l+'\n' for l in ff.map(lex1))
         ae(res,ok)
 
 s  = asuite(C1)
 s1 = asuite(maptest)
 
-suite = asuite(file1,fileops,heretst,maptest)
+suite = asuite(fixedfile,freefile,fileops,heretst,maptest)
 
 
 if __name__ == '__main__':

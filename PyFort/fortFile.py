@@ -62,42 +62,10 @@ class Ffile(object):
     def here(str,free=False,c_action=cline,s_action=fline):
         return Ffile(StringIO(str),free,c_action,s_action)
 
-    def line_str(self,line,free=False):
-        if free: fmt = ''
-        else: fmt = ' ' * 6
-        if hasattr(line,'lead'):
-            return fmt+line.lead+line.rawline+'\n'
-        else:
-            return fmt+line+'\n'
-
-    def str(self,free=False):
-        '''return all of the original file lines concatenated together
-        WARNING: do not use on large files !!
-        '''
-        if free:
-            fmt = ''
-        else:
-            fmt = ' ' * 6
-        string = ''.join([self.line_str(l) for l in self.lines])
-        return string
-
-    def readlines(self,free=False):
-        '''Make Ffile function like readlines for regular files'''
-        if free: fmt = ''
-        else: fmt = ' ' * 6
-        return [ self.line_str(l) for l in self.lines for ll in l.rawline.splitlines(True) ]
-
-    def iterlines(self,free=False):
-        '''instead of the whole line list, return an iterator
-        that yields 1 rawline at a time
-        '''
-        if free: fmt = ''
-        else: fmt = ' ' * 6
-        return ( (self.line_str(l) for l in self.lines for ll in l.rawline.splitlines(True)) )
-
     def printit(self,out=sys.stdout):
-        for l in self.iterlines():
-            print >> out,l,
+        for l in self.lines:
+            line = l.lead+l.rawline
+            print >> out,line
     
     def write(self,fname):
         ff = open(fname,'w')
