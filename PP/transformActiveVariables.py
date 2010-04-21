@@ -90,6 +90,8 @@ class TransformActiveVariables(object):
             if hasattr(anExec, "_sons"):
                 for aSon in anExec.get_sons() :
                     theSon = getattr(anExec,aSon)
+                    if isinstance(theSon,fs.AllocateStmt) or isinstance(theSon,fs.DeallocateStmt) :
+                        continue
                     newSon = self.__transformActiveTypes(theSon,anExec)
                     anExec.set_son(aSon,newSon)
             DebugManager.debug('TransformActiveVariables.transformUnit: resulting exec statement: "'+str(anExec)+'"')
