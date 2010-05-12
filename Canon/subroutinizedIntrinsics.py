@@ -139,7 +139,7 @@ def makeSubroutinizedMaxvalOrMinval(newUnit,aKey,aTypeClass,indent):
                                        App(locVersion,['a']),
                                        lead=indent+'    '))
     newUnit.execs.append(fs.AssignStmt('r',
-                                       App('i',['1']),
+                                       App('a',[App('i',['1'])]),
                                        lead=indent+'    '))
     newUnit.end.append(fs.EndSubroutineStmt(lead=indent))
 
