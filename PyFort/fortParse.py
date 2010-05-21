@@ -30,7 +30,7 @@ def parse_stmts(jl,lineNumber):
         scan = scan[index+1:]
         count -= 1
 
-    if len(scan) != 0:
+    if len(scan) != 0 and scan!=[' ']:
         parsed = fs.parse(scan,lineNumber)
         objs.append(parsed)
 
