@@ -5,7 +5,7 @@ from unittest  import *
 
 from fortExp import LoopControl
 from fortStmts import *
-from fortStmts import _F90Len,_F90ExplLen,_Star,_NoInit,_Kind,_ExplKind,_AssignInit,_PointerInit,_ImplicitDoConstruct
+from fortStmts import _F90Len,_F90ExplLen,_Star,_NoInit,_Kind,_Prec,_ExplKind,_AssignInit,_PointerInit,_ImplicitDoConstruct
 from useparse  import *
 
 class C2(TestCase):
@@ -466,6 +466,18 @@ class TestRealStmt(TestCase):
         theRepr = RealStmt([],[App('intent',['in']), 'allocatable'],[_NoInit('x'), _NoInit('y')])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
+
+    def test6(self):
+        'F77 style real statement with and variable dimension'
+        flow.setInputFormat('fixed')
+        theString = '      Real*8     array_p( 1-myOLw:sNx+myOLe,1-myOLs:sNy+myOLn,myNz, nSx, nSy )'
+        theRepr = RealStmt([_Prec('8')],[],[_NoInit(App('array_p',[Ops(':',Ops('-','1','myOLw'),Ops('+','sNx','myOLe')),
+                                                                   Ops(':',Ops('-','1','myOLs'),Ops('+','sNy','myOLn')),
+                                                                   'myNz', 'nSx', 'nSy']))])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(len(pps(theString).decls),1)
+        flow.setInputFormat('free')
 
 class TestCharacterDecls(TestCase):
     'test character declaration statements'
