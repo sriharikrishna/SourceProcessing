@@ -35,6 +35,18 @@ class C1(TestCase):
         for (l,c) in izip(f1.lines,ok_s):
             a_(isinstance(l,c))
 
+    def test2(self):
+        'parse file f3a.f'
+
+        f1   = Ffile.file(fname_t('f3a.f'),c_action=parse_cmnt,s_action=parse_stmts)
+        ok_s = (fs.SubroutineStmt,
+                fs.Comments,
+                fs.AssignStmt,
+                fs.EndStmt,
+                )
+        for (l,c) in izip(f1.lines,ok_s):
+            a_(isinstance(l,c))
+
 s1 = makeSuite(C1)
 
 suite = asuite(C1)
