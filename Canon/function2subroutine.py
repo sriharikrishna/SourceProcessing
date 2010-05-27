@@ -151,7 +151,7 @@ def updateTypeDecl(aDecl,outParam,declList):
                 resultDeclCreated = True
     return (declCopy,resultDeclCreated)
 
-def convertFunction(functionUnit,newExecs,newDecls,keepFunctionDecl=True):
+def convertFunction(functionUnit,newExecs,newDecls):
     '''converts a function unit definition to a subroutine unit definition'''
     DebugManager.debug(10*'-'+'>'+'called function2subroutine.convertFunction ' \
                      + 'on function unit statement "'+str(functionUnit)+'",' \

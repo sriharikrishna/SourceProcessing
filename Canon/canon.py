@@ -636,8 +636,7 @@ class UnitCanonicalizer(object):
                 else:
                     aUnit.parent.ulist.append(newUnit)                    
             else:
-                aUnit = function2subroutine.convertFunction(\
-                    aUnit,self.__myNewExecs,declList,self._keepFunctionDecl)
+                aUnit = function2subroutine.convertFunction(aUnit,self.__myNewExecs,subroutineDecls)
         return aUnit
 
     def __canonicalizeExecStmts(self,execList):
