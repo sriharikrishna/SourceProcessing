@@ -13,6 +13,7 @@ __intrinsics = (
     'amax1',
     'amin0',
     'amin1',
+    'any',
     'associated',
     'atan',
     'atan2',
@@ -69,6 +70,7 @@ __intrinsics = (
     )
 
 __inquiry = (
+    'any',
     'associated',
     'allocated',
     'present',
