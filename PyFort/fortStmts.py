@@ -1289,8 +1289,10 @@ class DimensionStmt(Decl):
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
         p1 = seq(lit(DimensionStmt.kw),
+                 zo1(lit('::')),
                  cslist(app))
-        ((dc,lst),rest) = p1(scan)
+        print p1(scan)
+        ((dc,sep,lst),rest) = p1(scan)
         return DimensionStmt(lst,dc,lineNumber,rest=rest)
 
     def __init__(self,lst,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
