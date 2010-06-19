@@ -10,6 +10,7 @@ from PyUtil.argreplacement import replaceArgs
 
 from PyFort.intrinsic import is_intrinsic,getGenericName
 from PyFort.typeInference import TypeInferenceError,expressionType,functionType,isArrayReference,canonicalTypeClass
+from PyFort.shapeInference import expressionShape
 import PyFort.flow as flow
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
@@ -100,6 +101,7 @@ class UnitCanonicalizer(object):
         theNewTemp = _tmp_prefix + str(self.__tempCounter)
         self.__tempCounter += 1
         (varTypeClass,varModifierList) = expressionType(anExpression,self.__myUnit.symtab,parentStmt.lineNumber)
+        varShape=expressionShape(anExpression,self.__myUnit.symtab,parentStmt.lineNumber)
         if (varModifierList!=[] and isinstance(varModifierList[0],fs._FLenMod) and varModifierList[0].len=='*'):
             raise CanonError('unable to determine length of temporary variable for '+str(anExpression),parentStmt.lineNumber)
         if varTypeClass == fs.RealStmt and varModifierList == []:
@@ -107,11 +109,15 @@ class UnitCanonicalizer(object):
             if varTypeClass == fs.DoubleStmt:
                 print >>sys.stderr,'WARNING: Temp variable forced to 8-byte float (real -> double)'
         DebugManager.debug('replaced with '+str(theNewTemp)+' of type '+str(varTypeClass)+'('+str(varModifierList)+')')
-        theNewDecl = varTypeClass(varModifierList,[],[theNewTemp])
+        typeAttrList=[]
+        if varShape:
+            typeAttrList.append(fe.App('dimension',[i for i in varShape]))
+        theNewDecl = varTypeClass(varModifierList,typeAttrList,[theNewTemp])
         self.__myNewDecls.append(theNewDecl)
         self.__myUnit.symtab.enter_name(theNewTemp,
                                         SymtabEntry(SymtabEntry.VariableEntryKind,
                                                     type=(varTypeClass,varModifierList),
+                                                    dimensions=varShape,
                                                     origin='temp'))
         return (theNewTemp,varTypeClass,varModifierList)
 
