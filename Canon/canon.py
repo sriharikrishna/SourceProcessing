@@ -140,12 +140,19 @@ class UnitCanonicalizer(object):
             if funcName in ('maxval','minval'):
                 newArgs = [fe.App('size',[theFuncCall.args[0],'1']), theNewTemp]
             newSubName = subroutinizedIntrinsics.makeName(funcName)
+            argRanks=[]
+            for arg in theFuncCall.args:
+                argS=expressionShape(arg,self.__myUnit.symtab,parentStmt.lineNumber)                            
+                if argS:
+                    argRanks.append(len(argS))
+                else:
+                    argRanks.append(0)
             (d,t)=canonicalTypeClass(newTempType,newTempTypeMods)
-            if (d): 
-                subroutinizedIntrinsics.markRequired(funcName,t)
+            if (d):
+                subroutinizedIntrinsics.markRequired(funcName,t,argRanks)
             else:
                 for t in subroutinizedIntrinsics.typeList:
-                    subroutinizedIntrinsics.markRequired(funcName,t)
+                    subroutinizedIntrinsics.markRequired(funcName,t,argRanks)
             if funcName in ('max','min') and len(theFuncCall.args)>2 :
                 self.__recursionDepth -= 1
                 return self.__canonicalizeFuncCall(self.__canonicalizeIntrinsicEllipsisRec(theFuncCall.head,theFuncCall.args),parentStmt)
