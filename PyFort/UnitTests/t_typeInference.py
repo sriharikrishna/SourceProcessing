@@ -5,7 +5,7 @@ from useparse import *
 
 from PyUtil.symtab import Symtab
 
-from typeInference import expressionType,constantType,typemerge,kw2type,lenfn
+from inference import expressionType,constantType,typemerge,kw2type,lenfn
 from fortStmts import LogicalStmt,CharacterStmt,IntegerStmt,RealStmt,DoubleStmt,ComplexStmt,DoubleCplexStmt
 from fortStmts import _Prec,_Kind,_F77Len
 
