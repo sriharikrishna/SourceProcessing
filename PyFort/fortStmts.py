@@ -1291,7 +1291,6 @@ class DimensionStmt(Decl):
         p1 = seq(lit(DimensionStmt.kw),
                  zo1(lit('::')),
                  cslist(app))
-        print p1(scan)
         ((dc,sep,lst),rest) = p1(scan)
         return DimensionStmt(lst,dc,lineNumber,rest=rest)
 
