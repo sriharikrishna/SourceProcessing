@@ -9,8 +9,7 @@ from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
 from PyUtil.argreplacement import replaceArgs
 
 from PyFort.intrinsic import is_intrinsic,getGenericName
-from PyFort.typeInference import TypeInferenceError,expressionType,functionType,isArrayReference,canonicalTypeClass
-from PyFort.shapeInference import expressionShape
+from PyFort.inference import InferenceError,expressionType,functionType,isArrayReference,canonicalTypeClass,expressionShape
 import PyFort.flow as flow
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
@@ -87,9 +86,9 @@ class UnitCanonicalizer(object):
             raise CanonError('UnitCanonicalizer.shouldSubroutinizeFunction called on array reference '+str(theApp),parentStmt.lineNumber)
         try:
             (funcType,modifier) = functionType(theApp,self.__myUnit.symtab,parentStmt.lineNumber)
-        except TypeInferenceError,errorObj:
+        except InferenceError,errorObj:
             sys.stdout.flush()
-            raise CanonError('UnitCanonicalizer.shouldSubroutinizeFunction: TypeInferenceError: '+errorObj.msg,parentStmt.lineNumber)
+            raise CanonError('UnitCanonicalizer.shouldSubroutinizeFunction:InferenceError: '+errorObj.msg,parentStmt.lineNumber)
         if is_intrinsic(theApp.head):
             DebugManager.debug('UnitCanonicalizer.shouldSubroutinizeFunction: It\'s an intrinsic of type '+str(funcType))
             return subroutinizedIntrinsics.shouldSubroutinize(theApp) and (UnitCanonicalizer._subroutinizeIntegerFunctions or not funcType == fs.IntegerStmt)
@@ -651,8 +650,8 @@ class UnitCanonicalizer(object):
             DebugManager.debug('[Line '+str(anExecStmt.lineNumber)+']:')
             try:
                 self.__canonicalizeExecStmt(anExecStmt)
-            except TypeInferenceError,e:
-                raise CanonError('Caught TypeInferenceError: '+e.msg,anExecStmt.lineNumber)
+            except InferenceError,e:
+                raise CanonError('Caught InferenceError: '+e.msg,anExecStmt.lineNumber)
             except SymtabError,e: # add a lineNumber to SymtabErrors that don't have one
                 e.lineNumber = e.lineNumber or anExecStmt.lineNumber
                 raise e        

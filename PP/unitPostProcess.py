@@ -4,7 +4,7 @@ from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
 from PyUtil.argreplacement import replaceArgs, replaceSon
 
-from PyFort.typeInference import TypeInferenceError,expressionType,functionType,isArrayReference
+from PyFort.inference import InferenceError,expressionType,functionType,isArrayReference
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
 import PyFort.intrinsic as intrinsic

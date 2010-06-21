@@ -19,6 +19,7 @@ from PyFort.flow import setOutputLineLength, setOutputFormat
 from PyFort.fortUnit import Unit,fortUnitIterator
 from PyFort.fortFile import Ffile
 import PyFort.fortStmts as fs
+from PyFort.inference import InferenceError
 
 from Canon.canon import UnitCanonicalizer,CanonError
 from Canon.subroutinizedIntrinsics import makeSubroutinizedIntrinsics,SubroutinizeError,getModuleName
@@ -268,6 +269,11 @@ def main():
         print >>sys.stderr,e.scannedLine
         if e.details: print >>sys.stderr,e.details
         if e.target: print >>sys.stderr,"tried to parse as",e.target
+        cleanup(config)
+        return 1 
+    except InferenceError,e: 
+        print >>sys.stderr,'\nERROR: InferenceError:  in '+currentInputFile+' at line '+str(e.lineNumber)+':'
+        if e.msg: print >>sys.stderr,e.msg
         cleanup(config)
         return 1 
     except AssemblerException,e:
