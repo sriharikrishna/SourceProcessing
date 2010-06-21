@@ -11,7 +11,7 @@ from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import SymtabEntry
 
 import fortStmts
-from fortExp import App,NamedParam,Sel,Unary,Ops,is_const,_id_re,_flonum_re,_int_re,_logicon_set,_quote_set
+from fortExp import App,NamedParam,Sel,Unary,Ops,is_const,_id_re,_flonum_re,_int_re,_logicon_set,_quote_set,Zslice,Lslice,Rslice
 from intrinsic import is_intrinsic
 
 class InferenceError(Exception):
@@ -278,11 +278,26 @@ def identifierShape(anId,localSymtab,lineNumber):
     return returnShape
 
 def arrayReferenceShape(arrRefApp,localSymtab,lineNumber):
+    DebugManager.debug('inference.arrayReferenceShape called on '+repr(arrRefApp)+'...',newLine=False)
     (symtabEntry,containingSymtab) = localSymtab.lookup_name_level(arrRefApp.head)
     dimensions=[]
     symDimIndex=0
     for index in arrRefApp.args:
-       if isRangeExpression(index):
+       if isinstance(index,Zslice):
+          dimensions.append(symtabEntry.dimensions[symDimIndex])
+       if isinstance(index,Lslice):
+          if (isinstance(symtabEntry.dimensions[symDimIndex],Ops)):
+             uBound=symtabEntry.dimensions[symDimIndex].a2
+          else:
+             uBound=symtabEntry.dimensions[symDimIndex]
+          dimensions.append(Ops(':',index.arg,uBound))
+       if isinstance(index,Rslice):
+          if (isinstance(symtabEntry.dimensions[symDimIndex],Ops)):
+             lBound=symtabEntry.dimensions[symDimIndex].a1
+          else:
+             lBound='1'
+          dimensions.append(Ops(':',lBound,index.arg))
+       elif (isRangeExpression(index)):
           dimensions.append(index)
        symDimIndex+=1
     while symDimIndex<len(symtabEntry.dimensions):
