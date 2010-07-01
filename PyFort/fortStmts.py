@@ -986,10 +986,22 @@ class ImplicitStmt(Decl):
 
         (v,r) = disj(p0,p1)(scan)
         v.rest = r
+        if v.kw is 'implicit':
+            type = []
+            for item in v.rest:
+                if item is '(' or len(item) < 2:
+                    break
+                else:
+                    type.append(item)
+            v.const_list = v.rest[len(type):]
+            type = ' '.join(item.lower() for item in type)
+            v.type = type.strip()
         return v
 
     def __init__(self,lst,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         self.lst  = lst 
+        self.type = ''
+        self.const_list = []
         Decl.__init__(self,lineNumber,label,lead,internal,rest)
 
     def __repr__(self):
@@ -1004,7 +1016,8 @@ class ImplicitStmt(Decl):
                                           for l in explst]))+''.join(self.internal)
             
         return 'implicit %s' % ', '.join([_helper(e) for e in self.lst])\
-               +''.join(self.internal)
+            +self.type+''.join(self.const_list)\
+            +''.join(self.internal)
 
 class EquivalenceStmt(Decl):
     kw = 'equivalence'
