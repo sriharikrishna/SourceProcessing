@@ -3,6 +3,7 @@ from PyUtil.debugManager import DebugManager
 from PyFort.fortUnit import fortUnitIterator
 import PyFort.fortStmts as fs
 import PyFort.fortExp as fe
+import re
 
 class TransformError(Exception):
     '''Exception for errors that occur during active variable transformation'''
@@ -80,7 +81,30 @@ class TransformActiveVariables(object):
         for subUnit in self.__myUnit.ulist :
             DebugManager.debug(str(subUnit))
             TransformActiveVariables(subUnit).transformUnit()
-
+            
+        implicit_none = True
+        for aDecl in self.__myUnit.decls:
+            if isinstance(aDecl,fs.ImplicitStmt):
+                if aDecl.type == 'double precision':
+                    aDecl.type = 'type(active)'
+                    aDecl.rawline = str(aDecl)
+                    new_stmt = fs.UseAllStmt(moduleName='OAD_active',renameList=None)
+                    self.__myUnit.decls.insert(0,new_stmt)
+                implicit_none = False
+            if not implicit_none and isinstance(aDecl,fs.DimensionStmt):
+                for var in aDecl.lst:
+                    if isinstance(var,fe.App):
+                        if var.head[0].lower() in 'abcdefghopqrstuvwxyz':
+                            newDecl = fs.DrvdTypeDecl(['(active)'],[],[var])
+                            self.__myUnit.decls.insert(self.__myUnit.decls.index(aDecl),newDecl)
+                            aDecl.lst.remove(var)
+                            aDecl.modified = True
+                    else:
+                        if var[0].lower() in 'abcdefghopqrstuvwxyz':
+                            newDecl = fs.DrvdTypeDecl(['(active)'],[],[var])
+                            self.__myUnit.decls.insert(self.__myUnit.decls.index(aDecl),newDecl)
+                            aDecl.lst.remove(var)
+                            aDecl.modified = True
         for anExec in self.__myUnit.execs:
             DebugManager.debug('TransformActiveVariables.transformUnit: '\
                               +'processing exec statement "'+str(anExec)+'"',
