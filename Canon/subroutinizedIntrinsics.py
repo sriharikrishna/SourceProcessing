@@ -123,26 +123,31 @@ def makeSubroutinizedMaxOrMin(newUnit,aKey,aTypeClass,indent,aRanks):
                                     ['r'],
                                     lead=indent+'  '))
     if maxRank>0:
+        newUnit.decls.append(fs.IntegerStmt(None,[],['i'+str(i) for i in xrange(1,maxRank+1)],lead=indent+'  '))
         newUnit.decls.append(fs.IntegerStmt(None,[],['l'+str(i) for i in xrange(1,maxRank+1)],lead=indent+'  '))
+        newUnit.decls.append(fs.IntegerStmt(None,[],['u'+str(i) for i in xrange(1,maxRank+1)],lead=indent+'  '))
+        for i in xrange(1,maxRank+1):
+            newUnit.execs.append(fs.AssignStmt('l'+str(i),App('lbound',['a'+str(argArrIdx),str(i)]),lead=indent+'  '))
+            newUnit.execs.append(fs.AssignStmt('u'+str(i),App('ubound',['a'+str(argArrIdx),str(i)]),lead=indent+'  '))
         for i in xrange(1,maxRank+1):
             newUnit.execs.append(fs.DoStmt(None,None,
-                                           LoopControl('l'+str(i),
-                                                       App('lbound',['a'+str(argArrIdx),str(i)]),
-                                                       App('ubound',['a'+str(argArrIdx),str(i)]),
+                                           LoopControl('i'+str(i),
+                                                       'l'+str(i),
+                                                       'u'+str(i),
                                                        None),
                                            lead=indent+'  '))
         testExpr=None
         ops=[]
         for arg in xrange(0,2):
             if aRanks[arg]:
-                ops.append(App('a'+str(arg),['l'+str(i) for i in xrange(1,aRanks[arg]+1)]))
+                ops.append(App('a'+str(arg),['i'+str(i) for i in xrange(1,aRanks[arg]+1)]))
             else:
                 ops.append('a'+str(arg))
         if (aKey=='max'):
             testExpr=Ops('>',ops[0],ops[1])
         else:
             testExpr=Ops('<',ops[0],ops[1])
-        rOp=App('r',['l'+str(i) for i in xrange(1,maxRank+1)])
+        rOp=App('r',['i'+str(i) for i in xrange(1,maxRank+1)])
         newUnit.execs.append(fs.IfThenStmt(testExpr,lead=indent+'  '))
         newUnit.execs.append(fs.AssignStmt(rOp,ops[0],lead=indent+'    '))
         newUnit.execs.append(fs.ElseStmt(lead=indent+'  '))
