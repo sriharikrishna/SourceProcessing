@@ -436,13 +436,13 @@ class UnitPostProcessor(object):
                         index = 0
                         while index < len(theSon):
                             arg = theSon[index]
-                            newSon = replaceSon(arg,inlineArgs,replacementArgs)
+                            newSon = replaceSon(argReps,arg,inlineArgs,replacementArgs)
                             if newSon is not arg:
                                 theSon[index] = newSon
                                 Stmt.modified = True
                             index += 1
                     else:
-                        newSon = replaceSon(theSon,inlineArgs,replacementArgs)
+                        newSon = replaceSon(argReps,theSon,inlineArgs,replacementArgs)
                         Stmt.set_son(aSon,newSon)
                 Stmt.lead = stmt_lead
                 Execs.append(Stmt)

@@ -34,12 +34,15 @@ def replaceArg(string,inlineArg,replacementArg):
 # Replaces inline args with the given args
 # called on _son attributes
 # PARAMS:
+# argReps -- the number of times to loop through looking at arguments (the
+# number of arguments to look at); equal to the minimum of the number of
+# inlineArgs and number of replacementArgs
 # arg -- the expression to be modified (is one of the sons of a statement)
 # inlineArgs -- arguments from the inline file (args to be replaced)
 # replacementArgs -- arguments from the input file being processed
 # RETURNS: a modified expression to replace the old son in the statement
 # being processed
-def replaceSon(arg,inlineArgs,replacementArgs):
+def replaceSon(argReps,arg,inlineArgs,replacementArgs):
     newSon = arg
     if isinstance(arg,fe.Sel):
         try:
@@ -56,7 +59,7 @@ def replaceSon(arg,inlineArgs,replacementArgs):
         while i < len(arg.args):
             anArg = arg.args[i]
             if isinstance(anArg,fe.App) or isinstance(anArg,fe.Sel):
-                newArgs.append(replaceSon(anArg,inlineArgs,replacementArgs))
+                newArgs.append(replaceSon(argReps,anArg,inlineArgs,replacementArgs))
             else:
                 try:
                     index = inlineArgs.index(anArg)
@@ -73,6 +76,10 @@ def replaceSon(arg,inlineArgs,replacementArgs):
         except:
             pass
         newSon = fe.App(head,newArgs)
+    elif isinstance(arg,fe.Ops):
+        newSon=fe.Ops(arg.op,
+                      replaceArgs(argReps,str(arg.a1),inlineArgs,replacementArgs),
+                      replaceArgs(argReps,str(arg.a2),inlineArgs,replacementArgs))
     else:
         try:
             index = inlineArgs.index(arg)
