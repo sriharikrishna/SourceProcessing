@@ -8,8 +8,9 @@ from PyUtil.errors import UserError
 from PyUtil.symtab import Symtab
 from PyFort.fortUnit import fortUnitIterator
 from PyFort.fortStmts import RealStmt,IntegerStmt
-from unitPostProcess import UnitPostProcessor,PostProcessError
 from PyUtil.debugManager import DebugManager
+from unitPostProcess import UnitPostProcessor,PostProcessError
+from PP.templateExpansion import TemplateExpansion
 
 '''
 Unit tests for post-processor
@@ -20,10 +21,17 @@ DebugManager.setQuiet(True)
 
 Symtab.setTypeDefaults((RealStmt,[]),(IntegerStmt,[]))
 
-def compareFiles(assertFunc,originalFileName,RefFileName,free):
+def compareFiles(assertFunc,originalFileName,RefFileName,free=False,mode='forward',templateFile=None,inlineFile=None):
     try:
         (fd,testFileName) = tempfile.mkstemp()
         testFile  = open(testFileName,'w')
+        UnitPostProcessor.setMode(mode)
+        if (mode=='reverse'):
+            if (inlineFile):
+                UnitPostProcessor.setInlineFile(fname_t(inlineFile))
+                UnitPostProcessor.processInlineFile()
+            if (templateFile):
+                TemplateExpansion.setTemplateFile(fname_t(templateFile))
         for aUnit in fortUnitIterator(fname_t(originalFileName),free):
             UnitPostProcessor(aUnit).processUnit().printit(testFile)
         testFile.close()
@@ -31,7 +39,7 @@ def compareFiles(assertFunc,originalFileName,RefFileName,free):
         testFileLines = testFile.readlines()
         refFile = open(fname_t(RefFileName),'r')
         refFileLines = refFile.readlines()
-        assertFunc(len(testFileLines),len(refFileLines),'transformation result and reference file have disparate line counts')
+        assertFunc(len(testFileLines),len(refFileLines),'transformation result ('+testFileName+') and reference file have disparate line counts')
         for testLine,refLine in zip(testFileLines,refFileLines):
             assertFunc(testLine,refLine)
         refFile.close()
@@ -58,47 +66,55 @@ def compareFiles(assertFunc,originalFileName,RefFileName,free):
 
 class C1(TestCase):
 
-    def test00(self):
+    def test0(self):
         'post-process empty file: empty.f'
-        compareFiles(self.assertEquals,'empty.f','empty.post.f',free=False)
+        compareFiles(self.assertEquals,'empty.f','empty.post.f')
 
     def test1(self):
         'post-process file with declarations which should not change: implicit.f'
         #implicit, save, real, integer, etc
-        compareFiles(self.assertEquals, 'implicit.f','implicit.post.f',free=False)
+        compareFiles(self.assertEquals, 'implicit.f','implicit.post.f')
 
     def test2(self):
         'post-process a file with included modules: modules.f'
         #active module should be added
-        compareFiles(self.assertEquals, 'modules.f','modules.post.f',free=False)
+        compareFiles(self.assertEquals, 'modules.f','modules.post.f')
 
     def test3(self):
         'test type replacements: active.f'
-        compareFiles(self.assertEquals,'active.f','active.post.f',free=False)
+        compareFiles(self.assertEquals,'active.f','active.post.f')
 
     def test4(self):
         'test inline replacement of __value__ and __deriv__ in declaration statements: decl_inline.f'
-        compareFiles(self.assertEquals,'decl_inline.f','decl_inline.post.f',free=False)
+        compareFiles(self.assertEquals,'decl_inline.f','decl_inline.post.f')
 
     def test5(self):
         'test inline replacement of __value__ and __deriv__ in execution statements: exec_inline.f'
-        compareFiles(self.assertEquals,'exec_inline.f','exec_inline.post.f',free=False)
+        compareFiles(self.assertEquals,'exec_inline.f','exec_inline.post.f')
 
     def test6(self):
         'test inline replacement of nested __value__ and __deriv__ in decl and execution statements: nested_inline.f'
-        compareFiles(self.assertEquals,'nested_inline.f','nested_inline.post.f',free=False)
+        compareFiles(self.assertEquals,'nested_inline.f','nested_inline.post.f')
 
     def test7(self):
         'test replacement of __value__ and __deriv__ in simple I/O statements: ioSimple.f'
-        compareFiles(self.assertEquals,'ioSimple.f','ioSimple.post.f',free=False)
+        compareFiles(self.assertEquals,'ioSimple.f','ioSimple.post.f')
 
     def test8(self):
         'test replacement of __value__ and __deriv__ in expressions in I/O statements : ioExpr.f'
-        compareFiles(self.assertEquals,'ioExpr.f','ioExpr.post.f',free=False)
+        compareFiles(self.assertEquals,'ioExpr.f','ioExpr.post.f')
 
     def test9(self):
         'test replacement of __value__ and __deriv__ in implicit do loops in I/O statements : ioImplDo.f'
-        compareFiles(self.assertEquals,'ioImplDo.f','ioImplDo.post.f',free=False)
+        compareFiles(self.assertEquals,'ioImplDo.f','ioImplDo.post.f')
+
+    def test10(self):
+        'test inlining: inlinepush2_simple.f'
+        compareFiles(self.assertEquals,'inlinepush2_simple.f','inlinepush2_simple.post.f',mode='reverse',templateFile='inlinepush2.template.f',inlineFile='inlinepush2.inline.f')
+
+    def test11(self):
+        'test inlining: inlinepush2.f'
+        compareFiles(self.assertEquals,'inlinepush2.f','inlinepush2.post.f',mode='reverse',templateFile='inlinepush2.template.f',inlineFile='inlinepush2.inline.f')
 
 suite = asuite(C1)
 
