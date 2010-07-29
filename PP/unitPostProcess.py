@@ -539,8 +539,8 @@ class UnitPostProcessor(object):
             else:
                 return Execs
 
-        except TypeInferenceError,e:
-            raise PostProcessError('Caught TypeInferenceError: '+e.msg,anExecStmt.lineNumber)
+        except InferenceError,e:
+            raise PostProcessError('Caught InferenceError: '+e.msg,anExecStmt.lineNumber)
         except SymtabError,e: # add a lineNumber to SymtabErrors that don't have one
             e.lineNumber = e.lineNumber or anExecStmt.lineNumber
             raise e
@@ -615,8 +615,8 @@ class UnitPostProcessor(object):
             else:
                 return (Decls,Execs,UseStmtSeen)
 
-        except TypeInferenceError,e:
-            raise PostProcessError('Caught TypeInferenceError: '+e.msg,aDecl.lineNumber)
+        except InferenceError,e:
+            raise PostProcessError('Caught InferenceError: '+e.msg,aDecl.lineNumber)
         except SymtabError,e: # add a lineNumber to SymtabErrors that don't have one
             e.lineNumber = e.lineNumber or aDecl.lineNumber
             raise e
