@@ -137,8 +137,6 @@ class UnitCanonicalizer(object):
         newSubName=''
         if is_intrinsic(theFuncCall.head):
             funcName=getGenericName(theFuncCall.head)
-            if funcName in ('maxval','minval'):
-                newArgs = [fe.App('size',[theFuncCall.args[0],'1']), theNewTemp]
             newSubName = subroutinizedIntrinsics.makeName(funcName)
             argRanks=[]
             for arg in theFuncCall.args:

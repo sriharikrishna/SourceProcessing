@@ -12,12 +12,12 @@ class SubroutinizeError(Exception):
     def __init__(self,msg):
         self.msg  = msg
 
-_subroutinizable=['max','maxval','min','minval']
-_rankCombinations=[([a,b]) for a in xrange(0,8) for b in xrange(0,8)]
+_subroutinizable={'max':2,'maxval':1,'min':2,'minval':1}
+_rankCombinations=[[([a]) for a in xrange(0,8)],[([a,b]) for a in xrange(0,8) for b in xrange(0,8)]]
 
 def shouldSubroutinize(aFunction):
     DebugManager.debug('subroutinizedIntrinsics.shouldSubroutinize called on "'+str(aFunction)+'"')
-    return intrinsic.getGenericName(aFunction.head) in _subroutinizable
+    return intrinsic.getGenericName(aFunction.head) in _subroutinizable.keys()
 
 _requiredSubroutinizedIntrinsics=[]
 
@@ -62,7 +62,7 @@ def __skipThisType(onlyRequired,key,typeClass,aRanks):
 
 def makeSubroutinizedIntrinsics(onlyRequired):
     ''' this is incomplete '''
-    keyList=_subroutinizable
+    keyList=_subroutinizable.keys()
     if onlyRequired:
         uniq=set([k for k,t,aRanks in _requiredSubroutinizedIntrinsics])
         keyList=[k for k in uniq] 
@@ -73,7 +73,7 @@ def makeSubroutinizedIntrinsics(onlyRequired):
         nameList=[]
         newUnit.decls.append(fs.InterfaceStmt(call_prefix+k,lead='  '))
         for t in typeList:
-            for aRanks in _rankCombinations: 
+            for aRanks in _rankCombinations[_subroutinizable[k]-1]: 
                 if (__skipThisType(onlyRequired,k,t,aRanks)) :
                     #print 'skipping'+str(k)+str(t)+str(aRanks)
                     continue
@@ -85,7 +85,7 @@ def makeSubroutinizedIntrinsics(onlyRequired):
         newUnit.decls.append(fs.ContainsStmt(lead='  '))
     for k in keyList:
         for t in typeList:
-            for aRanks in _rankCombinations: 
+            for aRanks in _rankCombinations[_subroutinizable[k]-1]: 
                 if (__skipThisType(onlyRequired,k,t,aRanks)) : 
                     continue
                 newSUnit=Unit()
@@ -165,24 +165,24 @@ def makeSubroutinizedMaxOrMin(newUnit,aKey,aTypeClass,indent,aRanks):
     newUnit.end.append(fs.EndSubroutineStmt(lead=indent))
 
 def makeSubroutinizedMaxvalOrMinval(newUnit,aKey,aTypeClass,indent,aRanks):
-    newUnit.uinfo = fs.SubroutineStmt(__makeNameImpl(aKey,aTypeClass),
-                                      ['a','l','r'],
+    newUnit.uinfo = fs.SubroutineStmt(__makeNameImpl(aKey,aTypeClass,aRanks),
+                                      ['a','r'],
                                       lead=indent)
+    mods=[App('intent',['in'])]
+    dArgs=[Zslice() for  i in xrange(1,aRanks[0]+1)]
+    if aRanks[0]>0 :
+        mods.append(App('dimension',dArgs))
     newUnit.decls.append(aTypeClass(None,
-                                    [App('intent',['in'])],
-                                    [fs._NoInit(fs.App('a',['l']))],
+                                    mods,
+                                    ['a'],
                                     lead=indent+'  '))
-    newUnit.decls.append(fs.IntegerStmt(None,
-                                        [App('intent',['in'])],
-                                        ['l'],
-                                        lead=indent+'  '))
     newUnit.decls.append(aTypeClass(None,
                                     [App('intent',['out'])],
                                     ['r'],
                                     lead=indent+'  '))
     newUnit.decls.append(fs.IntegerStmt(None,
                                         None,
-                                        [fs._NoInit(App('i',['1']))],
+                                        [fs._NoInit(App('i',aRanks))],
                                         lead=indent+'  '))
     locVersion = (aKey=='maxval') and 'maxloc' \
                                    or 'minloc'
@@ -190,7 +190,7 @@ def makeSubroutinizedMaxvalOrMinval(newUnit,aKey,aTypeClass,indent,aRanks):
                                        App(locVersion,['a']),
                                        lead=indent+'    '))
     newUnit.execs.append(fs.AssignStmt('r',
-                                       App('a',[App('i',['1'])]),
+                                       App('a',[(App('i',[r])) for r in xrange(1,aRanks[0]+1)]),
                                        lead=indent+'    '))
     newUnit.end.append(fs.EndSubroutineStmt(lead=indent))
 
