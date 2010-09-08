@@ -592,6 +592,13 @@ class TestCharacterDecls(TestCase):
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
 
+    def test9(self):
+        '''logical declaration with kind specifier'''
+        theString = 'logical(kind = kind(.true.)) :: l2'
+        theRepr = LogicalStmt([_ExplKind(App('kind',['.true.']))],[],[_NoInit('l2')])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
 
 class TestDimensionStmt(TestCase):
     '''Dimension statement'''
@@ -791,9 +798,8 @@ class TestFunctionStmt(TestCase):
 
     def test3(self):
         '''function statement with type real (with modifier)'''
-        s = 'real(kind=16) function foo(x)'
-        #r = FunctionStmt((RealStmt,[_ExplKind('16')]),'foo',['x'],None)
-        r = FunctionStmt((RealStmt,[_Kind(NamedParam('kind','16'))]),'foo',['x'],None)
+        s = 'real(kind = 16) function foo(x)'
+        r = FunctionStmt((RealStmt,[_ExplKind('16')]),'foo',['x'],None)
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
@@ -806,9 +812,8 @@ class TestFunctionStmt(TestCase):
         
     def test5(self):
         '''function statement with type real (with modifier) and result specifier'''
-        s = 'real(kind=16) function foo(x) result(y)'
-        #r = FunctionStmt((RealStmt,[_ExplKind('16')]),'foo',['x'],'y')
-        r = FunctionStmt((RealStmt,[_Kind(NamedParam('kind','16'))]),'foo',['x'],'y')
+        s = 'real(kind = 16) function foo(x) result(y)'
+        r = FunctionStmt((RealStmt,[_ExplKind('16')]),'foo',['x'],'y')
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
