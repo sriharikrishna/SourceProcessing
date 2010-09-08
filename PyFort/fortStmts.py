@@ -133,7 +133,7 @@ _dblp1   = lit('doubleprecision')
 _dblp    = disj(_dblp2,_dblp1)
 
 pstd = seq(_typeid,
-         zo1(disj(prec,kind,explKind)),
+         zo1(disj(prec,explKind,kind)),
          )
 
 pchar = seq(lit('character'),
