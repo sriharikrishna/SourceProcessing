@@ -29,6 +29,30 @@ def default_dims(attrs_list):
             return tuple(a.args)
     return ()
 
+def _beginDrvdTypeDefn(aDrvdTypeDefn,curr):
+    'derived type definition -- record type in symbol table and set the name on the unit'
+    localSymtab = curr.val.symtab
+    theSymtabEntry = localSymtab.lookup_name_local(aDrvdTypeDefn.name)
+    isPrivate = False
+    curr.val._in_drvdType=aDrvdTypeDefn.name
+    if theSymtabEntry: # already in symtab, shouldn't happen  
+        theSymtabEntry.enterEntryKind(SymtabEntry.DerivedTypeEntryKind)
+    else :
+        newSymtabEntry = SymtabEntry(SymtabEntry.DerivedTypeEntryKind,
+                                     type=None,
+                                     dimensions=None,
+                                     length=None,
+                                     origin='local',
+                                     isPrivate=isPrivate)
+        DebugManager.debug('defn "'+str(aDrvdTypeDefn)+'" NOT already present in symbol table => adding '+str(newSymtabEntry.debug(aDrvdTypeDefn.name)))
+        localSymtab.enter_name(aDrvdTypeDefn.name,newSymtabEntry)
+    return aDrvdTypeDefn
+
+def _endDrvdTypeDefn(aEndDrvdTypeDefnStmt,curr):
+    'derived type definition end  -- unset the name on the unit'
+    curr.val._in_drvdType=None
+    return aEndDrvdTypeDefnStmt
+
 def _processTypedeclStmt(aTypeDeclStmt,curr):
     'type declaration -- record type in symbol table'
     localSymtab = curr.val.symtab
@@ -37,12 +61,15 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
     dflt_d  = default_dims(aTypeDeclStmt.attrs)
     DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: stmt2unit._processTypedeclStmt('+str(aTypeDeclStmt)+') with default dimensions '+str(dflt_d))
     isPrivate = False
+    inDrvdTypeDefn=curr.val._in_drvdType
     for anAttribute in aTypeDeclStmt.attrs :
         if isinstance(anAttribute,str) and anAttribute.lower() == 'private' :
             isPrivate = True
     for aDecl in aTypeDeclStmt.decls:
         DebugManager.debug('\tProcessing decl '+repr(aDecl)+' ... ',newLine=False)
         (name,newDimensions) = typesep(aDecl,dflt_d)
+        if inDrvdTypeDefn:
+            name=inDrvdTypeDefn+":"+name
         try:
             # set the length for character statements
             if (aTypeDeclStmt.kw_str == 'character'):
@@ -60,6 +87,8 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                 theSymtabEntry.enterType(newType)
                 theSymtabEntry.enterDimensions(newDimensions)
                 theSymtabEntry.enterLength(newLength)
+                if inDrvdTypeDefn:
+                    theSymtabEntry.enterDrvdTypeName(inDrvdTypeDefn)
                 # for function/subroutine entries, also update this information in the parent symbol table
                 #if isinstance(theSymtabEntry.entryKind,SymtabEntry.ProcedureEntryKind):
                 if localSymtab.parent and theSymtabEntry.entryKind in (SymtabEntry.FunctionEntryKind,SymtabEntry.SubroutineEntryKind):
@@ -73,6 +102,8 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                                              length=newLength,
                                              origin='local',
                                              isPrivate=isPrivate)
+                if inDrvdTypeDefn:
+                    newSymtabEntry.enterDrvdTypeName(inDrvdTypeDefn)
                 DebugManager.debug('decl "'+str(aDecl)+'" NOT already present in symbol table => adding '+str(newSymtabEntry.debug(name)))
                 localSymtab.enter_name(name,newSymtabEntry)
             unitSymbolEntry,sTable=localSymtab.lookup_name_level(curr.val.name())
@@ -399,3 +430,6 @@ fs.ImplicitStmt.unit_action   = _implicit
 fs.InterfaceStmt.unit_action  = _beginInterface
 fs.ProcedureStmt.unit_action  = _processProcedureStmt
 fs.EndInterfaceStmt.unit_action = _endInterface
+
+fs.DrvdTypeDefn.unit_action = _beginDrvdTypeDefn 
+fs.EndDrvdTypeDefn.unit_action = _endDrvdTypeDefn 
