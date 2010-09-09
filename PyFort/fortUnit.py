@@ -95,6 +95,7 @@ class Unit(object):
     symtab     hierachical symbol table
     fmod       ???? (fmod = cur.module_handler)
     _in_iface  whether or not we are currently in an interface block
+    _in_drvdType the name of the derived type whose definition block we are currently processing
     '''
 
     def __init__(self,parent=None,fmod=None):
@@ -110,6 +111,7 @@ class Unit(object):
         self.symtab    = Symtab(_symtab_of(parent))
         self.fmod      = fmod
         self._in_iface = False
+        self._in_drvdType = None # this would be set to the name of the derived type being processed
 
         DebugManager.debug('new unit created: '+str(self)+', new symtab being created = '+str(self.symtab))
 
