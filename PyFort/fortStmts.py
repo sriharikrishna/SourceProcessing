@@ -120,6 +120,7 @@ id_l     = treat(id,str.lower)
 _typeid  = disj(lit('real'),
                 lit('integer'),
                 lit('logical'),
+                lit('character'),
                 lit('complex'),
                 lit('doubleprecision'),
                 lit('doublecomplex'),
@@ -1200,16 +1201,34 @@ class CharacterStmt(TypeDecl):
         f90mod   = seq(lit('('),disj(lit('*'),Exp),lit(')'))
         f90mod   = treat(f90mod,lambda l: _F90Len(l[1]))
 
-        explLen  = seq(lit('('),
-                       lit('len'),
+        explLen  = seq(lit('len'),
                        lit('='),
                        disj(Exp,
-                            lit('*')),
+                            lit('*'))
+                       )
+        
+        explLen  = treat(explLen,lambda l: _F90ExplLen(l[2]))
+
+        explKind = seq(lit('kind'),
+                       lit('='),
+                       Exp)
+        
+        explKind = treat(explKind,lambda l: _ExplKind(l[2]))
+
+        explList = seq(lit('('),
+                       cslist(disj(explLen,explKind)), 
                        lit(')'))
-        explLen  = treat(explLen,lambda l: _F90ExplLen(l[3]))
-                
+
+        explList = treat(explList,lambda l: l[1])
+
+        modOpts  = zo1(disj(f77mod,f90mod,explList))
+
+        # the first two are just single things while the last thing is a list
+        # we need to remove one level of list nesting: 
+        modOpts  = treat(modOpts,lambda l: len(l) and isinstance(l[0],list) and l[0] or l)
+        
         p1 = seq(lit(CharacterStmt.kw),
-                 zo1(disj(f77mod,f90mod,explLen)),type_attr_list,zo1(lit('::')),
+                 modOpts,type_attr_list,zo1(lit('::')),
                  cslist(char_decl_item))
         try: 
           ((dc,mod,attrs,dc1,decls),rest) = p1(scan)
@@ -1228,7 +1247,10 @@ class CharacterStmt(TypeDecl):
     def __str__(self):
         modstr = ''
         if self.mod:
-            modstr = str(self.mod[0])
+            if (len(self.mod)==1 and isinstance(self.mod[0],_F77Len) or isinstance(self.mod[0],_F90Len)):
+                modstr=str(self.mod[0])
+            else:
+                modstr = '('+','.join([str(a)[1:-1] for a in self.mod])+')'
         
         attr_str = ''
         if self.attrs:
