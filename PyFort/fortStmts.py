@@ -2716,43 +2716,53 @@ class BackspaceStmt(Exec):
 class RewindStmt(Exec):
     kw = 'rewind'
     kw_str = kw
+    paramNames=['unit','err','iostat']
 
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
         try:
-            parenUnitSpec = seq(lit('('),
-                                 id,
-                                 lit(')'))
-            formRewindStmt = seq(lit(RewindStmt.kw),
-                                 disj(id,parenUnitSpec))
+            # without parenthesis
+            formRewindStmt = seq(lit(RewindStmt.kw),id)
             ((rewindKeyword,unitSpec),rest) = formRewindStmt(scan)
             return RewindStmt(unitSpec,lineNumber=lineNumber)
         except:
-            formUnitSpec = seq(lit('unit'),
-                               lit('='),
-                               id)
-            formErrLabel = seq(lit(','),
-                               lit('err'),
-                               lit('='),
+            # with parenthesis
+            formUnitSpec = disj(seq(lit(RewindStmt.paramNames[0]),
+                                    lit('='),
+                                    id),
+                                id)
+            formUnitSpec=treat(formUnitSpec, lambda l: isinstance(l,list) and NamedParam(l[0].lower(),l[2]) or l)
+            formErrLabel = disj(seq(lit(RewindStmt.paramNames[1]),
+                                    lit('='),
+                                    int),
+                                int)
+            formErrLabel=treat(formErrLabel, lambda l: isinstance(l,list) and NamedParam(l[0].lower(),l[2]) or l)
+            formIOCheck = disj(seq(lit(RewindStmt.paramNames[2]),
+                                   lit('='),
+                                   int),
                                int)
-            formIOCheck = seq(lit(','),
-                              lit('iostat'),
-                              lit('='),
-                              int)
-            formRewindStmt = seq(lit(RewindStmt.kw), # 0
-                                 lit('('),           # 1
-                                 formUnitSpec,       # 2
-                                 zo1(formErrLabel),  # 3
-                                 zo1(formIOCheck),   # 4
-                                 lit(')'))           # 5
-            formRewindStmt = treat(formRewindStmt, lambda x: RewindStmt(x[2],
-                                                                        x[3] or None,
-                                                                        x[4] or None,
-                                                                        lineNumber))
-            (theParsedStmt,rest) = formRewindStmt(scan)
+            formIOCheck=treat(formIOCheck, lambda l: isinstance(l,list) and NamedParam(l[0].lower(),l[2]) or l)
+            # note below formUnitSpec goes in the end because otherwise the "id" can capture the parameter name
+            formRewindStmt = seq(lit(RewindStmt.kw),lit('('),disj(cslist(disj(formErrLabel,formIOCheck,formUnitSpec)),id),lit(')'))
+            ((stmt_name,lparen,params,rparen),rest)=formRewindStmt(scan)
+            theParsedStmt=None
+            if isinstance(params,list):
+                theParams=dict((i,None) for i in RewindStmt.paramNames)
+                for pos,p in enumerate(params):
+                    if isinstance(p,NamedParam):
+                        theParams[p.myId]=p.myRHS
+                    else:
+                        theParams[RewindStmt.paramNames[pos]]=p
+                theParsedStmt=RewindStmt(theParams[RewindStmt.paramNames[0]],
+                                         theParams[RewindStmt.paramNames[1]],
+                                         theParams[RewindStmt.paramNames[2]],
+                                         lineNumber)
+            else:
+                theParsedStmt=RewindStmt(params,None,None,lineNumber)
             theParsedStmt.rest = rest
             return theParsedStmt
+        
     def __init__(self,unitSpec,errLabel='',IOCheck='',lineNumber=0,label=False,lead='',internal=[],rest=[]):
         self.unitSpec = unitSpec
         self.errLabel = errLabel
@@ -2760,8 +2770,13 @@ class RewindStmt(Exec):
         Exec.__init__(self,lineNumber,label,lead,internal,rest)
 
     def __str__(self):
-        return '%s %s%s%s' % (self.kw,self.unitSpec,self.errLabel,self.IOCheck)+\
-               ''.join(self.internal)
+        rstr=self.kw+"("+str(self.unitSpec)
+        if (self.errLabel):
+            rstr+=","+str(self.errLabel)
+        if (self.IOCheck):
+            rstr+=","+str(self.IOCheck)
+        rstr+=')'
+        return rstr
 
 
 kwtbl = dict(blockdata       = BlockdataStmt,
