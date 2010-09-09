@@ -870,17 +870,17 @@ class EndInterfaceStmt(DeclLeaf):
     def __init__(self,stmt_name=kw_str,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         DeclLeaf.__init__(self,lineNumber,label,lead,internal,rest)
 
-class EndTypeStmt(DeclLeaf):
-    'end of a type definition'
+class EndDrvdTypeDefn(DeclLeaf):
+    'end of a derived type definition'
     kw     = 'endtype'
     kw_str = 'end type'
 
     @staticmethod
     def parse(ws_scan,lineNumber) :
         scan = filter(lambda x: x != ' ',ws_scan)
-        form = seq(lit(EndTypeStmt.kw)) # 0 = stmt_name
+        form = seq(lit(EndDrvdTypeDefn.kw)) # 0 = stmt_name
         (id,rest) = form(scan)
-        return EndTypeStmt(lineNumber=lineNumber,rest=rest)
+        return EndDrvdTypeDefn(lineNumber=lineNumber,rest=rest)
 
     def __init__(self,stmt_name=kw_str,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         DeclLeaf.__init__(self,lineNumber,label,lead,internal,rest)    
@@ -2784,7 +2784,7 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              endif           = EndifStmt,
              end             = EndStmt,
              endinterface    = EndInterfaceStmt,
-             endtype         = EndTypeStmt,
+             endtype         = EndDrvdTypeDefn,
              endmodule       = EndModuleStmt,
              endprogram      = EndProgramStmt,
              endfunction     = EndFunctionStmt,
