@@ -600,6 +600,18 @@ class TestCharacterDecls(TestCase):
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
 
+    def test10(self):
+        '''character type declaration with kind and optional and intent attribute'''
+        theString = 'character(kind = kind("A"),len=*),intent(in),optional :: name'
+        theRepr = CharacterStmt([_ExplKind(App('kind',['"A"'])),_F90ExplLen('*')],
+                                [App('intent',
+                                     ['in']),
+                                 'optional'],
+                                [_NoInit('name')])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
 class TestDimensionStmt(TestCase):
     '''Dimension statement'''
     def test1(self):
