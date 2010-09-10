@@ -185,8 +185,11 @@ def functionType(aFunctionApp,localSymtab,lineNumber):
 
 def selectionType(aSelectionExpression,localSymtab,lineNumber):
     DebugManager.debug('inference.SelectionType: determining type of selection expression '+str(aSelectionExpression)+' using symtab '+str(localSymtab))
-    # retrieve information for the derived type from the symbol table
-    raise InferenceError('inference.selectionType: called on "'+str(theApp)+'" (Not yet implemented)',lineNumber)
+    # lookup type of head
+    dType=identifierType(aSelectionExpression.head,localSymtab,lineNumber)
+    # lookup the projection type
+    pType=identifierType(dType[1][0]+":"+aSelectionExpression.proj,localSymtab,lineNumber)
+    return pType
 
 def expressionType(anExpression,localSymtab,lineNumber):
     DebugManager.debug('inference.expressionType: determining type of expression '+str(anExpression)+'...',newLine=False)
@@ -212,8 +215,8 @@ def expressionType(anExpression,localSymtab,lineNumber):
         DebugManager.debug(' it\'s a NAMED PARAMETER')
         return expressionType(anExpression.myRHS,localSymtab,lineNumber)
     elif isinstance(anExpression,Sel):
-        DebugManager.debug(' it\'s a SELECTION EXPRESSION')
-        return selectionType(anExpression.myRHS,lineNumber)
+       DebugManager.debug(' it\'s a SELECTION EXPRESSION')
+       return selectionType(anExpression,localSymtab,lineNumber)
     else:
         raise InferenceError('inference.expressionType: No type could be determined for expression "'+str(anExpression)+'"',lineNumber)
 
@@ -344,8 +347,11 @@ def functionShape(aFunctionApp,localSymtab,lineNumber):
 
 def selectionShape(aSelectionExpression,localSymtab,lineNumber):
     DebugManager.debug('inference.SelectionShape: determining shape of selection expression '+str(aSelectionExpression)+' using symtab '+str(localSymtab))
-    # retrieve information for the derived shape from the symbol table
-    raise InferenceError('inference.selectionShape: called on "'+str(theApp)+'" (Not yet implemented)',lineNumber)
+    # lookup type of head
+    dType=identifierType(aSelectionExpression.head,localSymtab,lineNumber)
+    # lookup the projection type
+    pShape=identifierShape(dType[1][0]+":"+aSelectionExpression.proj,localSymtab,lineNumber)
+    return pShape
 
 def expressionShape(anExpression,localSymtab,lineNumber):
     DebugManager.debug('inference.expressionShape: determining shape of expression '+str(anExpression)+'...',newLine=False)
@@ -375,7 +381,7 @@ def expressionShape(anExpression,localSymtab,lineNumber):
         return expressionShape(anExpression.myRHS,localSymtab,lineNumber)
     elif isinstance(anExpression,Sel):
         DebugManager.debug(' it\'s a SELECTION EXPRESSION')
-        return selectionShape(anExpression.myRHS,lineNumber)
+        return selectionShape(anExpression,localSymtab,lineNumber)
     else:
         raise InferenceError('inference.expressionShape: No shape could be determined for expression "'+str(anExpression)+'"',lineNumber)
 
