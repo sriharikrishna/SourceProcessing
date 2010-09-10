@@ -130,7 +130,7 @@ class C5(TestCase):
     def test4(self):
         '''derived type declaration with empty array bounds'''
         s = 'type(OpenADTy_active) :: X(:)'
-        r = DrvdTypeDecl(['(OpenADTy_active)'],[],[_NoInit(App('X',[':']))])
+        r = DrvdTypeDecl(['OpenADTy_active'],[],[_NoInit(App('X',[':']))])
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 

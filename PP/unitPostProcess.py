@@ -106,8 +106,8 @@ class UnitPostProcessor(object):
         for decl in DrvdTypeDecl.get_decls():
             newDecls.append(self.__transformActiveTypesExpression(decl))
         DrvdTypeDecl.set_decls(newDecls)
-        if DrvdTypeDecl.get_mod()[0].lower() == '('+self._abstract_type+')':
-            DrvdTypeDecl.set_mod(['('+self._replacement_type+')'])
+        if DrvdTypeDecl.get_mod()[0].lower() == self._abstract_type:
+            DrvdTypeDecl.set_mod([self._replacement_type])
         return DrvdTypeDecl
 
     # Transforms active types for an expression recursively

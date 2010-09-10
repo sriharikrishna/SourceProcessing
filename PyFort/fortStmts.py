@@ -531,10 +531,20 @@ class DrvdTypeDecl(TypeDecl):
                  type_attr_list,
                  zo1(lit('::')),
                  cslist(decl_item))
-        p0 = treat(p0,lambda l: DrvdTypeDecl([l[1]+l[2]+l[3]],l[4],l[6],lineNumber=lineNumber))
+        p0 = treat(p0,lambda l: DrvdTypeDecl([l[2]],l[4],l[6],lineNumber=lineNumber))
         (v,r) = p0(scan)
         v.rest=r
         return v
+
+    def __str__(self):
+        attr_str = ''
+        if self.attrs:
+            attr_str = ','+','.join([str(a) for a in self.attrs])
+        return '%s(%s)%s :: %s' % (self.__class__.kw_str,
+                                   str(self.mod[0]),
+                                   attr_str,
+                                   ','.join([str(d) for d in self.decls]))\
+                                   +''.join(self.internal)
 
 class DrvdTypeDefn(Decl):
     '''
