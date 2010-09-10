@@ -186,7 +186,7 @@ def functionType(aFunctionApp,localSymtab,lineNumber):
 def selectionType(aSelectionExpression,localSymtab,lineNumber):
     DebugManager.debug('inference.SelectionType: determining type of selection expression '+str(aSelectionExpression)+' using symtab '+str(localSymtab))
     # lookup type of head
-    dType=identifierType(aSelectionExpression.head,localSymtab,lineNumber)
+    dType=expressionType(aSelectionExpression.head,localSymtab,lineNumber)
     # lookup the projection type
     pType=identifierType(dType[1][0]+":"+aSelectionExpression.proj,localSymtab,lineNumber)
     return pType
@@ -348,7 +348,7 @@ def functionShape(aFunctionApp,localSymtab,lineNumber):
 def selectionShape(aSelectionExpression,localSymtab,lineNumber):
     DebugManager.debug('inference.SelectionShape: determining shape of selection expression '+str(aSelectionExpression)+' using symtab '+str(localSymtab))
     # lookup type of head
-    dType=identifierType(aSelectionExpression.head,localSymtab,lineNumber)
+    dType=expressionType(aSelectionExpression.head,localSymtab,lineNumber)
     # lookup the projection type
     pShape=identifierShape(dType[1][0]+":"+aSelectionExpression.proj,localSymtab,lineNumber)
     return pShape
