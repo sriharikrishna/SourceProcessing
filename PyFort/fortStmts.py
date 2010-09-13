@@ -2788,13 +2788,19 @@ class RewindStmt(Exec):
         rstr+=')'
         return rstr
 
+kwBuiltInTypesTbl= dict(
+    character       = CharacterStmt,
+    complex         = ComplexStmt,
+    doublecomplex   = DoubleCplexStmt,
+    doubleprecision = DoubleStmt,
+    integer         = IntegerStmt,
+    logical         = LogicalStmt,
+    real            = RealStmt
+    )
 
 kwtbl = dict(blockdata       = BlockdataStmt,
              common          = CommonStmt,
-             logical         = LogicalStmt,
              data            = DataStmt,
-             doubleprecision = DoubleStmt,
-             doublecomplex   = DoubleCplexStmt,
              implicit        = ImplicitStmt,
              equivalence     = EquivalenceStmt,
              parameter       = ParameterStmt,
@@ -2807,13 +2813,9 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              goto            = GotoStmt,
              external        = ExternalStmt,
              allocatable     = AllocatableStmt,
-             character       = CharacterStmt,
              intrinsic       = IntrinsicStmt,
              include         = IncludeStmt,
-             real            = RealStmt,
-             integer         = IntegerStmt,
              dimension       = DimensionStmt,
-             complex         = ComplexStmt,
              subroutine      = SubroutineStmt,
              program         = ProgramStmt,
              function        = FunctionStmt,
@@ -2855,6 +2857,8 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              namelist        = NamelistStmt,
              )
 
+kwtbl.update(kwBuiltInTypesTbl)
+
 for kw in ('if','continue','return','else','print','use','cycle','exit','rewind','where','elsewhere','format','pointer','target'):
     kwtbl[kw] = globals()[kw.capitalize() + 'Stmt']
     
@@ -2871,15 +2875,6 @@ def sqz(n,mutable):
     mutable[0][0:n] = [rv]
     return rv
 
-_types = ('real',
-          'integer',
-          'logical',
-          'complex',
-          'character',
-          'doubleprecision',
-          'doublecomplex',
-          )
-
 def parse(ws_scan,lineNumber):
     scan = filter(lambda x: x != ' ',ws_scan)
     try:
@@ -2893,7 +2888,7 @@ def parse(ws_scan,lineNumber):
         kw = len(scan) >=3 and kw3g(lscan[0:3]) and sqz(3,[scan]) or \
              len(scan) >=2 and kw2g(lscan[0:2]) and sqz(2,[scan]) or \
              lscan[0]
-        if kw in _types and 'function' in lscan:
+        if kw in kwBuiltInTypesTbl.keys() and 'function' in lscan:
             kw = 'function'
         # special case for module procedure statements:
         elif (kw == 'module') and (lscan[1] == 'procedure') :
