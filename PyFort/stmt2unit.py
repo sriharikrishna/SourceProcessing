@@ -307,7 +307,7 @@ def _beginProcedureUnit(aProcedureDeclStmt,cur):
     localSymtab.enter_name(aProcedureDeclStmt.name,entry)
     cur.val.symtab.enter_name(aProcedureDeclStmt.name,entry)
     cur.val.symtab = localSymtab
-    if (isisntance(aProcedureDeclStmt,FunctionStmt)): 
+    if (isinstance(aProcedureDeclStmt,fs.FunctionStmt)): 
         cur.val._in_functionDecl=aProcedureDeclStmt
     return aProcedureDeclStmt
 
