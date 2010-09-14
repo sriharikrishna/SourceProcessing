@@ -120,16 +120,16 @@ def identifierType(anId,localSymtab,lineNumber):
        # needs to be resolved by genericResolve
        return None
     elif symtabEntry:
-        symtabEntry.enterType(containingSymtab.implicit[anId[0]])
-        returnType = symtabEntry.type
-        DebugManager.debug('with symtab entry'+symtabEntry.debug(anId)+' (without type).  Implicit type (locally) is '+str(returnType))
-        DebugManager.warning('inference.identifierType: [line '+str(lineNumber)+'] implicit typing (scope ='+str(containingSymtab)+') used for identifier "'+anId+'" type ="'+str(returnType)+'"')
+       symtabEntry.enterType(containingSymtab.implicit[anId[0]])
+       returnType = symtabEntry.type
+       DebugManager.debug('with symtab entry'+symtabEntry.debug(anId)+' (without type).  Implicit type (locally) is '+str(returnType))
+       DebugManager.warning('inference.identifierType: [line '+str(lineNumber)+'] implicit typing (scope ='+str(containingSymtab)+') used for identifier "'+anId+'" type ="'+str(returnType)+'"')
     else: # no symtab entry -> try local implicit typing
-        returnType = localSymtab.implicit[anId[0]]
-        DebugManager.warning('inference.identifierType: [line '+str(lineNumber)+'] local scope implicit typing used for identifier "'+anId+'" type ="'+str(returnType)+'"')
-        DebugManager.debug('with implicit type '+str(returnType))
+       returnType = localSymtab.implicit[anId[0]]
+       DebugManager.warning('inference.identifierType: [line '+str(lineNumber)+'] local scope implicit typing used for identifier "'+anId+'" type ="'+str(returnType)+'"')
+       DebugManager.debug('with implicit type '+str(returnType))
     if not returnType:
-        raise InferenceError('inference.identifierType: No type could be determined for identifier "'+anId+'"',lineNumber)
+       raise InferenceError('inference.identifierType: No type could be determined for identifier "'+anId+'"',lineNumber)
     return returnType
 
 def intrinsicType(anIntrinsicApp,localSymtab,lineNumber):
