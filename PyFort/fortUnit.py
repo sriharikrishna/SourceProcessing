@@ -37,27 +37,32 @@ def install_pat(cur):
             return self.unit_action(cur)
         return _action
     
-    _ustart    = lambda s: s.is_ustart()
-    _uend      = lambda s: s.is_uend()
+    _ustart    = lambda s: s.is_ustart() # set in fortStmts, true for block data, module, function, subroutine, program
+    _uend      = lambda s: s.is_uend() # set in fortStmts, true for the respective end statements
 
     startunit  = treat(pred(_ustart))
     endunit    = pred(_uend)
-    cblk       = pred(lambda s: s.is_comment())
-    ulist_pre  = pred(lambda s: s.is_contains())
+    cblk       = pred(lambda s: s.is_comment()) # set in fortStmts, true for Comments only
+    ulist_pre  = pred(lambda s: s.is_contains()) # set in fortStmts, true for ContainsStmt only
+    # for the following: is_decl is set in fortStmts and true for all subclasses of Decl except for ContainsStmt and EndStmt when not in an interface
+    # the "action" refers to the unit_action of a Statement which is set in stmt2unit; this - however - is executed only when is_decl is true
     adecl      = treat(pred(lambda s: s.is_decl(cur)),action(cur))
-    aexec      = pred(lambda s: s.is_exec())
+    aexec      = pred(lambda s: s.is_exec()) # is exec is set in fortStmts, true for Exec and all subclasses except for EndStmt and its subclasses
 
-
-    (c,u,d,x,n,e) = (cblk,
-                     startunit,
-                     adecl,
-                     aexec,
-                     ulist_pre,
-                     endunit)
+    # tuple of shorter names for the following:
+    (c,u,d,x,n,e) = (cblk,      # comment block
+                     startunit, # unit start
+                     adecl,     # declarations
+                     aexec,     # executable stmts
+                     ulist_pre, # contains being a predicate for subunits
+                     endunit)   # unit end
 
     fmod = cur.module_handler
 
     def handle_mod(aUnit):
+        '''
+        collect all the modules along the way
+        '''
         if isinstance(aUnit.uinfo,fs.ModuleStmt):
             fmod.add_module(aUnit.uinfo.name,aUnit)
         return aUnit
@@ -68,17 +73,17 @@ def install_pat(cur):
         'eta expansion for recursive patterns'
         return uu(s)
 
-    uh    = treat(seq(zo1(c),u),cur.uhead)
-    udcl  = treat(star(cmst(d)),flatten,cur.udecl)
-    uexc  = treat(star(cmst(x)),flatten,cur.uexec)
-    cnth  = treat(cmst(n),cur.ucont)
-    cntl  = treat(star(_ul),cur.ulist)
-    uctn  = zo1(seq(cnth,cntl))
-    uend  = treat(cmst(e),cur.uend,handle_mod)
+    uh    = treat(seq(zo1(c),u),cur.uhead)         # comments and unit start, invoke uhead -> uinfo -> <stmt>.unit_entry
+    udcl  = treat(star(cmst(d)),flatten,cur.udecl) # comments and declarations. invoke udecl
+    uexc  = treat(star(cmst(x)),flatten,cur.uexec) # comments and executable statements
+    cnth  = treat(cmst(n),cur.ucont)               # comments and CONTAINS, invoke ucont -> makes a new sub unit
+    cntl  = treat(star(_ul),cur.ulist)             # recursive descent into sub units
+    uctn  = zo1(seq(cnth,cntl))                    # contains block   
+    uend  = treat(cmst(e),cur.uend,handle_mod)     # comments and unit end, invoke uend (makes new Unit) and handle_mod
 
-    uu    = treat(seq(uh,udcl,uexc,uctn,uend),lambda s:cur.fval)
-    ucm   = treat(c,cur.ucm,lambda s:cur.fval)
-    return disj(uu,ucm)
+    uu    = treat(seq(uh,udcl,uexc,uctn,uend),lambda s:cur.fval) # apply cur.fval to the full assembly for a unit
+    ucm   = treat(c,cur.ucm,lambda s:cur.fval)     # apply ucm and cur.fval to he comments in c
+    return disj(uu,ucm)                            # it is either a unit or some comments
 
 def _symtab_of(v):
     return v and v.symtab or None
@@ -96,6 +101,7 @@ class Unit(object):
     fmod       ???? (fmod = cur.module_handler)
     _in_iface  whether or not we are currently in an interface block
     _in_drvdType the name of the derived type whose definition block we are currently processing
+    _in_functionDecl this will be set to the FunctionDeclStmt if a function is being processed
     '''
 
     def __init__(self,parent=None,fmod=None):
@@ -112,7 +118,7 @@ class Unit(object):
         self.fmod      = fmod
         self._in_iface = False
         self._in_drvdType = None # this would be set to the name of the derived type being processed
-
+        self._in_functionDecl = None # this will be set to the FunctionDeclStmt if a function is being processed
         DebugManager.debug('new unit created: '+str(self)+', new symtab being created = '+str(self.symtab))
 
     def name(self):
@@ -214,6 +220,11 @@ class _curr(object):
         return u
 
 def fortUnitIterator(fileName,inputFormat=None):
+    '''
+    returns an iterator over units found in the given file named fileName;
+    the units are assembled based on install_pat
+    and buf_iter provides the source iterator from which the units are assembled
+    '''
     return vgen(install_pat(_curr(module_handler.ourModuleHandler)),
                 buf_iter(Ffile.file(fileName,parse_cmnt,parse_stmts,\
                                     inputFormat).lines))
