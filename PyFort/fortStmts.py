@@ -1538,7 +1538,7 @@ class FunctionStmt(PUstart):
                               or ''
         resultStr = self.result and ' result('+str(self.result)+')' \
                                  or ''
-        return '%s %s %s(%s)%s' % (typePrefix,
+        return '%s%s %s(%s)%s' % (typePrefix,
                                    self.kw,
                                    str(self.name),
                                    ','.join([str(l) for l in self.args]),
