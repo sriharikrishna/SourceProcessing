@@ -1528,20 +1528,22 @@ class FunctionStmt(PUstart):
                             or None
         resultRepr = self.result and repr(self.result) \
                                   or None
-        return 'FunctionStmt(%s,%s,%s,%s)' % (typeRepr,
-                                              repr(self.name),
-                                              repr(self.args),
-                                              resultRepr)
+        return '%s(%s,%s,%s,%s)' % (self.__class__.__name__,
+                                    typeRepr,
+                                    repr(self.name),
+                                    repr(self.args),
+                                    resultRepr)
     def __str__(self):
         typePrefix = self.ty and (typestr2(self.ty)+' ') \
                               or ''
         resultStr = self.result and ' result('+str(self.result)+')' \
                                  or ''
-        return '%sfunction %s(%s)%s' % (typePrefix,
-                                        str(self.name),
-                                        ','.join([str(l) for l in self.args]),
-                                        resultStr)\
-                                        +''.join(self.internal)
+        return '%s %s %s(%s)%s' % (typePrefix,
+                                   self.kw,
+                                   str(self.name),
+                                   ','.join([str(l) for l in self.args]),
+                                   resultStr)\
+                                   +''.join(self.internal)
 
 class ModuleStmt(PUstart):
     kw = 'module'
