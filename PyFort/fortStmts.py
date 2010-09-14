@@ -1489,7 +1489,9 @@ class FunctionStmt(PUstart):
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
-        p1 = seq(zo1(type_pat_sem),
+        drvdTypeSpec=seq(lit('type'), lit('('), id, lit(')'))
+        drvdTypeSpec=treat(drvdTypeSpec,lambda l: DrvdTypeDecl([l[2]],[],[],lineNumber=lineNumber))
+        p1 = seq(zo1(disj(type_pat_sem,drvdTypeSpec)),
                  lit(FunctionStmt.kw),
                  id,
                  lit('('),
@@ -2888,7 +2890,7 @@ def parse(ws_scan,lineNumber):
         kw = len(scan) >=3 and kw3g(lscan[0:3]) and sqz(3,[scan]) or \
              len(scan) >=2 and kw2g(lscan[0:2]) and sqz(2,[scan]) or \
              lscan[0]
-        if kw in kwBuiltInTypesTbl.keys() and 'function' in lscan:
+        if (kw in kwBuiltInTypesTbl.keys() or kw == 'type') and 'function' in lscan:
             kw = 'function'
         # special case for module procedure statements:
         elif (kw == 'module') and (lscan[1] == 'procedure') :
