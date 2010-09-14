@@ -307,9 +307,19 @@ def _beginProcedureUnit(aProcedureDeclStmt,cur):
     localSymtab.enter_name(aProcedureDeclStmt.name,entry)
     cur.val.symtab.enter_name(aProcedureDeclStmt.name,entry)
     cur.val.symtab = localSymtab
+    if (isisntance(aProcedureDeclStmt,FunctionStmt)): 
+        cur.val._in_functionDecl=aProcedureDeclStmt
     return aProcedureDeclStmt
 
 def _endProcedureUnit(anEndProcedureStmt,cur):
+    if cur.val._in_functionDecl:
+        theSymtabEntry=cur.val.symtab.lookup_name(cur.val._in_functionDecl.name)
+        if (theSymtabEntry.type is None and cur.val._in_functionDecl.result):
+            # try to get the tupe from the result symbol
+            theResultEntry=cur.val.symtab.lookup_name(cur.val._in_functionDecl.name)
+            if (theResultEntry):
+                theSymtabEntry.enterType(theResultEntry.type)
+        cur.val._in_functionDecl=None         
     if cur.val.symtab.parent :
         DebugManager.debug('[Line '+str(anEndProcedureStmt.lineNumber)+']: stmt2unit._endProcedureUnit:' \
                           +' called on "'+str(anEndProcedureStmt)+'"' \
@@ -400,25 +410,25 @@ def _endInterface(anEndInterfaceStmt,cur):
     DebugManager.debug('[Line '+str(anEndInterfaceStmt.lineNumber)+']: stmt2unit._endInterface('+str(anEndInterfaceStmt)+')')
     return anEndInterfaceStmt
 
-fs.GenStmt.unit_action        = lambda s,*rest,**kw: s
-fs.GenStmt.unit_entry         = lambda s,*rest,**kw: s
+fs.GenStmt.unit_action            = lambda s,*rest,**kw: s
+fs.GenStmt.unit_entry             = lambda s,*rest,**kw: s
 
 fs.SubroutineStmt.unit_entry      = _unit_entry
 fs.SubroutineStmt.make_unit_entry = _makeSubroutineEntry
 fs.SubroutineStmt.unit_action     = _beginProcedureUnit
 fs.EndSubroutineStmt.unit_action  = _endProcedureUnit
 
-fs.FunctionStmt.unit_entry      = _unit_entry
-fs.FunctionStmt.make_unit_entry = _makeFunctionEntry
-fs.FunctionStmt.unit_action     = _beginProcedureUnit
-fs.EndFunctionStmt.unit_action  = _endProcedureUnit
+fs.FunctionStmt.unit_entry        = _unit_entry
+fs.FunctionStmt.make_unit_entry   = _makeFunctionEntry
+fs.FunctionStmt.unit_action       = _beginProcedureUnit
+fs.EndFunctionStmt.unit_action    = _endProcedureUnit
 
 fs.AssignStmt.is_decl         = _is_stmt_fn
 fs.AssignStmt.unit_action     = _assign2stmtfn
 
 fs.DimensionStmt.unit_action = _processDimensionStmt
 
-fs.ExternalStmt.unit_action = _processExternalStmt
+fs.ExternalStmt.unit_action  = _processExternalStmt
 
 fs.TypeDecl.unit_action       = _processTypedeclStmt
 
