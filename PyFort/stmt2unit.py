@@ -298,9 +298,12 @@ def _implicit_none(self,cur):
     return self
 
 def _beginProcedureUnit(aProcedureDeclStmt,cur):
+    '''
+    called for function/subroutine statements within an interface block
+    '''
     localSymtab = Symtab(cur.val.symtab)
     DebugManager.debug('[Line '+str(aProcedureDeclStmt.lineNumber)+']: stmt2unit._beginProcedureUnit:' \
-                      +' called for procedure statement "'+str(aProcedureDeclStmt)+'"' \
+                      +' called for '+aProcedureDeclStmt.__class__.__name__+': "'+str(aProcedureDeclStmt)+'"' \
                       +' changing from current symtab "'+str(cur.val.symtab)+'"' \
                       +' to local symtab "'+str(localSymtab)+'"')
     entry = aProcedureDeclStmt.make_unit_entry(localSymtab)
@@ -312,6 +315,9 @@ def _beginProcedureUnit(aProcedureDeclStmt,cur):
     return aProcedureDeclStmt
 
 def _endProcedureUnit(anEndProcedureStmt,cur):
+    '''
+    called for function/subroutine end statements within an interface block
+    '''
     if cur.val._in_functionDecl:
         theSymtabEntry=cur.val.symtab.lookup_name(cur.val._in_functionDecl.name)
         if (theSymtabEntry.type is None and cur.val._in_functionDecl.result):
