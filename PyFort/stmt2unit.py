@@ -270,6 +270,23 @@ def _unit_entry(self,cur):
             currentSymtab.parent.enter_name(self.name,parentSymtabEntry)
             DebugManager.debug('[Line '+str(self.lineNumber)+']: new PARENT unit symtab entry '+parentSymtabEntry.debug(self.name))
     DebugManager.debug('[Line '+str(self.lineNumber)+']: stmt2unit._unit_entry() for '+str(self)+': with symtab '+str(currentSymtab)+' with parent symtab '+str(currentSymtab.parent))
+    if (isinstance(self,fs.FunctionStmt)): 
+        cur.val._in_functionDecl=self
+    return self
+
+def _unit_exit(self,cur):
+    '''exit a subroutine or function
+    '''
+    if cur.val._in_functionDecl:
+        theSymtabEntry=cur.val.symtab.lookup_name(cur.val._in_functionDecl.name)
+        if (theSymtabEntry.type is None and cur.val._in_functionDecl.result):
+            # try to get the tupe from the result symbol
+            theResultEntry=cur.val.symtab.lookup_name(cur.val._in_functionDecl.result)
+            if (theResultEntry):
+                theSymtabEntry.enterType(theResultEntry.type)
+                if cur.val.symtab.parent:  # update the copy in the parent 
+                    cur.val.symtab.parent.lookup_name(cur.val._in_functionDecl.name).enterType(theResultEntry.type)
+        cur.val._in_functionDecl=None         
     return self
 
 def _implicit(self,cur):
@@ -418,16 +435,19 @@ def _endInterface(anEndInterfaceStmt,cur):
 
 fs.GenStmt.unit_action            = lambda s,*rest,**kw: s
 fs.GenStmt.unit_entry             = lambda s,*rest,**kw: s
+fs.GenStmt.unit_exit              = lambda s,*rest,**kw: s
 
 fs.SubroutineStmt.unit_entry      = _unit_entry
 fs.SubroutineStmt.make_unit_entry = _makeSubroutineEntry
 fs.SubroutineStmt.unit_action     = _beginProcedureUnit
 fs.EndSubroutineStmt.unit_action  = _endProcedureUnit
+fs.EndSubroutineStmt.unit_exit    = _unit_exit
 
 fs.FunctionStmt.unit_entry        = _unit_entry
 fs.FunctionStmt.make_unit_entry   = _makeFunctionEntry
 fs.FunctionStmt.unit_action       = _beginProcedureUnit
 fs.EndFunctionStmt.unit_action    = _endProcedureUnit
+fs.EndFunctionStmt.unit_exit      = _unit_exit
 
 fs.AssignStmt.is_decl         = _is_stmt_fn
 fs.AssignStmt.unit_action     = _assign2stmtfn

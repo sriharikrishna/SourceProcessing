@@ -194,6 +194,7 @@ class _curr(object):
     def uend(self,s):
         u = self.val
         p = u.parent
+        s[-1].unit_exit(self)
         u.end = s
         self.fval = u
         self.val  = Unit(p,self.module_handler)
