@@ -318,7 +318,6 @@ def _beginProcedureUnit(aProcedureDeclStmt,cur):
     '''
     called for function/subroutine statements within an interface block
     '''
-    print "BEGIN PROCEDURE UNIT"
     localSymtab = Symtab(cur.val.symtab)
     DebugManager.debug('[Line '+str(aProcedureDeclStmt.lineNumber)+']: stmt2unit._beginProcedureUnit:' \
                       +' called for '+aProcedureDeclStmt.__class__.__name__+': "'+str(aProcedureDeclStmt)+'"' \
@@ -336,7 +335,6 @@ def _endProcedureUnit(anEndProcedureStmt,cur):
     '''
     called for function/subroutine end statements within an interface block
     '''
-    PRINT "END PROCEDURE UNIT"
     if cur.val._in_functionDecl:
         theSymtabEntry=cur.val.symtab.lookup_name(cur.val._in_functionDecl.name)
         if (theSymtabEntry.type is None and cur.val._in_functionDecl.result):
