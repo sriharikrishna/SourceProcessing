@@ -740,6 +740,7 @@ class UnitPostProcessor(object):
             return newUnit
         return None
     
+    # a procedure which initializes all active global variables
     @staticmethod
     def createGlobalInitProcedure(initNames):
         newUnit = Unit()
@@ -754,10 +755,12 @@ class UnitPostProcessor(object):
         newUnit.end = [fs.EndSubroutineStmt()]
         return newUnit
 
+    # inserts a call to the global initialization procedure
     def __insertGlobalInitCall(self):
         newExec = fs.CallStmt('OAD_globalVar_init',[],lead='\t')
         self.__myUnit.execs.insert(0,newExec)
 
+    # creates a contains block in the module with a new subroutine initializing all active variables within the module
     def __createModuleInitProcedure(self):
         activeTypeDecls = []
         for decl in self.__myUnit.decls:
@@ -790,6 +793,7 @@ class UnitPostProcessor(object):
             self.__myUnit.contains.append(fs.ContainsStmt())
         return subUnit
 
+    # find all common block variables to be initialized
     def getInitCommonStmts(self,initSet,initNames,typeDecls):
         if isinstance(self.__myUnit.uinfo,fs.ModuleStmt):
             if not self.__myUnit.uinfo.name in initNames:
