@@ -24,7 +24,7 @@ class TransformActiveVariables(object):
             for aDeclStmt in aUnit.decls:
                 if isinstance(aDeclStmt,fs.DrvdTypeDecl) and \
                    hasattr(aDeclStmt,'mod') and \
-                   aDeclStmt.mod[0] == '(active)' :
+                   aDeclStmt.mod[0] == 'active' :
                     DebugManager.debug('TransformActiveVariables.getActiveDecls:'\
                                       +'processing active variable declaration "'+str(aDeclStmt)+'"')
                     for aDecl in aDeclStmt.decls:
@@ -95,13 +95,13 @@ class TransformActiveVariables(object):
                 for var in aDecl.lst:
                     if isinstance(var,fe.App):
                         if var.head[0].lower() in 'abcdefghopqrstuvwxyz':
-                            newDecl = fs.DrvdTypeDecl(['(active)'],[],[var])
+                            newDecl = fs.DrvdTypeDecl(['active'],[],[var])
                             self.__myUnit.decls.insert(self.__myUnit.decls.index(aDecl),newDecl)
                             aDecl.lst.remove(var)
                             aDecl.modified = True
                     else:
                         if var[0].lower() in 'abcdefghopqrstuvwxyz':
-                            newDecl = fs.DrvdTypeDecl(['(active)'],[],[var])
+                            newDecl = fs.DrvdTypeDecl(['active'],[],[var])
                             self.__myUnit.decls.insert(self.__myUnit.decls.index(aDecl),newDecl)
                             aDecl.lst.remove(var)
                             aDecl.modified = True

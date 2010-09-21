@@ -123,6 +123,9 @@ def main():
     currentFile = config.vardefs
     try:
         # suppress missing module warnings???
+        # AL: shouldnt be necessary now that we're putting everything in the active variables file
+        TransformActiveVariables.getActiveDecls(config.vardefs,\
+                                                config.inputFormat)
         # only one input file
         if len(inputFileList) == 1 :
             currentFile = inputFileList[0]

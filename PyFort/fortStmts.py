@@ -120,6 +120,7 @@ id_l     = treat(id,str.lower)
 _typeid  = disj(lit('real'),
                 lit('integer'),
                 lit('logical'),
+                lit('character'),
                 lit('complex'),
                 lit('doubleprecision'),
                 lit('doublecomplex'),
@@ -133,7 +134,7 @@ _dblp1   = lit('doubleprecision')
 _dblp    = disj(_dblp2,_dblp1)
 
 pstd = seq(_typeid,
-         zo1(disj(prec,kind,explKind)),
+         zo1(disj(prec,explKind,kind)),
          )
 
 pchar = seq(lit('character'),
@@ -530,10 +531,20 @@ class DrvdTypeDecl(TypeDecl):
                  type_attr_list,
                  zo1(lit('::')),
                  cslist(decl_item))
-        p0 = treat(p0,lambda l: DrvdTypeDecl([l[1]+l[2]+l[3]],l[4],l[6],lineNumber=lineNumber))
+        p0 = treat(p0,lambda l: DrvdTypeDecl([l[2]],l[4],l[6],lineNumber=lineNumber))
         (v,r) = p0(scan)
         v.rest=r
         return v
+
+    def __str__(self):
+        attr_str = ''
+        if self.attrs:
+            attr_str = ','+','.join([str(a) for a in self.attrs])
+        return '%s(%s)%s :: %s' % (self.__class__.kw_str,
+                                   str(self.mod[0]),
+                                   attr_str,
+                                   ','.join([str(d) for d in self.decls]))\
+                                   +''.join(self.internal)
 
 class DrvdTypeDefn(Decl):
     '''
@@ -870,17 +881,17 @@ class EndInterfaceStmt(DeclLeaf):
     def __init__(self,stmt_name=kw_str,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         DeclLeaf.__init__(self,lineNumber,label,lead,internal,rest)
 
-class EndTypeStmt(DeclLeaf):
-    'end of a type definition'
+class EndDrvdTypeDefn(DeclLeaf):
+    'end of a derived type definition'
     kw     = 'endtype'
     kw_str = 'end type'
 
     @staticmethod
     def parse(ws_scan,lineNumber) :
         scan = filter(lambda x: x != ' ',ws_scan)
-        form = seq(lit(EndTypeStmt.kw)) # 0 = stmt_name
+        form = seq(lit(EndDrvdTypeDefn.kw)) # 0 = stmt_name
         (id,rest) = form(scan)
-        return EndTypeStmt(lineNumber=lineNumber,rest=rest)
+        return EndDrvdTypeDefn(lineNumber=lineNumber,rest=rest)
 
     def __init__(self,stmt_name=kw_str,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         DeclLeaf.__init__(self,lineNumber,label,lead,internal,rest)    
@@ -1200,16 +1211,34 @@ class CharacterStmt(TypeDecl):
         f90mod   = seq(lit('('),disj(lit('*'),Exp),lit(')'))
         f90mod   = treat(f90mod,lambda l: _F90Len(l[1]))
 
-        explLen  = seq(lit('('),
-                       lit('len'),
+        explLen  = seq(lit('len'),
                        lit('='),
                        disj(Exp,
-                            lit('*')),
+                            lit('*'))
+                       )
+        
+        explLen  = treat(explLen,lambda l: _F90ExplLen(l[2]))
+
+        explKind = seq(lit('kind'),
+                       lit('='),
+                       Exp)
+        
+        explKind = treat(explKind,lambda l: _ExplKind(l[2]))
+
+        explList = seq(lit('('),
+                       cslist(disj(explLen,explKind)), 
                        lit(')'))
-        explLen  = treat(explLen,lambda l: _F90ExplLen(l[3]))
-                
+
+        explList = treat(explList,lambda l: l[1])
+
+        modOpts  = zo1(disj(f77mod,f90mod,explList))
+
+        # the first two are just single things while the last thing is a list
+        # we need to remove one level of list nesting: 
+        modOpts  = treat(modOpts,lambda l: len(l) and isinstance(l[0],list) and l[0] or l)
+        
         p1 = seq(lit(CharacterStmt.kw),
-                 zo1(disj(f77mod,f90mod,explLen)),type_attr_list,zo1(lit('::')),
+                 modOpts,type_attr_list,zo1(lit('::')),
                  cslist(char_decl_item))
         try: 
           ((dc,mod,attrs,dc1,decls),rest) = p1(scan)
@@ -1228,7 +1257,10 @@ class CharacterStmt(TypeDecl):
     def __str__(self):
         modstr = ''
         if self.mod:
-            modstr = str(self.mod[0])
+            if (len(self.mod)==1 and isinstance(self.mod[0],_F77Len) or isinstance(self.mod[0],_F90Len)):
+                modstr=str(self.mod[0])
+            else:
+                modstr = '('+','.join([str(a)[1:-1] for a in self.mod])+')'
         
         attr_str = ''
         if self.attrs:
@@ -1457,7 +1489,9 @@ class FunctionStmt(PUstart):
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
-        p1 = seq(zo1(type_pat_sem),
+        drvdTypeSpec=seq(lit('type'), lit('('), id, lit(')'))
+        drvdTypeSpec=treat(drvdTypeSpec,lambda l: DrvdTypeDecl([l[2]],[],[],lineNumber=lineNumber))
+        p1 = seq(zo1(disj(type_pat_sem,drvdTypeSpec)),
                  lit(FunctionStmt.kw),
                  id,
                  lit('('),
@@ -1494,20 +1528,22 @@ class FunctionStmt(PUstart):
                             or None
         resultRepr = self.result and repr(self.result) \
                                   or None
-        return 'FunctionStmt(%s,%s,%s,%s)' % (typeRepr,
-                                              repr(self.name),
-                                              repr(self.args),
-                                              resultRepr)
+        return '%s(%s,%s,%s,%s)' % (self.__class__.__name__,
+                                    typeRepr,
+                                    repr(self.name),
+                                    repr(self.args),
+                                    resultRepr)
     def __str__(self):
         typePrefix = self.ty and (typestr2(self.ty)+' ') \
                               or ''
         resultStr = self.result and ' result('+str(self.result)+')' \
                                  or ''
-        return '%sfunction %s(%s)%s' % (typePrefix,
-                                        str(self.name),
-                                        ','.join([str(l) for l in self.args]),
-                                        resultStr)\
-                                        +''.join(self.internal)
+        return '%s%s %s(%s)%s' % (typePrefix,
+                                   self.kw,
+                                   str(self.name),
+                                   ','.join([str(l) for l in self.args]),
+                                   resultStr)\
+                                   +''.join(self.internal)
 
 class ModuleStmt(PUstart):
     kw = 'module'
@@ -2694,43 +2730,53 @@ class BackspaceStmt(Exec):
 class RewindStmt(Exec):
     kw = 'rewind'
     kw_str = kw
+    paramNames=['unit','err','iostat']
 
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
         try:
-            parenUnitSpec = seq(lit('('),
-                                 id,
-                                 lit(')'))
-            formRewindStmt = seq(lit(RewindStmt.kw),
-                                 disj(id,parenUnitSpec))
+            # without parenthesis
+            formRewindStmt = seq(lit(RewindStmt.kw),id)
             ((rewindKeyword,unitSpec),rest) = formRewindStmt(scan)
             return RewindStmt(unitSpec,lineNumber=lineNumber)
         except:
-            formUnitSpec = seq(lit('unit'),
-                               lit('='),
-                               id)
-            formErrLabel = seq(lit(','),
-                               lit('err'),
-                               lit('='),
+            # with parenthesis
+            formUnitSpec = disj(seq(lit(RewindStmt.paramNames[0]),
+                                    lit('='),
+                                    id),
+                                id)
+            formUnitSpec=treat(formUnitSpec, lambda l: isinstance(l,list) and NamedParam(l[0].lower(),l[2]) or l)
+            formErrLabel = disj(seq(lit(RewindStmt.paramNames[1]),
+                                    lit('='),
+                                    int),
+                                int)
+            formErrLabel=treat(formErrLabel, lambda l: isinstance(l,list) and NamedParam(l[0].lower(),l[2]) or l)
+            formIOCheck = disj(seq(lit(RewindStmt.paramNames[2]),
+                                   lit('='),
+                                   int),
                                int)
-            formIOCheck = seq(lit(','),
-                              lit('iostat'),
-                              lit('='),
-                              int)
-            formRewindStmt = seq(lit(RewindStmt.kw), # 0
-                                 lit('('),           # 1
-                                 formUnitSpec,       # 2
-                                 zo1(formErrLabel),  # 3
-                                 zo1(formIOCheck),   # 4
-                                 lit(')'))           # 5
-            formRewindStmt = treat(formRewindStmt, lambda x: RewindStmt(x[2],
-                                                                        x[3] or None,
-                                                                        x[4] or None,
-                                                                        lineNumber))
-            (theParsedStmt,rest) = formRewindStmt(scan)
+            formIOCheck=treat(formIOCheck, lambda l: isinstance(l,list) and NamedParam(l[0].lower(),l[2]) or l)
+            # note below formUnitSpec goes in the end because otherwise the "id" can capture the parameter name
+            formRewindStmt = seq(lit(RewindStmt.kw),lit('('),disj(cslist(disj(formErrLabel,formIOCheck,formUnitSpec)),id),lit(')'))
+            ((stmt_name,lparen,params,rparen),rest)=formRewindStmt(scan)
+            theParsedStmt=None
+            if isinstance(params,list):
+                theParams=dict((i,None) for i in RewindStmt.paramNames)
+                for pos,p in enumerate(params):
+                    if isinstance(p,NamedParam):
+                        theParams[p.myId]=p.myRHS
+                    else:
+                        theParams[RewindStmt.paramNames[pos]]=p
+                theParsedStmt=RewindStmt(theParams[RewindStmt.paramNames[0]],
+                                         theParams[RewindStmt.paramNames[1]],
+                                         theParams[RewindStmt.paramNames[2]],
+                                         lineNumber)
+            else:
+                theParsedStmt=RewindStmt(params,None,None,lineNumber)
             theParsedStmt.rest = rest
             return theParsedStmt
+        
     def __init__(self,unitSpec,errLabel='',IOCheck='',lineNumber=0,label=False,lead='',internal=[],rest=[]):
         self.unitSpec = unitSpec
         self.errLabel = errLabel
@@ -2738,16 +2784,27 @@ class RewindStmt(Exec):
         Exec.__init__(self,lineNumber,label,lead,internal,rest)
 
     def __str__(self):
-        return '%s %s%s%s' % (self.kw,self.unitSpec,self.errLabel,self.IOCheck)+\
-               ''.join(self.internal)
+        rstr=self.kw+"("+str(self.unitSpec)
+        if (self.errLabel):
+            rstr+=","+str(self.errLabel)
+        if (self.IOCheck):
+            rstr+=","+str(self.IOCheck)
+        rstr+=')'
+        return rstr
 
+kwBuiltInTypesTbl= dict(
+    character       = CharacterStmt,
+    complex         = ComplexStmt,
+    doublecomplex   = DoubleCplexStmt,
+    doubleprecision = DoubleStmt,
+    integer         = IntegerStmt,
+    logical         = LogicalStmt,
+    real            = RealStmt
+    )
 
 kwtbl = dict(blockdata       = BlockdataStmt,
              common          = CommonStmt,
-             logical         = LogicalStmt,
              data            = DataStmt,
-             doubleprecision = DoubleStmt,
-             doublecomplex   = DoubleCplexStmt,
              implicit        = ImplicitStmt,
              equivalence     = EquivalenceStmt,
              parameter       = ParameterStmt,
@@ -2760,13 +2817,9 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              goto            = GotoStmt,
              external        = ExternalStmt,
              allocatable     = AllocatableStmt,
-             character       = CharacterStmt,
              intrinsic       = IntrinsicStmt,
              include         = IncludeStmt,
-             real            = RealStmt,
-             integer         = IntegerStmt,
              dimension       = DimensionStmt,
-             complex         = ComplexStmt,
              subroutine      = SubroutineStmt,
              program         = ProgramStmt,
              function        = FunctionStmt,
@@ -2784,7 +2837,7 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              endif           = EndifStmt,
              end             = EndStmt,
              endinterface    = EndInterfaceStmt,
-             endtype         = EndTypeStmt,
+             endtype         = EndDrvdTypeDefn,
              endmodule       = EndModuleStmt,
              endprogram      = EndProgramStmt,
              endfunction     = EndFunctionStmt,
@@ -2808,6 +2861,8 @@ kwtbl = dict(blockdata       = BlockdataStmt,
              namelist        = NamelistStmt,
              )
 
+kwtbl.update(kwBuiltInTypesTbl)
+
 for kw in ('if','continue','return','else','print','use','cycle','exit','rewind','where','elsewhere','format','pointer','target'):
     kwtbl[kw] = globals()[kw.capitalize() + 'Stmt']
     
@@ -2824,15 +2879,6 @@ def sqz(n,mutable):
     mutable[0][0:n] = [rv]
     return rv
 
-_types = ('real',
-          'integer',
-          'logical',
-          'complex',
-          'character',
-          'doubleprecision',
-          'doublecomplex',
-          )
-
 def parse(ws_scan,lineNumber):
     scan = filter(lambda x: x != ' ',ws_scan)
     try:
@@ -2846,7 +2892,7 @@ def parse(ws_scan,lineNumber):
         kw = len(scan) >=3 and kw3g(lscan[0:3]) and sqz(3,[scan]) or \
              len(scan) >=2 and kw2g(lscan[0:2]) and sqz(2,[scan]) or \
              lscan[0]
-        if kw in _types and 'function' in lscan:
+        if (kw in kwBuiltInTypesTbl.keys() or kw == 'type') and 'function' in lscan:
             kw = 'function'
         # special case for module procedure statements:
         elif (kw == 'module') and (lscan[1] == 'procedure') :

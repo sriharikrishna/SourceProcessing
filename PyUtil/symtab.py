@@ -177,6 +177,7 @@ class SymtabEntry(object):
         self.renameSource = renameSource
         self.isPrivate = isPrivate
         self.genericInfo = None
+        self.memberOfDrvdType = None
 
     def enterEntryKind(self,newEntryKind):
         # the replacement entry kind must be an 'instance' of the existing one.
@@ -242,6 +243,9 @@ class SymtabEntry(object):
         if not resolvesTo.lower in self.genericInfo.resolvableTo :
             self.genericInfo.resolvableTo[resolvesTo.lower()]=None
 
+    def enterDrvdTypeName(self,aDrvdTypeName):
+        self.memberOfDrvdType=aDrvdTypeName
+
     def debug(self,name='<symbol name unknown>'):
         return '[SymtabEntry "'+name+'" -> entryKind='+str(self.entryKind)+\
                                          ', type='+str(self.type)+\
@@ -251,8 +255,9 @@ class SymtabEntry(object):
                                          ', renameSource='+str(self.renameSource)+\
                                          ', isPrivate='+str(self.isPrivate)+\
                                          ', genericInfo='+((self.genericInfo and str(self.genericInfo.debug())) or 'None')+\
+                                         ', memberOfDrvdType='+((self.memberOfDrvdType and self.memberOfDrvdType) or 'None')+\
                                          ']'
-
+    
     class GenericEntryKind(object):
         keyword = 'unknown'
 
@@ -282,6 +287,9 @@ class SymtabEntry(object):
 
     class CharacterEntryKind(VariableEntryKind):
         keyword = 'character'
+
+    class DerivedTypeEntryKind(GenericEntryKind):
+        keyword = 'type'
 
 '''
 if __name__ == '__main__':

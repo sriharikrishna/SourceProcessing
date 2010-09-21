@@ -23,6 +23,7 @@ from PyFort.inference import InferenceError
 
 from Canon.canon import UnitCanonicalizer,CanonError
 from Canon.subroutinizedIntrinsics import makeSubroutinizedIntrinsics,SubroutinizeError,getModuleName
+from Canon.function2subroutine import FunToSubError
 
 sys.setrecursionlimit(1500)
 
@@ -283,6 +284,11 @@ def main():
     except ListAssemblerException,e:
         print >>sys.stderr,'\nERROR: ListAssemblerError: parser failed in '+currentInputFile+':',e.msg
         print >>sys.stderr,'rest =', e.rest
+        cleanup(config)
+        return 1 
+    except FunToSubError,e: 
+        print >>sys.stderr,'\nERROR: FunToSubError:  in '+currentInputFile+':'
+        if e.msg: print >>sys.stderr,e.msg
         cleanup(config)
         return 1 
     except RuntimeError,e:

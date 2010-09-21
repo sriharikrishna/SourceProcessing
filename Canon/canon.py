@@ -9,7 +9,7 @@ from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
 from PyUtil.argreplacement import replaceArgs
 
 from PyFort.intrinsic import is_intrinsic,getGenericName
-from PyFort.inference import InferenceError,expressionType,functionType,isArrayReference,canonicalTypeClass,expressionShape
+from PyFort.inference import InferenceError,expressionType,appType,isArrayReference,canonicalTypeClass,expressionShape
 import PyFort.flow as flow
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
@@ -85,7 +85,7 @@ class UnitCanonicalizer(object):
         if theSymtabEntry and isinstance(theSymtabEntry.entryKind,SymtabEntry.VariableEntryKind):
             raise CanonError('UnitCanonicalizer.shouldSubroutinizeFunction called on array reference '+str(theApp),parentStmt.lineNumber)
         try:
-            (funcType,modifier) = functionType(theApp,self.__myUnit.symtab,parentStmt.lineNumber)
+            (funcType,modifier) = appType(theApp,self.__myUnit.symtab,parentStmt.lineNumber)
         except InferenceError,errorObj:
             sys.stdout.flush()
             raise CanonError('UnitCanonicalizer.shouldSubroutinizeFunction:InferenceError: '+errorObj.msg,parentStmt.lineNumber)
@@ -137,8 +137,6 @@ class UnitCanonicalizer(object):
         newSubName=''
         if is_intrinsic(theFuncCall.head):
             funcName=getGenericName(theFuncCall.head)
-            if funcName in ('maxval','minval'):
-                newArgs = [fe.App('size',[theFuncCall.args[0],'1']), theNewTemp]
             newSubName = subroutinizedIntrinsics.makeName(funcName)
             argRanks=[]
             for arg in theFuncCall.args:
@@ -431,7 +429,7 @@ class UnitCanonicalizer(object):
         if isinstance(exp,fe.App):
             if ((not isArrayReference(exp,self.__myUnit.symtab,parentStmt.lineNumber))
                 and
-                (not functionType(exp,self.__myUnit.symtab,parentStmt.lineNumber)[0]== fs.IntegerStmt)):
+                (not appType(exp,self.__myUnit.symtab,parentStmt.lineNumber)[0]== fs.IntegerStmt)):
                 newExp = self.__hoistExpression(exp,parentStmt,paramName)
         elif isinstance(exp,fe.Ops):
             newExp = fe.Ops(exp.op,

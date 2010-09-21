@@ -20,25 +20,18 @@ class FunToSubError(Exception):
 
 name_init = 'oad_s_'
 
-def createTypeDecl(type_kw,mod,outParam,lead):
+def createTypeDecl(type_kw,mod,outParam,aLead):
     DebugManager.debug(10*'-'+'>'+'called function2subroutine.createTypeDecl ' \
                      + 'with type keyword "'+type_kw+'",' \
                      +' mod = "'+str(mod)+'",' \
-                     +' outParam = "'+str(outParam)+'"')
-    intentArg = fe.App('intent',['out'])
-    try:
-        newDecl = {
-            'real': fs.RealStmt(mod,[intentArg],[outParam,],lead=lead),
-            'complex': fs.ComplexStmt(mod,[intentArg],[outParam,],lead=lead),
-            'integer': fs.IntegerStmt(mod,[intentArg],[outParam,],lead=lead),
-            'logical': fs.LogicalStmt(mod,[intentArg],[outParam,],lead=lead),
-            'doubleprecision': fs.DoubleStmt(mod,[intentArg],[outParam,],lead=lead),
-            'doublecomplex': fs.DoubleCplexStmt(mod,[intentArg],[outParam,],lead=lead)
-            }[type_kw]
-    except KeyError:
-        raise FunToSubError('Unrecognized type "'+type_kw+'"')
-
-    return newDecl
+                     +' outParam = "'+str(outParam)+'",'\
+                     +' lead = "'+str(aLead)+'"')
+    # look up the class in the kwBuiltInTypesTbl and invoke the ctor which has the same signature for all type classes
+    if (type_kw in fs.kwBuiltInTypesTbl.keys()): 
+        return (fs.kwBuiltInTypesTbl[type_kw])(mod=mod,attrs=[fe.App('intent',['out'])],decls=[outParam],lead=aLead)
+    else : # must be derived type
+        return fs.DrvdTypeDecl(mod=mod,attrs=[fe.App('intent',['out'])],decls=[outParam],lead=aLead)
+        
 
 def convertFunctionDecl(aDecl,oldFuncnewSubPairs):
     DebugManager.debug(10*'-'+'>'+'called function2subroutine.convertFunctionDecl ' \

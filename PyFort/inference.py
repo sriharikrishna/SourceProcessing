@@ -120,16 +120,16 @@ def identifierType(anId,localSymtab,lineNumber):
        # needs to be resolved by genericResolve
        return None
     elif symtabEntry:
-        symtabEntry.enterType(containingSymtab.implicit[anId[0]])
-        returnType = symtabEntry.type
-        DebugManager.debug('with symtab entry'+symtabEntry.debug(anId)+' (without type).  Implicit type (locally) is '+str(returnType))
-        DebugManager.warning('inference.identifierType: [line '+str(lineNumber)+'] implicit typing (scope ='+str(containingSymtab)+') used for identifier "'+anId+'" type ="'+str(returnType)+'"')
+       symtabEntry.enterType(containingSymtab.implicit[anId[0]])
+       returnType = symtabEntry.type
+       DebugManager.debug('with symtab entry'+symtabEntry.debug(anId)+' (without type).  Implicit type (locally) is '+str(returnType))
+       DebugManager.warning('inference.identifierType: [line '+str(lineNumber)+'] implicit typing (scope ='+str(containingSymtab)+') used for identifier "'+anId+'" type ="'+str(returnType)+'"')
     else: # no symtab entry -> try local implicit typing
-        returnType = localSymtab.implicit[anId[0]]
-        DebugManager.warning('inference.identifierType: [line '+str(lineNumber)+'] local scope implicit typing used for identifier "'+anId+'" type ="'+str(returnType)+'"')
-        DebugManager.debug('with implicit type '+str(returnType))
+       returnType = localSymtab.implicit[anId[0]]
+       DebugManager.warning('inference.identifierType: [line '+str(lineNumber)+'] local scope implicit typing used for identifier "'+anId+'" type ="'+str(returnType)+'"')
+       DebugManager.debug('with implicit type '+str(returnType))
     if not returnType:
-        raise InferenceError('inference.identifierType: No type could be determined for identifier "'+anId+'"',lineNumber)
+       raise InferenceError('inference.identifierType: No type could be determined for identifier "'+anId+'"',lineNumber)
     return returnType
 
 def intrinsicType(anIntrinsicApp,localSymtab,lineNumber):
@@ -164,29 +164,33 @@ def genericFunctionType(aFunctionApp,localSymtab,lineNumber):
        return localSymtab.lookup_name(sName).type
     raise InferenceError('inference.genericFunctionType: could not resolve generic "'+aFunctionApp.head+'"',lineNumber)
 
-def functionType(aFunctionApp,localSymtab,lineNumber):
-    DebugManager.debug('inference.functionType called on '+str(aFunctionApp)+'...',newLine=False)
-    # example: bbb(3)(2:14)
-    if isinstance(aFunctionApp.head,App):
-        return functionType(aFunctionApp.head,localSymtab,lineNumber)
+def appType(anApp,localSymtab,lineNumber):
+    DebugManager.debug('inference.appType called on '+str(anApp)+'...',newLine=False)
+    if isinstance(anApp.head,App): # example: matrix(3)(2:14)
+        return appType(anApp.head,localSymtab,lineNumber)
+    if isinstance(anApp.head,Sel):  # example type%member(1)
+        return expressionType(anApp.head,localSymtab,lineNumber)
     returnType = None
     # intrinsics: do a type merge
-    if is_intrinsic(aFunctionApp.head):
-        returnType = intrinsicType(aFunctionApp,localSymtab,lineNumber)
+    if is_intrinsic(anApp.head):
+        returnType = intrinsicType(anApp,localSymtab,lineNumber)
         DebugManager.debug(' It is an INTRINSIC of type '+str(returnType))
     # nonintrinsics: Look for it in the symbol table or for implicit type
     else:
-        returnType = identifierType(aFunctionApp.head,localSymtab,lineNumber)
+        returnType = identifierType(anApp.head,localSymtab,lineNumber)
         if (returnType is None) :
            # this must be a generic
-           returnType=genericFunctionType(aFunctionApp,localSymtab,lineNumber)
+           returnType=genericFunctionType(anApp,localSymtab,lineNumber)
         DebugManager.debug(' It is an NONINTRINSIC of type '+str(returnType))
     return returnType
 
 def selectionType(aSelectionExpression,localSymtab,lineNumber):
     DebugManager.debug('inference.SelectionType: determining type of selection expression '+str(aSelectionExpression)+' using symtab '+str(localSymtab))
-    # retrieve information for the derived type from the symbol table
-    raise InferenceError('inference.selectionType: called on "'+str(theApp)+'" (Not yet implemented)',lineNumber)
+    # lookup type of head
+    dType=expressionType(aSelectionExpression.head,localSymtab,lineNumber)
+    # lookup the projection type
+    pType=identifierType(dType[1][0]+":"+aSelectionExpression.proj,localSymtab,lineNumber)
+    return pType
 
 def expressionType(anExpression,localSymtab,lineNumber):
     DebugManager.debug('inference.expressionType: determining type of expression '+str(anExpression)+'...',newLine=False)
@@ -207,13 +211,13 @@ def expressionType(anExpression,localSymtab,lineNumber):
                                    (None,None))
     elif isinstance(anExpression,App):
         DebugManager.debug(' it\'s an APPLICATION')
-        return functionType(anExpression,localSymtab,lineNumber)
+        return appType(anExpression,localSymtab,lineNumber)
     elif isinstance(anExpression,NamedParam):
         DebugManager.debug(' it\'s a NAMED PARAMETER')
         return expressionType(anExpression.myRHS,localSymtab,lineNumber)
     elif isinstance(anExpression,Sel):
-        DebugManager.debug(' it\'s a SELECTION EXPRESSION')
-        return selectionType(anExpression.myRHS,lineNumber)
+       DebugManager.debug(' it\'s a SELECTION EXPRESSION')
+       return selectionType(anExpression,localSymtab,lineNumber)
     else:
         raise InferenceError('inference.expressionType: No type could be determined for expression "'+str(anExpression)+'"',lineNumber)
 
@@ -309,6 +313,8 @@ def arrayReferenceShape(arrRefApp,localSymtab,lineNumber):
 def intrinsicShape(anIntrinsicApp,localSymtab,lineNumber):
     if anIntrinsicApp.head.lower() in ['reshape','matmul']:
         raise InferenceError('inference.intrinsicShape: not implemented for "'+anIntrinsicApp+'"',lineNumber)
+    if anIntrinsicApp.head.lower() in ['maxval','minval']:
+       return None
     else:
         return shapemerge([expressionShape(anArg,localSymtab,lineNumber) for anArg in anIntrinsicApp.args],
                          (None,None))
@@ -342,8 +348,11 @@ def functionShape(aFunctionApp,localSymtab,lineNumber):
 
 def selectionShape(aSelectionExpression,localSymtab,lineNumber):
     DebugManager.debug('inference.SelectionShape: determining shape of selection expression '+str(aSelectionExpression)+' using symtab '+str(localSymtab))
-    # retrieve information for the derived shape from the symbol table
-    raise InferenceError('inference.selectionShape: called on "'+str(theApp)+'" (Not yet implemented)',lineNumber)
+    # lookup type of head
+    dType=expressionType(aSelectionExpression.head,localSymtab,lineNumber)
+    # lookup the projection type
+    pShape=identifierShape(dType[1][0]+":"+aSelectionExpression.proj,localSymtab,lineNumber)
+    return pShape
 
 def expressionShape(anExpression,localSymtab,lineNumber):
     DebugManager.debug('inference.expressionShape: determining shape of expression '+str(anExpression)+'...',newLine=False)
@@ -373,7 +382,7 @@ def expressionShape(anExpression,localSymtab,lineNumber):
         return expressionShape(anExpression.myRHS,localSymtab,lineNumber)
     elif isinstance(anExpression,Sel):
         DebugManager.debug(' it\'s a SELECTION EXPRESSION')
-        return selectionShape(anExpression.myRHS,lineNumber)
+        return selectionShape(anExpression,localSymtab,lineNumber)
     else:
         raise InferenceError('inference.expressionShape: No shape could be determined for expression "'+str(anExpression)+'"',lineNumber)
 
@@ -435,14 +444,31 @@ def genericResolve(aFunctionApp,localSymtab,lineNumber):
 def isRangeExpression(theExpression):
    return (isinstance(theExpression,Ops) and theExpression.op==':')
 
+def selPrefix(aSel,localSymtab):
+    prefix=""
+    if (isinstance(aSel.head,Sel)):
+        prefix=selSymtabName(aSel.head,localSymtab,lineNumber)
+        prefix=(localSymtab.lookup_name(prefix+":"+aSel.proj).type)[1][0]
+    else:
+        prefix=(localSymtab.lookup_name(aSel.head).type)[1][0]
+    return prefix
+
+def selSymtabName(aSel,localSymtab):
+    return selPrefix(aSel,localSymtab)+":"+aSel.proj
+    
 def isArrayReference(theApp,localSymtab,lineNumber):
     if not isinstance(theApp,App):
         raise InferenceError('inference.isArrayReference: called on non-App object '+str(theApp),lineNumber)
-    theSymtabEntry = localSymtab.lookup_name(theApp.head)
+    lookupName=""
+    if isinstance(theApp.head,Sel): # example type%member(1)
+        lookupName=selSymtabName(theApp.head,localSymtab)
+    else:
+        lookupName=theApp.head
+    theSymtabEntry=localSymtab.lookup_name(lookupName)
     if not theSymtabEntry:
         return False
     # there has to be a symbol table entry for a variable
-    DebugManager.debug('inference.isArrayReference for '+theSymtabEntry.debug(theApp.head))
+    DebugManager.debug('inference.isArrayReference for '+theSymtabEntry.debug(lookupName))
     if isinstance(theSymtabEntry.entryKind(),SymtabEntry.ProcedureEntryKind):
         return False
     if (not theSymtabEntry.dimensions or theSymtabEntry.dimensions == ()) and \

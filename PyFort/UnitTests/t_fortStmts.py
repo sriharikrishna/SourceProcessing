@@ -130,7 +130,7 @@ class C5(TestCase):
     def test4(self):
         '''derived type declaration with empty array bounds'''
         s = 'type(OpenADTy_active) :: X(:)'
-        r = DrvdTypeDecl(['(OpenADTy_active)'],[],[_NoInit(App('X',[':']))])
+        r = DrvdTypeDecl(['OpenADTy_active'],[],[_NoInit(App('X',[':']))])
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
@@ -592,6 +592,25 @@ class TestCharacterDecls(TestCase):
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
 
+    def test9(self):
+        '''logical declaration with kind specifier'''
+        theString = 'logical(kind = kind(.true.)) :: l2'
+        theRepr = LogicalStmt([_ExplKind(App('kind',['.true.']))],[],[_NoInit('l2')])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test10(self):
+        '''character type declaration with kind and optional and intent attribute'''
+        theString = 'character(kind = kind("A"),len=*),intent(in),optional :: name'
+        theRepr = CharacterStmt([_ExplKind(App('kind',['"A"'])),_F90ExplLen('*')],
+                                [App('intent',
+                                     ['in']),
+                                 'optional'],
+                                [_NoInit('name')])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
 
 class TestDimensionStmt(TestCase):
     '''Dimension statement'''
@@ -714,7 +733,7 @@ class TestIfStmt(TestCase):
 
     def test9(self):
         '''if (non-then) statement from scale, with rewind stmt'''
-        theString = 'if (nt4>0) rewind nt4'
+        theString = 'if (nt4>0) rewind(nt4)'
         theRepr = IfNonThenStmt(Ops('>','nt4','0'),RewindStmt('nt4'))
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
@@ -791,9 +810,8 @@ class TestFunctionStmt(TestCase):
 
     def test3(self):
         '''function statement with type real (with modifier)'''
-        s = 'real(kind=16) function foo(x)'
-        #r = FunctionStmt((RealStmt,[_ExplKind('16')]),'foo',['x'],None)
-        r = FunctionStmt((RealStmt,[_Kind(NamedParam('kind','16'))]),'foo',['x'],None)
+        s = 'real(kind = 16) function foo(x)'
+        r = FunctionStmt((RealStmt,[_ExplKind('16')]),'foo',['x'],None)
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
@@ -806,9 +824,8 @@ class TestFunctionStmt(TestCase):
         
     def test5(self):
         '''function statement with type real (with modifier) and result specifier'''
-        s = 'real(kind=16) function foo(x) result(y)'
-        #r = FunctionStmt((RealStmt,[_ExplKind('16')]),'foo',['x'],'y')
-        r = FunctionStmt((RealStmt,[_Kind(NamedParam('kind','16'))]),'foo',['x'],'y')
+        s = 'real(kind = 16) function foo(x) result(y)'
+        r = FunctionStmt((RealStmt,[_ExplKind('16')]),'foo',['x'],'y')
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
@@ -1310,12 +1327,39 @@ class TestRewindStmt(TestCase):
     '''rewind statements'''
 
     def test0(self):
-        '''rewind statement from centrm/pxlib_read_M.f90 -- KNOWN TO FAIL (see https://trac.mcs.anl.gov/projects/openAD/ticket/202)'''
-        theString = "rewind ['(', 'linpxs', ')']"
-        theRepr = ProcedureStmt(False,['x'])
+        '''rewind statement with parenthesis'''
+        theString = "rewind(linpxs)"
+        theRepr = RewindStmt('linpxs')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
+
+    def test1(self):
+        '''rewind statement without parenthesis'''
+        theString = "rewind linpxs"
+        compString= "rewind(linpxs)" # always unparsed with parenthesis
+        theRepr = RewindStmt('linpxs')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(compString,str(pps(theString)))
+
+    def test2(self):
+        '''rewind statement with explicit unit/err parameter'''
+        theString = "rewind(err=1,unit=linpxs)"
+        compString= "rewind(linpxs,1)" # always unparsed with positional parameters
+        theRepr = RewindStmt('linpxs',1)
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(compString,str(pps(theString)))
+
+    def test3(self):
+        '''rewind statement with positional and named parameters mixed, mixed case for parameters'''
+        theString = "rewind(linpxs, ioStat=2,err=1)"
+        compString= "rewind(linpxs,1,2)" # always unparsed with positional parameters in the proper order
+        theRepr = RewindStmt('linpxs',1,2)
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(compString,str(pps(theString)))
 
 
 suite = asuite(C2,C3,C4,C5,C6,C8,C9,

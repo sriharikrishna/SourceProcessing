@@ -29,6 +29,30 @@ def default_dims(attrs_list):
             return tuple(a.args)
     return ()
 
+def _beginDrvdTypeDefn(aDrvdTypeDefn,curr):
+    'derived type definition -- record type in symbol table and set the name on the unit'
+    localSymtab = curr.val.symtab
+    theSymtabEntry = localSymtab.lookup_name_local(aDrvdTypeDefn.name)
+    isPrivate = False
+    curr.val._in_drvdType=aDrvdTypeDefn.name
+    if theSymtabEntry: # already in symtab, shouldn't happen  
+        theSymtabEntry.enterEntryKind(SymtabEntry.DerivedTypeEntryKind)
+    else :
+        newSymtabEntry = SymtabEntry(SymtabEntry.DerivedTypeEntryKind,
+                                     type=None,
+                                     dimensions=None,
+                                     length=None,
+                                     origin='local',
+                                     isPrivate=isPrivate)
+        DebugManager.debug('defn "'+str(aDrvdTypeDefn)+'" NOT already present in symbol table => adding '+str(newSymtabEntry.debug(aDrvdTypeDefn.name)))
+        localSymtab.enter_name(aDrvdTypeDefn.name,newSymtabEntry)
+    return aDrvdTypeDefn
+
+def _endDrvdTypeDefn(aEndDrvdTypeDefnStmt,curr):
+    'derived type definition end  -- unset the name on the unit'
+    curr.val._in_drvdType=None
+    return aEndDrvdTypeDefnStmt
+
 def _processTypedeclStmt(aTypeDeclStmt,curr):
     'type declaration -- record type in symbol table'
     localSymtab = curr.val.symtab
@@ -37,12 +61,15 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
     dflt_d  = default_dims(aTypeDeclStmt.attrs)
     DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: stmt2unit._processTypedeclStmt('+str(aTypeDeclStmt)+') with default dimensions '+str(dflt_d))
     isPrivate = False
+    inDrvdTypeDefn=curr.val._in_drvdType
     for anAttribute in aTypeDeclStmt.attrs :
         if isinstance(anAttribute,str) and anAttribute.lower() == 'private' :
             isPrivate = True
     for aDecl in aTypeDeclStmt.decls:
         DebugManager.debug('\tProcessing decl '+repr(aDecl)+' ... ',newLine=False)
         (name,newDimensions) = typesep(aDecl,dflt_d)
+        if inDrvdTypeDefn:
+            name=inDrvdTypeDefn+":"+name
         try:
             # set the length for character statements
             if (aTypeDeclStmt.kw_str == 'character'):
@@ -60,6 +87,8 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                 theSymtabEntry.enterType(newType)
                 theSymtabEntry.enterDimensions(newDimensions)
                 theSymtabEntry.enterLength(newLength)
+                if inDrvdTypeDefn:
+                    theSymtabEntry.enterDrvdTypeName(inDrvdTypeDefn)
                 # for function/subroutine entries, also update this information in the parent symbol table
                 #if isinstance(theSymtabEntry.entryKind,SymtabEntry.ProcedureEntryKind):
                 if localSymtab.parent and theSymtabEntry.entryKind in (SymtabEntry.FunctionEntryKind,SymtabEntry.SubroutineEntryKind):
@@ -73,6 +102,8 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                                              length=newLength,
                                              origin='local',
                                              isPrivate=isPrivate)
+                if inDrvdTypeDefn:
+                    newSymtabEntry.enterDrvdTypeName(inDrvdTypeDefn)
                 DebugManager.debug('decl "'+str(aDecl)+'" NOT already present in symbol table => adding '+str(newSymtabEntry.debug(name)))
                 localSymtab.enter_name(name,newSymtabEntry)
             unitSymbolEntry,sTable=localSymtab.lookup_name_level(curr.val.name())
@@ -239,6 +270,23 @@ def _unit_entry(self,cur):
             currentSymtab.parent.enter_name(self.name,parentSymtabEntry)
             DebugManager.debug('[Line '+str(self.lineNumber)+']: new PARENT unit symtab entry '+parentSymtabEntry.debug(self.name))
     DebugManager.debug('[Line '+str(self.lineNumber)+']: stmt2unit._unit_entry() for '+str(self)+': with symtab '+str(currentSymtab)+' with parent symtab '+str(currentSymtab.parent))
+    if (isinstance(self,fs.FunctionStmt)): 
+        cur.val._in_functionDecl=self
+    return self
+
+def _unit_exit(self,cur):
+    '''exit a subroutine or function
+    '''
+    if cur.val._in_functionDecl:
+        theSymtabEntry=cur.val.symtab.lookup_name(cur.val._in_functionDecl.name)
+        if (theSymtabEntry.type is None and cur.val._in_functionDecl.result):
+            # try to get the tupe from the result symbol
+            theResultEntry=cur.val.symtab.lookup_name(cur.val._in_functionDecl.result)
+            if (theResultEntry):
+                theSymtabEntry.enterType(theResultEntry.type)
+                if cur.val.symtab.parent:  # update the copy in the parent 
+                    cur.val.symtab.parent.lookup_name(cur.val._in_functionDecl.name).enterType(theResultEntry.type)
+        cur.val._in_functionDecl=None         
     return self
 
 def _implicit(self,cur):
@@ -267,18 +315,34 @@ def _implicit_none(self,cur):
     return self
 
 def _beginProcedureUnit(aProcedureDeclStmt,cur):
+    '''
+    called for function/subroutine statements within an interface block
+    '''
     localSymtab = Symtab(cur.val.symtab)
     DebugManager.debug('[Line '+str(aProcedureDeclStmt.lineNumber)+']: stmt2unit._beginProcedureUnit:' \
-                      +' called for procedure statement "'+str(aProcedureDeclStmt)+'"' \
+                      +' called for '+aProcedureDeclStmt.__class__.__name__+': "'+str(aProcedureDeclStmt)+'"' \
                       +' changing from current symtab "'+str(cur.val.symtab)+'"' \
                       +' to local symtab "'+str(localSymtab)+'"')
     entry = aProcedureDeclStmt.make_unit_entry(localSymtab)
     localSymtab.enter_name(aProcedureDeclStmt.name,entry)
     cur.val.symtab.enter_name(aProcedureDeclStmt.name,entry)
     cur.val.symtab = localSymtab
+    if (isinstance(aProcedureDeclStmt,fs.FunctionStmt)): 
+        cur.val._in_functionDecl=aProcedureDeclStmt
     return aProcedureDeclStmt
 
 def _endProcedureUnit(anEndProcedureStmt,cur):
+    '''
+    called for function/subroutine end statements within an interface block
+    '''
+    if cur.val._in_functionDecl:
+        theSymtabEntry=cur.val.symtab.lookup_name(cur.val._in_functionDecl.name)
+        if (theSymtabEntry.type is None and cur.val._in_functionDecl.result):
+            # try to get the tupe from the result symbol
+            theResultEntry=cur.val.symtab.lookup_name(cur.val._in_functionDecl.name)
+            if (theResultEntry):
+                theSymtabEntry.enterType(theResultEntry.type)
+        cur.val._in_functionDecl=None         
     if cur.val.symtab.parent :
         DebugManager.debug('[Line '+str(anEndProcedureStmt.lineNumber)+']: stmt2unit._endProcedureUnit:' \
                           +' called on "'+str(anEndProcedureStmt)+'"' \
@@ -369,25 +433,28 @@ def _endInterface(anEndInterfaceStmt,cur):
     DebugManager.debug('[Line '+str(anEndInterfaceStmt.lineNumber)+']: stmt2unit._endInterface('+str(anEndInterfaceStmt)+')')
     return anEndInterfaceStmt
 
-fs.GenStmt.unit_action        = lambda s,*rest,**kw: s
-fs.GenStmt.unit_entry         = lambda s,*rest,**kw: s
+fs.GenStmt.unit_action            = lambda s,*rest,**kw: s
+fs.GenStmt.unit_entry             = lambda s,*rest,**kw: s
+fs.GenStmt.unit_exit              = lambda s,*rest,**kw: s
 
 fs.SubroutineStmt.unit_entry      = _unit_entry
 fs.SubroutineStmt.make_unit_entry = _makeSubroutineEntry
 fs.SubroutineStmt.unit_action     = _beginProcedureUnit
 fs.EndSubroutineStmt.unit_action  = _endProcedureUnit
+fs.EndSubroutineStmt.unit_exit    = _unit_exit
 
-fs.FunctionStmt.unit_entry      = _unit_entry
-fs.FunctionStmt.make_unit_entry = _makeFunctionEntry
-fs.FunctionStmt.unit_action     = _beginProcedureUnit
-fs.EndFunctionStmt.unit_action  = _endProcedureUnit
+fs.FunctionStmt.unit_entry        = _unit_entry
+fs.FunctionStmt.make_unit_entry   = _makeFunctionEntry
+fs.FunctionStmt.unit_action       = _beginProcedureUnit
+fs.EndFunctionStmt.unit_action    = _endProcedureUnit
+fs.EndFunctionStmt.unit_exit      = _unit_exit
 
 fs.AssignStmt.is_decl         = _is_stmt_fn
 fs.AssignStmt.unit_action     = _assign2stmtfn
 
 fs.DimensionStmt.unit_action = _processDimensionStmt
 
-fs.ExternalStmt.unit_action = _processExternalStmt
+fs.ExternalStmt.unit_action  = _processExternalStmt
 
 fs.TypeDecl.unit_action       = _processTypedeclStmt
 
@@ -399,3 +466,6 @@ fs.ImplicitStmt.unit_action   = _implicit
 fs.InterfaceStmt.unit_action  = _beginInterface
 fs.ProcedureStmt.unit_action  = _processProcedureStmt
 fs.EndInterfaceStmt.unit_action = _endInterface
+
+fs.DrvdTypeDefn.unit_action = _beginDrvdTypeDefn 
+fs.EndDrvdTypeDefn.unit_action = _endDrvdTypeDefn 

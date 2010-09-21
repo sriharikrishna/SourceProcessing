@@ -4,7 +4,7 @@ from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
 from PyUtil.argreplacement import replaceArgs, replaceSon
 
-from PyFort.inference import InferenceError,expressionType,functionType,isArrayReference
+from PyFort.inference import InferenceError,expressionType,isArrayReference
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
 import PyFort.intrinsic as intrinsic
@@ -106,8 +106,8 @@ class UnitPostProcessor(object):
         for decl in DrvdTypeDecl.get_decls():
             newDecls.append(self.__transformActiveTypesExpression(decl))
         DrvdTypeDecl.set_decls(newDecls)
-        if DrvdTypeDecl.get_mod()[0].lower() == '('+self._abstract_type+')':
-            DrvdTypeDecl.set_mod(['('+self._replacement_type+')'])
+        if DrvdTypeDecl.get_mod()[0].lower() == self._abstract_type:
+            DrvdTypeDecl.set_mod([self._replacement_type])
         return DrvdTypeDecl
 
     # Transforms active types for an expression recursively
@@ -126,7 +126,7 @@ class UnitPostProcessor(object):
 
         DebugManager.debug(self.__recursionDepth*'|\t'+'unitPostProcessor.__transformActiveTypesExpression called on"'+str(theExpression)+'"')
         self.__recursionDepth += 1
-        if isinstance(replacementExpression, fe.App):
+        if (isinstance(replacementExpression, fe.App) and not isinstance(replacementExpression.head,fe.Sel)):
             if intrinsic.is_inquiry(replacementExpression.head):
                 self.__inquiryExpression = True
                 self.__inquiryRecursionLevel = self.__recursionDepth
