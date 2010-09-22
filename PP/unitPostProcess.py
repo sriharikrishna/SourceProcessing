@@ -722,8 +722,8 @@ class UnitPostProcessor(object):
                             newDecls.append(var)
                             fortStmt.declList.remove(str(var))
                     decl.set_decls(newDecls)
-                    if decl.get_mod()[0].lower() == '('+UnitPostProcessor._abstract_type+')':
-                        decl.set_mod(['('+UnitPostProcessor._replacement_type+')'])
+                    if decl.get_mod()[0].lower() == UnitPostProcessor._abstract_type:
+                        decl.set_mod([UnitPostProcessor._replacement_type])
                     decl.lead = '\t'
                     if len(decl.get_decls()) > 0:
                         newUnit.decls.append(decl)
@@ -765,7 +765,7 @@ class UnitPostProcessor(object):
         activeTypeDecls = []
         for decl in self.__myUnit.decls:
             if isinstance(decl,fs.DrvdTypeDecl) and \
-                    (decl.get_mod()[0].lower() == '('+self._abstract_type+')'):
+                    (decl.get_mod()[0].lower() == self._abstract_type):
                 activeTypeDecls.append(decl)
         if len(activeTypeDecls) == 0:
             return None
@@ -778,8 +778,8 @@ class UnitPostProcessor(object):
 
         for decl in activeTypeDecls:
             if isinstance(decl,fs.DrvdTypeDecl):
-                if decl.get_mod()[0].lower() == '('+UnitPostProcessor._abstract_type+')':
-                    decl.set_mod(['('+UnitPostProcessor._replacement_type+')'])
+                if decl.get_mod()[0].lower() == UnitPostProcessor._abstract_type:
+                    decl.set_mod([UnitPostProcessor._replacement_type])
                 subUnit.decls.append(decl)
             else:
                 subUnit.decls.append(decl)
@@ -799,7 +799,7 @@ class UnitPostProcessor(object):
             if not self.__myUnit.uinfo.name in initNames:
                 for decl in self.__myUnit.decls:
                     if isinstance(decl,fs.DrvdTypeDecl) and \
-                            (decl.get_mod()[0].lower() == '('+self._abstract_type+')'):
+                            (decl.get_mod()[0].lower() == self._abstract_type):
                         initNames.append('mod_'+self.__myUnit.uinfo.name)
                         return
         initCommonStmt = None
