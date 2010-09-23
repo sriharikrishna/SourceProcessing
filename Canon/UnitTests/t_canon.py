@@ -104,15 +104,15 @@ class TestCanonicalizeSubroutineCall(TestCase):
 class TestFunctionToSubroutine(TestCase):    
     def test1(self):
         'test converting function to subroutine'
-        compareFiles(self.assertEquals,'funDef2subDef.f','funDef2subDef.pre.f',format='free')
+        compareFiles(self.assertEquals,'funDef2subDef.f90','funDef2subDef.pre.f90',format='free')
 
     def test2(self):
         'test converting function to subroutine 2'
-        compareFiles(self.assertEquals,'funDef2subDef2.f','funDef2subDef2.pre.f',format='free')
+        compareFiles(self.assertEquals,'funDef2subDef2.f90','funDef2subDef2.pre.f90',format='free')
 
     def test3(self):
         'test converting function definition and call to subroutine definition and call with function type definition outside function statement'
-        compareFiles(self.assertEquals,'funDef2subDef3.f','funDef2subDef3.pre.f',format='free')
+        compareFiles(self.assertEquals,'funDef2subDef3.f90','funDef2subDef3.pre.f90',format='free')
 
     def test4(self):
         'test result argument replacement while converting function definition to subroutine definition'
