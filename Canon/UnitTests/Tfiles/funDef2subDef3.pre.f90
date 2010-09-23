@@ -13,8 +13,8 @@
 
       function f(x)
       use OAD_intrinsics
-C     blah blah
-C     aren't these names interesting?: pomentale and gargantini
+!     blah blah
+!     aren't these names interesting?: pomentale and gargantini
         real :: x,f
 
         if (x<=0) then
@@ -28,8 +28,8 @@ C     aren't these names interesting?: pomentale and gargantini
 
       subroutine oad_s_f(x,f)
       use OAD_intrinsics
-C     blah blah
-C     aren't these names interesting?: pomentale and gargantini
+!     blah blah
+!     aren't these names interesting?: pomentale and gargantini
         real,intent(out) :: f
         real :: x
 

@@ -161,15 +161,17 @@ def main():
            (config.inputFormat<>'free') and \
            (config.inputFormat is not None):
         opt.error("inputFormat option must be specified with either 'fixed' or 'free' as an argument")
+    # set outputFormat explicitly if format or output file are supplied by user. 
+    # otherwise, outputFormat is set to inputFormat during parsing
     if config.outputFormat == None:
         if config.outputFile:
             ext = os.path.splitext(config.outputFile)[1]
             config.outputFormat = Ffile.get_format(ext)
-        else:
-            config.outputFormat = config.inputFormat
+            setOutputFormat(config.outputFormat,True)
     elif (config.outputFormat<>'fixed') and (config.outputFormat<>'free'):
         opt.error("outputFormat option must be specified with either 'fixed' or 'free' as an argument")
-    setOutputFormat(config.outputFormat)
+    else:
+        setOutputFormat(config.outputFormat,True)
 
     if config.inputLineLength:
         if config.inputLineLength < 72 or \

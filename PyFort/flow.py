@@ -76,17 +76,27 @@ commentInit = _fixed_comment
 
 inputFormat = 'fixed'
 outputFormat = 'fixed'
+outputFormatSet = False
 
 # default output format is the same as the input format
 def setInputFormat(input_format='fixed'):
     '''sets input and output formats. When the output format is not specified, it defaults to be the same as the input format. When the input format is not specified, it defaults to fixed format.'''
-    global inputFormat
+    global inputFormat, outputFormatSet
     inputFormat = input_format
+    # if outputFormat is not set explicitly, default is to set it the same as input
+    if not outputFormatSet:
+        setOutputFormat(input_format)
+    else:
+        # reset bool
+        outputFormatSet = False
 
-def setOutputFormat(output_format):
+# outputFormatBool represents whether or not the outputFormat was explicitly set by the user
+# (such as from a command line opt to postProcess or preProcess)
+def setOutputFormat(output_format,outputFormatBool=False):
     '''sets the output format'''
-    global outputFormat
+    global outputFormat, outputFormatSet
     outputFormat = output_format
+    outputFormatSet = outputFormatBool
     _setFormatDefaults(output_format=='free')
 
 def _setFormatDefaults(switch=True):

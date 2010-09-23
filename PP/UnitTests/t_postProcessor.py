@@ -21,7 +21,7 @@ DebugManager.setQuiet(True)
 
 Symtab.setTypeDefaults((RealStmt,[]),(IntegerStmt,[]))
 
-def compareFiles(assertFunc,originalFileName,RefFileName,free=False,mode='forward',templateFile=None,inlineFile=None):
+def compareFiles(assertFunc,originalFileName,RefFileName,format='fixed',mode='forward',templateFile=None,inlineFile=None):
     try:
         (fd,testFileName) = tempfile.mkstemp()
         testFile  = open(testFileName,'w')
@@ -32,7 +32,7 @@ def compareFiles(assertFunc,originalFileName,RefFileName,free=False,mode='forwar
                 UnitPostProcessor.processInlineFile()
             if (templateFile):
                 TemplateExpansion.setTemplateFile(fname_t(templateFile))
-        for aUnit in fortUnitIterator(fname_t(originalFileName),free):
+        for aUnit in fortUnitIterator(fname_t(originalFileName),format):
             UnitPostProcessor(aUnit).processUnit().printit(testFile)
         testFile.close()
         testFile = open(testFileName,'r')
