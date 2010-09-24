@@ -355,7 +355,7 @@ def main():
                         newOutputFile = os.path.join(outputDirectory,fileName+config.filenameSuffix+fileExtension)
                         if setFormat:
                             config.outputFormat = Ffile.get_format(fileExtension)
-                            setOutputFormat(config.outputFormat)
+                            setOutputFormat(config.outputFormat,True)
                         outFileNameList.append(newOutputFile)
                         out = open(newOutputFile,'w')
                 elif not out:

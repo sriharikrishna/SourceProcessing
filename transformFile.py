@@ -86,13 +86,13 @@ def main():
         opt.error("inputFormat option must be specified with either 'fixed' or 'free' as an argument")
     if config.outputFormat == None:
         if config.output:
-            ext = os.path.splitext(config.output)[1]
+            ext = os.path.splitext(config.outputFile)[1]
             config.outputFormat = Ffile.get_format(ext)
-        else:
-            config.outputFormat = config.inputFormat
+            setOutputFormat(config.outputFormat,True)
     elif (config.outputFormat<>'fixed') and (config.outputFormat<>'free'):
         opt.error("outputFormat option must be specified with either 'fixed' or 'free' as an argument")
-    setOutputFormat(config.outputFormat)
+    else:
+        setOutputFormat(config.outputFormat,True)
 
     # set line length
     if config.inputLineLength:
