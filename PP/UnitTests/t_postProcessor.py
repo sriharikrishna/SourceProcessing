@@ -116,6 +116,10 @@ class C1(TestCase):
         'test inlining: inlinepush2.f'
         compareFiles(self.assertEquals,'inlinepush2.f','inlinepush2.post.f',mode='reverse',templateFile='inlinepush2.template.f',inlineFile='inlinepush2.inline.f')
 
+    def test12(self):
+        'test initialization of derivative components of active variables within a module'
+        compareFiles(self.assertEquals,'module_init.f90','module_init.post.f90',format='free',mode='reverse')
+
 suite = asuite(C1)
 
 if __name__ == "__main__":
