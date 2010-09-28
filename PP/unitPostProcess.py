@@ -8,7 +8,7 @@ from PyFort.inference import InferenceError,expressionType,isArrayReference
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
 import PyFort.intrinsic as intrinsic
-from PyFort.fortUnit import fortUnitIterator
+from PyFort.fortUnit import fortUnitIterator,Unit
 from PP.templateExpansion import *
 import PyFort.flow as flow
 from PyFort.fortFile import Ffile
@@ -86,7 +86,7 @@ class UnitPostProcessor(object):
     # PARAMS:
     # arg -- the first use statement declaration in this subunit
     # RETURNS: a new statement to append to the unit's declaration statements
-    def __addActiveModule(self,arg):
+    def __addActiveModule(self,arg=None):
         DebugManager.debug('unitPostProcessor.__addActiveModule called on: "'\
                            +str(arg)+"'")
         new_stmt = fs.UseAllStmt(moduleName='OAD_active',renameList=None)
@@ -704,8 +704,122 @@ class UnitPostProcessor(object):
             newUnit = UnitPostProcessor.__getInlineSubroutine(aUnit)
             UnitPostProcessor._inlineFileUnits.append(newUnit)
 
+    @staticmethod
+    def createInitProcedure(fortStmt,typeDecls):
+        if isinstance(fortStmt,fs.CommonStmt):
+            newUnit = Unit()
+            newUnit.uinfo = fs.SubroutineStmt(fortStmt.name+'_init',[])
+            # insert oad_active module
+            newDecl = fs.UseAllStmt(moduleName='OAD_active',renameList=None,lead='\t')
+            newUnit.decls.append(newDecl)
+            newStmt = fs.CommonStmt(fortStmt.name,copy.deepcopy(fortStmt.declList),lead='\t')
+            newUnit.decls.append(newStmt)
+            for decl in typeDecls:
+                if isinstance(decl,fs.DrvdTypeDecl):
+                    newDecls = []
+                    for var in decl.get_decls():
+                        if str(var) in fortStmt.declList:
+                            newDecls.append(var)
+                            fortStmt.declList.remove(str(var))
+                    decl.set_decls(newDecls)
+                    if decl.get_mod()[0].lower() == UnitPostProcessor._abstract_type:
+                        decl.set_mod([UnitPostProcessor._replacement_type])
+                    decl.lead = '\t'
+                    if len(decl.get_decls()) > 0:
+                        newUnit.decls.append(decl)
+                else:
+                    for var in decl.get_decls():
+                        if str(var) in fortStmt.declList:
+                            newUnit.decls.append(decl)
+            for arg in newStmt.declList:
+                lhs = fe.Sel(arg,'d')
+                rhs = '0'
+                newExec = fs.AssignStmt(lhs,rhs,lead='\t')
+                newUnit.execs.append(newExec)
+            newUnit.end = [fs.EndSubroutineStmt()]
+            return newUnit
+        return None
+    
+    # a procedure which initializes all active global variables
+    @staticmethod
+    def createGlobalInitProcedure(initNames):
+        newUnit = Unit()
+        newUnit.uinfo = fs.SubroutineStmt('OAD_globalVar_init',[])
+        for name in initNames:
+            if name[0:3] == 'mod':
+                mod_name = name[4:]
+                newStmt = fs.UseAllStmt(mod_name,[],lead='\t')
+                newUnit.decls.append(newStmt)
+            newStmt = fs.CallStmt(name+'_init',[],lead='\t')
+            newUnit.execs.append(newStmt)
+        newUnit.end = [fs.EndSubroutineStmt()]
+        return newUnit
+
+    # inserts a call to the global initialization procedure
+    def __insertGlobalInitCall(self):
+        newExec = fs.CallStmt('OAD_globalVar_init',[],lead='\t')
+        self.__myUnit.execs.insert(0,newExec)
+
+    # creates a contains block in the module with a new subroutine initializing all active variables within the module
+    def __createModuleInitProcedure(self):
+        activeTypeDecls = []
+        for decl in self.__myUnit.decls:
+            if isinstance(decl,fs.DrvdTypeDecl) and \
+                    (decl.get_mod()[0].lower() == self._abstract_type):
+                activeTypeDecls.append(decl)
+        if len(activeTypeDecls) == 0:
+            return None
+
+        subUnit = Unit()
+        subUnit.uinfo = fs.SubroutineStmt('mod_'+self.__myUnit.uinfo.name+'_init',[])
+        # insert oad_active module
+        newDecl = fs.UseAllStmt(moduleName='OAD_active',renameList=None,lead='\t')
+        subUnit.decls.append(newDecl)
+
+        for decl in activeTypeDecls:
+            if isinstance(decl,fs.DrvdTypeDecl):
+                if decl.get_mod()[0].lower() == UnitPostProcessor._abstract_type:
+                    decl.set_mod([UnitPostProcessor._replacement_type])
+                subUnit.decls.append(decl)
+            else:
+                subUnit.decls.append(decl)
+            for arg in decl.get_decls():
+                lhs = fe.Sel(arg,'d')
+                rhs = '0'
+                newExec = fs.AssignStmt(lhs,rhs,lead='\t')
+                subUnit.execs.append(newExec)
+        subUnit.end = [fs.EndSubroutineStmt()]
+        if len(self.__myUnit.contains) == 0:
+            self.__myUnit.contains.append(fs.ContainsStmt())
+        return subUnit
+
+    # find all common block variables to be initialized
+    def getInitCommonStmts(self,initSet,initNames,typeDecls):
+        if isinstance(self.__myUnit.uinfo,fs.ModuleStmt):
+            if not self.__myUnit.uinfo.name in initNames:
+                for decl in self.__myUnit.decls:
+                    if isinstance(decl,fs.DrvdTypeDecl) and \
+                            (decl.get_mod()[0].lower() == self._abstract_type):
+                        initNames.append('mod_'+self.__myUnit.uinfo.name)
+                        return
+        initCommonStmt = None
+        for decl in self.__myUnit.decls:
+            if isinstance(decl,fs.CommonStmt):
+                initCommonStmt = fs.CommonStmt(decl.name,[])
+                initDecls = []
+                for var in decl.declList:
+                    # lookup in symtab
+                    var_type = self.__myUnit.symtab.lookup_name(var).type
+                    if (var_type[1][0].lower() == self._abstract_type):
+                        initCommonStmt.declList.append(var)
+                if not initCommonStmt.name in initNames:
+                    initSet.add(initCommonStmt)
+                    initNames.append(initCommonStmt.name)
+            if isinstance(decl,fs.TypeDecl):
+                typeDecls.add(decl)
+
     # Processes all statements in the unit
-    def processUnit(self):
+    def processUnit(self,insertGlobalInitCall=False):
         ''' post-process a unit '''
         DebugManager.debug(('+'*55)+' Begin post-processing unit <'+str(self.__myUnit.uinfo)+'> '+(55*'+'))
         DebugManager.debug('local '+self.__myUnit.symtab.debug())
@@ -716,10 +830,18 @@ class UnitPostProcessor(object):
             UnitPostProcessor(subUnit).processUnit()
 
         if self._mode == 'reverse':
+            if isinstance(self.__myUnit.uinfo,fs.ModuleStmt):
+                # create init subroutine & add it inside module
+                subUnit = self.__createModuleInitProcedure()
+                if subUnit is not None:
+                    subUnit.parent = self.__myUnit
+                    self.__myUnit.ulist.append(subUnit)
             inline = False
             self.__templateExpansion()
             self.__myUnit.decls = self.__myNewDecls
             self.__myUnit.execs = self.__myNewExecs
+            if insertGlobalInitCall:
+                self.__insertGlobalInitCall()
         else:
             (Decls,Execs) = self.__forwardProcessDeclsAndExecs()
             self.__myUnit.decls = Decls
