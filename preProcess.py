@@ -104,7 +104,7 @@ def main():
     opt.add_option('-o',
                    '--output',
                    dest='outputFile',
-                   help='set output file (defaults to stdout)',
+                   help='redirect output to  file OUTPUT (default output is stdout); If the "--outputFormat" option is not used, the output format is taken from the extension of this filename',
                    metavar='<output_file>',
                    default=None)
     opt.add_option('--recursionLimit',

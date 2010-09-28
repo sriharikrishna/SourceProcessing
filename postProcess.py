@@ -71,7 +71,7 @@ def main():
     opt.add_option('-o',
                    '--output',
                    dest='output',
-                   help='redirect output to  file OUTPUT (default output is stdout); cannot be specified together with --width',
+                   help='redirect output to  file OUTPUT (default output is stdout); cannot be specified together with --width; If the "--outputFormat" option is not used, the output format is taken from the extension of this filename',
                    default=None)
     opt.add_option('-p',
                    '--progress',
