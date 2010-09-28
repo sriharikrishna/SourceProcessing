@@ -88,11 +88,11 @@ def main():
         if config.output:
             ext = os.path.splitext(config.outputFile)[1]
             config.outputFormat = Ffile.get_format(ext)
-            setOutputFormat(config.outputFormat,True)
+            setOutputFormat(config.outputFormat)
     elif (config.outputFormat<>'fixed') and (config.outputFormat<>'free'):
         opt.error("outputFormat option must be specified with either 'fixed' or 'free' as an argument")
     else:
-        setOutputFormat(config.outputFormat,True)
+        setOutputFormat(config.outputFormat)
 
     # set line length
     if config.inputLineLength:

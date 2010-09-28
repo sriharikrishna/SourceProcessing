@@ -200,11 +200,11 @@ def main():
             if config.output:
                 ext = os.path.splitext(config.output)[1]
                 config.outputFormat = Ffile.get_format(ext)
-                setOutputFormat(config.outputFormat,True)
+                setOutputFormat(config.outputFormat)
         elif (config.outputFormat<>'fixed') and (config.outputFormat<>'free'):
             opt.error("outputFormat option must be specified with either 'fixed' or 'free' as an argument")
         else:
-            setOutputFormat(config.outputFormat,True)
+            setOutputFormat(config.outputFormat)
 
         if config.inputLineLength:
             if config.inputLineLength < 72 or \
@@ -314,7 +314,7 @@ def main():
                         newOutputFile = os.path.join(outputDirectory,fileName+config.filenameSuffix+fileExtension)
                         if setFormat:
                             config.outputFormat = Ffile.get_format(fileExtension)
-                            setOutputFormat(config.outputFormat,True)
+                            setOutputFormat(config.outputFormat)
                         outFileNameList.append(newOutputFile)
                         out = open(newOutputFile,'w')
                 elif not out:
