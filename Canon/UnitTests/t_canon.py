@@ -8,6 +8,7 @@ from PyUtil.errors import UserError
 from PyUtil.symtab import Symtab
 from PyFort.fortUnit import fortUnitIterator
 from PyFort.fortStmts import RealStmt,IntegerStmt
+from PyFort.flow import setOutputFormat
 from canon import UnitCanonicalizer,CanonError
 from PyUtil.debugManager import DebugManager
 
@@ -23,6 +24,7 @@ def compareFiles(assertFunc,originalFileName,RefFileName,format):
     try:
         (fd,testFileName) = tempfile.mkstemp()
         testFile  = open(testFileName,'w')
+        setOutputFormat(format)
         for aUnit in fortUnitIterator(fname_t(originalFileName),format):
             UnitCanonicalizer(aUnit).canonicalizeUnit().printit(testFile)
         testFile.close()

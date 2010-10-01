@@ -8,6 +8,7 @@ from PyUtil.errors import UserError
 from PyUtil.symtab import Symtab
 from PyFort.fortUnit import fortUnitIterator
 from PyFort.fortStmts import RealStmt,IntegerStmt
+from PyFort.flow import setOutputFormat
 from PyUtil.debugManager import DebugManager
 from unitPostProcess import UnitPostProcessor,PostProcessError
 from PP.templateExpansion import TemplateExpansion
@@ -26,6 +27,7 @@ def compareFiles(assertFunc,originalFileName,RefFileName,format='fixed',mode='fo
         (fd,testFileName) = tempfile.mkstemp()
         testFile  = open(testFileName,'w')
         UnitPostProcessor.setMode(mode)
+        setOutputFormat(format)
         if (mode=='reverse'):
             if (inlineFile):
                 UnitPostProcessor.setInlineFile(fname_t(inlineFile))
