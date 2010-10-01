@@ -10,6 +10,7 @@ from PyFort.fortUnit import fortUnitIterator
 from PyFort.fortStmts import RealStmt,IntegerStmt
 from canon import UnitCanonicalizer,CanonError
 from PyUtil.debugManager import DebugManager
+from PyFort.flow import setOutputFormat
 
 '''
 Unit tests for canonicalizer
@@ -24,15 +25,20 @@ def compareFiles(assertFunc,originalFileName,RefFileName,format):
         (fd,testFileName) = tempfile.mkstemp()
         testFile  = open(testFileName,'w')
         for aUnit in fortUnitIterator(fname_t(originalFileName),format):
+            setOutputFormat(format)
             UnitCanonicalizer(aUnit).canonicalizeUnit().printit(testFile)
         testFile.close()
         testFile = open(testFileName,'r')
         testFileLines = testFile.readlines()
         refFile = open(fname_t(RefFileName),'r')
         refFileLines = refFile.readlines()
-        assertFunc(len(testFileLines),len(refFileLines),'transformation result and reference file have disparate line counts')
+        assertFunc(len(testFileLines),len(refFileLines),'transformation result ('+testFileName+') and reference file ('+RefFileName+') have disparate line counts')
         for testLine,refLine in zip(testFileLines,refFileLines):
-            assertFunc(testLine,refLine)
+            try : 
+                assertFunc(testLine,refLine)
+            except AssertionError, e:
+                print >> sys.stderr, '\ncomparing produced output('+testFileName+') and reference file ('+RefFileName+') fails with:\n'+str(e)
+                raise e
         refFile.close()
         testFile.close()
         os.remove(testFileName)
