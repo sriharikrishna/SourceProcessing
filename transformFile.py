@@ -17,11 +17,11 @@ from PyFort.flow import setInputLineLength, setOutputLineLength, setOutputFormat
 
 def cleanup(config):
     import os 
-    if ((not config.noCleanup) and (not config.output is None) and  os.path.exists(config.output)):
+    if ((not config.noCleanup) and (not config.outputFile is None) and  os.path.exists(config.outputFile)):
         try: 
-            os.remove(config.output)
+            os.remove(config.outputFile)
         except:
-            print >>sys.stderr,'Cannot remove output file '+config.output
+            print >>sys.stderr,'Cannot remove output file '+config.outputFile
  
 def main():
     usage = '%prog <input_file>'
@@ -52,7 +52,7 @@ def main():
                    default=None)
     opt.add_option('-o',
                    '--output',
-                   dest='output',
+                   dest='outputFile',
                    help='redirect output to  file OUTPUT (default output is stdout); If the "--outputFormat" option is not used, the output format is taken from the extension of this filename',
                    default=None)
     opt.add_option('-n',
@@ -85,7 +85,7 @@ def main():
            (config.inputFormat is not None):
         opt.error("inputFormat option must be specified with either 'fixed' or 'free' as an argument")
     if config.outputFormat == None:
-        if config.output:
+        if config.outputFile:
             ext = os.path.splitext(config.outputFile)[1]
             config.outputFormat = Ffile.get_format(ext)
             setOutputFormat(config.outputFormat)
@@ -114,7 +114,7 @@ def main():
         opt.error('expected at least one argument <input_file> ;' \
                  +' the following options were given: '+str(config))
     inputFileList = args
-    if config.output and len(inputFileList) > 1 :
+    if config.outputFile and len(inputFileList) > 1 :
             opt.error('No output file can be specified when more than one input file is given.' \
                      +' the following options were given: '+str(config))
     if config.outputDir :
@@ -129,11 +129,11 @@ def main():
         # only one input file
         if len(inputFileList) == 1 :
             currentFile = inputFileList[0]
-            out = config.output and open(config.output,'w') \
+            out = config.outputFile and open(config.outputFile,'w') \
                                  or sys.stdout
             for aUnit in fortUnitIterator(inputFileList[0],config.inputFormat):
                 TransformActiveVariables(aUnit).transformUnit().printit(out)
-            if config.output :
+            if config.outputFile :
                 out.close()
         # multiple input files
         else :
