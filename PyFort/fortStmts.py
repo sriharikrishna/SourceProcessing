@@ -1055,7 +1055,7 @@ class EquivalenceStmt(Decl):
             declStrList.append('('+','.join(str(item) for item in nlist[1])+')')
         return '%s %s' % (self.kw,','.join(declStrList))
         
-aNamedParam = seq(id,lit('='),Exp)
+namedParamPatn = seq(id,lit('='),Exp)
 
 class ParameterStmt(Decl):
     _sons = ['namedParamList']
@@ -1067,7 +1067,7 @@ class ParameterStmt(Decl):
         scan = filter(lambda x: x != ' ',ws_scan)
         p0 = seq(lit(ParameterStmt.kw),
                  lit('('),
-                 cslist(aNamedParam),
+                 cslist(namedParamPatn),
                  lit(')'))
         p0 = treat(p0,lambda l:ParameterStmt(l[2],lineNumber))
         (v,r) = p0(scan)
@@ -1848,92 +1848,6 @@ class PointerAssignStmt(Exec):
 
     def __str__(self):
         return '%s => %s' % (str(self.lhs),str(self.rhs))+''.join(self.internal)
-
-class OpenStmt(Exec):
-    kw = 'open'
-    kw_str = kw
-
-    @staticmethod
-    def parse(ws_scan,lineNumber):
-        scan = filter(lambda x: x != ' ',ws_scan)
-        unitSpec = seq(zo1(seq(lit('unit'),lit('='))),
-                       disj(int,id))
-        unitSpec = treat(unitSpec, lambda x: x[-1])
-        formOpenStmt = seq(lit(OpenStmt.kw),
-                           lit('('),
-                           unitSpec,
-                           zo1(seq(lit(','),
-                                   cslist(disj(seq(lit('access'),lit('='),Exp),
-                                               seq(lit('action'),lit('='),Exp),
-                                               seq(lit('blank'),lit('='),Exp),
-                                               seq(lit('blocksize'),lit('='),Exp),
-                                               seq(lit('err'),lit('='),Exp),
-                                               seq(lit('file'),lit('='),Exp),
-                                               seq(lit('form'),lit('='),Exp),
-                                               seq(lit('iostat'),lit('='),Exp),
-                                               seq(lit('mode'),lit('='),Exp),
-                                               seq(lit('position'),lit('='),Exp),
-                                               seq(lit('recl'),lit('='),Exp),
-                                               seq(lit('share'),lit('='),Exp),
-                                               seq(lit('status'),lit('='),Exp),
-                                               seq(lit('iofocus'),lit('='),Exp),
-                                               seq(lit('title'),lit('='),Exp))))),
-                           lit(')'))
-        
-        ((stmt_name,lparen,unitspec,params,rparen),rst) = formOpenStmt(scan)
-        return OpenStmt(unitspec,params,lineNumber,rest=rst)
-
-    def __init__(self,unitspec,params=[],lineNumber=0,label=False,lead='',internal=[],rest=[]):
-        self.unitspec = unitspec
-        if len(params) > 0:
-            self.params = params[0][1]
-        else: self.params = []
-        Exec.__init__(self,lineNumber,label,lead,internal,rest)
-
-    def __str__(self):
-        if self.params == []:
-            return '%s (%s)' % (self.kw,self.unitspec)            
-        paramlist = []
-        for param in self.params:
-            paramlist.append(''.join(str(elt) for elt in param))
-        return '%s (%s)' % (self.kw,self.unitspec+','+','.join(paramlist))
-
-class CloseStmt(Exec):
-    kw = 'close'
-    kw_str = kw
-
-    @staticmethod
-    def parse(ws_scan,lineNumber):
-        scan = filter(lambda x: x != ' ',ws_scan)
-        unitSpec = seq(zo1(seq(lit('unit'),lit('='))),
-                       disj(int,id))
-        unitSpec = treat(unitSpec, lambda x: x[-1])
-        formCloseStmt = seq(lit(CloseStmt.kw),
-                           lit('('),
-                           unitSpec,
-                           zo1(seq(lit(','),
-                                   cslist(disj(seq(lit('err'),lit('='),Exp),
-                                               seq(lit('iostat'),lit('='),Exp),
-                                               seq(lit('status'),lit('='),Exp))))),
-                           lit(')'))
-        
-        ((stmt_name,lparen,unitspec,params,rparen),rst) = formCloseStmt(scan)
-        return CloseStmt(unitspec,params,lineNumber,rest=rst)
-
-    def __init__(self,unitspec,params=[],lineNumber=0,label=False,lead='',internal=[],rest=[]):
-        self.unitspec = unitspec
-        if len(params) > 0:
-            self.params = params[0][1]
-        else: self.params = []
-        Exec.__init__(self,lineNumber,label,lead,internal,rest)
-
-    def __str__(self):
-        if self.params == []:
-            return '%s (%s)' % (self.kw,self.unitspec)            
-        paramlist = []
-        for param in self.params:
-            paramlist.append(''.join(str(elt) for elt in param))
-        return '%s (%s)' % (self.kw,self.unitspec+','+','.join(paramlist))
 
 
 class IOStmt(Exec):
@@ -2727,70 +2641,82 @@ class BackspaceStmt(Exec):
             paramlist.append(''.join(str(elt) for elt in param))
         return '%s (%s)' % (self.kw,unitspec+','+','.join(paramlist))
 
-class RewindStmt(Exec):
+class BuiltinExec(Exec):
+
+    @classmethod
+    def parse(cls,ws_scan,lineNumber):
+        scan = filter(lambda x: x != ' ',ws_scan)
+        theParams=dict((i,None) for i in cls.paramNames)
+        theParsedStmt=None
+        try:
+            # without parenthesis
+            formStmt = seq(lit(cls.kw),id)
+            ((builtinKeyword,unitSpec),rest) = formStmt(scan)
+            theParams[cls.paramNames[0]]=unitSpec
+            theParsedStmt=cls(theParams,lineNumber)
+        except:
+            # with parenthesis
+            aNamedParam=treat(namedParamPatn,lambda p: NamedParam(p[0].lower(),p[2]))
+            formStmt = seq(lit(cls.kw),lit('('),cslist(disj(aNamedParam,Exp)),lit(')'))
+            ((stmt_name,lparen,params,rparen),rest)=formStmt(scan)
+            if isinstance(params,list):
+                for pos,p in enumerate(params):
+                    if isinstance(p,NamedParam):
+                        theParams[p.myId]=p
+                    else:
+                        theParams[cls.paramNames[pos]]=p
+            else:
+                theParams[cls.paramNames[0]]=params
+            theParsedStmt=cls(theParams,lineNumber)
+        theParsedStmt.rest = rest
+        return theParsedStmt
+        
+    def __init__(self,aParamsDict,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.paramsDict = aParamsDict
+        Exec.__init__(self,lineNumber,label,lead,internal,rest)
+
+    def __str__(self):
+        rstr=self.kw+"("
+        pCount=0
+        for p in self.__class__.paramNames:
+            if (p in self.paramsDict.keys() and self.paramsDict[p]) :
+                if (pCount):
+                    rstr+=","
+                pCount+=1
+                rstr+=str(self.paramsDict[p])
+        rstr+=')'
+        return rstr
+
+class RewindStmt(BuiltinExec):
     kw = 'rewind'
     kw_str = kw
     paramNames=['unit','err','iostat']
 
-    @staticmethod
-    def parse(ws_scan,lineNumber):
-        scan = filter(lambda x: x != ' ',ws_scan)
-        try:
-            # without parenthesis
-            formRewindStmt = seq(lit(RewindStmt.kw),id)
-            ((rewindKeyword,unitSpec),rest) = formRewindStmt(scan)
-            return RewindStmt(unitSpec,lineNumber=lineNumber)
-        except:
-            # with parenthesis
-            formUnitSpec = disj(seq(lit(RewindStmt.paramNames[0]),
-                                    lit('='),
-                                    id),
-                                id)
-            formUnitSpec=treat(formUnitSpec, lambda l: isinstance(l,list) and NamedParam(l[0].lower(),l[2]) or l)
-            formErrLabel = disj(seq(lit(RewindStmt.paramNames[1]),
-                                    lit('='),
-                                    int),
-                                int)
-            formErrLabel=treat(formErrLabel, lambda l: isinstance(l,list) and NamedParam(l[0].lower(),l[2]) or l)
-            formIOCheck = disj(seq(lit(RewindStmt.paramNames[2]),
-                                   lit('='),
-                                   int),
-                               int)
-            formIOCheck=treat(formIOCheck, lambda l: isinstance(l,list) and NamedParam(l[0].lower(),l[2]) or l)
-            # note below formUnitSpec goes in the end because otherwise the "id" can capture the parameter name
-            formRewindStmt = seq(lit(RewindStmt.kw),lit('('),disj(cslist(disj(formErrLabel,formIOCheck,formUnitSpec)),id),lit(')'))
-            ((stmt_name,lparen,params,rparen),rest)=formRewindStmt(scan)
-            theParsedStmt=None
-            if isinstance(params,list):
-                theParams=dict((i,None) for i in RewindStmt.paramNames)
-                for pos,p in enumerate(params):
-                    if isinstance(p,NamedParam):
-                        theParams[p.myId]=p.myRHS
-                    else:
-                        theParams[RewindStmt.paramNames[pos]]=p
-                theParsedStmt=RewindStmt(theParams[RewindStmt.paramNames[0]],
-                                         theParams[RewindStmt.paramNames[1]],
-                                         theParams[RewindStmt.paramNames[2]],
-                                         lineNumber)
-            else:
-                theParsedStmt=RewindStmt(params,None,None,lineNumber)
-            theParsedStmt.rest = rest
-            return theParsedStmt
-        
-    def __init__(self,unitSpec,errLabel='',IOCheck='',lineNumber=0,label=False,lead='',internal=[],rest=[]):
-        self.unitSpec = unitSpec
-        self.errLabel = errLabel
-        self.IOCheck = IOCheck
-        Exec.__init__(self,lineNumber,label,lead,internal,rest)
 
-    def __str__(self):
-        rstr=self.kw+"("+str(self.unitSpec)
-        if (self.errLabel):
-            rstr+=","+str(self.errLabel)
-        if (self.IOCheck):
-            rstr+=","+str(self.IOCheck)
-        rstr+=')'
-        return rstr
+class OpenStmt(BuiltinExec):
+    kw = 'open'
+    kw_str = kw
+    paramNames=['unit',
+                'access',
+                'action',
+                'blank',
+                'delim',
+                'err',
+                'file',
+                'form',
+                'iostat',
+                'pad',
+                'position',
+                'recl',
+                'status']
+
+class CloseStmt(BuiltinExec):
+    kw = 'close'
+    kw_str = kw
+    paramNames=['unit',
+                'iostat',
+                'err',
+                'status']
 
 kwBuiltInTypesTbl= dict(
     character       = CharacterStmt,

@@ -734,7 +734,7 @@ class TestIfStmt(TestCase):
     def test9(self):
         '''if (non-then) statement from scale, with rewind stmt'''
         theString = 'if (nt4>0) rewind(nt4)'
-        theRepr = IfNonThenStmt(Ops('>','nt4','0'),RewindStmt('nt4'))
+        theRepr = IfNonThenStmt(Ops('>','nt4','0'),RewindStmt({'unit':'nt4'}))
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
@@ -1322,6 +1322,52 @@ class TestExitStmt(TestCase):
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
 
+class TestOpenStmt(TestCase):
+    '''open statements'''
+
+    def test0(self):
+        '''open statement with parenthesis'''
+        theString = "open(linpxs)"
+        theRepr = OpenStmt({'unit':'linpxs'})
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test1(self):
+        '''open statement without parenthesis'''
+        theString = "open linpxs"
+        compString= "open(linpxs)" # always unparsed with parenthesis
+        theRepr = OpenStmt({'unit':'linpxs'})
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(compString,str(pps(theString)))
+
+    def test2(self):
+        '''open statement with explicit unit/err parameter'''
+        theString = "open(err=1,unit=linpxs)"
+        compString= "open(unit=linpxs,err=1)" # always unparsed with ordered parameters
+        theRepr = OpenStmt({'err':NamedParam('err',1),'unit':NamedParam('unit','linpxs')})
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(compString,str(pps(theString)))
+
+    def test3(self):
+        '''open statement with positional and named parameters mixed, mixed case for parameters'''
+        theString = "open(linpxs, ioStat=2,err=1)"
+        compString= "open(linpxs,err=1,iostat=2)" # always unparsed with ordered parameters
+        theRepr = OpenStmt({'unit':'linpxs','err':NamedParam('err',1),'iostat':NamedParam('iostat',2)})
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(compString,str(pps(theString)))
+
+    def test4(self):
+        '''open statement with positional and named parameters mixed, mixed case for parameters given as expressions'''
+        theString = "open(myType%linpxs, ioStat=2,err=1)"
+        compString= "open(myType%linpxs,err=1,iostat=2)" # always unparsed with ordered parameters
+        theRepr = OpenStmt({'unit':Sel('myType','linpxs'),'err':NamedParam('err',1),'iostat':NamedParam('iostat',2)})
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(compString,str(pps(theString)))
 
 class TestRewindStmt(TestCase):
     '''rewind statements'''
@@ -1329,7 +1375,7 @@ class TestRewindStmt(TestCase):
     def test0(self):
         '''rewind statement with parenthesis'''
         theString = "rewind(linpxs)"
-        theRepr = RewindStmt('linpxs')
+        theRepr = RewindStmt({'unit':'linpxs'})
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
@@ -1338,7 +1384,7 @@ class TestRewindStmt(TestCase):
         '''rewind statement without parenthesis'''
         theString = "rewind linpxs"
         compString= "rewind(linpxs)" # always unparsed with parenthesis
-        theRepr = RewindStmt('linpxs')
+        theRepr = RewindStmt({'unit':'linpxs'})
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(compString,str(pps(theString)))
@@ -1346,8 +1392,8 @@ class TestRewindStmt(TestCase):
     def test2(self):
         '''rewind statement with explicit unit/err parameter'''
         theString = "rewind(err=1,unit=linpxs)"
-        compString= "rewind(linpxs,1)" # always unparsed with positional parameters
-        theRepr = RewindStmt('linpxs',1)
+        compString= "rewind(unit=linpxs,err=1)" # always unparsed with ordered parameters
+        theRepr = RewindStmt({'err':NamedParam('err',1),'unit':NamedParam('unit','linpxs')})
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(compString,str(pps(theString)))
@@ -1355,11 +1401,58 @@ class TestRewindStmt(TestCase):
     def test3(self):
         '''rewind statement with positional and named parameters mixed, mixed case for parameters'''
         theString = "rewind(linpxs, ioStat=2,err=1)"
-        compString= "rewind(linpxs,1,2)" # always unparsed with positional parameters in the proper order
-        theRepr = RewindStmt('linpxs',1,2)
+        compString= "rewind(linpxs,err=1,iostat=2)" # always unparsed with ordered parameters
+        theRepr = RewindStmt({'unit':'linpxs','err':NamedParam('err',1),'iostat':NamedParam('iostat',2)})
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(compString,str(pps(theString)))
+
+class TestCloseStmt(TestCase):
+    '''close statements'''
+
+    def test0(self):
+        '''close statement with parenthesis'''
+        theString = "close(linpxs)"
+        theRepr = CloseStmt({'unit':'linpxs'})
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test1(self):
+        '''close statement without parenthesis'''
+        theString = "close linpxs"
+        compString= "close(linpxs)" # always unparsed with parenthesis
+        theRepr = CloseStmt({'unit':'linpxs'})
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(compString,str(pps(theString)))
+
+    def test2(self):
+        '''close statement with explicit unit/err parameter'''
+        theString = "close(err=1,unit=linpxs)"
+        compString= "close(unit=linpxs,err=1)" # always unparsed with ordered parameters
+        theRepr = CloseStmt({'err':NamedParam('err',1),'unit':NamedParam('unit','linpxs')})
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(compString,str(pps(theString)))
+
+    def test3(self):
+        '''close statement with positional and named parameters mixed, mixed case for parameters'''
+        theString = "close(linpxs, err=1, ioStat=2)"
+        compString= "close(linpxs,iostat=2,err=1)" # always unparsed with ordered parameters
+        theRepr = CloseStmt({'unit':'linpxs','err':NamedParam('err',1),'iostat':NamedParam('iostat',2)})
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(compString,str(pps(theString)))
+
+    def test4(self):
+        '''close statement with positional and named parameters mixed, mixed case for parameters given as expressions'''
+        theString = "close(myType%linpxs,iostat=2,err=1)"
+        theRepr = CloseStmt({'unit':Sel('myType','linpxs'),'err':NamedParam('err',1),'iostat':NamedParam('iostat',2)})
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
 
 
 suite = asuite(C2,C3,C4,C5,C6,C8,C9,
@@ -1389,8 +1482,9 @@ suite = asuite(C2,C3,C4,C5,C6,C8,C9,
                TestDataStmt,
                TestProcedureStmt,
                TestExitStmt,
+               TestOpenStmt,
                TestRewindStmt,
-              )
+               TestCloseStmt)
 
 if __name__ == '__main__':
     sys.exit(runit(suite))
