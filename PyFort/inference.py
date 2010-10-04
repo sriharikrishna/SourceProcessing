@@ -285,7 +285,15 @@ def identifierShape(anId,localSymtab,lineNumber):
 
 def arrayReferenceShape(arrRefApp,localSymtab,lineNumber):
     DebugManager.debug('inference.arrayReferenceShape called on '+repr(arrRefApp)+'...',newLine=False)
-    (symtabEntry,containingSymtab) = localSymtab.lookup_name_level(arrRefApp.head)
+    symtabEntry=None
+    if isinstance(arrRefApp.head,Sel):
+       theSel=arrRefApp.head
+       # lookup type of head
+       dType=expressionType(theSel.head,localSymtab,lineNumber)
+       # lookup the projection
+       (symtabEntry,containingSymtab) = localSymtab.lookup_name_level(dType[1][0]+":"+theSel.proj)
+    else: 
+       (symtabEntry,containingSymtab) = localSymtab.lookup_name_level(arrRefApp.head)
     dimensions=[]
     symDimIndex=0
     for index in arrRefApp.args:
@@ -352,7 +360,7 @@ def selectionShape(aSelectionExpression,localSymtab,lineNumber):
     DebugManager.debug('inference.SelectionShape: determining shape of selection expression '+str(aSelectionExpression)+' using symtab '+str(localSymtab))
     # lookup type of head
     dType=expressionType(aSelectionExpression.head,localSymtab,lineNumber)
-    # lookup the projection type
+    # lookup the projection shape
     pShape=identifierShape(dType[1][0]+":"+aSelectionExpression.proj,localSymtab,lineNumber)
     return pShape
 
