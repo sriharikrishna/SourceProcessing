@@ -141,6 +141,8 @@ def intrinsicType(anIntrinsicApp,localSymtab,lineNumber):
         return (fortStmts.DoubleStmt, [])
     elif anIntrinsicApp.head.lower() == 'cmplx':
         return (fortStmts.ComplexStmt, [])
+    elif anIntrinsicApp.head.lower() == 'repeat':
+        return (fortStmts.CharacterStmt, [])
     else:
         return typemerge([expressionType(anArg,localSymtab,lineNumber) for anArg in anIntrinsicApp.args],
                          (None,None))
