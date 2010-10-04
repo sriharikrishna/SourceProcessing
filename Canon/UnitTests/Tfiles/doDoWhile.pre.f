@@ -1,5 +1,5 @@
         subroutine head(y)
-      use OAD_intrinsics
+        use OAD_intrinsics
           real :: y
           integer :: i,j
           external foo,bar
