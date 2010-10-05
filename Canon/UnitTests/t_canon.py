@@ -126,6 +126,10 @@ class TestFunctionToSubroutine(TestCase):
         'test result argument replacement while converting function definition to subroutine definition'
         compareFiles(self.assertEquals,'funDef_resultReplacement.f90','funDef_resultReplacement.pre.f90',format='free')
 
+    def test5(self):
+        'test converting function definition to subroutine definition within an interface statement'
+        compareFiles(self.assertEquals,'funDef2subDef4.f90','funDef2subDef4.pre.f90',format='free')
+
 class TestCanonicalizeEllipsis(TestCase):
     def test1(self):
         'test converting max ellipsis'
