@@ -2519,67 +2519,6 @@ class DeallocateStmt(Exec):
         return '%s(%s)' % (self.kw,','.join([str(arg) for arg in self.argList]))\
                +''.join(self.internal)
 
-class InquireStmt(Exec):
-    kw = 'inquire'
-    kw_str = kw
-
-    @staticmethod
-    def parse(ws_scan,lineNumber):
-        scan = filter(lambda x: x != ' ',ws_scan)
-        unitSpec = seq(zo1(seq(lit('unit'),lit('='))),
-                       int)
-        formInquireStmt = seq(lit(InquireStmt.kw),
-                              lit('('),
-                              zo1(unitSpec),
-                              zo1(lit(',')),
-                              zo1(cslist(disj(seq(lit('access'),lit('='),Exp),
-                                               seq(lit('binary'),lit('='),Exp),
-                                               seq(lit('blank'),lit('='),Exp),
-                                               seq(lit('blocksize'),lit('='),Exp),
-                                               seq(lit('direct'),lit('='),Exp),
-                                               seq(lit('err'),lit('='),Exp),
-                                               seq(lit('exist'),lit('='),Exp),
-                                               seq(lit('file'),lit('='),Exp),
-                                               seq(lit('form'),lit('='),Exp),
-                                               seq(lit('formatted'),lit('='),Exp),
-                                               seq(lit('iostat'),lit('='),Exp),
-                                               seq(lit('iofocus'),lit('='),Exp),
-                                               seq(lit('mode'),lit('='),Exp),
-                                               seq(lit('name'),lit('='),Exp),
-                                               seq(lit('named'),lit('='),Exp),
-                                               seq(lit('nextrec'),lit('='),Exp),
-                                               seq(lit('number'),lit('='),Exp),
-                                               seq(lit('opened'),lit('='),Exp),
-                                               seq(lit('recl'),lit('='),Exp),
-                                               seq(lit('sequential'),lit('='),Exp),
-                                               seq(lit('share'),lit('='),Exp),
-                                               seq(lit('unformatted'),lit('='),Exp)))),
-                           lit(')'))
-        
-        ((stmt_name,lparen,unitspec,comma,params,rparen),rst) = formInquireStmt(scan)
-        return InquireStmt(unitspec,params,lineNumber,rest=rst)
-
-    def __init__(self,unitspec,params=[],lineNumber=0,label=False,lead='',internal=[],rest=[]):
-        self.unitspec = unitspec
-        if len(params) > 0:
-            self.params = params[0]
-        else: self.params = []
-        Exec.__init__(self,lineNumber,label,lead,internal,rest)
-
-    def __str__(self):
-        if isinstance(self.unitspec,list):
-            unitspec = ''.join(self.unitspec)
-        else:
-            unitspec = self.unitspec
-        if self.params == []:
-            return '%s (%s)' % (self.kw,unitspec)            
-        paramlist = []
-        for param in self.params:
-            paramlist.append(''.join(str(elt) for elt in param))
-        if unitspec == '':
-            return '%s (%s)' % (self.kw,','.join(paramlist))
-        return '%s (%s)' % (self.kw,unitspec+','+','.join(paramlist))
-
 class NullifyStmt(Exec):
     kw = 'nullify'
     kw_str = kw
@@ -2717,6 +2656,35 @@ class CloseStmt(BuiltinExec):
                 'iostat',
                 'err',
                 'status']
+
+class InquireStmt(BuiltinExec):
+    kw = 'inquire'
+    kw_str = kw
+    paramNames=['unit',
+                'access',
+                'action',
+                'blank',
+                'delim',
+                'direct',
+                'err',
+                'exist',
+                'file',
+                'form',
+                'formatted',
+                'iostat',
+                'name',
+                'named',
+                'nextrec',
+                'number',
+                'opened',
+                'pad',
+                'postion',
+                'read',
+                'readwrite',
+                'recl',
+                'sequential',
+                'unformatted',
+                'write']
 
 kwBuiltInTypesTbl= dict(
     character       = CharacterStmt,
