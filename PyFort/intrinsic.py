@@ -54,6 +54,7 @@ __intrinsics = (
     'present',
     'read',
     'real',
+    'repeat',
     'shape',
     'sign',
     'sin',

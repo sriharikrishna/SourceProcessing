@@ -8,8 +8,10 @@ from PyUtil.errors import UserError
 from PyUtil.symtab import Symtab
 from PyFort.fortUnit import fortUnitIterator
 from PyFort.fortStmts import RealStmt,IntegerStmt
+from PyFort.flow import setOutputFormat
 from canon import UnitCanonicalizer,CanonError
 from PyUtil.debugManager import DebugManager
+from PyFort.flow import setOutputFormat
 
 '''
 Unit tests for canonicalizer
@@ -23,16 +25,22 @@ def compareFiles(assertFunc,originalFileName,RefFileName,format):
     try:
         (fd,testFileName) = tempfile.mkstemp()
         testFile  = open(testFileName,'w')
+        setOutputFormat(format)
         for aUnit in fortUnitIterator(fname_t(originalFileName),format):
+            setOutputFormat(format)
             UnitCanonicalizer(aUnit).canonicalizeUnit().printit(testFile)
         testFile.close()
         testFile = open(testFileName,'r')
         testFileLines = testFile.readlines()
         refFile = open(fname_t(RefFileName),'r')
         refFileLines = refFile.readlines()
-        assertFunc(len(testFileLines),len(refFileLines),'transformation result and reference file have disparate line counts')
+        assertFunc(len(testFileLines),len(refFileLines),'transformation result ('+testFileName+') and reference file ('+RefFileName+') have disparate line counts')
         for testLine,refLine in zip(testFileLines,refFileLines):
-            assertFunc(testLine,refLine)
+            try : 
+                assertFunc(testLine,refLine)
+            except AssertionError, e:
+                print >> sys.stderr, '\ncomparing produced output('+testFileName+') and reference file ('+RefFileName+') fails with:\n'+str(e)
+                raise e
         refFile.close()
         testFile.close()
         os.remove(testFileName)
@@ -117,6 +125,10 @@ class TestFunctionToSubroutine(TestCase):
     def test4(self):
         'test result argument replacement while converting function definition to subroutine definition'
         compareFiles(self.assertEquals,'funDef_resultReplacement.f90','funDef_resultReplacement.pre.f90',format='free')
+
+    def test5(self):
+        'test converting function definition to subroutine definition within an interface statement'
+        compareFiles(self.assertEquals,'funDef2subDef4.f90','funDef2subDef4.pre.f90',format='free')
 
 class TestCanonicalizeEllipsis(TestCase):
     def test1(self):

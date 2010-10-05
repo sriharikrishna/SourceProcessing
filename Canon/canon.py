@@ -581,10 +581,13 @@ class UnitCanonicalizer(object):
                 subroutineBlock.append(self.__resultDecl)
                 self.setCreateResultDeclFlag(False)
             elif isinstance(aDecl,fs.TypeDecl):
-                (aDecl,resultDeclFlag) = function2subroutine.updateTypeDecl(\
+                (aDecl,resultDecl,resultDeclFlag) = function2subroutine.updateTypeDecl(\
                     aDecl,self.__outParam,self.__myNewDecls)
                 self.setCreateResultDeclFlag(resultDeclFlag)
-            subroutineBlock.append(aDecl)
+                if resultDeclFlag:
+                    subroutineBlock.append(resultDecl)
+            if aDecl is not None:
+                subroutineBlock.append(aDecl)
         else:
             subroutineBlock.append(aDecl)
         return subroutineBlock
@@ -668,7 +671,7 @@ class UnitCanonicalizer(object):
         DebugManager.debug('subunits (len ='+str(len(self.__myUnit.ulist))+'):')
         if (not self.__SRmoduleUsed):
             aUseIdx=None
-            lead=''
+            lead=self.__myUnit.uinfo and self.__myUnit.uinfo.lead or ''
             for i,d in enumerate(self.__myUnit.decls):
                 if (isinstance(d,fs.UseStmt)
                     or
