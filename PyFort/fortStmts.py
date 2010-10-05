@@ -447,10 +447,12 @@ class TypeDecl(Decl):
     mod = None
     decls = []
 
+    spec=type_pat
+    
     @classmethod
     def parse(cls,ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
-        p0 = seq(type_pat,
+        p0 = seq(TypeDecl.spec,
                  type_attr_list,
                  zo1(lit('::')),
                  cslist(decl_item))
@@ -514,17 +516,19 @@ class DrvdTypeDecl(TypeDecl):
     kw     = 'type'
     kw_str = kw
 
+    spec=seq(lit(kw),
+             lit('('),
+             id,
+             lit(')'))
+    
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
-        p0 = seq(lit('type'),
-                 lit('('),
-                 id,
-                 lit(')'),
+        p0 = seq(DrvdTypeDecl.spec,
                  type_attr_list,
                  zo1(lit('::')),
                  cslist(decl_item))
-        p0 = treat(p0,lambda l: DrvdTypeDecl([l[2]],l[4],l[6],lineNumber=lineNumber))
+        p0 = treat(p0,lambda l: DrvdTypeDecl([l[0][2]],l[1],l[3],lineNumber=lineNumber))
         (v,r) = p0(scan)
         v.rest=r
         return v
@@ -1182,50 +1186,52 @@ class CharacterStmt(TypeDecl):
     kw_str = kw
     _sons  = ['mod','attrs','decls']
 
+    # build up the spec: 
+    _starmod  = seq(lit('('),lit('*'),lit(')'))
+    _starmod  = treat(_starmod,lambda l: _Star())
+    
+    _lenmod   = disj(int,_starmod)
+    _f77mod   = seq(lit('*'),_lenmod)
+    _f77mod   = treat(_f77mod,lambda l: _F77Len(l[1]))
+    
+    _f90mod   = seq(lit('('),disj(lit('*'),Exp),lit(')'))
+    _f90mod   = treat(_f90mod,lambda l: _F90Len(l[1]))
+    
+    _explLen  = seq(lit('len'),
+                    lit('='),
+                    disj(Exp,
+                         lit('*')))
+    
+    _explLen  = treat(_explLen,lambda l: _F90ExplLen(l[2]))
+    
+    _explKind = seq(lit('kind'),
+                    lit('='),
+                    Exp)
+    
+    _explKind = treat(_explKind,lambda l: _ExplKind(l[2]))
+    
+    _explList = seq(lit('('),
+                    cslist(disj(_explLen,_explKind)), 
+                    lit(')'))
+    
+    _explList = treat(_explList,lambda l: l[1])
+    
+    _modOpts  = zo1(disj(_f77mod,_f90mod,_explList))
+    
+    # the first two are just single things while the last thing is a list
+    # we need to remove one level of list nesting: 
+    _modOpts  = treat(_modOpts,lambda l: len(l) and isinstance(l[0],list) and l[0] or l)
+    spec=seq(lit(kw),
+             _modOpts)
+    
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
-        starmod  = seq(lit('('),lit('*'),lit(')'))
-        starmod  = treat(starmod,lambda l: _Star())
-
-        lenmod   = disj(Exp,starmod)
-        f77mod   = seq(lit('*'),lenmod)
-        f77mod   = treat(f77mod,lambda l: _F77Len(l[1]))
-
-        f90mod   = seq(lit('('),disj(lit('*'),Exp),lit(')'))
-        f90mod   = treat(f90mod,lambda l: _F90Len(l[1]))
-
-        explLen  = seq(lit('len'),
-                       lit('='),
-                       disj(Exp,
-                            lit('*'))
-                       )
         
-        explLen  = treat(explLen,lambda l: _F90ExplLen(l[2]))
-
-        explKind = seq(lit('kind'),
-                       lit('='),
-                       Exp)
-        
-        explKind = treat(explKind,lambda l: _ExplKind(l[2]))
-
-        explList = seq(lit('('),
-                       cslist(disj(explLen,explKind)), 
-                       lit(')'))
-
-        explList = treat(explList,lambda l: l[1])
-
-        modOpts  = zo1(disj(f77mod,f90mod,explList))
-
-        # the first two are just single things while the last thing is a list
-        # we need to remove one level of list nesting: 
-        modOpts  = treat(modOpts,lambda l: len(l) and isinstance(l[0],list) and l[0] or l)
-        
-        p1 = seq(lit(CharacterStmt.kw),
-                 modOpts,type_attr_list,zo1(lit('::')),
+        p1 = seq(CharacterStmt.spec,type_attr_list,zo1(lit('::')),
                  cslist(char_decl_item))
         try: 
-          ((dc,mod,attrs,dc1,decls),rest) = p1(scan)
+          (((dc,mod),attrs,dc1,decls),rest) = p1(scan)
         except AssemblerException,e:
           raise ParseError(lineNumber,scan,'character variable declaration')  
 
