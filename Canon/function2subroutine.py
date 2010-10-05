@@ -20,18 +20,20 @@ class FunToSubError(Exception):
 
 name_init = 'oad_s_'
 
-def createTypeDecl(type_kw,mod,outParam,aLead):
+def createTypeDecl(type_kw,mod,attrs,outParam,aLead):
     DebugManager.debug(10*'-'+'>'+'called function2subroutine.createTypeDecl ' \
                      + 'with type keyword "'+type_kw+'",' \
                      +' mod = "'+str(mod)+'",' \
+                     +' attrs = "'+str(attrs)+'",' \
                      +' outParam = "'+str(outParam)+'",'\
                      +' lead = "'+str(aLead)+'"')
+    newAttrs = copy.deepcopy(attrs)
+    newAttrs.append(fe.App('intent',['out']))
     # look up the class in the kwBuiltInTypesTbl and invoke the ctor which has the same signature for all type classes
     if (type_kw in fs.kwBuiltInTypesTbl.keys()): 
-        return (fs.kwBuiltInTypesTbl[type_kw])(mod=mod,attrs=[fe.App('intent',['out'])],decls=[outParam],lead=aLead)
+        return (fs.kwBuiltInTypesTbl[type_kw])(mod=mod,attrs=newAttrs,decls=[outParam],lead=aLead)
     else : # must be derived type
-        return fs.DrvdTypeDecl(mod=mod,attrs=[fe.App('intent',['out'])],decls=[outParam],lead=aLead)
-        
+        return fs.DrvdTypeDecl(mod=mod,attrs=newAttrs,decls=[outParam],lead=aLead)
 
 def convertFunctionDecl(aDecl,oldFuncnewSubPairs):
     DebugManager.debug(10*'-'+'>'+'called function2subroutine.convertFunctionDecl ' \
@@ -109,7 +111,7 @@ def createResultDecl(functionStmt,outParam):
                      +' with out parameter "'+str(outParam)+'"')
     if functionStmt.ty is not None:
         (type_name,mod) = functionStmt.ty
-        newDecl = createTypeDecl(type_name.kw,mod,outParam,functionStmt.lead)
+        newDecl = createTypeDecl(type_name.kw,mod,[],outParam,functionStmt.lead)
         return newDecl
     return None
 
@@ -132,17 +134,17 @@ def updateTypeDecl(aDecl,outParam,declList):
     declCopy = copy.deepcopy(aDecl)
     if (len(declCopy.decls) == 1) and \
            updateResultDecl(declCopy.get_decls()[0],outParam):
-        declCopy = createTypeDecl(declCopy.kw,declCopy.get_mod(),outParam,declCopy.lead)
+        newDecl = createTypeDecl(declCopy.kw,declCopy.get_mod(),declCopy.get_attrs(),outParam,declCopy.lead)
+        declCopy = None
         resultDeclCreated = True
     else:
         for decl in declCopy.get_decls():
             if updateResultDecl(decl,outParam):
-                newDecl = createTypeDecl(declCopy.kw,declCopy.get_mod(),outParam,declCopy.lead)
+                newDecl = createTypeDecl(declCopy.kw,declCopy.get_mod(),declCopy.get_attrs(),outParam,declCopy.lead)
                 declCopy.decls.remove(decl)
                 declCopy.modified = True
-                declList.append(newDecl)
                 resultDeclCreated = True
-    return (declCopy,resultDeclCreated)
+    return (declCopy,newDecl,resultDeclCreated)
 
 def convertFunction(functionUnit,newExecs,newDecls):
     '''converts a function unit definition to a subroutine unit definition'''
@@ -172,8 +174,9 @@ def convertFunction(functionUnit,newExecs,newDecls):
     # iterate over decls for functionUnit
     for aDecl in newDecls:
         if not funTypeFound and isinstance(aDecl,fs.TypeDecl):
-            (aDecl,funTypeFound) = updateTypeDecl(aDecl,outParam,newSubUnit.decls)
-        newSubUnit.decls.append(aDecl)
+            (aDecl,resultDecl,funTypeFound) = updateTypeDecl(aDecl,outParam,newSubUnit.decls)
+        if aDecl is not None:
+            newSubUnit.decls.append(aDecl)
 
     if resultDecl is not None:
         if len(functionUnit.decls) != 0:
