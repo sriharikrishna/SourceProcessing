@@ -1,6 +1,7 @@
 '''add methods to fort stmts to build units
 '''
 
+import string
 from _Setup import *
 
 from PyUtil.symtab import Symtab,SymtabEntry,SymtabError, GenericInfo
@@ -284,30 +285,22 @@ def _unit_exit(self,cur):
             theResultEntry=cur.val.symtab.lookup_name(cur.val._in_functionDecl.result)
             if (theResultEntry):
                 theSymtabEntry.enterType(theResultEntry.type)
-                if cur.val.symtab.parent:  # update the copy in the parent 
+                if cur.val.symtab.parent:  # update the copy in the parent
                     cur.val.symtab.parent.lookup_name(cur.val._in_functionDecl.name).enterType(theResultEntry.type)
         cur.val._in_functionDecl=None         
     return self
 
 def _implicit(self,cur):
-    '''Set up the implicit table
+    '''update the implicit table
     '''
-    currentUnit = cur.val
-#   if currentUnit._in_iface:
-#       return line
-
-    letters = 'abcdefghijklmnopqrstuvwxyz'
-
-    for (tval,tlst) in self.lst:
-        for exp in tlst:
-            if isinstance(exp,str):
-                currentUnit.symtab.implicit[exp] = tval
+    alphabet=string.ascii_lowercase
+    for (type_spec,letter_spec) in self.lst: 
+        for e in letter_spec:
+            if isinstance(e,fe.Ops): # something like 'q-t' for which we get Ops('-','q','t')
+                for letter in alphabet[ord(e.a1.lower())-ord(alphabet[0]):ord(e.a2.lower())-ord(alphabet[0])+1]:
+                    cur.val.symtab.implicit[letter] = type_spec
             else:
-                for l in letters[ \
-                    letters.find(exp.a1) : \
-                    letters.find(exp.a2)+1]:
-                    currentUnit.symtab.implicit[l] = tval
-
+                cur.val.symtab.implicit[e] = type_spec
     return self
 
 def _implicit_none(self,cur):
