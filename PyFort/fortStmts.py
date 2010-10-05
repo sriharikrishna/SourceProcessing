@@ -126,13 +126,6 @@ _typeid  = disj(lit('real'),
                 lit('doublecomplex'),
                 )
 
-_dblp2   = seq(lit('double'),lit('precision'))
-_dblp2   = treat(_dblp2,lambda l:'doubleprecision')
-
-_dblp1   = lit('doubleprecision')
-
-_dblp    = disj(_dblp2,_dblp1)
-
 pstd = seq(_typeid,
          zo1(disj(prec,explKind,kind)),
          )
@@ -961,15 +954,6 @@ def _extract_imp_elts(type_pair):
     m = m[0]
     (nmod,implst) = m._separate_implicit_list()
     return ((cls,nmod),implst)
-
-impelt1 = seq(type_pat_sem,lit('('),cslist(Exp),lit(')'))
-impelt1f = treat(impelt1,lambda l: (l[0],l[2]))
-
-impelt2 = type_pat_sem
-impelt2f = treat(impelt2,_extract_imp_elts)
-
-impelt = disj(impelt1,impelt2)
-impeltf = disj(impelt1f,impelt2f)
 
 class ImplicitStmt(Decl):
     kw = 'implicit'
