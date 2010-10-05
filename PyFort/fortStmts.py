@@ -94,7 +94,7 @@ class _Kind(_TypeMod):
 class _ExplKind(_TypeMod):
     pat = '(kind = %s)'
 
-prec = seq(lit('*'),Exp)
+prec = seq(lit('*'),int)
 prec = treat(prec,lambda a:_Prec(a[1]))
 
 # kind = seq(lit('('),cslist(Exp),lit(')')) #### KILL THIS??
