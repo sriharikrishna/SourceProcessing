@@ -967,56 +967,49 @@ class ImplicitStmt(Decl):
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
-        p0 = seq(lit(ImplicitStmt.kw),lit('none'))
-        p0 = treat(p0,ImplicitNone)
-
-        impelt1 = seq(type_pat_sem,lit('('),cslist(Exp),lit(')'))
-        impelt1 = treat(impelt1,lambda l: (l[0],l[2]))
-
-        impelt2 = type_pat_sem
-        impelt2 = treat(impelt2,_extract_imp_elts)
-
-        impelt = disj(impelt1,impelt2)
-
-        p1 = seq(lit(ImplicitStmt.kw),
-                 cslist(impelt))
-
-        p1 = treat(p1,lambda l:ImplicitStmt(l[1],lineNumber))
-
-        (v,r) = disj(p0,p1)(scan)
-        v.rest = r
-        if v.kw is 'implicit':
-            type = []
-            for item in v.rest:
-                if item is '(' or len(item) < 2:
-                    break
-                else:
-                    type.append(item)
-            v.const_list = v.rest[len(type):]
-            type = ' '.join(item.lower() for item in type)
-            v.type = type.strip()
-        return v
+        try: 
+            implNone = seq(lit(ImplicitStmt.kw),lit('none'))
+            implNone = treat(implNone,ImplicitNone)
+            (theImplNone,r) = implNone(scan)
+            theImplNone.rest=r
+            return theImplNone
+        except:
+            letter_spec_list=seq(lit('('),cslist(Exp),lit(')'))
+            letter_spec_list=treat(letter_spec_list,lambda l: l[1]) # extract the list 
+            type_spec_with_mods=disj(treat(DrvdTypeDecl.spec,lambda l:(DrvdTypeDecl,[l[2]])),
+                                     treat(CharacterStmt.spec,lambda l:(CharacterStmt,l[1])),
+                                     treat(TypeDecl.spec,_get_class))
+            # For the other cases the type is the keyword the
+            # parser handles the types consisting of two keywords
+            # here we have to do it explicitly:
+            dblp = treat(seq(lit('double'),lit('precision')),lambda l:'doubleprecision')
+            # get the pair of type class and empty mod list
+            type_spec_wo_mods=disj(treat(dblp,lambda l:(DoubleStmt,[])),
+                                   treat(_typeid,lambda l:_get_class((l,[]))))
+            typeLetterListPair=disj(seq(type_spec_with_mods,letter_spec_list),
+                                    seq(type_spec_wo_mods,letter_spec_list))
+            implSpec=seq(lit(ImplicitStmt.kw),cslist(typeLetterListPair))
+            (kw,list),rest=implSpec(scan)
+            return ImplicitStmt(list,lineNumber,rest=rest)
 
     def __init__(self,lst,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        # list of pairs that are (type-spec,letter-spec-list)
+        # where type-spec is a pair (<TypeClass>,[<mods>])
         self.lst  = lst 
-        self.type = ''
-        self.const_list = []
         Decl.__init__(self,lineNumber,label,lead,internal,rest)
 
     def __repr__(self):
-        return 'ImplicitStmt(%s)' % repr(self.lst)
+        return self.__class__.__name__+'(%s)' % repr(self.lst)
 
     def __str__(self):
-
-        def _helper(elt):
-            (typ,explst) = elt
-            return '%s (%s)' % (typestr2(typ),
-                                ','.join([str(l).replace(' ','') \
-                                          for l in explst]))+''.join(self.internal)
-            
-        return 'implicit %s' % ', '.join([_helper(e) for e in self.lst])\
-            +self.type+''.join(self.const_list)\
-            +''.join(self.internal)
+        def dumpPair(p):
+            rstr=p[0][0].kw_str
+            if len(p[0][1]):
+                rstr+=str(p[0][1][0])
+            return rstr+' ('+','.join([str(l) for l in p[1]])+')'  
+        rstr=ImplicitStmt.kw+' '
+        rstr+=','.join(map(dumpPair,self.lst))
+        return rstr
 
 class EquivalenceStmt(Decl):
     kw = 'equivalence'
