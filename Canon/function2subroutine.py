@@ -180,8 +180,8 @@ def convertFunction(functionUnit,newExecs,newDecls):
             newSubUnit.decls.append(aDecl)
 
     if resultDecl is not None:
-        if len(functionUnit.decls) != 0:
-            resultDecl.lead = aDecl.lead
+        if len(newSubUnit.decls) != 0:
+            resultDecl.lead = newSubUnit.decls[-1].lead
         # append declaration for new out parameter
         newSubUnit.decls.append(resultDecl)
         
