@@ -30,8 +30,8 @@
       use OAD_intrinsics
 !     blah blah
 !     aren't these names interesting?: pomentale and gargantini
-        real,intent(out) :: f
         real :: x
+        real,intent(out) :: f
 
         if (x<=0) then
            f = 4.0D0
