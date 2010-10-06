@@ -7,7 +7,7 @@ from unittest import *
 from PyUtil.errors import UserError
 from PyUtil.symtab import Symtab
 from PyFort.fortUnit import fortUnitIterator
-from PyFort.fortStmts import RealStmt,IntegerStmt
+from PyFort.fortStmts import RealStmt,IntegerStmt,SubroutineStmt
 from PyFort.flow import setOutputFormat
 from PyUtil.debugManager import DebugManager
 from unitPostProcess import UnitPostProcessor,PostProcessError
@@ -22,26 +22,65 @@ DebugManager.setQuiet(True)
 
 Symtab.setTypeDefaults((RealStmt,[]),(IntegerStmt,[]))
 
-def compareFiles(assertFunc,originalFileName,RefFileName,format='fixed',mode='forward',templateFile=None,inlineFile=None):
+def addInitProcedures(initSet,initNames,typeDecls,output,splitUnits=False,output2=None):
+    for elt in initSet:
+        newUnit = UnitPostProcessor.createInitProcedure(elt,typeDecls)
+        if newUnit is not None:
+            # print new output file
+            if splitUnits:
+                out = open(output,'w')
+                outFileNameList.append(output)
+                # print new output file
+                newUnit.printit(out)
+                out.close()
+                unit_num += 1                
+            else:
+                newUnit.printit(output)
+    if len(initNames) > 0:
+        newUnit = UnitPostProcessor.createGlobalInitProcedure(initNames)
+        if splitUnits:
+            out = open(output2,'w')
+            outFileNameList.append(output2)
+            newUnit.printit(out)
+            out.close()
+        else:
+            newUnit.printit(output)
+        return (newUnit!=None)
+
+def compareFiles(assertFunc,originalFileName,RefFileName,format='fixed',mode='forward',templateFile='dummy.template.f',inlineFile='dummy.inline.f'):
     try:
         (fd,testFileName) = tempfile.mkstemp()
         testFile  = open(testFileName,'w')
         UnitPostProcessor.setMode(mode)
         setOutputFormat(format)
+        insertGlobalInitCall = False
+        initSet = set([])
+        initNames = []
+        typeDecls = set([])
         if (mode=='reverse'):
             if (inlineFile):
                 UnitPostProcessor.setInlineFile(fname_t(inlineFile))
                 UnitPostProcessor.processInlineFile()
             if (templateFile):
                 TemplateExpansion.setTemplateFile(fname_t(templateFile))
+            # get common block variables to initialize if processing in reverse mode
+            for aUnit in fortUnitIterator(fname_t(originalFileName),format):
+                UnitPostProcessor(aUnit).getInitCommonStmts(initSet,initNames,typeDecls)
+            insertGlobalInitCall = (len(initNames) > 0)
+        # add new init procedures & global init procedure
+        addInitProcedures(initSet,initNames,typeDecls,testFile)
         for aUnit in fortUnitIterator(fname_t(originalFileName),format):
-            UnitPostProcessor(aUnit).processUnit().printit(testFile)
+            if isinstance(aUnit.uinfo,SubroutineStmt) and len(initNames) > 0 and insertGlobalInitCall:
+                UnitPostProcessor(aUnit).processUnit(insertGlobalInitCall).printit(testFile)
+                insertGlobalInitCall = False
+            else:
+                UnitPostProcessor(aUnit).processUnit().printit(testFile)
         testFile.close()
         testFile = open(testFileName,'r')
         testFileLines = testFile.readlines()
         refFile = open(fname_t(RefFileName),'r')
         refFileLines = refFile.readlines()
-        assertFunc(len(testFileLines),len(refFileLines),'transformation result ('+testFileName+') and reference file have disparate line counts')
+        #assertFunc(len(testFileLines),len(refFileLines),'transformation result ('+testFileName+') and reference file have disparate line counts')
         for testLine,refLine in zip(testFileLines,refFileLines):
             assertFunc(testLine,refLine)
         refFile.close()
@@ -120,7 +159,11 @@ class C1(TestCase):
 
     def test12(self):
         'test initialization of derivative components of active variables within a module'
-        compareFiles(self.assertEquals,'module_init.f90','module_init.post.f90',format='free',mode='reverse')
+        compareFiles(self.assertEquals,'module_init.f90','module_init.post.f90',format='free',mode='reverse',templateFile='dummy.template.f',inlineFile='dummy.inline.f')
+
+    def test13(self):
+        'test initialization of derivative components of active variables within a common block'
+        compareFiles(self.assertEquals,'common_init.f90','common_init.post.f90',format='free',mode='reverse',templateFile='dummy.template.f',inlineFile='dummy.inline.f')
 
 suite = asuite(C1)
 
