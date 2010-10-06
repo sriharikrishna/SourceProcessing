@@ -97,12 +97,10 @@ def convertFunctionStmt(functionStmt):
         outParam = fs._NoInit(functionStmt.name.lower())
     else:
         outParam = fs._NoInit(functionStmt.result.lower())
-
-    args = functionStmt.args
+    args = copy.deepcopy(functionStmt.args) # if we don't do a deep copy here we update the function statement
     args.append(outParam)
     name = name_init+functionStmt.name.lower()
     subroutineStmt = fs.SubroutineStmt(name,args,lead=functionStmt.lead)
-
     return (outParam,subroutineStmt)
 
 def createResultDecl(functionStmt,outParam):
