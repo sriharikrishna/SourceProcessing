@@ -37,18 +37,26 @@ def cleanup(outFileNameList):
             except:
                 print >>sys.stderr,'ERROR: cleanup - cannot remove output file '+outFile
 
+# initSet: a set of common blocks occurring in the file which need variables initialized
+# initNames: a list of names of initialization subroutines to be called by the global
+# init procedure
+# typeDecls: a list of variable type declarations from the common blocks
+# output: the file to which new units are printed
+# splitUnits: True if units are being split and printed to different files
+# output2: the file to print the globalInitProcedure unit to if splitUnits is true
 def addInitProcedures(initSet,initNames,typeDecls,output,splitUnits=False,output2=None):
+    '''creates active variable derivative initialization procedures and prints them to specified output file(s)'''
     for elt in initSet:
         newUnit = UnitPostProcessor.createInitProcedure(elt,typeDecls)
         if newUnit is not None:
             # print new output file
             if splitUnits:
+                #TODO THIS DOESN'T WORK IF MULTIPLE NEW INIT PROCEDURES ARE CREATED....
                 out = open(output,'w')
                 outFileNameList.append(output)
                 # print new output file
                 newUnit.printit(out)
                 out.close()
-                unit_num += 1                
             else:
                 newUnit.printit(output)
     if len(initNames) > 0:
