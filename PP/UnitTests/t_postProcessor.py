@@ -7,7 +7,7 @@ from unittest import *
 from PyUtil.errors import UserError
 from PyUtil.symtab import Symtab
 from PyFort.fortUnit import fortUnitIterator
-from PyFort.fortStmts import RealStmt,IntegerStmt,SubroutineStmt
+from PyFort.fortStmts import RealStmt,IntegerStmt,SubroutineStmt,ModuleStmt
 from PyFort.flow import setOutputFormat
 from PyUtil.debugManager import DebugManager
 from unitPostProcess import UnitPostProcessor,PostProcessError
@@ -66,9 +66,9 @@ def compareFiles(assertFunc,originalFileName,RefFileName,format='fixed',mode='fo
                 UnitPostProcessor(aUnit).getInitCommonStmts(initSet,initNames,typeDecls)
             insertGlobalInitCall = (len(initNames) > 0)
         for aUnit in fortUnitIterator(fname_t(originalFileName),format):
-            if not isinstance(aUnit.uinfo,fs.ModuleStmt) and not initSubroutinesAdded:
+            if not isinstance(aUnit.uinfo,ModuleStmt) and not initSubroutinesAdded:
                 # add new init procedures & global init procedure
-                initSubroutinesAdded = addInitProcedures(initSet,initNames,typeDecls,out)
+                initSubroutinesAdded = addInitProcedures(initSet,initNames,typeDecls,testFile)
             if isinstance(aUnit.uinfo,SubroutineStmt) and len(initNames) > 0 and insertGlobalInitCall:
                 UnitPostProcessor(aUnit).processUnit(insertGlobalInitCall).printit(testFile)
                 insertGlobalInitCall = False
