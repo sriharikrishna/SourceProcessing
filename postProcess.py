@@ -290,13 +290,15 @@ def main():
         # set whitespace
         fe.setWhitespace(config.whitespace)
 
-        # get common block variables to initialize
+        insertGlobalInitCall = False
         initSet = set([])
         initNames = []
         typeDecls = set([])
-        for aUnit in fortUnitIterator(inputFile,config.inputFormat):
-            UnitPostProcessor(aUnit).getInitCommonStmts(initSet,initNames,typeDecls)
-        insertGlobalInitCall = (len(initNames) > 0)
+        if config.mode == 'r':
+            # get common block variables to initialize if processing in reverse mode
+            for aUnit in fortUnitIterator(inputFile,config.inputFormat):
+                UnitPostProcessor(aUnit).getInitCommonStmts(initSet,initNames,typeDecls)
+            insertGlobalInitCall = (len(initNames) > 0)
         if splitUnits:
             (base,ext) = os.path.splitext(inputFile)
             unitNumExt = "%0"+str(unitNameWidth)+"d"
