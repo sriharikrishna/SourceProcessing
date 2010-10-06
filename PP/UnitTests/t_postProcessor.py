@@ -53,10 +53,8 @@ def compareFiles(assertFunc,originalFileName,RefFileName,format='fixed',mode='fo
         testFile  = open(testFileName,'w')
         UnitPostProcessor.setMode(mode)
         setOutputFormat(format)
-        insertGlobalInitCall = False
-        initSet = set([])
-        initNames = []
-        typeDecls = set([])
+        insertGlobalInitCall = False; initSubroutinesAdded = False
+        initSet = set([]); initNames = []; typeDecls = set([])
         if (mode=='reverse'):
             if (inlineFile):
                 UnitPostProcessor.setInlineFile(fname_t(inlineFile))
@@ -67,9 +65,10 @@ def compareFiles(assertFunc,originalFileName,RefFileName,format='fixed',mode='fo
             for aUnit in fortUnitIterator(fname_t(originalFileName),format):
                 UnitPostProcessor(aUnit).getInitCommonStmts(initSet,initNames,typeDecls)
             insertGlobalInitCall = (len(initNames) > 0)
-        # add new init procedures & global init procedure
-        addInitProcedures(initSet,initNames,typeDecls,testFile)
         for aUnit in fortUnitIterator(fname_t(originalFileName),format):
+            if not isinstance(aUnit.uinfo,fs.ModuleStmt) and not initSubroutinesAdded:
+                # add new init procedures & global init procedure
+                initSubroutinesAdded = addInitProcedures(initSet,initNames,typeDecls,out)
             if isinstance(aUnit.uinfo,SubroutineStmt) and len(initNames) > 0 and insertGlobalInitCall:
                 UnitPostProcessor(aUnit).processUnit(insertGlobalInitCall).printit(testFile)
                 insertGlobalInitCall = False
@@ -80,7 +79,7 @@ def compareFiles(assertFunc,originalFileName,RefFileName,format='fixed',mode='fo
         testFileLines = testFile.readlines()
         refFile = open(fname_t(RefFileName),'r')
         refFileLines = refFile.readlines()
-        #assertFunc(len(testFileLines),len(refFileLines),'transformation result ('+testFileName+') and reference file have disparate line counts')
+        assertFunc(len(testFileLines),len(refFileLines),'transformation result ('+testFileName+') and reference file have disparate line counts')
         for testLine,refLine in zip(testFileLines,refFileLines):
             assertFunc(testLine,refLine)
         refFile.close()

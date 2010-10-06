@@ -15,11 +15,10 @@ subroutine mod_globals_init()
 end subroutine
   
 END MODULE globals
-
 subroutine OAD_globalVar_init()
-  use globals
-  call mod_globals_init()
-end subroutine OAD_globalVar_init
+	use globals
+	call mod_globals_init()
+end subroutine
 
 SUBROUTINE bar(BARX, BARY)
   use w2f__types
