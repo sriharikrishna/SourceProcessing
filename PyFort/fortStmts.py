@@ -94,7 +94,7 @@ class _Kind(_TypeMod):
 class _ExplKind(_TypeMod):
     pat = '(kind = %s)'
 
-prec = seq(lit('*'),Exp)
+prec = seq(lit('*'),int)
 prec = treat(prec,lambda a:_Prec(a[1]))
 
 # kind = seq(lit('('),cslist(Exp),lit(')')) #### KILL THIS??
@@ -125,13 +125,6 @@ _typeid  = disj(lit('real'),
                 lit('doubleprecision'),
                 lit('doublecomplex'),
                 )
-
-_dblp2   = seq(lit('double'),lit('precision'))
-_dblp2   = treat(_dblp2,lambda l:'doubleprecision')
-
-_dblp1   = lit('doubleprecision')
-
-_dblp    = disj(_dblp2,_dblp1)
 
 pstd = seq(_typeid,
          zo1(disj(prec,explKind,kind)),
@@ -454,10 +447,12 @@ class TypeDecl(Decl):
     mod = None
     decls = []
 
+    spec=type_pat
+    
     @classmethod
     def parse(cls,ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
-        p0 = seq(type_pat,
+        p0 = seq(TypeDecl.spec,
                  type_attr_list,
                  zo1(lit('::')),
                  cslist(decl_item))
@@ -521,17 +516,19 @@ class DrvdTypeDecl(TypeDecl):
     kw     = 'type'
     kw_str = kw
 
+    spec=seq(lit(kw),
+             lit('('),
+             id,
+             lit(')'))
+    
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
-        p0 = seq(lit('type'),
-                 lit('('),
-                 id,
-                 lit(')'),
+        p0 = seq(DrvdTypeDecl.spec,
                  type_attr_list,
                  zo1(lit('::')),
                  cslist(decl_item))
-        p0 = treat(p0,lambda l: DrvdTypeDecl([l[2]],l[4],l[6],lineNumber=lineNumber))
+        p0 = treat(p0,lambda l: DrvdTypeDecl([l[0][2]],l[1],l[3],lineNumber=lineNumber))
         (v,r) = p0(scan)
         v.rest=r
         return v
@@ -962,15 +959,6 @@ def _extract_imp_elts(type_pair):
     (nmod,implst) = m._separate_implicit_list()
     return ((cls,nmod),implst)
 
-impelt1 = seq(type_pat_sem,lit('('),cslist(Exp),lit(')'))
-impelt1f = treat(impelt1,lambda l: (l[0],l[2]))
-
-impelt2 = type_pat_sem
-impelt2f = treat(impelt2,_extract_imp_elts)
-
-impelt = disj(impelt1,impelt2)
-impeltf = disj(impelt1f,impelt2f)
-
 class ImplicitStmt(Decl):
     kw = 'implicit'
     kw_str = kw
@@ -979,56 +967,49 @@ class ImplicitStmt(Decl):
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
-        p0 = seq(lit(ImplicitStmt.kw),lit('none'))
-        p0 = treat(p0,ImplicitNone)
-
-        impelt1 = seq(type_pat_sem,lit('('),cslist(Exp),lit(')'))
-        impelt1 = treat(impelt1,lambda l: (l[0],l[2]))
-
-        impelt2 = type_pat_sem
-        impelt2 = treat(impelt2,_extract_imp_elts)
-
-        impelt = disj(impelt1,impelt2)
-
-        p1 = seq(lit(ImplicitStmt.kw),
-                 cslist(impelt))
-
-        p1 = treat(p1,lambda l:ImplicitStmt(l[1],lineNumber))
-
-        (v,r) = disj(p0,p1)(scan)
-        v.rest = r
-        if v.kw is 'implicit':
-            type = []
-            for item in v.rest:
-                if item is '(' or len(item) < 2:
-                    break
-                else:
-                    type.append(item)
-            v.const_list = v.rest[len(type):]
-            type = ' '.join(item.lower() for item in type)
-            v.type = type.strip()
-        return v
+        try: 
+            implNone = seq(lit(ImplicitStmt.kw),lit('none'))
+            implNone = treat(implNone,ImplicitNone)
+            (theImplNone,r) = implNone(scan)
+            theImplNone.rest=r
+            return theImplNone
+        except:
+            letter_spec_list=seq(lit('('),cslist(Exp),lit(')'))
+            letter_spec_list=treat(letter_spec_list,lambda l: l[1]) # extract the list 
+            type_spec_with_mods=disj(treat(DrvdTypeDecl.spec,lambda l:(DrvdTypeDecl,[l[2]])),
+                                     treat(CharacterStmt.spec,lambda l:(CharacterStmt,l[1])),
+                                     treat(TypeDecl.spec,_get_class))
+            # For the other cases the type is the keyword the
+            # parser handles the types consisting of two keywords
+            # here we have to do it explicitly:
+            dblp = treat(seq(lit('double'),lit('precision')),lambda l:'doubleprecision')
+            # get the pair of type class and empty mod list
+            type_spec_wo_mods=disj(treat(dblp,lambda l:(DoubleStmt,[])),
+                                   treat(_typeid,lambda l:_get_class((l,[]))))
+            typeLetterListPair=disj(seq(type_spec_with_mods,letter_spec_list),
+                                    seq(type_spec_wo_mods,letter_spec_list))
+            implSpec=seq(lit(ImplicitStmt.kw),cslist(typeLetterListPair))
+            (kw,list),rest=implSpec(scan)
+            return ImplicitStmt(list,lineNumber,rest=rest)
 
     def __init__(self,lst,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        # list of pairs that are (type-spec,letter-spec-list)
+        # where type-spec is a pair (<TypeClass>,[<mods>])
         self.lst  = lst 
-        self.type = ''
-        self.const_list = []
         Decl.__init__(self,lineNumber,label,lead,internal,rest)
 
     def __repr__(self):
-        return 'ImplicitStmt(%s)' % repr(self.lst)
+        return self.__class__.__name__+'(%s)' % repr(self.lst)
 
     def __str__(self):
-
-        def _helper(elt):
-            (typ,explst) = elt
-            return '%s (%s)' % (typestr2(typ),
-                                ','.join([str(l).replace(' ','') \
-                                          for l in explst]))+''.join(self.internal)
-            
-        return 'implicit %s' % ', '.join([_helper(e) for e in self.lst])\
-            +self.type+''.join(self.const_list)\
-            +''.join(self.internal)
+        def dumpPair(p):
+            rstr=p[0][0].kw_str
+            if len(p[0][1]):
+                rstr+=str(p[0][1][0])
+            return rstr+' ('+','.join([str(l) for l in p[1]])+')'  
+        rstr=ImplicitStmt.kw+' '
+        rstr+=','.join(map(dumpPair,self.lst))
+        return rstr
 
 class EquivalenceStmt(Decl):
     kw = 'equivalence'
@@ -1198,50 +1179,52 @@ class CharacterStmt(TypeDecl):
     kw_str = kw
     _sons  = ['mod','attrs','decls']
 
+    # build up the spec: 
+    _starmod  = seq(lit('('),lit('*'),lit(')'))
+    _starmod  = treat(_starmod,lambda l: _Star())
+    
+    _lenmod   = disj(int,_starmod)
+    _f77mod   = seq(lit('*'),_lenmod)
+    _f77mod   = treat(_f77mod,lambda l: _F77Len(l[1]))
+    
+    _f90mod   = seq(lit('('),disj(lit('*'),Exp),lit(')'))
+    _f90mod   = treat(_f90mod,lambda l: _F90Len(l[1]))
+    
+    _explLen  = seq(lit('len'),
+                    lit('='),
+                    disj(Exp,
+                         lit('*')))
+    
+    _explLen  = treat(_explLen,lambda l: _F90ExplLen(l[2]))
+    
+    _explKind = seq(lit('kind'),
+                    lit('='),
+                    Exp)
+    
+    _explKind = treat(_explKind,lambda l: _ExplKind(l[2]))
+    
+    _explList = seq(lit('('),
+                    cslist(disj(_explLen,_explKind)), 
+                    lit(')'))
+    
+    _explList = treat(_explList,lambda l: l[1])
+    
+    _modOpts  = zo1(disj(_f77mod,_f90mod,_explList))
+    
+    # the first two are just single things while the last thing is a list
+    # we need to remove one level of list nesting: 
+    _modOpts  = treat(_modOpts,lambda l: len(l) and isinstance(l[0],list) and l[0] or l)
+    spec=seq(lit(kw),
+             _modOpts)
+    
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
-        starmod  = seq(lit('('),lit('*'),lit(')'))
-        starmod  = treat(starmod,lambda l: _Star())
-
-        lenmod   = disj(Exp,starmod)
-        f77mod   = seq(lit('*'),lenmod)
-        f77mod   = treat(f77mod,lambda l: _F77Len(l[1]))
-
-        f90mod   = seq(lit('('),disj(lit('*'),Exp),lit(')'))
-        f90mod   = treat(f90mod,lambda l: _F90Len(l[1]))
-
-        explLen  = seq(lit('len'),
-                       lit('='),
-                       disj(Exp,
-                            lit('*'))
-                       )
         
-        explLen  = treat(explLen,lambda l: _F90ExplLen(l[2]))
-
-        explKind = seq(lit('kind'),
-                       lit('='),
-                       Exp)
-        
-        explKind = treat(explKind,lambda l: _ExplKind(l[2]))
-
-        explList = seq(lit('('),
-                       cslist(disj(explLen,explKind)), 
-                       lit(')'))
-
-        explList = treat(explList,lambda l: l[1])
-
-        modOpts  = zo1(disj(f77mod,f90mod,explList))
-
-        # the first two are just single things while the last thing is a list
-        # we need to remove one level of list nesting: 
-        modOpts  = treat(modOpts,lambda l: len(l) and isinstance(l[0],list) and l[0] or l)
-        
-        p1 = seq(lit(CharacterStmt.kw),
-                 modOpts,type_attr_list,zo1(lit('::')),
+        p1 = seq(CharacterStmt.spec,type_attr_list,zo1(lit('::')),
                  cslist(char_decl_item))
         try: 
-          ((dc,mod,attrs,dc1,decls),rest) = p1(scan)
+          (((dc,mod),attrs,dc1,decls),rest) = p1(scan)
         except AssemblerException,e:
           raise ParseError(lineNumber,scan,'character variable declaration')  
 

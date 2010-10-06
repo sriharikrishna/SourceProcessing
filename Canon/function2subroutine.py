@@ -131,6 +131,7 @@ def updateTypeDecl(aDecl,outParam,declList):
                      +' outParam = "'+str(outParam)+'",' \
                      +' declList = "'+str(declList)+'"')
     resultDeclCreated = False
+    newDecl=None
     declCopy = copy.deepcopy(aDecl)
     if (len(declCopy.decls) == 1) and \
            updateResultDecl(declCopy.get_decls()[0],outParam):

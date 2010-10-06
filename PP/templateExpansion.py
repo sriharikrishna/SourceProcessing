@@ -223,6 +223,7 @@ class TemplateExpansion(object):
 
         self.__expandTemplateExecs(aUnit, Execs)
 
+        newEndStmts = []
         for endStmt in aUnit.end:
             newEndStmts = []
             if isinstance(endStmt,fs.EndStmt):
@@ -231,11 +232,6 @@ class TemplateExpansion(object):
                     newEndStmt=endStmt.__class__(self.__myUnit.uinfo.name,\
                                                  lineNumber=endStmt.lineNumber,\
                                                  label=endStmt.label,lead=endStmt.lead)
-                    #newEndStmt.rawline=endStmt.rawline
-                    #newEndStmt.rawline = \
-                    #    newEndStmt.rawline[:match.start(0)] + \
-                    #    self.__myUnit.uinfo.name + \
-                    #    newEndStmt.rawline[match.end(0):]
                     newEndStmts.append(newEndStmt)
                 else: 
                     newEndStmts.append(endStmt)
