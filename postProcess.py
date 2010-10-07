@@ -44,14 +44,14 @@ def cleanup(outFileNameList):
 # output: the file to which new units are printed
 # splitUnits: True if units are being split and printed to different files
 # output2: the file to print the globalInitProcedure unit to if splitUnits is true
-def addInitProcedures(initSet,initNames,typeDecls,output,splitUnits=False,output2=None):
+def addInitProcedures(initSet,initNames,typeDecls,output=None,base='',unitNumExt='',unit_num=0,ext='',splitUnits=False):
     '''creates active variable derivative initialization procedures and prints them to specified output file(s)'''
     for elt in initSet:
         newUnit = UnitPostProcessor.createInitProcedure(elt,typeDecls)
         if newUnit is not None:
             # print new output file
             if splitUnits:
-                #TODO THIS DOESN'T WORK IF MULTIPLE NEW INIT PROCEDURES ARE CREATED....
+                output = base + unitNumExt % unit_num + ext; unit_num += 1
                 out = open(output,'w')
                 outFileNameList.append(output)
                 # print new output file
@@ -62,13 +62,15 @@ def addInitProcedures(initSet,initNames,typeDecls,output,splitUnits=False,output
     if len(initNames) > 0:
         newUnit = UnitPostProcessor.createGlobalInitProcedure(initNames)
         if splitUnits:
-            out = open(output2,'w')
-            outFileNameList.append(output2)
+            output = base + unitNumExt % unit_num + ext; unit_num += 1
+            out = open(output,'w')
+            outFileNameList.append(output)
             newUnit.printit(out)
             out.close()
+            return (newUnit!=None,unit_num)
         else:
             newUnit.printit(output)
-        return (newUnit!=None)
+            return (newUnit!=None)
 
 def main():
     usage = '%prog [options] <input_file>'
@@ -315,11 +317,10 @@ def main():
             for aUnit in fortUnitIterator(inputFile,config.inputFormat):
                 if not isinstance(aUnit.uinfo,fs.ModuleStmt) and not initSubroutinesAdded:
                     # add new init procedures & global init procedure after module declarations
-                    output = base + unitNumExt % unit_num + ext; unit_num += 1
-                    output2 = base + unitNumExt % unit_num + ext; unit_num += 1
-                    initSubroutinesAdded = \
-                        addInitProcedures(initSet,initNames,typeDecls,output,splitUnits=splitUnits,output2=output2)
-                output = base + unitNumExt % unit_num + ext
+                    (initSubroutinesAdded,unit_num) = \
+                        addInitProcedures(initSet,initNames,typeDecls,base=base,unitNumExt=unitNumExt,\
+                                              unit_num=unit_num,ext=ext,splitUnits=splitUnits)
+                output = base + unitNumExt % unit_num + ext; unit_num
                 out = open(output,'w')
                 outFileNameList.append(output)
                 if isinstance(aUnit.uinfo,fs.SubroutineStmt) and len(initNames) > 0 and insertGlobalInitCall:
@@ -335,7 +336,6 @@ def main():
                         msg+=' took: '+str(nTime-unitStartTime)
                         unitStartTime=nTime
                     print msg
-                unit_num += 1
             makeOut = open('postProcess.make','w')
             makeOut.write("POSTPROCESSEDFILES=")
             for outFileName in outFileNameList:
