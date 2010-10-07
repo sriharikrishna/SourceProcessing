@@ -698,7 +698,7 @@ class UnitPostProcessor(object):
         if isinstance(fortStmt,fs.CommonStmt):
             # create a new unit for the initializations
             newUnit = Unit()
-            newUnit.uinfo = fs.SubroutineStmt(fortStmt.name+'_init',[])
+            newUnit.uinfo = fs.SubroutineStmt('common_'+fortStmt.name+'_init',[])
             # insert oad_active module
             newDecl = fs.UseAllStmt(moduleName='OAD_active',renameList=None,lead='\t')
             newUnit.decls.append(newDecl)
@@ -746,7 +746,9 @@ class UnitPostProcessor(object):
                 mod_name = name[4:]
                 newStmt = fs.UseAllStmt(mod_name,[],lead='\t')
                 newUnit.decls.append(newStmt)
-            newStmt = fs.CallStmt(name+'_init',[],lead='\t')
+                newStmt = fs.CallStmt(name+'_init',[],lead='\t')
+            else:
+                newStmt = fs.CallStmt('common_'+name+'_init',[],lead='\t')                
             newUnit.execs.append(newStmt)
         newUnit.end = [fs.EndSubroutineStmt()]
         return newUnit
@@ -810,7 +812,7 @@ class UnitPostProcessor(object):
             if isinstance(decl,fs.CommonStmt):
                 # create a new common statement with a declList that contains all 
                 # active variables from the original common statement 
-                initCommonStmt = fs.CommonStmt('common_'+decl.name,[])
+                initCommonStmt = fs.CommonStmt(decl.name,[])
                 initDecls = []
                 for var in decl.declList:
                     # lookup in symtab
@@ -822,7 +824,7 @@ class UnitPostProcessor(object):
                 # units with different vars to be initialized?
                 if not initCommonStmt.name in initNames:
                     initSet.add(initCommonStmt)
-                    initNames.append(initCommonStmt.name)
+                    initNames.append(decl.name)
             if isinstance(decl,fs.TypeDecl):
                 typeDecls.add(decl)
 
