@@ -37,6 +37,41 @@ def cleanup(outFileNameList):
             except:
                 print >>sys.stderr,'ERROR: cleanup - cannot remove output file '+outFile
 
+# initSet: a set of common blocks occurring in the file which need variables initialized
+# initNames: a list of names of initialization subroutines to be called by the global
+# init procedure
+# typeDecls: a list of variable type declarations from the common blocks
+# output: the file to which new units are printed
+# splitUnits: True if units are being split and printed to different files
+# output2: the file to print the globalInitProcedure unit to if splitUnits is true
+def addInitProcedures(initSet,initNames,typeDecls,output=None,base='',unitNumExt='',unit_num=0,ext='',splitUnits=False):
+    '''creates active variable derivative initialization procedures and prints them to specified output file(s)'''
+    for elt in initSet:
+        newUnit = UnitPostProcessor.createInitProcedure(elt,typeDecls)
+        if newUnit is not None:
+            # print new output file
+            if splitUnits:
+                output = base + unitNumExt % unit_num + ext; unit_num += 1
+                out = open(output,'w')
+                outFileNameList.append(output)
+                # print new output file
+                newUnit.printit(out)
+                out.close()
+            else:
+                newUnit.printit(output)
+    if len(initNames) > 0:
+        newUnit = UnitPostProcessor.createGlobalInitProcedure(initNames)
+        if splitUnits:
+            output = base + unitNumExt % unit_num + ext; unit_num += 1
+            out = open(output,'w')
+            outFileNameList.append(output)
+            newUnit.printit(out)
+            out.close()
+            return (newUnit!=None,unit_num)
+        else:
+            newUnit.printit(output)
+            return (newUnit!=None)
+
 def main():
     usage = '%prog [options] <input_file>'
     modes={'f':'forward','r':'reverse'}
@@ -265,6 +300,13 @@ def main():
         # set whitespace
         fe.setWhitespace(config.whitespace)
 
+        insertGlobalInitCall = False; initSubroutinesAdded = False
+        initSet = set([]); initNames = []; typeDecls = set([])
+        if config.mode == 'r':
+            # get common block variables to initialize if processing in reverse mode
+            for aUnit in fortUnitIterator(inputFile,config.inputFormat):
+                UnitPostProcessor(aUnit).getInitCommonStmts(initSet,initNames,typeDecls)
+            insertGlobalInitCall = (len(initNames) > 0)
         if splitUnits:
             (base,ext) = os.path.splitext(inputFile)
             unitNumExt = "%0"+str(unitNameWidth)+"d"
@@ -273,10 +315,19 @@ def main():
             if (config.timing):
                 unitStartTime=datetime.datetime.utcnow()
             for aUnit in fortUnitIterator(inputFile,config.inputFormat):
-                output = base + unitNumExt % unit_num + ext
+                if not isinstance(aUnit.uinfo,fs.ModuleStmt) and not initSubroutinesAdded:
+                    # add new init procedures & global init procedure after module declarations
+                    (initSubroutinesAdded,unit_num) = \
+                        addInitProcedures(initSet,initNames,typeDecls,base=base,unitNumExt=unitNumExt,\
+                                              unit_num=unit_num,ext=ext,splitUnits=splitUnits)
+                output = base + unitNumExt % unit_num + ext; unit_num
                 out = open(output,'w')
                 outFileNameList.append(output)
-                UnitPostProcessor(aUnit).processUnit().printit(out)
+                if isinstance(aUnit.uinfo,fs.SubroutineStmt) and len(initNames) > 0 and insertGlobalInitCall:
+                    UnitPostProcessor(aUnit).processUnit(insertGlobalInitCall).printit(out)
+                    insertGlobalInitCall = False
+                else:
+                    UnitPostProcessor(aUnit).processUnit().printit(out)                    
                 out.close()
                 if (config.progress):
                     msg='SourceProcessing: progress: done with unit '+aUnit.uinfo.name
@@ -285,7 +336,6 @@ def main():
                         msg+=' took: '+str(nTime-unitStartTime)
                         unitStartTime=nTime
                     print msg
-                unit_num += 1
             makeOut = open('postProcess.make','w')
             makeOut.write("POSTPROCESSEDFILES=")
             for outFileName in outFileNameList:
@@ -319,8 +369,15 @@ def main():
                         out = open(newOutputFile,'w')
                 elif not out:
                     raise PostProcessError('option separateOutput specified, no output file can be determined for the first unit',0)
+                if not isinstance(aUnit.uinfo,fs.ModuleStmt) and not initSubroutinesAdded:
+                    # add new init procedures & global init procedure after module declarations
+                    initSubroutinesAdded = addInitProcedures(initSet,initNames,typeDecls,out)
                 # postprocess the unit and print it
-                UnitPostProcessor(aUnit).processUnit().printit(out)
+                if isinstance(aUnit.uinfo,fs.SubroutineStmt) and len(initNames) > 0 and insertGlobalInitCall:
+                    UnitPostProcessor(aUnit).processUnit(insertGlobalInitCall).printit(out)
+                    insertGlobalInitCall = False
+                else:
+                    UnitPostProcessor(aUnit).processUnit().printit(out)
             out.close()
         else: 
             out=None
@@ -330,7 +387,14 @@ def main():
             else:
                 out=sys.stdout
             for aUnit in fortUnitIterator(inputFile,config.inputFormat):
-                UnitPostProcessor(aUnit).processUnit().printit(out)
+                if not isinstance(aUnit.uinfo,fs.ModuleStmt) and not initSubroutinesAdded:
+                    # add new init procedures & global init procedure after module declarations
+                    initSubroutinesAdded = addInitProcedures(initSet,initNames,typeDecls,out)
+                if isinstance(aUnit.uinfo,fs.SubroutineStmt) and len(initNames) > 0 and insertGlobalInitCall:
+                    UnitPostProcessor(aUnit).processUnit(insertGlobalInitCall).printit(out)
+                    insertGlobalInitCall = False
+                else:
+                    UnitPostProcessor(aUnit).processUnit().printit(out)
             if config.output: 
                 out.close()
 
@@ -400,3 +464,4 @@ if __name__ == "__main__":
     # import cProfile
     # cProfile.runctx( 'main()', globals(), locals(), filename="postProcess.profile" )
     sys.exit(main())
+
