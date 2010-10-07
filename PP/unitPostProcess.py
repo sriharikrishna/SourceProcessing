@@ -820,8 +820,6 @@ class UnitPostProcessor(object):
                     if (var_type[1][0].lower() == self._abstract_type):
                         initCommonStmt.declList.append(var)
                 # avoid initializing variables twice
-                # TODO: could the same common stmt name be used twice in different 
-                # units with different vars to be initialized?
                 if not initCommonStmt.name in initNames:
                     initSet.add(initCommonStmt)
                     initNames.append(decl.name)
