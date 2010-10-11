@@ -754,9 +754,19 @@ class CommonStmt(Decl):
     @classmethod
     def parse(cls,ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
-        stmt = seq(lit(CommonStmt.kw),lit('/'),id,lit('/'),cslist(Exp))
-        ([common,slash1,name,slash2,declList],rm) = stmt(scan)
-        return cls(name,declList,lineNumber,rest=rm)
+        theStmt=None
+        rm=None
+        try : # try the blank with no space between the slashes
+            stmtPatn = seq(lit(CommonStmt.kw),lit('//'),cslist(Exp))
+            stmtMaker = treat(stmtPatn,lambda l: cls('',l[2]))
+            (theStmt,rm)=stmtMaker(scan)
+        except: # named or blank with spaces between the slashes
+            stmtPatn = seq(lit(CommonStmt.kw),lit('/'),zo1(id),lit('/'),cslist(Exp))
+            stmtMaker = treat(stmtPatn,lambda l: cls((len(l[2]) and l[2][0] or ''),l[4]))
+            (theStmt,rm)=stmtMaker(scan)
+	theStmt.lineNumber=lineNumber
+        theStmt.rest=rm
+        return theStmt
 
     def __init__(self,name,declList=[],lineNumber=0,label=False,lead='',internal=[],rest=[]):
         self.declList = declList
