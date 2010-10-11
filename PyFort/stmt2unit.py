@@ -170,6 +170,36 @@ def _processExternalStmt(anExternalStmt,curr):
             raise e
     return anExternalStmt
 
+def _processCommonStmt(aCommonStmt,curr):
+    localSymtab = curr.val.symtab
+    DebugManager.debug('['+':'+str(aCommonStmt.lineNumber)+']: stmt2unit._processCommonStmt: called on "'+repr(aCommonStmt)+'" with localSymtab '+str(localSymtab) +" implicit "+str(localSymtab.implicit))
+    for aDecl in aCommonStmt.declList:
+        try:
+            aDeclName=""
+            if isinstance(aDecl,fe.App):
+                aDeclName=aDecl.head
+            else:
+                aDeclName=aDecl
+            theSymtabEntry = localSymtab.lookup_name(aDeclName)
+            if not theSymtabEntry:
+                newSymtabEntry = SymtabEntry(SymtabEntry.VariableEntryKind,
+                                             origin=aCommonStmt.name)
+                localSymtab.enter_name(aDeclName,newSymtabEntry)
+                if isinstance(aDecl,fe.App):
+                    newSymtabEntry.enterDimensions(aDecl.args)
+                DebugManager.debug('\tcommon variable NOT already present in symbol table -- adding '+newSymtabEntry.debug(aDeclName))
+            else:
+                DebugManager.debug('\tcommon variable already has SymtabEntry'+theSymtabEntry.debug(aDeclName))
+                theSymtabEntry.enterEntryKind(SymtabEntry.VariableEntryKind)
+                if isinstance(aDecl,fe.App):
+                    theSymtabEntry.enterDimensions(aDecl.args)
+                theSymtabEntry.updateOrigin(aCommonStmt.name)
+        except SymtabError,e: # add lineNumber and symbol name to any SymtabError we encounter
+            e.lineNumber = e.lineNumber or aCommonStmt.lineNumber
+            e.symbolName = e.symbolName or aDeclName
+            raise e
+    return aCommonStmt
+
 def _assign2stmtfn(anAssignmentStmt,curr):
     'convert assign stmt to stmtfn, and enter in unit symtab'
     DebugManager.debug('[Line '+str(anAssignmentStmt.lineNumber)+']: converting '+str(anAssignmentStmt)+' to stmt fn')
@@ -301,10 +331,12 @@ def _implicit(self,cur):
                     cur.val.symtab.implicit[letter] = type_spec
             else:
                 cur.val.symtab.implicit[e] = type_spec
+    DebugManager.debug('[Line '+str(self.lineNumber)+']: stmt2unit._implicit() implicit table is now '+str(cur.val.symtab.implicit)+str(cur.val.symtab))
     return self
 
 def _implicit_none(self,cur):
     cur.val.symtab.implicit_none()
+    DebugManager.debug('[Line '+str(self.lineNumber)+']: stmt2unit._implicit_none() implicit table is now '+str(cur.val.symtab.implicit)+str(cur.val.symtab))
     return self
 
 def _beginProcedureUnit(aProcedureDeclStmt,cur):
@@ -450,6 +482,8 @@ fs.DimensionStmt.unit_action = _processDimensionStmt
 fs.ExternalStmt.unit_action  = _processExternalStmt
 
 fs.TypeDecl.unit_action       = _processTypedeclStmt
+
+fs.CommonStmt.unit_action     = _processCommonStmt
 
 fs.UseStmt.unit_action        = _use_module
 
