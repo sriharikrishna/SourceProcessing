@@ -2,6 +2,8 @@
    Linked list of caselessDicts
 '''
 
+import copy
+
 from _Setup import *
 
 from PyUtil.caselessDict import caselessDict as cDict
@@ -45,7 +47,7 @@ class Symtab(object):
 
     def default_implicit(self):
         if self.parent:
-            self.implicit = self.parent.implicit
+            self.implicit = copy.deepcopy(self.parent.implicit)
             return
 
         self.implicit = cDict()
@@ -163,8 +165,9 @@ class Symtab(object):
         outString = 'symbol table '+str(self)+':\n'
         for aKey in self.ids.keys():
             outString += '\t'+self.ids[aKey].debug(aKey)+'\n'
+        outString+="\timplicit:"+str(self.implicit)+'\n'
         if self.parent:
-            outString += self.parent.debug()
+            outString += ' parent:'+self.parent.debug()
         return outString
 
 class SymtabEntry(object):
