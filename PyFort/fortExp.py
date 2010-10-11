@@ -160,7 +160,10 @@ class _AppH(_AtomH):
 class _SelH(_AtomH):
     constr = Sel
 
-class Rslice(_Exp):
+class Slice(_Exp):
+    pass
+    
+class Rslice(Slice):
 
     _sons = ['arg']
 
@@ -171,7 +174,7 @@ class Rslice(_Exp):
     def __str__(self):
         return ':%s' % str(self.arg)
 
-class Lslice(_Exp):
+class Lslice(Slice):
 
     _sons = ['arg']
 
@@ -182,7 +185,7 @@ class Lslice(_Exp):
     def __str__(self):
         return '%s:' % str(self.arg)
 
-class Zslice(_Exp):
+class Zslice(Slice):
     def __init__(self): pass
     def __repr__(self):
         return 'Zslice()'
