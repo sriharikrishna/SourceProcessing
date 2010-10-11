@@ -35,11 +35,12 @@ def main():
                    dest='outputFormat',
                    help="<output_file> is in 'free' or 'fixed' format",
                    default=None)
+    vardefsDefault='activeVariableDefinitions.f'
     opt.add_option('-d',
                    '--vardefs',
                    dest='vardefs',
-                   help='file with definitions for active variables',
-                   default='activeVariableDefinitions.f')
+                   help='file with definitions for active variables (default '+vardefsDefault+' )',
+                   default=vardefsDefault)
     opt.add_option('','--inputLineLength',
                    dest='inputLineLength',
                    type=int,
