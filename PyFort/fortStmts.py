@@ -763,6 +763,9 @@ class CommonStmt(Decl):
         self.name = name
         Decl.__init__(self,lineNumber,label,lead,internal,rest)
 
+    def __repr__(self):
+        return self.__class__.__name__+'('+self.name+','+repr(self.declList)+')'
+
     def __str__(self):
         return self.kw + '/%s/ %s' % \
               (self.name,','.join(str(item) for item in self.declList))+ \
@@ -972,6 +975,7 @@ class ImplicitStmt(Decl):
             implNone = treat(implNone,ImplicitNone)
             (theImplNone,r) = implNone(scan)
             theImplNone.rest=r
+            theImplNone.lineNumber=lineNumber
             return theImplNone
         except:
             letter_spec_list=seq(lit('('),cslist(Exp),lit(')'))
