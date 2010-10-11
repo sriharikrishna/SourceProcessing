@@ -11,7 +11,7 @@ from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import SymtabEntry
 
 import fortStmts
-from fortExp import App,NamedParam,Sel,Unary,Ops,is_const,_id_re,_flonum_re,_int_re,_logicon_set,_quote_set,Zslice,Lslice,Rslice
+from fortExp import App,NamedParam,Sel,Unary,Ops,is_const,_id_re,_flonum_re,_int_re,_logicon_set,_quote_set,Slice,Zslice,Lslice,Rslice
 from intrinsic import is_intrinsic
 
 class InferenceError(Exception):
@@ -117,12 +117,15 @@ def identifierType(anId,localSymtab,lineNumber):
         DebugManager.debug('with symtab entry '+symtabEntry.debug(anId)+' -> returning type '+str(returnType))
     # an entry exists with no type -> try to type implicitly
     elif symtabEntry and symtabEntry.entryKind==SymtabEntry.InterfaceEntryKind:
+       DebugManager.debug('with symtab entry'+symtabEntry.debug(anId)+' (is an interface name).')
        # needs to be resolved by genericResolve
        return None
     elif symtabEntry:
-       symtabEntry.enterType(containingSymtab.implicit[anId[0]])
-       returnType = symtabEntry.type
-       DebugManager.debug('with symtab entry'+symtabEntry.debug(anId)+' (without type).  Implicit type (locally) is '+str(returnType))
+       #try local implicit typing
+       implicitLocalType=containingSymtab.implicit[anId[0]]
+       if implicitLocalType: # we handle the error condition below
+           symtabEntry.enterType(containingSymtab.implicit[anId[0]])
+       returnType = implicitLocalType
        DebugManager.warning('inference.identifierType: [line '+str(lineNumber)+'] implicit typing (scope ='+str(containingSymtab)+') used for identifier "'+anId+'" type ="'+str(returnType)+'"')
     else: # no symtab entry -> try local implicit typing
        returnType = localSymtab.implicit[anId[0]]
@@ -220,8 +223,11 @@ def expressionType(anExpression,localSymtab,lineNumber):
     elif isinstance(anExpression,Sel):
        DebugManager.debug(' it\'s a SELECTION EXPRESSION')
        return selectionType(anExpression,localSymtab,lineNumber)
+    elif isinstance(anExpression,Slice) :
+       DebugManager.debug(' it\'s a SLICE EXPRESSION')
+       return (fortStmts.IntegerStmt, [])
     else:
-        raise InferenceError('inference.expressionType: No type could be determined for expression "'+str(anExpression)+'"',lineNumber)
+        raise InferenceError('inference.expressionType: No type could be determined for expression "'+str(anExpression)+'" (represented as '+repr(anExpression)+' )',lineNumber)
 
 def canonicalTypeClass(typeClass,modList):
    if modList:
@@ -469,12 +475,14 @@ def selSymtabName(aSel,localSymtab):
 def isArrayReference(theApp,localSymtab,lineNumber):
     if not isinstance(theApp,App):
         raise InferenceError('inference.isArrayReference: called on non-App object '+str(theApp),lineNumber)
+    DebugManager.debug('inference.isArrayReference: Application Expression "'+str(theApp))
     lookupName=""
     if isinstance(theApp.head,Sel): # example type%member(1)
         lookupName=selSymtabName(theApp.head,localSymtab)
     else:
         lookupName=theApp.head
     theSymtabEntry=localSymtab.lookup_name(lookupName)
+    DebugManager.debug('inference.isArrayReference: symtab entry is '+str(theSymtabEntry))
     if not theSymtabEntry:
         return False
     # there has to be a symbol table entry for a variable
