@@ -2424,29 +2424,41 @@ class CaseRangeListStmt(Exec):
 class GotoStmt(Exec):
     kw = 'goto'
     kw_str = 'go to'
-    _sons = ['targetLabel']
 
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
-        noSpace = seq(lit(GotoStmt.kw),
-                      int)
+        theStmt=None
+        try : 
+            simplePatn=seq(lit(GotoStmt.kw),int)
+            ((thekw,theLabel),rest)=simplePatn(scan)
+            theStmt=SimpleGotoStmt(theLabel,lineNumber,rest=rest)
+        except :
+            computedPatn=seq(lit(GotoStmt.kw),lit('('),cslist(int),lit(')'),zo1(lit(',')),Exp)
+            ((kwS,pl,labelList,pr,optComma,theExpr),rest)=computedPatn(scan)
+            theStmt=ComputedGotoStmt(labelList,theExpr,lineNumber,rest=rest)
+        return theStmt
+    
+class SimpleGotoStmt(GotoStmt):
+    _sons = ['targetLabel']
 
-        withSpace = seq(lit('go'),
-                        lit('to'),
-                        int)
-        withSpace = treat(withSpace, lambda x: (x[0]+' '+x[1],x[2]))
-
-        ((gotoFormatStr,targetLabel),rest) = disj(withSpace,noSpace)(scan)
-        return GotoStmt(targetLabel,gotoFormatStr,lineNumber,rest=rest)
-
-    def __init__(self,targetLabel,gotoFormatStr=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+    def __init__(self,targetLabel,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         self.targetLabel = targetLabel
-        self.gotoFormatStr = gotoFormatStr
         Exec.__init__(self,lineNumber,label,lead,internal,rest)
         
     def __str__(self):
-        return self.gotoFormatStr+' '+self.targetLabel+''.join(self.internal)
+        return self.__class__.kw_str+' '+self.targetLabel
+
+class ComputedGotoStmt(GotoStmt):
+    _sons = ['labelList','expr']
+
+    def __init__(self,labelList,expr,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.labelList = labelList
+        self.expr = expr
+        Exec.__init__(self,lineNumber,label,lead,internal,rest)
+        
+    def __str__(self):
+        return self.__class__.kw_str+' ('+','.join(l for l in self.labelList)+') '+str(self.expr)
 
 class AllocateStmt(Exec):
     '''

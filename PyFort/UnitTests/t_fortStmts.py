@@ -725,8 +725,8 @@ class TestIfStmt(TestCase):
 
     def test1(self):
         'IfNonThenStmt with a relatively complicated conditional'
-        theString = 'if (x(11).EQ.y.OR.x(12).lt.(floob*(i**k))) goto 10'
-        theRepr = IfNonThenStmt(Ops('.OR.',Ops('.EQ.',App('x',['11']),'y'),Ops('.lt.',App('x',['12']),ParenExp(Ops('*','floob',ParenExp(Ops('**','i','k')))))),GotoStmt('10'))
+        theString = 'if (x(11).EQ.y.OR.x(12).lt.(floob*(i**k))) go to 10'
+        theRepr = IfNonThenStmt(Ops('.OR.',Ops('.EQ.',App('x',['11']),'y'),Ops('.lt.',App('x',['12']),ParenExp(Ops('*','floob',ParenExp(Ops('**','i','k')))))),SimpleGotoStmt('10'))
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
@@ -1152,17 +1152,24 @@ class TestGotoStmt(TestCase):
 
     def test0(self):
         '''goto without space'''
-        theString = 'GoTo 100'
-        theRepr = GotoStmt('100',gotoFormatStr='GoTo')
+        theString = 'GoTo 100' 
+        theRepr = SimpleGotoStmt('100')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
-        self.assertEquals(theString,str(theRepr))
+        self.assertEquals('go to 100',str(theRepr)) # always printed lowercase with space
 
     def test1(self):
         '''goto with space'''
         theString = 'Go to 100'
-        theRepr = GotoStmt('100',gotoFormatStr='Go to')
+        theRepr = SimpleGotoStmt('100')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
-        self.assertEquals(theString,str(theRepr))
+        self.assertEquals('go to 100',str(theRepr)) # always printed lowercase with space
+
+    def test2(self):
+        '''computed goto without space and optional comma'''
+        theString = 'goto (10,20,30), i+3'
+        theRepr = ComputedGotoStmt(['10','20','30'],Ops('+','i','3'))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals('go to (10,20,30) i+3',str(theRepr)) # always printed lowercase with space and without optional comma
 
 class TestDataStmt(TestCase):
     '''data statements'''
