@@ -17,7 +17,7 @@ def typesep(dd,default_dims):
     a type declaration will either be a simple var (string)
     or an App expression
     '''
-    _helper = lambda e: isinstance(e,str) and (e,default_dims) or (e.head,tuple(e.args))
+    _helper = lambda e: isinstance(e,str) and (e,default_dims) or (e.head,e.args)
 
     d = dd.lhs
 
@@ -27,8 +27,8 @@ def typesep(dd,default_dims):
 def default_dims(attrs_list):
     for a in attrs_list:
         if isinstance(a,fe.App) and a.head.lower() == 'dimension':
-            return tuple(a.args)
-    return ()
+            return a.args
+    return None
 
 def _beginDrvdTypeDefn(aDrvdTypeDefn,curr):
     'derived type definition -- record type in symbol table and set the name on the unit'
