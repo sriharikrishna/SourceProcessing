@@ -716,7 +716,7 @@ class TestDoStmt(TestCase):
 
 
 class TestIfStmt(TestCase):
-    '''If statements have two types: IfThenStmt and IfNonThenStmt'''
+    '''If statements have three types: ArithIfStmt, IfThenStmt, and IfNonThenStmt'''
 
     def test0(self):
         'if statement classes have "_sons" attribute'
@@ -731,10 +731,26 @@ class TestIfStmt(TestCase):
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
 
-    def test9(self):
+    def test2(self):
         '''if (non-then) statement from scale, with rewind stmt'''
         theString = 'if (nt4>0) rewind(nt4)'
         theRepr = IfNonThenStmt(Ops('>','nt4','0'),RewindStmt({'unit':'nt4'}))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test3(self):
+        '''if (then) statement '''
+        theString = 'if (x(11).EQ.y.OR.x(12).lt.(floob*(i**k))) then'
+        theRepr = IfThenStmt(Ops('.OR.',Ops('.EQ.',App('x',['11']),'y'),Ops('.lt.',App('x',['12']),ParenExp(Ops('*','floob',ParenExp(Ops('**','i','k')))))))
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
+
+    def test4(self):
+        '''arithmetic if statement '''
+        theString = 'if (x(11)+3) 10,20,10'
+        theRepr = ArithmIfStmt(Ops('+',App('x',['11']),'3'),('10','20','10'))
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
