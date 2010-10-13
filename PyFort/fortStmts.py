@@ -1023,7 +1023,8 @@ class ImplicitStmt(Decl):
             return rstr+' ('+','.join([str(l) for l in p[1]])+')'  
         rstr=ImplicitStmt.kw+' '
         rstr+=','.join(map(dumpPair,self.lst))
-        return rstr
+        return rstr\
+               +''.join(self.internal)
 
 class EquivalenceStmt(Decl):
     kw = 'equivalence'
@@ -2447,7 +2448,8 @@ class SimpleGotoStmt(GotoStmt):
         Exec.__init__(self,lineNumber,label,lead,internal,rest)
         
     def __str__(self):
-        return self.__class__.kw_str+' '+self.targetLabel
+        return self.__class__.kw_str+' '+self.targetLabel\
+               +''.join(self.internal)
 
 class ComputedGotoStmt(GotoStmt):
     _sons = ['labelList','expr']
@@ -2458,7 +2460,8 @@ class ComputedGotoStmt(GotoStmt):
         Exec.__init__(self,lineNumber,label,lead,internal,rest)
         
     def __str__(self):
-        return self.__class__.kw_str+' ('+','.join(l for l in self.labelList)+') '+str(self.expr)
+        return self.__class__.kw_str+' ('+','.join(l for l in self.labelList)+') '+str(self.expr)\
+               +''.join(self.internal)
 
 class AllocateStmt(Exec):
     '''
@@ -2633,7 +2636,8 @@ class BuiltinExec(Exec):
                 pCount+=1
                 rstr+=str(self.paramsDict[p])
         rstr+=')'
-        return rstr
+        return rstr\
+               +''.join(self.internal)
 
 class RewindStmt(BuiltinExec):
     kw = 'rewind'
