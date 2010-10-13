@@ -54,6 +54,8 @@ def _endDrvdTypeDefn(aEndDrvdTypeDefnStmt,curr):
     curr.val._in_drvdType=None
     return aEndDrvdTypeDefnStmt
 
+_commonPrefix='common:'
+
 def _processTypedeclStmt(aTypeDeclStmt,curr):
     'type declaration -- record type in symbol table'
     localSymtab = curr.val.symtab
@@ -86,7 +88,10 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
             if theSymtabEntry: # already in symtab -> enter new information (taking exception to any conflicts)
                 DebugManager.debug('decl "'+str(aDecl)+'" already present in local symbol table as '+str(theSymtabEntry.debug(name)))
                 theSymtabEntry.enterType(newType)
-                theSymtabEntry.enterDimensions(newDimensions)
+                if (theSymtabEntry.origin and (_commonPrefix in theSymtabEntry.origin) and theSymtabEntry.dimensions and (newDimensions is None)):
+                    pass
+                else:
+                    theSymtabEntry.enterDimensions(newDimensions)
                 theSymtabEntry.enterLength(newLength)
                 if inDrvdTypeDefn:
                     theSymtabEntry.enterDrvdTypeName(inDrvdTypeDefn)
@@ -183,7 +188,7 @@ def _processCommonStmt(aCommonStmt,curr):
             theSymtabEntry = localSymtab.lookup_name(aDeclName)
             if not theSymtabEntry:
                 newSymtabEntry = SymtabEntry(SymtabEntry.VariableEntryKind,
-                                             origin=aCommonStmt.name)
+                                             origin=_commonPrefix+aCommonStmt.name)
                 localSymtab.enter_name(aDeclName,newSymtabEntry)
                 if isinstance(aDecl,fe.App):
                     newSymtabEntry.enterDimensions(aDecl.args)
@@ -193,7 +198,7 @@ def _processCommonStmt(aCommonStmt,curr):
                 theSymtabEntry.enterEntryKind(SymtabEntry.VariableEntryKind)
                 if isinstance(aDecl,fe.App):
                     theSymtabEntry.enterDimensions(aDecl.args)
-                theSymtabEntry.updateOrigin(aCommonStmt.name)
+                theSymtabEntry.updateOrigin(_commonPrefix+aCommonStmt.name)
         except SymtabError,e: # add lineNumber and symbol name to any SymtabError we encounter
             e.lineNumber = e.lineNumber or aCommonStmt.lineNumber
             e.symbolName = e.symbolName or aDeclName
