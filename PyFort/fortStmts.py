@@ -2035,15 +2035,41 @@ class IfStmt(Exec):
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
         prefix = seq(lit(IfStmt.kw),lit('('),Exp,lit(')'))
-        ((ifLit,dc1,test,dc2),rest) = prefix(scan)
-        index = -1
-        while index < (len(scan)-len(rest)):
-            index = ws_scan[index+1:].index(rest[0])+(index+1)
-        if [l.lower() for l in rest] == ['then']:
-            return IfThenStmt(test,ifLit,ws_scan[index],lineNumber,rest=rest)
-        else:
-            return IfNonThenStmt(test,_kw_parse(ws_scan[index:],lineNumber),ifLit,lineNumber,rest=rest)
+        theStmt=None
+        try: #arithmetic if
+            arithIfPatn=seq(prefix,int,lit(','),int,lit(','),int)
+            (((ifLit,dc1,expr,dc2),l1,c1,l2,c2,l3),rest)=arithIfPatn(scan)
+            theStmt=ArithmIfStmt(expr,(l1,l2,l3),ifLit,lineNumber,rest=rest)
+        except: 
+            try: # if ( ) then
+                thenPatn=seq(prefix,lit('then'))
+                (((ifLit,dc1,expr,dc2),thenLit),rest)=thenPatn(scan)
+                theStmt=IfThenStmt(expr,ifLit,thenLit,lineNumber,rest=rest)
+            except: # if ( )  statement   no  then 
+                ((ifLit,dc1,expr,dc2),rest)=prefix(scan)
+                wsIdx=-1 # find index where rest starts in ws_scan
+                while wsIdx<(len(scan)-len(rest)):
+                    wsIdx=ws_scan[wsIdx+1:].index(rest[0])+wsIdx+1
+                subStmt=_kw_parse(ws_scan[wsIdx:],lineNumber)
+                theStmt=IfNonThenStmt(expr,subStmt,ifLit,lineNumber)
+        return theStmt
+    
+class ArithmIfStmt(IfStmt): #arithmetic if 
+    _sons = ['expr', 'labelTriple']
 
+    def __init__(self,expr,labelTriple,ifFormatStr=IfStmt.kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.expr = expr
+        self.labelTriple = labelTriple
+        self.ifFormatStr = ifFormatStr
+        IfStmt.__init__(self,lineNumber,label,lead,internal,rest)
+
+    def __repr__(self):
+        return self.__class__.__name__+'(%s,%s)' % (repr(self.expr),repr(self.labelTriple))
+
+    def __str__(self):
+        return '%s (%s) %s' % (self.kw_str,str(self.expr),','.join(self.labelTriple))\
+               +''.join(self.internal)
+                   
 class IfThenStmt(IfStmt):
     _sons = ['test']
 
@@ -2070,13 +2096,12 @@ class IfNonThenStmt(IfStmt):
         IfStmt.__init__(self,lineNumber,label,lead,internal,rest)
 
     def __repr__(self):
-        return 'IfNonThenStmt(%s,%s)' % (repr(self.test),
-                                         repr(self.stmt))
+        return self.__class__.__name__+'(%s,%s)' % (repr(self.test),
+                                                    repr(self.stmt))
 
     def __str__(self):
         return '%s (%s) %s' % (self.ifFormatStr,str(self.test),str(self.stmt))\
                +''.join(self.internal)
-
 
 class ElseifStmt(Exec):
     kw = 'elseif'
