@@ -85,7 +85,7 @@ class TransformActiveVariables(object):
         implicit_none = True
         for aDecl in self.__myUnit.decls:
             if isinstance(aDecl,fs.ImplicitStmt):
-                if aDecl.type == 'double precision':
+                if hasattr(aDecl,'type') and aDecl.type == 'double precision':
                     aDecl.type = 'type(active)'
                     aDecl.rawline = str(aDecl)
                     new_stmt = fs.UseAllStmt(moduleName='OAD_active',renameList=None)
