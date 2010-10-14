@@ -46,6 +46,7 @@ def cleanup(outFileNameList):
 # output2: the file to print the globalInitProcedure unit to if splitUnits is true
 def addInitProcedures(initSet,initNames,typeDecls,output=None,base='',unitNumExt='',unit_num=0,ext='',splitUnits=False):
     '''creates active variable derivative initialization procedures and prints them to specified output file(s)'''
+    outFileNameList=[]
     for elt in initSet:
         newUnit = UnitPostProcessor.createInitProcedure(elt,typeDecls)
         if newUnit is not None:
@@ -67,7 +68,7 @@ def addInitProcedures(initSet,initNames,typeDecls,output=None,base='',unitNumExt
             outFileNameList.append(output)
             newUnit.printit(out)
             out.close()
-            return (newUnit!=None,unit_num)
+            return (newUnit!=None,unit_num,outFileNameList)
         else:
             newUnit.printit(output)
             return (newUnit!=None)
@@ -317,9 +318,10 @@ def main():
             for aUnit in fortUnitIterator(inputFile,config.inputFormat):
                 if not isinstance(aUnit.uinfo,fs.ModuleStmt) and not initSubroutinesAdded:
                     # add new init procedures & global init procedure after module declarations
-                    (initSubroutinesAdded,unit_num) = \
+                    (initSubroutinesAdded,unit_num,newOutFiles) = \
                         addInitProcedures(initSet,initNames,typeDecls,base=base,unitNumExt=unitNumExt,\
                                               unit_num=unit_num,ext=ext,splitUnits=splitUnits)
+                    outFileNameList.extend(newOutFiles)
                 output = base + unitNumExt % unit_num + ext; unit_num
                 out = open(output,'w')
                 outFileNameList.append(output)
