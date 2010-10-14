@@ -817,7 +817,7 @@ class UnitPostProcessor(object):
                 for var in decl.declList:
                     # lookup in symtab
                     var_type = self.__myUnit.symtab.lookup_name(var).type
-                    if (var_type[1][0].lower() == self._abstract_type):
+                    if not isinstance(var_type[1][0],fs._Kind) and (var_type[1][0].lower() == self._abstract_type):
                         initCommonStmt.declList.append(var)
                 # avoid initializing variables twice
                 if not initCommonStmt.name in initNames:
