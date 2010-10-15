@@ -216,11 +216,17 @@ class UnitCanonicalizer(object):
                 for arg in theExpression.args:
                     replacementArgs.append(self.__canonicalizeExpression(arg,parentStmt))
                 replacementHead = theExpression.head
-                # check whether we need to convert the function to the generic name (e.g. alog => log)
-                if (theExpression.head.lower() != getGenericName(theExpression.head)) :
+                aSymtabEntry=self.__myUnit.symtab.lookup_name(theExpression.head)
+                # see if it is  a statement function and expand it
+                if (aSymtabEntry and aSymtabEntry.entryKind==SymtabEntry.StatementFunctionEntryKind):
                     parentStmt.beenModified = True
-                    replacementHead = getGenericName(theExpression.head)
-                replacementExpression = fe.App(replacementHead,replacementArgs)
+                    replacementExpression=self.__expandStmtFunExp(fe.App(replacementHead,replacementArgs))
+                # check whether we need to convert the function to the generic name (e.g. alog => log)
+                else: 
+                    if (is_intrinsic(theExpression.head) and theExpression.head.lower() != getGenericName(theExpression.head)) :
+                      parentStmt.beenModified = True
+                      replacementHead = getGenericName(theExpression.head)
+                    replacementExpression = fe.App(replacementHead,replacementArgs)
         # Unary operation -> recursively canonicalize the sole subexpression
         elif isinstance(theExpression,fe.Unary):
             DebugManager.debug(', which is a unary op. with exp: "'+str(theExpression.exp)+'"')
