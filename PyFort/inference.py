@@ -491,8 +491,8 @@ def isArrayReference(theApp,localSymtab,lineNumber):
         return False
     if (not theSymtabEntry.dimensions or theSymtabEntry.dimensions == ()) and \
        (not theSymtabEntry.length or theSymtabEntry.length == 1):
-#       now we know that its NOT a scalar variable, but rather a function.  so we update the symbol table with this information.
-        if (theSymtabEntry.entryKind!=SymtabEntry.InterfaceEntryKind) : 
+        #  now we know that its NOT a scalar variable, but rather a function.  so we update the symbol table with this information.
+        if (not theSymtabEntry.entryKind in [SymtabEntry.InterfaceEntryKind,SymtabEntry.StatementFunctionEntryKind]) : 
            DebugManager.debug('inference.isArrayReference: Application Expression "'+str(theApp)+\
                               '" for something that we thought was a scalar variable => assuming it\'s a function and updating the symbol table to reflect this')
            theSymtabEntry.enterEntryKind(SymtabEntry.FunctionEntryKind)
