@@ -818,62 +818,45 @@ class _ImplicitDoConstruct(object):
 class DataStmt(Decl):
     kw = 'data'
     kw_str = kw
-    _sons = ['objectList','valueList']
+    _sons = ['objectValuePairList']
 
     @staticmethod
-    def parse(scan,lineNumber):
-        # FIXME we don't cover the full range of possibilities.  In particular, here is an incomplete list of the issues:
-        #  - there can be an entire comma-separated list of object-value pairs
-        #  - The values should all be constants, and NOT general expressions:
-        #      '1-1' is no good, but '-1' is.  It's just that '-1' doesnt match as a constant by the scanner (it matches as a unary expression)
-        #      the definition of "const" can't be fixed easily due to scanner particulars (sometimes we want the '-' and '1' to be separate tokens, sometimes not)
-        #  - we don't cover the optional repeat-factor for the value items (though this is handled by the fact that the values are parsed as expressions.  see previous item)
-
-            # form of data-value:
-            # [ repeat-factor * ] data-constant
-                # data-constant is one of
-                #  scalar-constant
-                #  scalar-constant-subobject
-                #  signed-integer-literal-constant
-                #  signed-real-literal-constant
-                #  null-initialization
-                #  structure-constructor
-
-        # form of DATA statement:
-        # DATA data-statement-object-list / data-value-list / [ [ , ] data-statement-object-list / data-value-list / ] ...
-            # form of data object is one of
-            #  variable
-            #  data-implied-do
-        formDataStmt = seq(lit(DataStmt.kw),        # 0 = stmt_name
-                           cslist(disj(_ImplicitDoConstruct.form, # 1 = objectList (variable or implicit do construct)
-                                  id)),
-                           lit('/'),           #
-                           cslist(Exp),        # 3 = valueList
-                           lit('/'))           #
-        formDataStmt = treat(formDataStmt, lambda x: DataStmt(x[1],x[3],stmt_name=x[0],lineNumber=lineNumber))
+    def parse(ws_scan,lineNumber):
+        ''' 
+        \todo we don't cover the full range of the DATA stmt syntax.
+        among the exceptions are: 
+         - from the dataObject pattern we subobject patterns combining App with Sel 
+         - the comma between the <dataObject,dataValue> pairs is optional 
+        '''
+        scan = filter(lambda x: x != ' ',ws_scan)
+        dataObjectListPatn=cslist(disj(_ImplicitDoConstruct.form,app1,id))
+        dataObjectValuePairListPatn=cslist(seq(dataObjectListPatn,lit('/'),cslist(Exp),lit('/')))
+        dataObjectValuePairList=treat(dataObjectValuePairListPatn,lambda l:[(le[0],le[2]) for le in l])
+        formDataStmt = seq(lit(DataStmt.kw),dataObjectValuePairList)           #
+        formDataStmt = treat(formDataStmt, lambda x: DataStmt(x[1],stmt_name=x[0],lineNumber=lineNumber))
         (theParsedStmt,rest) = formDataStmt(scan)
         theParsedStmt.rest=rest
         return theParsedStmt
 
-    def __init__(self,objectList,valueList,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
-        self.objectList = objectList
-        self.valueList = valueList
+    def __init__(self,objectValuePairList,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.objectValuePairList = objectValuePairList
         self.stmt_name = stmt_name
         Decl.__init__(self,lineNumber,label,lead,internal,rest)
 
     def __str__(self):
-        # put a space after the data keyword iff the first object is a variable
-        spaceStr = isinstance(self.objectList[0],str) and ' ' or ''
-        return '%s%s%s / %s /' % (self.stmt_name,
-                                  spaceStr,
-                                  ', '.join([str(anObject) for anObject in self.objectList]),
-                                  ', '.join([str(aValue) for aValue in self.valueList]))\
-                                  +''.join(self.internal)
+        def dumpObjectValuePair(thePair):
+            rstr=','.join(str(o) for o in thePair[0])
+            rstr+=' /'
+            rstr+=','.join(str(v) for v in thePair[1])
+            rstr+='/'
+            return rstr
+        return '%s %s' % (self.stmt_name,','.join(map(dumpObjectValuePair,self.objectValuePairList))\
+                          +''.join(self.internal))
 
     def __repr__(self):
         return self.__class__.__name__ + \
                '(' + \
-               ','.join([repr(aSon) for aSon in (self.objectList,self.valueList,self.stmt_name)]) + \
+               ','.join([repr(aSon) for aSon in self._sons]) + \
                ')'
 
 class EndInterfaceStmt(DeclLeaf):
