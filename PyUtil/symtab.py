@@ -182,6 +182,15 @@ class SymtabEntry(object):
         self.genericInfo = None
         self.memberOfDrvdType = None
 
+    @staticmethod
+    def ourTypePrint(type):
+        rstr=type[0].kw_str
+        rstr+=len(type[1]) and str(type[1][0]) or ''
+        return rstr
+    
+    def typePrint(self):
+        return SymtabEntry.ourTypePrint(self.type)
+        
     def enterEntryKind(self,newEntryKind):
         # the replacement entry kind must be an 'instance' of the existing one.
         # for example, we can replace a procedureKind with a functionKind,
