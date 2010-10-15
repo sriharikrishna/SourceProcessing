@@ -173,7 +173,7 @@ class Symtab(object):
 class SymtabEntry(object):
     def __init__(self,entryKind,type=None,dimensions=None,length=None,origin=None,renameSource=None,isPrivate=False):
         self.entryKind = entryKind # some instanve of self.GenericEntryKind
-        self.type = type # type class 
+        self.type = type # pair  (type class,type modifier) 
         self.dimensions = dimensions # None or list of expressions
         self.length = length
         self.origin = origin # None | [<parent origin>'|'](| 'local' | 'external' | 'temp' | 'common:'[<common block name])
