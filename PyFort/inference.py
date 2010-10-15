@@ -146,6 +146,8 @@ def intrinsicType(anIntrinsicApp,localSymtab,lineNumber):
         return (fortStmts.ComplexStmt, [])
     elif anIntrinsicApp.head.lower() == 'repeat':
         return (fortStmts.CharacterStmt, [])
+    elif anIntrinsicApp.head.lower() in ['lge','lgt','lle','llt']:
+        return (fortStmts.LogicalStmt, [])
     else:
         return typemerge([expressionType(anArg,localSymtab,lineNumber) for anArg in anIntrinsicApp.args],
                          (None,None))
@@ -329,7 +331,7 @@ def arrayReferenceShape(arrRefApp,localSymtab,lineNumber):
 def intrinsicShape(anIntrinsicApp,localSymtab,lineNumber):
     if anIntrinsicApp.head.lower() in ['reshape','matmul']:
         raise InferenceError('inference.intrinsicShape: not implemented for "'+anIntrinsicApp+'"',lineNumber)
-    if anIntrinsicApp.head.lower() in ['maxval','minval']:
+    if anIntrinsicApp.head.lower() in ['maxval','minval','lge','lgt','lle','llt']:
        return None
     else:
         return shapemerge([expressionShape(anArg,localSymtab,lineNumber) for anArg in anIntrinsicApp.args],
