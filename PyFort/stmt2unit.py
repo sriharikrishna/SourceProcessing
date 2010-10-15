@@ -88,7 +88,7 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
             if theSymtabEntry: # already in symtab -> enter new information (taking exception to any conflicts)
                 DebugManager.debug('decl "'+str(aDecl)+'" already present in local symbol table as '+str(theSymtabEntry.debug(name)))
                 theSymtabEntry.enterType(newType)
-                if (theSymtabEntry.origin and (_commonPrefix in theSymtabEntry.origin) and theSymtabEntry.dimensions and (newDimensions is None)):
+                if (theSymtabEntry.dimensions and (newDimensions is None)):
                     pass
                 else:
                     theSymtabEntry.enterDimensions(newDimensions)
