@@ -82,8 +82,11 @@ class UnitCanonicalizer(object):
         if not isinstance(theApp,fe.App):
             raise CanonError('UnitCanonicalizer.shouldSubroutinizeFunction called on non-App object '+str(theApp),parentStmt.lineNumber)
         theSymtabEntry = self.__myUnit.symtab.lookup_name(theApp.head)
-        if theSymtabEntry and isinstance(theSymtabEntry.entryKind,SymtabEntry.VariableEntryKind):
-            raise CanonError('UnitCanonicalizer.shouldSubroutinizeFunction called on array reference '+str(theApp),parentStmt.lineNumber)
+        if theSymtabEntry: 
+            if theSymtabEntry.entryKind==SymtabEntry.StatementFunctionEntryKind:
+                return False
+            if theSymtabEntry.entryKind==SymtabEntry.VariableEntryKind:
+                raise CanonError('UnitCanonicalizer.shouldSubroutinizeFunction called on array reference '+str(theApp)+" with "+theSymtabEntry.debug(theApp.head),parentStmt.lineNumber)
         try:
             (funcType,modifier) = appType(theApp,self.__myUnit.symtab,parentStmt.lineNumber)
         except InferenceError,errorObj:
