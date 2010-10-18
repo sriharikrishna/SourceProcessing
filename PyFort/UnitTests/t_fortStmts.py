@@ -1483,6 +1483,15 @@ class TestRewindStmt(TestCase):
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(compString,str(pps(theString)))
 
+    def test4(self):
+        '''rewind statement without parenthesis and hardwired unit number'''
+        theString = "rewind 13"
+        compString= "rewind(13)" # always unparsed with parenthesis
+        theRepr = RewindStmt({'unit':'13'})
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(compString,str(pps(theString)))
+
 class TestCloseStmt(TestCase):
     '''close statements'''
 

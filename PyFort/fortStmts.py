@@ -2655,7 +2655,7 @@ class BuiltinExec(Exec):
         theParsedStmt=None
         try:
             # without parenthesis
-            formStmt = seq(lit(cls.kw),id)
+            formStmt = seq(lit(cls.kw),disj(id,int))
             ((builtinKeyword,unitSpec),rest) = formStmt(scan)
             theParams[cls.paramNames[0]]=unitSpec
             theParsedStmt=cls(theParams,lineNumber)
