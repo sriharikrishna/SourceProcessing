@@ -52,12 +52,6 @@ def main():
                    dest='inputFormat',
                    help="<input_file> is in either 'fixed' or 'free' format",
                    default=None)
-    opt.add_option('',
-                   '--removeFunction',
-                   dest='removeFunction',
-                   help="remove original function definition when it is transformed to a subroutine definitions",
-                   action='store_true',
-                   default=False)
     opt.add_option('','--inputLineLength',
                    dest='inputLineLength',
                    type=int,
@@ -81,6 +75,25 @@ def main():
     opt.add_option('--noWarnings',
                    dest='noWarnings',
                    help='suppress warning messages (defaults to False)',
+                   action='store_true',
+                   default=False)
+    opt.add_option('--warn',
+                   dest='warn',
+                   type='choice',
+                   choices=DebugManager.WarnType.getNames()[1:],
+                   help='issue warning messages only for the specified type which is one of ( '+' | '.join(name for name in DebugManager.WarnType.getNames()[1:])+' ); conflicts with --noWarnings',
+                   action='append',
+                   default=[])
+    opt.add_option('',
+                   '--keepGoing',
+                   dest='keepGoing',
+                   help="try to continue despite error messages; this is intended only to find trouble spots for the canonicalization, if problems occur the output may contain invalid code (defaults to False)",
+                   action='store_true',
+                   default=False)
+    opt.add_option('',
+                   '--removeFunction',
+                   dest='removeFunction',
+                   help="remove original function definition when it is transformed to a subroutine definitions",
                    action='store_true',
                    default=False)
     opt.add_option('',
@@ -119,6 +132,11 @@ def main():
     opt.add_option('--timing',
                    dest='timing',
                    help='simple timing of the execution',
+                   action='store_true',
+                   default=False)
+    opt.add_option('--progress',
+                   dest='progress',
+                   help='issue progress message to stderr per opened input file (default is False)',
                    action='store_true',
                    default=False)
     opt.add_option('-v',
@@ -187,23 +205,25 @@ def main():
         else:
             setOutputLineLength(config.outputLineLength)
 
-    # set remove function definition
     if config.removeFunction:
         UnitCanonicalizer.setKeepFunctionDef(False)
-    # configure constant expression hoisting
     if config.hoistConstantsFlag:
         UnitCanonicalizer.setHoistConstantsFlag(config.hoistConstantsFlag)
-    # configure string hoisting
     if config.hoistStringsFlag:
         UnitCanonicalizer.setHoistStringsFlag(config.hoistStringsFlag)
-    # configure subroutinization
     if config.subroutinizeIntegerFunctions:
         UnitCanonicalizer.setSubroutinizeIntegerFunctions(True)
-
-    # set verbosity
+    if config.keepGoing:
+        CanonError.keepGoing()
     DebugManager.setVerbose(config.isVerbose)
+    if (config.noWarnings and config.warn):
+        opt.error("Option --noWarnings conflicts with option --warn="+config.warn[0])
     DebugManager.setQuiet(config.noWarnings)
-
+    if config.warn:
+        DebugManager.warnOnlyOn(config.warn)
+    if config.progress:
+        DebugManager.dumpProgress()    
+    
     try: 
         if config.outputFile:
             out = open(config.outputFile,'w')
