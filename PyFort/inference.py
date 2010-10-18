@@ -126,11 +126,11 @@ def identifierType(anId,localSymtab,lineNumber):
        if implicitLocalType: # we handle the error condition below
            symtabEntry.enterType(containingSymtab.implicit[anId[0]])
        returnType = implicitLocalType
-       DebugManager.warning('inference.identifierType: implicit typing: '+symtabEntry.typePrint()+' '+anId,lineNumber)
+       DebugManager.warning('inference.identifierType: implicit typing: '+symtabEntry.typePrint()+' '+anId,lineNumber,DebugManager.WarnType.implicit)
     else: # no symtab entry -> try local implicit typing
        returnType = localSymtab.implicit[anId[0]]
        if (returnType):
-           DebugManager.warning('inference.identifierType: implicit typing: '+SymtabEntry.ourTypePrint(returnType)+' '+anId,lineNumber)
+           DebugManager.warning('inference.identifierType: implicit typing: '+SymtabEntry.ourTypePrint(returnType)+' '+anId,lineNumber,DebugManager.WarnType.implicit)
     if not returnType:
        raise InferenceError('inference.identifierType: No type could be determined for identifier "'+anId+'"',lineNumber)
     return returnType
