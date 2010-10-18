@@ -1094,74 +1094,81 @@ class TestIOtmt(TestCase):
     def test0(self):
         '''write statement with defaults in io_ctrl_spec_list'''
         theString = 'write(*,*) x+1,y,i'
-        theRepr = WriteStmt('write',['*','*'],[Ops('+','x','1'),'y','i'])
+        theRepr = WriteStmt(['*','*'],[Ops('+','x','1'),'y','i'])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test1(self):
         '''formatted write statement'''
         theString = 'write(2,"(A,I3,A,I3,A,EN26.16E3)") "F(",i,",",k,")=",res_adj(i,k)'
-        theRepr = WriteStmt('write',['2','"(A,I3,A,I3,A,EN26.16E3)"'],['"F("','i','","',"k",'")="',App('res_adj',['i','k'])])
+        theRepr = WriteStmt(['2','"(A,I3,A,I3,A,EN26.16E3)"'],['"F("','i','","',"k",'")="',App('res_adj',['i','k'])])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test2(self):
         '''write statement with extra arguments'''
         theString = 'write(*,*,ADVANCE="NO") x+1,y,i'
-        theRepr = WriteStmt('write',['*','*',NamedParam('ADVANCE','"NO"')],[Ops('+','x','1'),'y','i'])
+        theRepr = WriteStmt(['*','*',NamedParam('ADVANCE','"NO"')],[Ops('+','x','1'),'y','i'])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test3(self):
         '''read statement with defaults in io_ctrl_spec_list'''
         theString = 'read(*,*) x,y,i'
-        theRepr = ReadStmt('read',['*','*'],['x','y','i'])
+        theRepr = ReadStmt(['*','*'],['x','y','i'])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test4(self):
         '''formatted read statement'''
         theString = 'read(2,"(A,I3,A,I3,A,EN26.16E3)") "F(",i,",",k,")=",res_adj(i,k)'
-        theRepr = ReadStmt('read',['2','"(A,I3,A,I3,A,EN26.16E3)"'],['"F("','i','","',"k",'")="',App('res_adj',['i','k'])])
+        theRepr = ReadStmt(['2','"(A,I3,A,I3,A,EN26.16E3)"'],['"F("','i','","',"k",'")="',App('res_adj',['i','k'])])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test5(self):
         '''read statement with extra arguments'''
         theString = 'read(*,*,REC=1) x,y,i'
-        theRepr = ReadStmt('read',['*','*',NamedParam('REC','1')],['x','y','i'])
+        theRepr = ReadStmt(['*','*',NamedParam('REC','1')],['x','y','i'])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test6(self):
         '''read statement with simpler syntax'''
         theString = 'read *,x,y,i'
-        theRepr = SimpleReadStmt('read','*',['x','y','i'])
+        theRepr = SimpleReadStmt('*',['x','y','i'])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test7(self):
         '''print statement'''
         theString = 'print *,x+1,y,i'
-        theRepr = PrintStmt('print','*',[Ops('+','x','1'),'y','i'])
+        theRepr = PrintStmt('*',[Ops('+','x','1'),'y','i'])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test8(self):
         '''write statement with more extra arguments'''
         theString = 'write(UNIT=pi_double,FMT=*) pi'
-        theRepr = WriteStmt('write',[NamedParam('UNIT','pi_double'),NamedParam('FMT','*')],['pi'])
+        theRepr = WriteStmt([NamedParam('UNIT','pi_double'),NamedParam('FMT','*')],['pi'])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test9(self):
         '''write statement with problematic forward slash in string constant (from SCALE: scalelib/html_M.f90)'''
         theString = "write(unit,'(a)') ' <APPLET \'"
-        theRepr = WriteStmt('write',['unit',"'(a)'"],["' <APPLET '"])
+        theRepr = WriteStmt(['unit',"'(a)'"],["' <APPLET '"])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
 
+    def test10(self):
+        '''print statement with format only'''
+        theString = "print 1542"
+        theRepr = PrintStmt('1542',[])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
 
 class TestGotoStmt(TestCase):
     '''goto statements'''
