@@ -2434,9 +2434,19 @@ class GotoStmt(Exec):
             ((thekw,theLabel),rest)=simplePatn(scan)
             theStmt=SimpleGotoStmt(theLabel,lineNumber,rest=rest)
         except :
-            computedPatn=seq(lit(GotoStmt.kw),lit('('),cslist(int),lit(')'),zo1(lit(',')),Exp)
-            ((kwS,pl,labelList,pr,optComma,theExpr),rest)=computedPatn(scan)
-            theStmt=ComputedGotoStmt(labelList,theExpr,lineNumber,rest=rest)
+            try: 
+                computedPatn=seq(lit(GotoStmt.kw),lit('('),cslist(int),lit(')'),zo1(lit(',')),Exp)
+                ((kwS,pl,labelList,pr,optComma,theExpr),rest)=computedPatn(scan)
+                theStmt=ComputedGotoStmt(labelList,theExpr,lineNumber,rest=rest)
+            except :
+                assignedPatn=seq(lit(GotoStmt.kw),id,zo1(seq(zo1(lit(',')),lit('('),cslist(int),lit(')'))))
+                assignedExtract=treat(assignedPatn,lambda l:(l[1],
+                                                             len(l[2]) # have the optional label list 
+                                                             and 
+                                                             l[2][0][2] # extract it
+                                                             or [])) # without the optional label list
+                ((var,labelList),rst)=assignedExtract(scan)
+                theStmt=AssignedGotoStmt(var,labelList,lineNumber,rest=rst)
         return theStmt
     
 class SimpleGotoStmt(GotoStmt):
@@ -2450,6 +2460,21 @@ class SimpleGotoStmt(GotoStmt):
         return self.__class__.kw_str+' '+self.targetLabel\
                +''.join(self.internal)
 
+class AssignedGotoStmt(GotoStmt):
+    _sons = ['var','labelList']
+    
+    def __init__(self,var,labelList,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.labelList = labelList
+        self.var = var
+        Exec.__init__(self,lineNumber,label,lead,internal,rest)
+        
+    def __str__(self):
+        rStr=self.__class__.kw_str+' '+self.var
+        if self.labelList:
+            rStr+=' ('+','.join(self.labelList)+')'
+        return rStr\
+               +''.join(self.internal)
+                   
 class ComputedGotoStmt(GotoStmt):
     _sons = ['labelList','expr']
 
@@ -2591,6 +2616,36 @@ class BackspaceStmt(Exec):
             paramlist.append(''.join(str(elt) for elt in param))
         return '%s (%s)' % (self.kw,unitspec+','+','.join(paramlist))
 
+class DeletedAssignStmt(Exec):
+    ''' 
+    old style ASSIGN statement which was deleted in the F95 standard
+    we parse it so we complain about it 
+    '''
+    kw = 'assign'
+    kw_str = kw
+    to = 'to'
+
+    @staticmethod
+    def parse(ws_scan,lineNumber):
+        scan = filter(lambda x: x != ' ',ws_scan)
+        patn = seq(lit(DeletedAssignStmt.kw),int,lit('to'),id)
+        ((kwString,assignedLabel,toString,var),rst)=patn(scan)
+        return DeletedAssignStmt(assignedLabel,var,kwString,toString,lineNumber,rest=rst)
+
+    def __init__(self,assignedLabel,var,kwString=kw,toString=to,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.assignedLabel=assignedLabel
+        self.var=var
+        self.kwString=kwString
+        self.toString=toString
+        Exec.__init__(self,lineNumber,label,lead,internal,rest)
+
+    def __repr__(self):
+        return self.__class__.__name__+'('+self.assignedLabel+','+self.var+')'
+
+    def __str__(self):
+        return '%s %s %s %s' % (self.kwString,self.assignedLabel,self.toString,self.var\
+                                +''.join(self.internal))
+
 class BuiltinExec(Exec):
 
     @classmethod
@@ -2708,7 +2763,8 @@ kwBuiltInTypesTbl= dict(
     real            = RealStmt
     )
 
-kwtbl = dict(blockdata       = BlockdataStmt,
+kwtbl = dict(assign          = DeletedAssignStmt,
+             blockdata       = BlockdataStmt,
              common          = CommonStmt,
              data            = DataStmt,
              implicit        = ImplicitStmt,

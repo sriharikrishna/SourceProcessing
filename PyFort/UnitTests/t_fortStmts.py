@@ -1194,6 +1194,37 @@ class TestGotoStmt(TestCase):
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals('go to (10,20,30) i+3',str(theRepr)) # always printed lowercase with space and without optional comma
 
+class TestDeletedStmts(TestCase):
+    ''' test deleted statements we parse so we can identify them in the code without parser errors '''
+
+    def test1(self):
+        '''ASSIGN statment (deleted from standard)'''
+        theString = 'assign 100 to icall'
+        theRepr = DeletedAssignStmt('100','icall')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr)) 
+
+    def test2(self):
+        '''assigned GOTO statment (deleted from standard)'''
+        theString = 'go to icall (10,20)'
+        theRepr = AssignedGotoStmt('icall',['10','20'])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr)) 
+
+    def test3(self):
+        '''assigned GOTO statment without label list (deleted from standard)'''
+        theString = 'go to icall'
+        theRepr = AssignedGotoStmt('icall',[])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr)) 
+
+    def test2(self):
+        '''assigned GOTO statment with optional comma (deleted from standard)'''
+        theString = 'go to icall , (10,20)'
+        theRepr = AssignedGotoStmt('icall',['10','20'])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString[:theString.index(',')-1]+theString[theString.index(',')+1:],str(theRepr)) # printed without the comma
+
 class TestDataStmt(TestCase):
     '''data statements'''
 
@@ -1529,7 +1560,8 @@ suite = asuite(C2,C3,C4,C5,C6,C8,C9,
                TestExitStmt,
                TestOpenStmt,
                TestRewindStmt,
-               TestCloseStmt)
+               TestCloseStmt,
+               TestDeletedStmts)
 
 if __name__ == '__main__':
     sys.exit(runit(suite))
