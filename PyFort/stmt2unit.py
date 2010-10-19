@@ -463,6 +463,11 @@ def _endInterface(anEndInterfaceStmt,cur):
     DebugManager.debug('[Line '+str(anEndInterfaceStmt.lineNumber)+']: stmt2unit._endInterface('+str(anEndInterfaceStmt)+')')
     return anEndInterfaceStmt
 
+def _processLabels(aStmt,curr):
+    if (isinstance(aStmt,fs.DoStmt) and aStmt.doLabel):
+        curr.val.symtab.enterLabelRef(aStmt.doLabel,aStmt)
+    return aStmt
+
 fs.GenStmt.unit_action            = lambda s,*rest,**kw: s
 fs.GenStmt.unit_entry             = lambda s,*rest,**kw: s
 fs.GenStmt.unit_exit              = lambda s,*rest,**kw: s
