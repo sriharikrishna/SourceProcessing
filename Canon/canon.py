@@ -23,11 +23,11 @@ _tmp_prefix   = 'oad_ctmp'
 
 class CanonError(Exception):
     '''exception for errors that occur during canonicalization'''
-    keepGoing=False
+    _keepGoing=False
     
     @staticmethod
     def keepGoing():
-        keepGoing=True
+        CanonError._keepGoing=True
 
     def __init__(self,msg,lineNumber):
         self.msg  = msg
@@ -374,7 +374,7 @@ class UnitCanonicalizer(object):
                                              lead=anElseifStmt.lead)
         if len(self.__myNewExecs) > newExecsLength: # this is the case iff some new statements were inserted
             e=CanonError('elseif test-component "'+str(anElseifStmt.test)+'" requires hoisting, but the placement of the extra assignment(s) is problematic.',anElseifStmt.lineNumber)
-            if CanonError.keepGoing:
+            if CanonError._keepGoing:
                 DebugManager.warning(e.msg,e.lineNumber,DebugManager.WarnType.hoisting)
             else:
                 raise e
