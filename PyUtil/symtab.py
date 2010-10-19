@@ -43,6 +43,7 @@ class Symtab(object):
     def __init__(self,parent=None):
         self.ids    = cDict()
         self.parent = parent
+        self.labelRefs = {} # list of statements refering to a given label 
         self.default_implicit()
 
     def default_implicit(self):
@@ -160,6 +161,13 @@ class Symtab(object):
                 self.ids[anOnlyItem.lhs].renameSource = anOnlyItem.rhs
             else:
                 self.ids[anOnlyItem] = aModuleUnit.symtab.replicateEntry(anOnlyItem,'module:'+aModuleUnit.name())
+
+    def enterLabelRef(self,label,labelRef):
+        if self.labelRefs.has_key(label) :
+            if (not labelRef in self.labelRefs[label]):
+                self.labelRefs[label].append(labelRef)
+        else:
+            self.labelRefs[label]=[labelRef]
 
     def debug(self):
         outString = 'symbol table '+str(self)+':\n'
