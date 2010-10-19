@@ -487,6 +487,8 @@ fs.EndFunctionStmt.unit_exit      = _unit_exit
 fs.AssignStmt.is_decl         = _is_stmt_fn
 fs.AssignStmt.unit_action     = _assign2stmtfn
 
+fs.DoStmt.unit_action         = _processLabels
+
 fs.DimensionStmt.unit_action = _processDimensionStmt
 
 fs.ExternalStmt.unit_action  = _processExternalStmt
