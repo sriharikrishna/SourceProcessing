@@ -42,6 +42,8 @@ class UnitCanonicalizer(object):
     _createResultDeclFlag = False
     _keepFunctionDecl = True
     _subroutinizeIntegerFunctions = False
+    
+    _ourPassiveTypes=[fs.IntegerStmt,fs.CharacterStmt]
 
     @staticmethod
     def setHoistConstantsFlag(hoistConstantsFlag):
@@ -448,7 +450,7 @@ class UnitCanonicalizer(object):
         if isinstance(exp,fe.App):
             if ((not isArrayReference(exp,self.__myUnit.symtab,parentStmt.lineNumber))
                 and
-                (not appType(exp,self.__myUnit.symtab,parentStmt.lineNumber)[0]== fs.IntegerStmt)):
+                (not appType(exp,self.__myUnit.symtab,parentStmt.lineNumber)[0] in UnitCanonicalizer._ourPassiveTypes)):
                 newExp = self.__hoistExpression(exp,parentStmt,paramName)
         elif isinstance(exp,fe.Ops):
             newExp = fe.Ops(exp.op,
