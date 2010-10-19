@@ -333,6 +333,19 @@ class UnitCanonicalizer(object):
            canonicalizing the test component and the conditionally executed statement'''
         # the replacement statement should be the endif
         DebugManager.debug(self.__recursionDepth*'|\t'+'canonicalizing if statement (without "then") "'+str(anIfNonThenStmt)+'" => replacing with an if-then statement')
+        if (anIfNonThenStmt.label 
+            and 
+            self.__myUnit.symtab.labelRefs.has_key(str(anIfNonThenStmt.label)) 
+            and 
+            any(map(lambda l: isinstance(l,fs.DoStmt),self.__myUnit.symtab.labelRefs[str(anIfNonThenStmt.label)]))):
+            # DO terminated by IfNonThenStmt
+            e=CanonError('IF statement "'+str(anIfNonThenStmt)+'" terminates DO construct "'\
+                         +str((filter(lambda l: isinstance(l,fs.DoStmt),self.__myUnit.symtab.labelRefs[str(anIfNonThenStmt.label)]))[0])\
+                         +'" and cannot be converted to an IF construct.',anIfNonThenStmt.lineNumber)
+            if CanonError._keepGoing:
+                DebugManager.warning(e.msg,e.lineNumber,DebugManager.WarnType.ifStmtToIfConstr)
+            else:
+                raise e
         self.__recursionDepth += 1
         # first append the new IfThenStmt
         self.__myNewExecs.append(fs.IfThenStmt(self.__canonicalizeExpression(anIfNonThenStmt.test,anIfNonThenStmt),
