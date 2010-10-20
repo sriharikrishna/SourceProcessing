@@ -475,6 +475,7 @@ fs.SubroutineStmt.makeSymtabEntry = _makeSubroutineSymtabEntry
 fs.GenStmt.unit_entry             = lambda s,*rest,**kw: s  # on start of a unit
 fs.GenStmt.unit_exit              = lambda s,*rest,**kw: s  # on exit of a unit
 fs.GenStmt.decl2unitAction        = lambda s,*rest,**kw: s  # for statements that have is_decl returning true
+fs.GenStmt.exec2unitAction        = lambda s,*rest,**kw: s  # for statements that have is_exec returning true
 
 # subroutine / function definitions are units 
 fs.SubroutineStmt.unit_entry      = _unit_entry         # start definition 
@@ -517,4 +518,4 @@ fs.EndInterfaceStmt.decl2unitAction = _endInterface           # unsets unit.val.
 fs.AssignStmt.is_decl             = _is_stmt_fn 
 fs.AssignStmt.decl2unitAction     = _assign2stmtfn
 
-fs.DoStmt.decl2unitAction         = _processLabels
+fs.DoStmt.exec2unitAction         = _processLabels
