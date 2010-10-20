@@ -32,10 +32,15 @@ def install_pat(cur):
         print 'looking at:',s
         return s
 
-    def action(cur):
-        def _action(self):
-            return self.unit_action(cur)
-        return _action
+    def declAction(cur):
+        def _declAction(self):
+            return self.decl2unitAction(cur)
+        return _declAction
+
+    def execAction(cur):
+        def _execAction(self):
+            return self.exec2unitAction(cur)
+        return _execAction
     
     _ustart    = lambda s: s.is_ustart() # set in fortStmts, true for block data, module, function, subroutine, program
     _uend      = lambda s: s.is_uend() # set in fortStmts, true for the respective end statements
@@ -45,9 +50,9 @@ def install_pat(cur):
     cblk       = pred(lambda s: s.is_comment()) # set in fortStmts, true for Comments only
     ulist_pre  = pred(lambda s: s.is_contains()) # set in fortStmts, true for ContainsStmt only
     # for the following: is_decl is set in fortStmts and true for all subclasses of Decl except for ContainsStmt and EndStmt when not in an interface
-    # the "action" refers to the unit_action of a Statement which is set in stmt2unit; this - however - is executed only when is_decl is true
-    adecl      = treat(pred(lambda s: s.is_decl(cur)),action(cur))
-    aexec      = pred(lambda s: s.is_exec()) # is exec is set in fortStmts, true for Exec and all subclasses except for EndStmt and its subclasses
+    # the "action" refers to the decl2unitAction of a Statement which is set in stmt2unit; this - however - is executed only when is_decl is true
+    adecl      = treat(pred(lambda s: s.is_decl(cur)),declAction(cur))
+    aexec      = treat(pred(lambda s: s.is_exec()),execAction(cur)) # is exec is set in fortStmts, true for Exec and all subclasses except for EndStmt and its subclasses
 
     # tuple of shorter names for the following:
     (c,u,d,x,n,e) = (cblk,      # comment block

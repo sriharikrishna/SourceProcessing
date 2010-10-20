@@ -88,7 +88,7 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
             if theSymtabEntry: # already in symtab -> enter new information (taking exception to any conflicts)
                 DebugManager.debug('decl "'+str(aDecl)+'" already present in local symbol table as '+str(theSymtabEntry.debug(name)))
                 theSymtabEntry.enterType(newType)
-                if (theSymtabEntry.origin and (_commonPrefix in theSymtabEntry.origin) and theSymtabEntry.dimensions and (newDimensions is None)):
+                if (theSymtabEntry.dimensions and (newDimensions is None)):
                     pass
                 else:
                     theSymtabEntry.enterDimensions(newDimensions)
@@ -259,12 +259,6 @@ def _use_module(aUseStmt,cur):
             DebugManager.warning('definition for module '+aUseStmt.moduleName+' not seen in the input.',aUseStmt.lineNumber)
     return aUseStmt
 
-def _makeFunctionEntry(aFunctionStmt,localSymtab):
-    return SymtabEntry(SymtabEntry.FunctionEntryKind,aFunctionStmt.ty)
-
-def _makeSubroutineEntry(self,localSymtab):
-    return SymtabEntry(SymtabEntry.SubroutineEntryKind)
-
 def _unit_entry(self,cur):
     '''enter a subroutine or function into:
        1. The local symtab for the object
@@ -279,7 +273,7 @@ def _unit_entry(self,cur):
             or
             mpSymTabEntry.genericInfo is None):
             raise SymtabError('parent symbol is not a module procedure')
-        entry = self.make_unit_entry(currentSymtab)
+        entry = self.makeSymtabEntry(currentSymtab)
         mpSymTabEntry.entryKind=entry.entryKind
         mpSymTabEntry.type=entry.type
         entry.genericInfo=mpSymTabEntry.genericInfo
@@ -298,7 +292,7 @@ def _unit_entry(self,cur):
         else :
             DebugManager.debug('\tstmt2unit._unit_entry() parent symboltable entry '+mpSymTabEntry.debug(self.name)+' self entry '+entry.debug(self.name))
     else: 
-        entry = self.make_unit_entry(currentSymtab)
+        entry = self.makeSymtabEntry(currentSymtab)
         currentSymtab.enter_name(self.name,entry)
         DebugManager.debug('[Line '+str(self.lineNumber)+']: new unit symtab entry '+entry.debug(self.name))
         if currentSymtab.parent:
@@ -353,7 +347,7 @@ def _beginProcedureUnit(aProcedureDeclStmt,cur):
                       +' called for '+aProcedureDeclStmt.__class__.__name__+': "'+str(aProcedureDeclStmt)+'"' \
                       +' changing from current symtab "'+str(cur.val.symtab)+'"' \
                       +' to local symtab "'+str(localSymtab)+'"')
-    entry = aProcedureDeclStmt.make_unit_entry(localSymtab)
+    entry = aProcedureDeclStmt.makeSymtabEntry(localSymtab)
     localSymtab.enter_name(aProcedureDeclStmt.name,entry)
     cur.val.symtab.enter_name(aProcedureDeclStmt.name,entry)
     cur.val.symtab = localSymtab
@@ -463,41 +457,65 @@ def _endInterface(anEndInterfaceStmt,cur):
     DebugManager.debug('[Line '+str(anEndInterfaceStmt.lineNumber)+']: stmt2unit._endInterface('+str(anEndInterfaceStmt)+')')
     return anEndInterfaceStmt
 
-fs.GenStmt.unit_action            = lambda s,*rest,**kw: s
-fs.GenStmt.unit_entry             = lambda s,*rest,**kw: s
-fs.GenStmt.unit_exit              = lambda s,*rest,**kw: s
+def _processLabels(aStmt,curr):
+    if (isinstance(aStmt,fs.DoStmt) and aStmt.doLabel):
+        curr.val.symtab.enterLabelRef(aStmt.doLabel,aStmt)
+    return aStmt
 
-fs.SubroutineStmt.unit_entry      = _unit_entry
-fs.SubroutineStmt.make_unit_entry = _makeSubroutineEntry
-fs.SubroutineStmt.unit_action     = _beginProcedureUnit
-fs.EndSubroutineStmt.unit_action  = _endProcedureUnit
-fs.EndSubroutineStmt.unit_exit    = _unit_exit
+# hooks used ONLY IN THIS MODULE:
+def _makeFunctionSymtabEntry(aFunctionStmt,localSymtab):
+    return SymtabEntry(SymtabEntry.FunctionEntryKind,aFunctionStmt.ty)
+fs.FunctionStmt.makeSymtabEntry   = _makeFunctionSymtabEntry
+def _makeSubroutineSymtabEntry(self,localSymtab):
+    return SymtabEntry(SymtabEntry.SubroutineEntryKind)
+fs.SubroutineStmt.makeSymtabEntry = _makeSubroutineSymtabEntry
 
-fs.FunctionStmt.unit_entry        = _unit_entry
-fs.FunctionStmt.make_unit_entry   = _makeFunctionEntry
-fs.FunctionStmt.unit_action       = _beginProcedureUnit
-fs.EndFunctionStmt.unit_action    = _endProcedureUnit
-fs.EndFunctionStmt.unit_exit      = _unit_exit
+# all hooks below are used by fortUnit:
+# no-op for everybody as a baseline to be overridden: 
+fs.GenStmt.unit_entry             = lambda s,*rest,**kw: s  # on start of a unit
+fs.GenStmt.unit_exit              = lambda s,*rest,**kw: s  # on exit of a unit
+fs.GenStmt.decl2unitAction        = lambda s,*rest,**kw: s  # for statements that have is_decl returning true
+fs.GenStmt.exec2unitAction        = lambda s,*rest,**kw: s  # for statements that have is_exec returning true
 
-fs.AssignStmt.is_decl         = _is_stmt_fn
-fs.AssignStmt.unit_action     = _assign2stmtfn
+# subroutine / function definitions are units 
+fs.SubroutineStmt.unit_entry      = _unit_entry         # start definition 
+fs.EndSubroutineStmt.unit_exit    = _unit_exit          # end definition 
+fs.FunctionStmt.unit_entry        = _unit_entry         # start definition  
+fs.EndFunctionStmt.unit_exit      = _unit_exit          # end definition
 
-fs.DimensionStmt.unit_action = _processDimensionStmt
+# a derived type definition is a pseudo sub unit;
+# the symbol table contents is merged with the enclosing
+# unit's symbol table. 
+fs.DrvdTypeDefn.decl2unitAction       = _beginDrvdTypeDefn  # start definition
+fs.EndDrvdTypeDefn.decl2unitAction    = _endDrvdTypeDefn    # end definition
 
-fs.ExternalStmt.unit_action  = _processExternalStmt
 
-fs.TypeDecl.unit_action       = _processTypedeclStmt
+# the following are all related to declaration statements,
+# the hooks update the symbol table
+fs.DimensionStmt.decl2unitAction      = _processDimensionStmt
+fs.ExternalStmt.decl2unitAction       = _processExternalStmt
+fs.TypeDecl.decl2unitAction           = _processTypedeclStmt
+fs.CommonStmt.decl2unitAction         = _processCommonStmt
+fs.UseStmt.decl2unitAction            = _use_module
+fs.ImplicitNone.decl2unitAction       = _implicit_none
+fs.ImplicitStmt.decl2unitAction       = _implicit
+fs.ProcedureStmt.decl2unitAction      = _processProcedureStmt # always in an interface
 
-fs.CommonStmt.unit_action     = _processCommonStmt
+fs.InterfaceStmt.decl2unitAction      = _beginInterface       # sets unit.val._in_iface which affects is_decl return for some statement classes
+# the is_decl implementation looks at the value of unit.val._in_iface for the following classes;
+# i.e. the following hooks are called only when unit.val._in_iface is set, that is, because we are in an interface
+# we are looking at a declaration of a function or subroutine and not at a definition. 
+fs.SubroutineStmt.decl2unitAction     = _beginProcedureUnit   # start declaration 
+fs.EndSubroutineStmt.decl2unitAction  = _endProcedureUnit     # end declaration   
+fs.FunctionStmt.decl2unitAction       = _beginProcedureUnit   # start declaration 
+fs.EndFunctionStmt.decl2unitAction    = _endProcedureUnit     # end declaration 
+fs.EndInterfaceStmt.decl2unitAction = _endInterface           # unsets unit.val._in_iface which affects is_decl return for some statement classes
 
-fs.UseStmt.unit_action        = _use_module
+# special case turns an Exec statement into a Decl statement:
+# _is_stmt_fn determines if an assignment is a statement function and if yes
+# then is_decl will return yes and what was an executable AssignStmt will be
+# turned into a StmtFnStmt instance 
+fs.AssignStmt.is_decl             = _is_stmt_fn 
+fs.AssignStmt.decl2unitAction     = _assign2stmtfn
 
-fs.ImplicitNone.unit_action   = _implicit_none
-fs.ImplicitStmt.unit_action   = _implicit
-
-fs.InterfaceStmt.unit_action  = _beginInterface
-fs.ProcedureStmt.unit_action  = _processProcedureStmt
-fs.EndInterfaceStmt.unit_action = _endInterface
-
-fs.DrvdTypeDefn.unit_action = _beginDrvdTypeDefn 
-fs.EndDrvdTypeDefn.unit_action = _endDrvdTypeDefn 
+fs.DoStmt.exec2unitAction         = _processLabels

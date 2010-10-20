@@ -43,6 +43,7 @@ class Symtab(object):
     def __init__(self,parent=None):
         self.ids    = cDict()
         self.parent = parent
+        self.labelRefs = {} # list of statements refering to a given label 
         self.default_implicit()
 
     def default_implicit(self):
@@ -161,6 +162,13 @@ class Symtab(object):
             else:
                 self.ids[anOnlyItem] = aModuleUnit.symtab.replicateEntry(anOnlyItem,'module:'+aModuleUnit.name())
 
+    def enterLabelRef(self,label,labelRef):
+        if self.labelRefs.has_key(label) :
+            if (not labelRef in self.labelRefs[label]):
+                self.labelRefs[label].append(labelRef)
+        else:
+            self.labelRefs[label]=[labelRef]
+
     def debug(self):
         outString = 'symbol table '+str(self)+':\n'
         for aKey in self.ids.keys():
@@ -173,7 +181,7 @@ class Symtab(object):
 class SymtabEntry(object):
     def __init__(self,entryKind,type=None,dimensions=None,length=None,origin=None,renameSource=None,isPrivate=False):
         self.entryKind = entryKind # some instanve of self.GenericEntryKind
-        self.type = type # type class 
+        self.type = type # pair  (type class,type modifier) 
         self.dimensions = dimensions # None or list of expressions
         self.length = length
         self.origin = origin # None | [<parent origin>'|'](| 'local' | 'external' | 'temp' | 'common:'[<common block name])
@@ -182,6 +190,15 @@ class SymtabEntry(object):
         self.genericInfo = None
         self.memberOfDrvdType = None
 
+    @staticmethod
+    def ourTypePrint(type):
+        rstr=type[0].kw_str
+        rstr+=len(type[1]) and str(type[1][0]) or ''
+        return rstr
+    
+    def typePrint(self):
+        return SymtabEntry.ourTypePrint(self.type)
+        
     def enterEntryKind(self,newEntryKind):
         # the replacement entry kind must be an 'instance' of the existing one.
         # for example, we can replace a procedureKind with a functionKind,

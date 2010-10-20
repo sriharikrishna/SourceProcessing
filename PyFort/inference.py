@@ -126,11 +126,11 @@ def identifierType(anId,localSymtab,lineNumber):
        if implicitLocalType: # we handle the error condition below
            symtabEntry.enterType(containingSymtab.implicit[anId[0]])
        returnType = implicitLocalType
-       DebugManager.warning('inference.identifierType: [line '+str(lineNumber)+'] implicit typing (scope ='+str(containingSymtab)+') used for identifier "'+anId+'" type ="'+str(returnType)+'"')
+       DebugManager.warning('inference.identifierType: implicit typing: '+symtabEntry.typePrint()+' '+anId,lineNumber,DebugManager.WarnType.implicit)
     else: # no symtab entry -> try local implicit typing
        returnType = localSymtab.implicit[anId[0]]
-       DebugManager.warning('inference.identifierType: [line '+str(lineNumber)+'] local scope implicit typing used for identifier "'+anId+'" type ="'+str(returnType)+'"')
-       DebugManager.debug('with implicit type '+str(returnType))
+       if (returnType):
+           DebugManager.warning('inference.identifierType: implicit typing: '+SymtabEntry.ourTypePrint(returnType)+' '+anId,lineNumber,DebugManager.WarnType.implicit)
     if not returnType:
        raise InferenceError('inference.identifierType: No type could be determined for identifier "'+anId+'"',lineNumber)
     return returnType
@@ -146,6 +146,8 @@ def intrinsicType(anIntrinsicApp,localSymtab,lineNumber):
         return (fortStmts.ComplexStmt, [])
     elif anIntrinsicApp.head.lower() == 'repeat':
         return (fortStmts.CharacterStmt, [])
+    elif anIntrinsicApp.head.lower() in ['lge','lgt','lle','llt']:
+        return (fortStmts.LogicalStmt, [])
     else:
         return typemerge([expressionType(anArg,localSymtab,lineNumber) for anArg in anIntrinsicApp.args],
                          (None,None))
@@ -329,7 +331,7 @@ def arrayReferenceShape(arrRefApp,localSymtab,lineNumber):
 def intrinsicShape(anIntrinsicApp,localSymtab,lineNumber):
     if anIntrinsicApp.head.lower() in ['reshape','matmul']:
         raise InferenceError('inference.intrinsicShape: not implemented for "'+anIntrinsicApp+'"',lineNumber)
-    if anIntrinsicApp.head.lower() in ['maxval','minval']:
+    if anIntrinsicApp.head.lower() in ['maxval','minval','lge','lgt','lle','llt']:
        return None
     else:
         return shapemerge([expressionShape(anArg,localSymtab,lineNumber) for anArg in anIntrinsicApp.args],
@@ -491,8 +493,8 @@ def isArrayReference(theApp,localSymtab,lineNumber):
         return False
     if (not theSymtabEntry.dimensions or theSymtabEntry.dimensions == ()) and \
        (not theSymtabEntry.length or theSymtabEntry.length == 1):
-#       now we know that its NOT a scalar variable, but rather a function.  so we update the symbol table with this information.
-        if (theSymtabEntry.entryKind!=SymtabEntry.InterfaceEntryKind) : 
+        #  now we know that its NOT a scalar variable, but rather a function.  so we update the symbol table with this information.
+        if (not theSymtabEntry.entryKind in [SymtabEntry.InterfaceEntryKind,SymtabEntry.StatementFunctionEntryKind]) : 
            DebugManager.debug('inference.isArrayReference: Application Expression "'+str(theApp)+\
                               '" for something that we thought was a scalar variable => assuming it\'s a function and updating the symbol table to reflect this')
            theSymtabEntry.enterEntryKind(SymtabEntry.FunctionEntryKind)

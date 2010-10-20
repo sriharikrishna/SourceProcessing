@@ -818,62 +818,45 @@ class _ImplicitDoConstruct(object):
 class DataStmt(Decl):
     kw = 'data'
     kw_str = kw
-    _sons = ['objectList','valueList']
+    _sons = ['objectValuePairList']
 
     @staticmethod
-    def parse(scan,lineNumber):
-        # FIXME we don't cover the full range of possibilities.  In particular, here is an incomplete list of the issues:
-        #  - there can be an entire comma-separated list of object-value pairs
-        #  - The values should all be constants, and NOT general expressions:
-        #      '1-1' is no good, but '-1' is.  It's just that '-1' doesnt match as a constant by the scanner (it matches as a unary expression)
-        #      the definition of "const" can't be fixed easily due to scanner particulars (sometimes we want the '-' and '1' to be separate tokens, sometimes not)
-        #  - we don't cover the optional repeat-factor for the value items (though this is handled by the fact that the values are parsed as expressions.  see previous item)
-
-            # form of data-value:
-            # [ repeat-factor * ] data-constant
-                # data-constant is one of
-                #  scalar-constant
-                #  scalar-constant-subobject
-                #  signed-integer-literal-constant
-                #  signed-real-literal-constant
-                #  null-initialization
-                #  structure-constructor
-
-        # form of DATA statement:
-        # DATA data-statement-object-list / data-value-list / [ [ , ] data-statement-object-list / data-value-list / ] ...
-            # form of data object is one of
-            #  variable
-            #  data-implied-do
-        formDataStmt = seq(lit(DataStmt.kw),        # 0 = stmt_name
-                           cslist(disj(_ImplicitDoConstruct.form, # 1 = objectList (variable or implicit do construct)
-                                  id)),
-                           lit('/'),           #
-                           cslist(Exp),        # 3 = valueList
-                           lit('/'))           #
-        formDataStmt = treat(formDataStmt, lambda x: DataStmt(x[1],x[3],stmt_name=x[0],lineNumber=lineNumber))
+    def parse(ws_scan,lineNumber):
+        ''' 
+        \todo we don't cover the full range of the DATA stmt syntax.
+        among the exceptions are: 
+         - from the dataObject pattern we subobject patterns combining App with Sel 
+         - the comma between the <dataObject,dataValue> pairs is optional 
+        '''
+        scan = filter(lambda x: x != ' ',ws_scan)
+        dataObjectListPatn=cslist(disj(_ImplicitDoConstruct.form,app1,id))
+        dataObjectValuePairListPatn=cslist(seq(dataObjectListPatn,lit('/'),cslist(Exp),lit('/')))
+        dataObjectValuePairList=treat(dataObjectValuePairListPatn,lambda l:[(le[0],le[2]) for le in l])
+        formDataStmt = seq(lit(DataStmt.kw),dataObjectValuePairList)           #
+        formDataStmt = treat(formDataStmt, lambda x: DataStmt(x[1],stmt_name=x[0],lineNumber=lineNumber))
         (theParsedStmt,rest) = formDataStmt(scan)
         theParsedStmt.rest=rest
         return theParsedStmt
 
-    def __init__(self,objectList,valueList,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
-        self.objectList = objectList
-        self.valueList = valueList
+    def __init__(self,objectValuePairList,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.objectValuePairList = objectValuePairList
         self.stmt_name = stmt_name
         Decl.__init__(self,lineNumber,label,lead,internal,rest)
 
     def __str__(self):
-        # put a space after the data keyword iff the first object is a variable
-        spaceStr = isinstance(self.objectList[0],str) and ' ' or ''
-        return '%s%s%s / %s /' % (self.stmt_name,
-                                  spaceStr,
-                                  ', '.join([str(anObject) for anObject in self.objectList]),
-                                  ', '.join([str(aValue) for aValue in self.valueList]))\
-                                  +''.join(self.internal)
+        def dumpObjectValuePair(thePair):
+            rstr=','.join(str(o) for o in thePair[0])
+            rstr+=' /'
+            rstr+=','.join(str(v) for v in thePair[1])
+            rstr+='/'
+            return rstr
+        return '%s %s' % (self.stmt_name,','.join(map(dumpObjectValuePair,self.objectValuePairList))\
+                          +''.join(self.internal))
 
     def __repr__(self):
         return self.__class__.__name__ + \
                '(' + \
-               ','.join([repr(aSon) for aSon in (self.objectList,self.valueList,self.stmt_name)]) + \
+               ','.join([repr(aSon) for aSon in self._sons]) + \
                ')'
 
 class EndInterfaceStmt(DeclLeaf):
@@ -1850,8 +1833,8 @@ class PointerAssignStmt(Exec):
 
 class IOStmt(Exec):
 
-    def __init__(self,stmt_name,ioCtrlSpecList,itemList=[],lineNumber=0,label=False,lead='',internal=[],rest=[]):
-        self.stmt_name = stmt_name
+    def __init__(self,ioCtrlSpecList,itemList,kwString,lineNumber,label,lead,internal,rest):
+        self.kwString = kwString # the actual string as given in the program
         self.ioCtrlSpecList=ioCtrlSpecList
         self.itemList=itemList
         Exec.__init__(self,lineNumber,label,lead,internal,rest)
@@ -1865,69 +1848,64 @@ class IOStmt(Exec):
 
 class SimpleSyntaxIOStmt(IOStmt):
 
-    @staticmethod
-    def parse(ws_scan,lineNumber,kw,SubClass):
+    @classmethod
+    def parse(cls,ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
-        io_stmt = seq(lit(kw),disj(lit('*'),Exp),lit(','),cslist(Exp))
-        ([kw,format,comma,itemList],rest) = io_stmt(scan)
-        return SubClass(kw,format,itemList,lineNumber,rest=rest)
+        ioStmtPatn = seq(lit(cls.kw),disj(lit('*'),Exp),zo1(seq(lit(','),cslist(Exp))))
+        ioStmtExtractList = treat(ioStmtPatn,lambda l: (l[0],l[1],len(l[2]) and l[2][0][1] or []))
+        ((kwString,format,itemList),rest) = ioStmtExtractList(scan)
+        return cls(format,itemList,kwString,lineNumber,rest=rest)
 
-    def __init__(self,stmt_name,format,itemList=[],lineNumber=0,label=False,lead='',internal=[],rest=[]):
-        IOStmt.__init__(self,stmt_name,[format],itemList,lineNumber,label,lead,internal,rest)
+    def __init__(self,format,itemList,kwString,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        IOStmt.__init__(self,[format],itemList,kwString,lineNumber,label,lead,internal,rest)
 
     def __str__(self):
-        return '%s %s,%s' % (self.stmt_name,self.ioCtrlSpecList[0],\
-                             ','.join([str(item) for item in self.itemList]))\
-                             +''.join(self.internal)
+        rstr=self.kwString+' '+str(self.ioCtrlSpecList[0])
+        if self.itemList:
+            rstr+=','+','.join(map(str,self.itemList))
+        return '%s' % (rstr\
+                       +''.join(self.internal))
 
 class PrintStmt(SimpleSyntaxIOStmt):
     kw = 'print'
     kw_str = kw
 
-    @staticmethod
-    def parse(ws_scan,lineNumber):
-        scan = filter(lambda x: x != ' ',ws_scan)
-        return SimpleSyntaxIOStmt.parse(scan,lineNumber,PrintStmt.kw, PrintStmt)
-
-    def __init__(self,kw,format,itemList,lineNumber=0,internal=[],rest=[]):
-        SimpleSyntaxIOStmt.__init__(self,kw,format,itemList,lineNumber,internal,rest)
+    def __init__(self,format,itemList,kwString=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        SimpleSyntaxIOStmt.__init__(self,format,itemList,kwString,lineNumber,internal,rest)
 
 class ComplexSyntaxIOStmt(IOStmt):
 
-    @staticmethod
-    def parse(ws_scan,lineNumber,kw,SubClass):
+    @classmethod
+    def parseAll(cls,ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
-        io_stmt = seq(lit(kw),
-                      lit('('),
-                      cslist(disj(lit('*'),NamedParmExpWithStar,Exp)),
-                      lit(')'),
-                      cslist(Exp))
-        ([kw,lbracket,ioCtrlSpecList,rbracket,itemList],rest) = io_stmt(scan)
+        ioStmt = seq(lit(cls.kw),
+                     lit('('),
+                     cslist(disj(lit('*'),NamedParmExpWithStar,Exp)),
+                     lit(')'),
+                     cslist(Exp))
+        ([kwString,lbracket,ioCtrlSpecList,rbracket,itemList],rest) = ioStmt(scan)
 
-        return SubClass(kw,ioCtrlSpecList,itemList,lineNumber=lineNumber,rest=rest)
+        return cls(ioCtrlSpecList,itemList,kwString,lineNumber=lineNumber,rest=rest)
 
-    def __init__(self,stmt_name,ioCtrlSpecList,itemList=[],lineNumber=0,label=False,lead='',internal=[],rest=[]):
-        IOStmt.__init__(self,stmt_name,ioCtrlSpecList,itemList,lineNumber,label,lead,internal,rest)
+    def __init__(self,ioCtrlSpecList,itemList,kwString,lineNumber,label,lead,internal,rest):
+        IOStmt.__init__(self,ioCtrlSpecList,itemList,kwString,lineNumber,label,lead,internal,rest)
 
     def __str__(self):
-        return '%s(%s) %s' % (self.stmt_name,
-                              ','.join([str(ioCtrl)
-                                        for ioCtrl in self.ioCtrlSpecList]),
-                              ','.join([str(item) for item in self.itemList]))\
-                              +''.join(self.internal)
+        return '%s(%s) %s' % (self.kwString,
+                              ','.join(map(str,self.ioCtrlSpecList)),
+                              ','.join(map(str,self.itemList))\
+                              +''.join(self.internal))
 
 class SimpleReadStmt(SimpleSyntaxIOStmt):
-    ''' the version that only has format but not a full ioCtrlSpecList; its parse method
-    is only called as a fallback on failure of ReadStmt.parse '''
+    ''' 
+    syntax variant that has only format but not a full ioCtrlSpecList; 
+    its parse method is only called as a fallback on failure of ReadStmt.parse 
+    '''
     kw = 'read'
     kw_str = kw
-    
-    @staticmethod
-    def parse(ws_scan,lineNumber):
-        return SimpleSyntaxIOStmt.parse(ws_scan,lineNumber,SimpleReadStmt.kw, SimpleReadStmt)
 
-    def __init__(self,kw,format,itemList,lineNumber=0,internal=[],rest=[]):
-        SimpleSyntaxIOStmt.__init__(self,kw,format,itemList,lineNumber,internal,rest)
+    def __init__(self,format,itemList,kwString=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        SimpleSyntaxIOStmt.__init__(self,format,itemList,kwString,lineNumber,label,lead,internal,rest)
 
 class ReadStmt(ComplexSyntaxIOStmt):
     kw = 'read'
@@ -1936,14 +1914,13 @@ class ReadStmt(ComplexSyntaxIOStmt):
     
     @staticmethod
     def parse(ws_scan,lineNumber):
-        scan = filter(lambda x: x != ' ',ws_scan)
         try : 
-            return ComplexSyntaxIOStmt.parse(scan,lineNumber,ReadStmt.kw,ReadStmt)
+            return ReadStmt.parseAll(ws_scan,lineNumber)
         except ListAssemblerException,e:
-            return SimpleReadStmt.parse(scan,lineNumber)
+            return SimpleReadStmt.parse(ws_scan,lineNumber)
 
-    def __init__(self,stmt_name=kw,ioCtrlSpecList=[],itemList=[],lineNumber=0,label=False,lead='',internal=[],rest=[]):
-        IOStmt.__init__(self,stmt_name,ioCtrlSpecList,itemList,lineNumber,label,lead,internal,rest)
+    def __init__(self,ioCtrlSpecList,itemList,kwString=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        IOStmt.__init__(self,ioCtrlSpecList,itemList,kwString,lineNumber,label,lead,internal,rest)
     
 class WriteStmt(ComplexSyntaxIOStmt):
     kw = 'write'
@@ -1952,13 +1929,10 @@ class WriteStmt(ComplexSyntaxIOStmt):
 
     @staticmethod
     def parse(ws_scan,lineNumber):
-        scan = filter(lambda x: x != ' ',ws_scan)
-        return ComplexSyntaxIOStmt.parse(scan,lineNumber,WriteStmt.kw,WriteStmt)
+        return WriteStmt.parseAll(ws_scan,lineNumber)
 
-    # rest is a temp. fix. implicit loops in WriteStmts should be
-    # fully parsed in ComplexSyntaxIOStmt
-    def __init__(self,stmt_name=kw,ioCtrlSpecList=[],itemList=[],lineNumber=0,label=False,lead='',internal=[],rest=[]):
-        ComplexSyntaxIOStmt.__init__(self,stmt_name,ioCtrlSpecList,itemList,lineNumber,label,lead,internal,rest)
+    def __init__(self,ioCtrlSpecList,itemList,kwString=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        ComplexSyntaxIOStmt.__init__(self,ioCtrlSpecList,itemList,kwString,lineNumber,label,lead,internal,rest)
 
 class FormatStmt(Exec):
     kw = 'format'
@@ -2460,9 +2434,19 @@ class GotoStmt(Exec):
             ((thekw,theLabel),rest)=simplePatn(scan)
             theStmt=SimpleGotoStmt(theLabel,lineNumber,rest=rest)
         except :
-            computedPatn=seq(lit(GotoStmt.kw),lit('('),cslist(int),lit(')'),zo1(lit(',')),Exp)
-            ((kwS,pl,labelList,pr,optComma,theExpr),rest)=computedPatn(scan)
-            theStmt=ComputedGotoStmt(labelList,theExpr,lineNumber,rest=rest)
+            try: 
+                computedPatn=seq(lit(GotoStmt.kw),lit('('),cslist(int),lit(')'),zo1(lit(',')),Exp)
+                ((kwS,pl,labelList,pr,optComma,theExpr),rest)=computedPatn(scan)
+                theStmt=ComputedGotoStmt(labelList,theExpr,lineNumber,rest=rest)
+            except :
+                assignedPatn=seq(lit(GotoStmt.kw),id,zo1(seq(zo1(lit(',')),lit('('),cslist(int),lit(')'))))
+                assignedExtract=treat(assignedPatn,lambda l:(l[1],
+                                                             len(l[2]) # have the optional label list 
+                                                             and 
+                                                             l[2][0][2] # extract it
+                                                             or [])) # without the optional label list
+                ((var,labelList),rst)=assignedExtract(scan)
+                theStmt=AssignedGotoStmt(var,labelList,lineNumber,rest=rst)
         return theStmt
     
 class SimpleGotoStmt(GotoStmt):
@@ -2476,6 +2460,21 @@ class SimpleGotoStmt(GotoStmt):
         return self.__class__.kw_str+' '+self.targetLabel\
                +''.join(self.internal)
 
+class AssignedGotoStmt(GotoStmt):
+    _sons = ['var','labelList']
+    
+    def __init__(self,var,labelList,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.labelList = labelList
+        self.var = var
+        Exec.__init__(self,lineNumber,label,lead,internal,rest)
+        
+    def __str__(self):
+        rStr=self.__class__.kw_str+' '+self.var
+        if self.labelList:
+            rStr+=' ('+','.join(self.labelList)+')'
+        return rStr\
+               +''.join(self.internal)
+                   
 class ComputedGotoStmt(GotoStmt):
     _sons = ['labelList','expr']
 
@@ -2617,6 +2616,36 @@ class BackspaceStmt(Exec):
             paramlist.append(''.join(str(elt) for elt in param))
         return '%s (%s)' % (self.kw,unitspec+','+','.join(paramlist))
 
+class DeletedAssignStmt(Exec):
+    ''' 
+    old style ASSIGN statement which was deleted in the F95 standard
+    we parse it so we complain about it 
+    '''
+    kw = 'assign'
+    kw_str = kw
+    to = 'to'
+
+    @staticmethod
+    def parse(ws_scan,lineNumber):
+        scan = filter(lambda x: x != ' ',ws_scan)
+        patn = seq(lit(DeletedAssignStmt.kw),int,lit('to'),id)
+        ((kwString,assignedLabel,toString,var),rst)=patn(scan)
+        return DeletedAssignStmt(assignedLabel,var,kwString,toString,lineNumber,rest=rst)
+
+    def __init__(self,assignedLabel,var,kwString=kw,toString=to,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.assignedLabel=assignedLabel
+        self.var=var
+        self.kwString=kwString
+        self.toString=toString
+        Exec.__init__(self,lineNumber,label,lead,internal,rest)
+
+    def __repr__(self):
+        return self.__class__.__name__+'('+self.assignedLabel+','+self.var+')'
+
+    def __str__(self):
+        return '%s %s %s %s' % (self.kwString,self.assignedLabel,self.toString,self.var\
+                                +''.join(self.internal))
+
 class BuiltinExec(Exec):
 
     @classmethod
@@ -2626,7 +2655,7 @@ class BuiltinExec(Exec):
         theParsedStmt=None
         try:
             # without parenthesis
-            formStmt = seq(lit(cls.kw),id)
+            formStmt = seq(lit(cls.kw),disj(id,int))
             ((builtinKeyword,unitSpec),rest) = formStmt(scan)
             theParams[cls.paramNames[0]]=unitSpec
             theParsedStmt=cls(theParams,lineNumber)
@@ -2734,7 +2763,8 @@ kwBuiltInTypesTbl= dict(
     real            = RealStmt
     )
 
-kwtbl = dict(blockdata       = BlockdataStmt,
+kwtbl = dict(assign          = DeletedAssignStmt,
+             blockdata       = BlockdataStmt,
              common          = CommonStmt,
              data            = DataStmt,
              implicit        = ImplicitStmt,

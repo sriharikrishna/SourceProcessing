@@ -38,7 +38,7 @@ def kill_token_cont(l):
     token_match = token_cont_re.match(l)
     if token_match:
         return l[token_match.end():]
-    return l.lstrip()
+    return ' '+l.lstrip()
         
 def _fjoin(asm):
     '''assemble a logical line from the assembled

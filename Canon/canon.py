@@ -23,6 +23,12 @@ _tmp_prefix   = 'oad_ctmp'
 
 class CanonError(Exception):
     '''exception for errors that occur during canonicalization'''
+    _keepGoing=False
+    
+    @staticmethod
+    def keepGoing():
+        CanonError._keepGoing=True
+
     def __init__(self,msg,lineNumber):
         self.msg  = msg
         self.lineNumber = lineNumber
@@ -36,6 +42,8 @@ class UnitCanonicalizer(object):
     _createResultDeclFlag = False
     _keepFunctionDecl = True
     _subroutinizeIntegerFunctions = False
+    
+    _ourPassiveTypes=[fs.IntegerStmt,fs.CharacterStmt]
 
     @staticmethod
     def setHoistConstantsFlag(hoistConstantsFlag):
@@ -82,8 +90,11 @@ class UnitCanonicalizer(object):
         if not isinstance(theApp,fe.App):
             raise CanonError('UnitCanonicalizer.shouldSubroutinizeFunction called on non-App object '+str(theApp),parentStmt.lineNumber)
         theSymtabEntry = self.__myUnit.symtab.lookup_name(theApp.head)
-        if theSymtabEntry and isinstance(theSymtabEntry.entryKind,SymtabEntry.VariableEntryKind):
-            raise CanonError('UnitCanonicalizer.shouldSubroutinizeFunction called on array reference '+str(theApp),parentStmt.lineNumber)
+        if theSymtabEntry: 
+            if theSymtabEntry.entryKind==SymtabEntry.StatementFunctionEntryKind:
+                return False
+            if theSymtabEntry.entryKind==SymtabEntry.VariableEntryKind:
+                raise CanonError('UnitCanonicalizer.shouldSubroutinizeFunction called on array reference '+str(theApp)+" with "+theSymtabEntry.debug(theApp.head),parentStmt.lineNumber)
         try:
             (funcType,modifier) = appType(theApp,self.__myUnit.symtab,parentStmt.lineNumber)
         except InferenceError,errorObj:
@@ -213,11 +224,17 @@ class UnitCanonicalizer(object):
                 for arg in theExpression.args:
                     replacementArgs.append(self.__canonicalizeExpression(arg,parentStmt))
                 replacementHead = theExpression.head
-                # check whether we need to convert the function to the generic name (e.g. alog => log)
-                if (theExpression.head.lower() != getGenericName(theExpression.head)) :
+                aSymtabEntry=self.__myUnit.symtab.lookup_name(theExpression.head)
+                # see if it is  a statement function and expand it
+                if (aSymtabEntry and aSymtabEntry.entryKind==SymtabEntry.StatementFunctionEntryKind):
                     parentStmt.beenModified = True
-                    replacementHead = getGenericName(theExpression.head)
-                replacementExpression = fe.App(replacementHead,replacementArgs)
+                    replacementExpression=self.__expandStmtFunExp(fe.App(replacementHead,replacementArgs))
+                # check whether we need to convert the function to the generic name (e.g. alog => log)
+                else: 
+                    if (is_intrinsic(theExpression.head) and theExpression.head.lower() != getGenericName(theExpression.head)) :
+                      parentStmt.beenModified = True
+                      replacementHead = getGenericName(theExpression.head)
+                    replacementExpression = fe.App(replacementHead,replacementArgs)
         # Unary operation -> recursively canonicalize the sole subexpression
         elif isinstance(theExpression,fe.Unary):
             DebugManager.debug(', which is a unary op. with exp: "'+str(theExpression.exp)+'"')
@@ -316,6 +333,19 @@ class UnitCanonicalizer(object):
            canonicalizing the test component and the conditionally executed statement'''
         # the replacement statement should be the endif
         DebugManager.debug(self.__recursionDepth*'|\t'+'canonicalizing if statement (without "then") "'+str(anIfNonThenStmt)+'" => replacing with an if-then statement')
+        if (anIfNonThenStmt.label 
+            and 
+            self.__myUnit.symtab.labelRefs.has_key(str(anIfNonThenStmt.label)) 
+            and 
+            any(map(lambda l: isinstance(l,fs.DoStmt),self.__myUnit.symtab.labelRefs[str(anIfNonThenStmt.label)]))):
+            # DO terminated by IfNonThenStmt
+            e=CanonError('IF statement "'+str(anIfNonThenStmt)+'" terminates DO construct "'\
+                         +str((filter(lambda l: isinstance(l,fs.DoStmt),self.__myUnit.symtab.labelRefs[str(anIfNonThenStmt.label)]))[0])\
+                         +'" and cannot be converted to an IF construct.',anIfNonThenStmt.lineNumber)
+            if CanonError._keepGoing:
+                DebugManager.warning(e.msg,e.lineNumber,DebugManager.WarnType.ifStmtToIfConstr)
+            else:
+                raise e
         self.__recursionDepth += 1
         # first append the new IfThenStmt
         self.__myNewExecs.append(fs.IfThenStmt(self.__canonicalizeExpression(anIfNonThenStmt.test,anIfNonThenStmt),
@@ -358,7 +388,11 @@ class UnitCanonicalizer(object):
                                              label=anElseifStmt.label,
                                              lead=anElseifStmt.lead)
         if len(self.__myNewExecs) > newExecsLength: # this is the case iff some new statements were inserted
-            raise CanonError('elseif test-component "'+str(anElseifStmt.test)+'" requires hoisting, but the placement of the extra assignment(s) is problematic.',anElseifStmt.lineNumber)
+            e=CanonError('elseif test-component "'+str(anElseifStmt.test)+'" requires hoisting, but the placement of the extra assignment(s) is problematic.',anElseifStmt.lineNumber)
+            if CanonError._keepGoing:
+                DebugManager.warning(e.msg,e.lineNumber,DebugManager.WarnType.hoisting)
+            else:
+                raise e
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|_')
         self.__recursionDepth -= 1
         return replacementStatement
@@ -429,7 +463,7 @@ class UnitCanonicalizer(object):
         if isinstance(exp,fe.App):
             if ((not isArrayReference(exp,self.__myUnit.symtab,parentStmt.lineNumber))
                 and
-                (not appType(exp,self.__myUnit.symtab,parentStmt.lineNumber)[0]== fs.IntegerStmt)):
+                (not appType(exp,self.__myUnit.symtab,parentStmt.lineNumber)[0] in UnitCanonicalizer._ourPassiveTypes)):
                 newExp = self.__hoistExpression(exp,parentStmt,paramName)
         elif isinstance(exp,fe.Ops):
             newExp = fe.Ops(exp.op,

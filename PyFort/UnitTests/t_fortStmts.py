@@ -1094,74 +1094,81 @@ class TestIOtmt(TestCase):
     def test0(self):
         '''write statement with defaults in io_ctrl_spec_list'''
         theString = 'write(*,*) x+1,y,i'
-        theRepr = WriteStmt('write',['*','*'],[Ops('+','x','1'),'y','i'])
+        theRepr = WriteStmt(['*','*'],[Ops('+','x','1'),'y','i'])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test1(self):
         '''formatted write statement'''
         theString = 'write(2,"(A,I3,A,I3,A,EN26.16E3)") "F(",i,",",k,")=",res_adj(i,k)'
-        theRepr = WriteStmt('write',['2','"(A,I3,A,I3,A,EN26.16E3)"'],['"F("','i','","',"k",'")="',App('res_adj',['i','k'])])
+        theRepr = WriteStmt(['2','"(A,I3,A,I3,A,EN26.16E3)"'],['"F("','i','","',"k",'")="',App('res_adj',['i','k'])])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test2(self):
         '''write statement with extra arguments'''
         theString = 'write(*,*,ADVANCE="NO") x+1,y,i'
-        theRepr = WriteStmt('write',['*','*',NamedParam('ADVANCE','"NO"')],[Ops('+','x','1'),'y','i'])
+        theRepr = WriteStmt(['*','*',NamedParam('ADVANCE','"NO"')],[Ops('+','x','1'),'y','i'])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test3(self):
         '''read statement with defaults in io_ctrl_spec_list'''
         theString = 'read(*,*) x,y,i'
-        theRepr = ReadStmt('read',['*','*'],['x','y','i'])
+        theRepr = ReadStmt(['*','*'],['x','y','i'])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test4(self):
         '''formatted read statement'''
         theString = 'read(2,"(A,I3,A,I3,A,EN26.16E3)") "F(",i,",",k,")=",res_adj(i,k)'
-        theRepr = ReadStmt('read',['2','"(A,I3,A,I3,A,EN26.16E3)"'],['"F("','i','","',"k",'")="',App('res_adj',['i','k'])])
+        theRepr = ReadStmt(['2','"(A,I3,A,I3,A,EN26.16E3)"'],['"F("','i','","',"k",'")="',App('res_adj',['i','k'])])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test5(self):
         '''read statement with extra arguments'''
         theString = 'read(*,*,REC=1) x,y,i'
-        theRepr = ReadStmt('read',['*','*',NamedParam('REC','1')],['x','y','i'])
+        theRepr = ReadStmt(['*','*',NamedParam('REC','1')],['x','y','i'])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test6(self):
         '''read statement with simpler syntax'''
         theString = 'read *,x,y,i'
-        theRepr = SimpleReadStmt('read','*',['x','y','i'])
+        theRepr = SimpleReadStmt('*',['x','y','i'])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test7(self):
         '''print statement'''
         theString = 'print *,x+1,y,i'
-        theRepr = PrintStmt('print','*',[Ops('+','x','1'),'y','i'])
+        theRepr = PrintStmt('*',[Ops('+','x','1'),'y','i'])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test8(self):
         '''write statement with more extra arguments'''
         theString = 'write(UNIT=pi_double,FMT=*) pi'
-        theRepr = WriteStmt('write',[NamedParam('UNIT','pi_double'),NamedParam('FMT','*')],['pi'])
+        theRepr = WriteStmt([NamedParam('UNIT','pi_double'),NamedParam('FMT','*')],['pi'])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test9(self):
         '''write statement with problematic forward slash in string constant (from SCALE: scalelib/html_M.f90)'''
         theString = "write(unit,'(a)') ' <APPLET \'"
-        theRepr = WriteStmt('write',['unit',"'(a)'"],["' <APPLET '"])
+        theRepr = WriteStmt(['unit',"'(a)'"],["' <APPLET '"])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
 
+    def test10(self):
+        '''print statement with format only'''
+        theString = "print 1542"
+        theRepr = PrintStmt('1542',[])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
 
 class TestGotoStmt(TestCase):
     '''goto statements'''
@@ -1187,92 +1194,138 @@ class TestGotoStmt(TestCase):
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals('go to (10,20,30) i+3',str(theRepr)) # always printed lowercase with space and without optional comma
 
+class TestDeletedStmts(TestCase):
+    ''' test deleted statements we parse so we can identify them in the code without parser errors '''
+
+    def test1(self):
+        '''ASSIGN statment (deleted from standard)'''
+        theString = 'assign 100 to icall'
+        theRepr = DeletedAssignStmt('100','icall')
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr)) 
+
+    def test2(self):
+        '''assigned GOTO statment (deleted from standard)'''
+        theString = 'go to icall (10,20)'
+        theRepr = AssignedGotoStmt('icall',['10','20'])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr)) 
+
+    def test3(self):
+        '''assigned GOTO statment without label list (deleted from standard)'''
+        theString = 'go to icall'
+        theRepr = AssignedGotoStmt('icall',[])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr)) 
+
+    def test2(self):
+        '''assigned GOTO statment with optional comma (deleted from standard)'''
+        theString = 'go to icall , (10,20)'
+        theRepr = AssignedGotoStmt('icall',['10','20'])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString[:theString.index(',')-1]+theString[theString.index(',')+1:],str(theRepr)) # printed without the comma
+
 class TestDataStmt(TestCase):
     '''data statements'''
 
     def test0(self):
         '''simple scalar data statement'''
-        theString = 'DATA TTP2 / 3.42D+02 /'
-        theRepr = DataStmt(['TTP2'],['3.42D+02'],'DATA')
+        theString = 'DATA TTP2 /3.42D+02/'
+        theRepr = DataStmt([(['TTP2'],['3.42D+02'])],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test1(self):
         '''simple array data statement'''
-        theString = 'data simp / 0.333333333D0, 1.333333333D0, 0.666666667D0 /'
-        theRepr = DataStmt(['simp'],['0.333333333D0', '1.333333333D0', '0.666666667D0'],'data')
+        theString = 'data simp /0.333333333D0,1.333333333D0,0.666666667D0/'
+        theRepr = DataStmt([(['simp'],['0.333333333D0', '1.333333333D0', '0.666666667D0'])],'data')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test2(self):
         '''data statement with implied do construct'''
-        theString = 'DATA(A1(tmp0), tmp0 = 1,5,1) / 3.4D-01, 5.9D-01, 1.0D00, 1.5D00, 1.3D00 /'
-        theRepr = DataStmt([_ImplicitDoConstruct(App('A1',['tmp0']),LoopControl('tmp0','1','5','1'))],['3.4D-01', '5.9D-01', '1.0D00', '1.5D00', '1.3D00'],'DATA')
+        theString = 'DATA (A1(tmp0), tmp0 = 1,5,1) /3.4D-01,5.9D-01,1.0D00,1.5D00,1.3D00/'
+        theRepr = DataStmt([([_ImplicitDoConstruct(App('A1',['tmp0']),LoopControl('tmp0','1','5','1'))],['3.4D-01', '5.9D-01', '1.0D00', '1.5D00', '1.3D00'])],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test3(self):
         '''data statement with negative constant in the value list'''
-        theString = 'DATA COEF / -1.D0 /'
-        theRepr = DataStmt(['COEF'],[Umi('1.D0')],'DATA')
+        theString = 'DATA COEF /-1.D0/'
+        theRepr = DataStmt([(['COEF'],[Umi('1.D0')])],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test4(self):
         '''long data statement from centrm with continuations removed'''
-        theString = 'DATA COEF / 1.D0, 1.D0, -1.D0, 3.D0, -3.D0, 5.D0, 3.D0, -30.D0, 35.D0, 15.D0, -70.D0, 63.D0, -5.D0, 105.D0, -315.D0, 231.D0, -35.D0, 315.D0, -693.D0, 429.D0, 35.D0, -1260.D0, 6930.D0, -12012.D0, 6435.D0, 315.D0, -4620.D0, 18018.D0, -25740.D0, 12155.D0, -63.D0, 3465.D0, -30030.D0, 90090.D0, -109395.D0, 46189.D0, -693.D0, 15015.D0, -90090.D0, 218790.D0, -230945.D0, 88179.D0 /'
-        theRepr = DataStmt(['COEF'],['1.D0', '1.D0', Umi('1.D0'), '3.D0', Umi('3.D0'), '5.D0', '3.D0', Umi('30.D0'), '35.D0', '15.D0', Umi('70.D0'), '63.D0', Umi('5.D0'), '105.D0', Umi('315.D0'), '231.D0', Umi('35.D0'), '315.D0', Umi('693.D0'), '429.D0', '35.D0', Umi('1260.D0'), '6930.D0', Umi('12012.D0'), '6435.D0', '315.D0', Umi('4620.D0'), '18018.D0', Umi('25740.D0'), '12155.D0', Umi('63.D0'), '3465.D0', Umi('30030.D0'), '90090.D0', Umi('109395.D0'), '46189.D0', Umi('693.D0'), '15015.D0', Umi('90090.D0'), '218790.D0', Umi('230945.D0'), '88179.D0'],'DATA')
+        theString = 'DATA COEF /1.D0,1.D0,-1.D0,3.D0,-3.D0,5.D0,3.D0,-30.D0,35.D0,15.D0/'
+        theRepr = DataStmt([(['COEF'],['1.D0', 
+                                       '1.D0', 
+                                       Umi('1.D0'), 
+                                       '3.D0', 
+                                       Umi('3.D0'), 
+                                       '5.D0', 
+                                       '3.D0', 
+                                       Umi('30.D0'), 
+                                       '35.D0', 
+                                       '15.D0'])],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test5(self):
         '''data statement with double implied do and repeat factor'''
-        theString = 'DATA((x(i,j), i = 1,2), j = 1,3) / 6*2 /'
-        theRepr = DataStmt([_ImplicitDoConstruct(_ImplicitDoConstruct(App('x',['i', 'j']),
-                                                                      LoopControl('i','1','2',None)),
-                                                 LoopControl('j','1','3',None))],
-                           [Ops('*','6','2')],
+        theString = 'DATA ((x(i,j), i = 1,2), j = 1,3) /6*2/'
+        theRepr = DataStmt([([_ImplicitDoConstruct(_ImplicitDoConstruct(App('x',['i', 'j']),
+                                                                        LoopControl('i','1','2',None)),
+                                                                        LoopControl('j','1','3',None))],
+                           [Ops('*','6','2')])],
                            'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test6(self):
         '''data statement with "NULL()" in the value list'''
-        theString = 'DATA START / NULL() /'
-        theRepr = DataStmt(['START'],[App('NULL',[])],'DATA')
+        theString = 'DATA START /NULL()/'
+        theRepr = DataStmt([(['START'],[App('NULL',[])])],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test7(self):
-        '''data statement with multiple objectList-valueList pairs -- KNOWN TO FAIL (see http://trac.mcs.anl.gov/projects/openAD/ticket/13)
-           (see http://trac.mcs.anl.gov/projects/openAD/ticket/13)'''
-        theString = 'DATA NAME / "JOHN DOE" /, METERS / 10*0 /'
-        theRepr = DataStmt(['NAME'],['"JOHN DOE"'],'DATA')
+        '''data statement with multiple objectList-valueList pairs'''
+        theString = 'DATA NAME /"JOHN DOE"/,METERS /10*0/'
+        theRepr = DataStmt([(['NAME'],['"JOHN DOE"']),(['METERS'],[Ops('*','10','0')])],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test8(self):
         '''data statement with an expression inside the implied do end'''
-        theString = 'DATA((SKEW(K,J), K = 1,J-1), J = 1,100) / 4950*1.0 /'
-        theRepr = DataStmt([_ImplicitDoConstruct(_ImplicitDoConstruct(App('SKEW',['K', 'J']),LoopControl('K','1',Ops('-','J','1'),None)),LoopControl('J','1','100',None))],[Ops('*','4950','1.0')],'DATA')
+        theString = 'DATA ((SKEW(K,J), K = 1,J-1), J = 1,100) /4950*1.0/'
+        theRepr = DataStmt([([_ImplicitDoConstruct(_ImplicitDoConstruct(App('SKEW',['K', 'J']),LoopControl('K','1',Ops('-','J','1'),None)),LoopControl('J','1','100',None))],[Ops('*','4950','1.0')])],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test9(self):
         '''data statement with implied do without optional stride'''
-        theString = 'DATA(A1(tmp0), tmp0 = 1,3) / 3.4D-01, 5.9D-01, 1.0D00 /'
-        theRepr = DataStmt([_ImplicitDoConstruct(App('A1',['tmp0']),LoopControl('tmp0','1','3',None))],['3.4D-01', '5.9D-01', '1.0D00'],'DATA')
+        theString = 'DATA (A1(tmp0), tmp0 = 1,3) /3.4D-01,5.9D-01,1.0D00/'
+        theRepr = DataStmt([([_ImplicitDoConstruct(App('A1',['tmp0']),LoopControl('tmp0','1','3',None))],['3.4D-01', '5.9D-01', '1.0D00'])],'DATA')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test10(self):
-        '''data statement with multiple objects (from SCALE: centrm/emsh.f90'''
-        theString = 'data aoxy, flet3, flet4 / 1.5994d+1, 0.05, 0.1 /'
-        theRepr = DataStmt(['aoxy', 'flet3', 'flet4'],['1.5994d+1', '0.05', '0.1'],'data')
+        '''data statement with multiple objects'''
+        theString = 'data aoxy,flet3,flet4 /1.5994d+1,0.05,0.1/'
+        theRepr = DataStmt([(['aoxy', 'flet3', 'flet4'],['1.5994d+1', '0.05', '0.1'])],'data')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
 
+    def test11(self):
+        '''data statement initializing array element'''
+        theString = 'data array(1) /1.5/'
+        theRepr = DataStmt([([App('array',['1'])],['1.5'])])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(theString,str(pps(theString)))
 
 class TestProcedureStmt(TestCase):
     '''procedure statements'''
@@ -1430,6 +1483,15 @@ class TestRewindStmt(TestCase):
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(compString,str(pps(theString)))
 
+    def test4(self):
+        '''rewind statement without parenthesis and hardwired unit number'''
+        theString = "rewind 13"
+        compString= "rewind(13)" # always unparsed with parenthesis
+        theRepr = RewindStmt({'unit':'13'})
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(str(pps(theString)),str(theRepr))
+        self.assertEquals(compString,str(pps(theString)))
+
 class TestCloseStmt(TestCase):
     '''close statements'''
 
@@ -1507,7 +1569,8 @@ suite = asuite(C2,C3,C4,C5,C6,C8,C9,
                TestExitStmt,
                TestOpenStmt,
                TestRewindStmt,
-               TestCloseStmt)
+               TestCloseStmt,
+               TestDeletedStmts)
 
 if __name__ == '__main__':
     sys.exit(runit(suite))

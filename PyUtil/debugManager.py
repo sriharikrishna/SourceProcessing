@@ -3,6 +3,7 @@ utility for managing debugging verbosity on a global level
 '''
 
 from _Setup import *
+import enum
 
 class DebugManager(object):
 
@@ -18,19 +19,37 @@ class DebugManager(object):
     def setQuiet(aBool):
         DebugManager._quiet = aBool
 
+    _progress = False
+    @staticmethod
+    def dumpProgress():
+        DebugManager._progress=True
+        
     _processedFile = ""
 
     @staticmethod
     def setProcessedFile(aFileName):
         DebugManager._processedFile = aFileName
+        if (DebugManager._progress):
+            sys.stderr.write('SourceProcessing: PROGRESS: '+ DebugManager._processedFile+'\n')
 
     @staticmethod
     def processedFile():
         return DebugManager._processedFile
 
+    WarnType = enum.Enum(['undefined', 'implicit','hoisting','ifStmtToIfConstr'])
+        
+    _warnOnlyTypeList=[]
+    
     @staticmethod
-    def warning(warningMessage,lineNumber=0):
-        if (not DebugManager._quiet): 
+    def warnOnlyOn(theWarnTypeList):
+        for w in theWarnTypeList:
+            DebugManager._warnOnlyTypeList.append(eval('DebugManager.WarnType.'+w))
+        
+    @staticmethod
+    def warning(warningMessage,lineNumber=0,warnType=WarnType.undefined):
+        if ((not DebugManager._quiet and not DebugManager._warnOnlyTypeList) 
+            or 
+            (DebugManager._warnOnlyTypeList and warnType in DebugManager._warnOnlyTypeList)): 
             sys.stderr.write('SourceProcessing: WARNING: '+warningMessage+' ('+DebugManager.processedFile())
             if (lineNumber>0):
                 sys.stderr.write(':'+str(lineNumber))
@@ -47,12 +66,4 @@ class DebugManager(object):
                 lineNumberStr += '[Line '+str(lineNumber)+']: '
             outStream.write(lineNumberStr+debugMessage+newLineStr)
             outStream.flush()
-
-
-
-
-
-
-
-
 

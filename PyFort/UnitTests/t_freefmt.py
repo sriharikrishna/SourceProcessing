@@ -71,6 +71,24 @@ function foo(x,y) ! test it
         ll = list(f1.lines)
         ae(repr(pps(ll[0].line)),repr(RealStmt([],[],[_NoInit(App('x',[':']))])))
 
+    def test5(self):
+        'continued statement with goto'
+        ae = self.assertEquals
+        a_ = self.assert_
+        l1 = preclip('''
+ 1900 IF (ABSSB.GE.APMWHD(20,IPMP).OR.ABS(WB).GE.APMWHD(19,IPMP))  GO TO&!PFLW.169
+         2000 !PFLW.170
+''')
+        flow.setInputFormat('free')
+        flow.setOutputFormat('free')
+        f1 = Ffile.here(l1,True)
+        ll = list(f1.lines)
+        ae(len(ll),1)
+        a_(isinstance(ll[0],fline))
+	compLine='IF (ABSSB.GE.APMWHD(20,IPMP).OR.ABS(WB).GE.APMWHD(19,IPMP))  GO TO 2000 '
+        ae(ll[0].line,compLine)
+        ae(ll[0].rawline,compLine)
+
 s1 = asuite(T1)
 suite = asuite(T1)
 
