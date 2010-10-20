@@ -333,26 +333,35 @@ class UnitCanonicalizer(object):
            canonicalizing the test component and the conditionally executed statement'''
         # the replacement statement should be the endif
         DebugManager.debug(self.__recursionDepth*'|\t'+'canonicalizing if statement (without "then") "'+str(anIfNonThenStmt)+'" => replacing with an if-then statement')
+        handleDoTermination=False
         if (anIfNonThenStmt.label 
             and 
             self.__myUnit.symtab.labelRefs.has_key(str(anIfNonThenStmt.label)) 
             and 
             any(map(lambda l: isinstance(l,fs.DoStmt),self.__myUnit.symtab.labelRefs[str(anIfNonThenStmt.label)]))):
             # DO terminated by IfNonThenStmt
-            e=CanonError('IF statement "'+str(anIfNonThenStmt)+'" terminates DO construct "'\
-                         +str((filter(lambda l: isinstance(l,fs.DoStmt),self.__myUnit.symtab.labelRefs[str(anIfNonThenStmt.label)]))[0])\
-                         +'" and cannot be converted to an IF construct.',anIfNonThenStmt.lineNumber)
-            if CanonError._keepGoing:
-                DebugManager.warning(e.msg,e.lineNumber,DebugManager.WarnType.ifStmtToIfConstr)
-            else:
-                raise e
+            # if there is only one reference we can save it by moving the label to a new  END DO that follows  the replacement of anIfNonThenStmt : 
+            if (len(self.__myUnit.symtab.labelRefs[str(anIfNonThenStmt.label)])==1) :
+                handleDoTermination=True
+            else : 
+                e=CanonError('IF statement "'+str(anIfNonThenStmt)+'" terminates DO construct "'\
+                             +str((filter(lambda l: isinstance(l,fs.DoStmt),self.__myUnit.symtab.labelRefs[str(anIfNonThenStmt.label)]))[0])\
+                             +'" and cannot be converted to an IF construct because references to its label other than from the above DO construct exist; list of all references: ['\
+                             +' ; '.join('line '+str(l.lineNumber)+": "+str(l) for l in self.__myUnit.symtab.labelRefs[str(anIfNonThenStmt.label)])\
+                             +"]",
+                             anIfNonThenStmt.lineNumber)   
+                if CanonError._keepGoing:
+                    DebugManager.warning(e.msg,e.lineNumber,DebugManager.WarnType.ifStmtToIfConstr)
+                else:
+                    raise e
         self.__recursionDepth += 1
         # first append the new IfThenStmt
+        newLabel=(not handleDoTermination) and anIfNonThenStmt.label or None # if we handle the do termination the label moves to a new END DO 
         self.__myNewExecs.append(fs.IfThenStmt(self.__canonicalizeExpression(anIfNonThenStmt.test,anIfNonThenStmt),
                                  ifFormatStr=anIfNonThenStmt.ifFormatStr,
                                  thenFormatStr='then',
                                  lineNumber=anIfNonThenStmt.lineNumber,
-                                 label=anIfNonThenStmt.label,
+                                 label=newLabel,
                                  lead=anIfNonThenStmt.lead))
         self.__recursionDepth -= 1
         # append the canonicalized version of the executable statement
@@ -360,7 +369,14 @@ class UnitCanonicalizer(object):
         self.__canonicalizeExecStmt(anIfNonThenStmt.stmt)
         self.__recursionDepth += 1
         # insert the endif statement as the replacement
-        replacementStatement = fs.EndifStmt(lead=anIfNonThenStmt.lead)
+        newEndIf=fs.EndifStmt(lead=anIfNonThenStmt.lead)
+        replacementStatement=None
+        if handleDoTermination:
+            self.__myNewExecs.append(newEndIf)
+            # new END DO with label that was on anIfNonThenStmt
+            replacementStatement=fs.EnddoStmt(None,label=anIfNonThenStmt.label,lead=anIfNonThenStmt.lead)
+        else:
+            replacementStatement = newEndIf
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|_')
         self.__recursionDepth -= 1
         return replacementStatement
@@ -752,7 +768,7 @@ class UnitCanonicalizer(object):
         else:
             subroutineDecls = self.__myNewDecls
         self.__myNewDecls = []
-        
+
         self.__canonicalizeExecStmts(self.__myUnit.execs)
 
         # set the leading whitespace for the new declarations and add them to the unit
