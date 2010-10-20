@@ -1,5 +1,5 @@
       program p
-      use OAD_intrinsics
+        use OAD_intrinsics
         real :: u,v,w,x,y,z
         real :: oad_ctmp0
         real :: oad_ctmp1

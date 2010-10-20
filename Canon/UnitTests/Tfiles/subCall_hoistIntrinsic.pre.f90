@@ -1,5 +1,5 @@
       program subCall_hoistIntrinsic
-      use OAD_intrinsics
+        use OAD_intrinsics
         real :: v
         real :: oad_ctmp0
         

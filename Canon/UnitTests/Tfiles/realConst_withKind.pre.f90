@@ -1,5 +1,5 @@
       subroutine foo(v)
-      use OAD_intrinsics
+        use OAD_intrinsics
         real(w2f__4) v
         real(w2f__4) ifoo
         real(w2f__8) :: oad_ctmp0
