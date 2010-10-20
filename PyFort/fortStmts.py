@@ -2270,6 +2270,7 @@ class DoStmt(Exec):
                                                         x[1]))
         (theParsedStmt,rest) = formDoStmt(scan)
         theParsedStmt.rest = rest
+        theParsedStmt.lineNumber=lineNumber
         return theParsedStmt 
 
     def __init__(self,doName,doLabel,loopControl,doFormatStr=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
