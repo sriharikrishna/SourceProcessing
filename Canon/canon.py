@@ -720,21 +720,12 @@ class UnitCanonicalizer(object):
         DebugManager.debug('local '+self.__myUnit.symtab.debug())
         DebugManager.debug('subunits (len ='+str(len(self.__myUnit.ulist))+'):')
         if (not self.__SRmoduleUsed):
-            aUseIdx=None
-            lead=self.__myUnit.uinfo and self.__myUnit.uinfo.lead or ''
-            for i,d in enumerate(self.__myUnit.decls):
-                if (isinstance(d,fs.UseStmt)
-                    or
-                    isinstance(d,fs.ImplicitStmt)
-                    or
-                    isinstance(d,fs.ImplicitNone)):
-                    aUseIdx=i
-                    lead=d.lead
-                    break
-            if (aUseIdx is None) and self.__myUnit.execs:
-                aUseIdx=0
-            if (not aUseIdx is None) : 
-                self.__myUnit.decls.insert(aUseIdx,
+            ncExecs=filter(lambda l: not isinstance(l, fs.Comments),self.__myUnit.execs)
+            if ncExecs:
+                # for 'beauty' make a reasonable guess for the lead
+                ncDecls=filter(lambda l: not isinstance(l, fs.Comments),self.__myUnit.decls)
+                lead=ncDecls and ncDecls[0].lead or ncExecs[0].lead
+                self.__myUnit.decls.insert(0, #always insert as the first decl to avoid ordering problems
                                            fs.UseAllStmt(moduleName=subroutinizedIntrinsics.getModuleName(),
                                                          renameList=None,
                                                          lead=lead))
