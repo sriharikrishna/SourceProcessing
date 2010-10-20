@@ -474,7 +474,7 @@ fs.SubroutineStmt.makeSymtabEntry = _makeSubroutineSymtabEntry
 # no-op for everybody as a baseline to be overridden: 
 fs.GenStmt.unit_entry             = lambda s,*rest,**kw: s  # on start of a unit
 fs.GenStmt.unit_exit              = lambda s,*rest,**kw: s  # on exit of a unit
-fs.GenStmt.unit_action            = lambda s,*rest,**kw: s  # for statements that have is_decl returning true
+fs.GenStmt.decl2unitAction        = lambda s,*rest,**kw: s  # for statements that have is_decl returning true
 
 # subroutine / function definitions are units 
 fs.SubroutineStmt.unit_entry      = _unit_entry         # start definition 
@@ -485,36 +485,36 @@ fs.EndFunctionStmt.unit_exit      = _unit_exit          # end definition
 # a derived type definition is a pseudo sub unit;
 # the symbol table contents is merged with the enclosing
 # unit's symbol table. 
-fs.DrvdTypeDefn.unit_action       = _beginDrvdTypeDefn  # start definition
-fs.EndDrvdTypeDefn.unit_action    = _endDrvdTypeDefn    # end definition
+fs.DrvdTypeDefn.decl2unitAction       = _beginDrvdTypeDefn  # start definition
+fs.EndDrvdTypeDefn.decl2unitAction    = _endDrvdTypeDefn    # end definition
 
 
 # the following are all related to declaration statements,
 # the hooks update the symbol table
-fs.DimensionStmt.unit_action      = _processDimensionStmt
-fs.ExternalStmt.unit_action       = _processExternalStmt
-fs.TypeDecl.unit_action           = _processTypedeclStmt
-fs.CommonStmt.unit_action         = _processCommonStmt
-fs.UseStmt.unit_action            = _use_module
-fs.ImplicitNone.unit_action       = _implicit_none
-fs.ImplicitStmt.unit_action       = _implicit
-fs.ProcedureStmt.unit_action      = _processProcedureStmt # always in an interface
+fs.DimensionStmt.decl2unitAction      = _processDimensionStmt
+fs.ExternalStmt.decl2unitAction       = _processExternalStmt
+fs.TypeDecl.decl2unitAction           = _processTypedeclStmt
+fs.CommonStmt.decl2unitAction         = _processCommonStmt
+fs.UseStmt.decl2unitAction            = _use_module
+fs.ImplicitNone.decl2unitAction       = _implicit_none
+fs.ImplicitStmt.decl2unitAction       = _implicit
+fs.ProcedureStmt.decl2unitAction      = _processProcedureStmt # always in an interface
 
-fs.InterfaceStmt.unit_action      = _beginInterface       # sets unit.val._in_iface which affects is_decl return for some statement classes
+fs.InterfaceStmt.decl2unitAction      = _beginInterface       # sets unit.val._in_iface which affects is_decl return for some statement classes
 # the is_decl implementation looks at the value of unit.val._in_iface for the following classes;
 # i.e. the following hooks are called only when unit.val._in_iface is set, that is, because we are in an interface
 # we are looking at a declaration of a function or subroutine and not at a definition. 
-fs.SubroutineStmt.unit_action     = _beginProcedureUnit   # start declaration 
-fs.EndSubroutineStmt.unit_action  = _endProcedureUnit     # end declaration   
-fs.FunctionStmt.unit_action       = _beginProcedureUnit   # start declaration 
-fs.EndFunctionStmt.unit_action    = _endProcedureUnit     # end declaration 
-fs.EndInterfaceStmt.unit_action = _endInterface           # unsets unit.val._in_iface which affects is_decl return for some statement classes
+fs.SubroutineStmt.decl2unitAction     = _beginProcedureUnit   # start declaration 
+fs.EndSubroutineStmt.decl2unitAction  = _endProcedureUnit     # end declaration   
+fs.FunctionStmt.decl2unitAction       = _beginProcedureUnit   # start declaration 
+fs.EndFunctionStmt.decl2unitAction    = _endProcedureUnit     # end declaration 
+fs.EndInterfaceStmt.decl2unitAction = _endInterface           # unsets unit.val._in_iface which affects is_decl return for some statement classes
 
 # special case turns an Exec statement into a Decl statement:
 # _is_stmt_fn determines if an assignment is a statement function and if yes
 # then is_decl will return yes and what was an executable AssignStmt will be
 # turned into a StmtFnStmt instance 
-fs.AssignStmt.is_decl         = _is_stmt_fn 
-fs.AssignStmt.unit_action     = _assign2stmtfn
+fs.AssignStmt.is_decl             = _is_stmt_fn 
+fs.AssignStmt.decl2unitAction     = _assign2stmtfn
 
-fs.DoStmt.unit_action         = _processLabels
+fs.DoStmt.decl2unitAction         = _processLabels

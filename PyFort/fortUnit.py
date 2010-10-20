@@ -34,7 +34,7 @@ def install_pat(cur):
 
     def action(cur):
         def _action(self):
-            return self.unit_action(cur)
+            return self.decl2unitAction(cur)
         return _action
     
     _ustart    = lambda s: s.is_ustart() # set in fortStmts, true for block data, module, function, subroutine, program
@@ -45,7 +45,7 @@ def install_pat(cur):
     cblk       = pred(lambda s: s.is_comment()) # set in fortStmts, true for Comments only
     ulist_pre  = pred(lambda s: s.is_contains()) # set in fortStmts, true for ContainsStmt only
     # for the following: is_decl is set in fortStmts and true for all subclasses of Decl except for ContainsStmt and EndStmt when not in an interface
-    # the "action" refers to the unit_action of a Statement which is set in stmt2unit; this - however - is executed only when is_decl is true
+    # the "action" refers to the decl2unitAction of a Statement which is set in stmt2unit; this - however - is executed only when is_decl is true
     adecl      = treat(pred(lambda s: s.is_decl(cur)),action(cur))
     aexec      = pred(lambda s: s.is_exec()) # is exec is set in fortStmts, true for Exec and all subclasses except for EndStmt and its subclasses
 
