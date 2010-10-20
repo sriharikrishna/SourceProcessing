@@ -457,9 +457,28 @@ def _endInterface(anEndInterfaceStmt,cur):
     DebugManager.debug('[Line '+str(anEndInterfaceStmt.lineNumber)+']: stmt2unit._endInterface('+str(anEndInterfaceStmt)+')')
     return anEndInterfaceStmt
 
-def _processLabels(aStmt,curr):
-    if (isinstance(aStmt,fs.DoStmt) and aStmt.doLabel):
+def _processDoLabels(aStmt,curr):
+    if (aStmt.doLabel):
         curr.val.symtab.enterLabelRef(aStmt.doLabel,aStmt)
+    return aStmt
+
+def _processSimpleGotoLabels(aStmt,curr):
+    if (aStmt.targetLabel):
+        curr.val.symtab.enterLabelRef(aStmt.targetLabel,aStmt)
+    return aStmt
+
+def _processGotoLabels(aStmt,curr):
+    for l in  aStmt.labelList:
+        curr.val.symtab.enterLabelRef(l,aStmt)
+    return aStmt
+
+def _processArithmIfLabels(aStmt,curr):
+    for l in  aStmt.labelTriple:
+        curr.val.symtab.enterLabelRef(l,aStmt)
+    return aStmt
+def _processSons(aStmt,curr):
+    if aStmt.stmt.is_exec():
+        aStmt.stmt.exec2unitAction(curr)
     return aStmt
 
 # hooks used ONLY IN THIS MODULE:
@@ -518,4 +537,9 @@ fs.EndInterfaceStmt.decl2unitAction = _endInterface           # unsets unit.val.
 fs.AssignStmt.is_decl             = _is_stmt_fn 
 fs.AssignStmt.decl2unitAction     = _assign2stmtfn
 
-fs.DoStmt.exec2unitAction         = _processLabels
+fs.DoStmt.exec2unitAction           = _processDoLabels
+fs.SimpleGotoStmt.exec2unitAction   = _processSimpleGotoLabels
+fs.ComputedGotoStmt.exec2unitAction = _processGotoLabels
+fs.AssignedGotoStmt.exec2unitAction = _processGotoLabels
+fs.ArithmIfStmt.exec2unitAction     = _processArithmIfLabels
+fs.IfNonThenStmt.exec2unitAction    = _processSons
