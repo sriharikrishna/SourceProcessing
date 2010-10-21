@@ -18,6 +18,7 @@ import function2subroutine
 import subroutinizedIntrinsics
 
 import copy
+import itertools
 
 _tmp_prefix   = 'oad_ctmp'
 
@@ -79,7 +80,6 @@ class UnitCanonicalizer(object):
         self.__resultDecl = None
         self.__processedFunctions = []
         self.__stmtFunctionStmts = []
-        self.__SRmoduleUsed = srModuleUsed
 
     def shouldSubroutinizeFunction(self,theApp,parentStmt):
         '''
@@ -719,17 +719,29 @@ class UnitCanonicalizer(object):
         DebugManager.debug(('+'*55)+' Begin canonicalize unit <'+str(self.__myUnit.uinfo)+'> '+(55*'+'))
         DebugManager.debug('local '+self.__myUnit.symtab.debug())
         DebugManager.debug('subunits (len ='+str(len(self.__myUnit.ulist))+'):')
-        if (not self.__SRmoduleUsed):
-            ncExecs=filter(lambda l: not isinstance(l, fs.Comments),self.__myUnit.execs)
-            if ncExecs:
-                # for 'beauty' make a reasonable guess for the lead
-                ncDecls=filter(lambda l: not isinstance(l, fs.Comments),self.__myUnit.decls)
-                lead=ncDecls and ncDecls[0].lead or ncExecs[0].lead
+        if (not self.__myUnit.parent and self.__myUnit.uinfo): # would have been added in the parent
+            lead=self.__myUnit.uinfo.lead or ''
+            addIt=False
+            if self.__myUnit.ulist:
+                addIt=True # if we have subunits add it regardless
+            # try to get a lead and see if we have non-comment execs 
+            ncExecsIter=itertools.ifilter(lambda l: not isinstance(l, fs.Comments),self.__myUnit.execs)
+            try : 
+                lead=ncExecsIter.next().lead
+                addIt=True # made it here, i.e. we have execs and need to add it
+                # see if we can get a better lead from non-comment decls 
+                ncDeclsIter=itertools.ifilter(lambda l: not isinstance(l, fs.Comments),self.__myUnit.decls)
+                try : 
+                    lead=ncDeclsIter.next().lead
+                except StopIteration, e:
+                    pass # doesn't matter 
+            except StopIteration, e: # no exec statements, no reason to add it here. 
+                pass # still we may have to add it because of subunits
+            if (addIt):
                 self.__myUnit.decls.insert(0, #always insert as the first decl to avoid ordering problems
                                            fs.UseAllStmt(moduleName=subroutinizedIntrinsics.getModuleName(),
                                                          renameList=None,
                                                          lead=lead))
-                self.__SRmoduleUsed=True;
         newList = []
         for subUnit in self.__myUnit.ulist:
             DebugManager.debug(5*'%'+'>'+'canon.canonicalizeUnit: ' \
@@ -744,7 +756,7 @@ class UnitCanonicalizer(object):
                 DebugManager.debug(5*'%'+'>'+'\t skipping this subunit because we already processed it')
                 newList.append(subUnit)
             else:
-                newUnit = UnitCanonicalizer(subUnit,self.__SRmoduleUsed).canonicalizeUnit()
+                newUnit = UnitCanonicalizer(subUnit).canonicalizeUnit()
                 newList.append(newUnit)
         self.__myUnit.ulist = newList
         
