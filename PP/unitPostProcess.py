@@ -14,6 +14,7 @@ import PyFort.flow as flow
 from PyFort.fortFile import Ffile
 import re
 import copy
+import itertools
 
 # Handles errors that occur during the postprocessing stage
 class PostProcessError(Exception):
@@ -80,17 +81,32 @@ class UnitPostProcessor(object):
         self.__inlineUnit = None
         # the file which contains all declarations of active variables
         self.__active_file = None
+        # temporary setting to figure out if we are within an interface
+        self.inInterface=False
 
-    # adds the active module OAD_active
-    # called when a module declaration is encountered in the unit's declarations
-    # PARAMS:
-    # arg -- the first use statement declaration in this subunit
-    # RETURNS: a new statement to append to the unit's declaration statements
-    def __addActiveModule(self,arg):
-        DebugManager.debug('unitPostProcessor.__addActiveModule called on: "'\
-                           +str(arg)+"'")
-        new_stmt = fs.UseAllStmt(moduleName='OAD_active',renameList=None)
-        return new_stmt
+    def __addActiveModule(self,Decls):
+        '''  
+        adds a UseAllStmt of the active module to Decls if necessary;
+        it should put it in the top level unit if there are subunits to avoid littering the subunits with the USE statements
+        '''
+        if (self.__myUnit.uinfo is None):
+            return
+        if (self.__myUnit.parent) : # done in parent
+            return
+        lead=self.__myUnit.uinfo.lead or ''
+        ncDeclsIter=itertools.ifilter(lambda l: not isinstance(l, fs.Comments),self.__myUnit.decls)
+        try : 
+            lead=ncDeclsIter.next().lead
+        except StopIteration, e:
+            ncExecIter=itertools.ifilter(lambda l: not isinstance(l, fs.Comments),self.__myUnit.execs)
+            try:
+                lead=ncExecIter.next().lead
+            except StopIteration, e: 
+                if (self.__myUnit.ulist):
+                    pass #  add it for the subunits that may need it
+                else:
+                    return   # no non-comment decls,  execs or subunits - don't bother
+        Decls.append(fs.UseAllStmt(moduleName='OAD_active',lead=lead,renameList=None))
 
     # Rewrites the active type in derived type declarations
     # returns the declaration
@@ -544,17 +560,22 @@ class UnitPostProcessor(object):
         except SymtabError,e: # add a lineNumber to SymtabErrors that don't have one
             e.lineNumber = e.lineNumber or anExecStmt.lineNumber
             raise e
-       
+    
+    class UseActiveInInterface:
+        def __init__(self):
+            self.inInterface=False
+            self.beginStmt=None
+            self.lead=None
+    
     # transforms all active types in an declaration statement; determines
     # if inlining or pragma replacement should occur (based on comments)
     # creates new exec statements for inlining based on the inline file
     # PARAMS:
-    # (in forward mode, only aDecl,Decls,Execs and UseStmtSeen are used)
+    # (in forward mode, only aDecl,Decls,Execs  are used)
     # aDecl -- the decl statement to be processed
     # Decls -- The declarations currently being accumulated for this pragma number
     # Execs -- The exec statements currently being accumulated for this pragma
     # number (since StmtFnStmt instances may be transformed into Assign statements)
-    # UseStmtSeen -- boolean to determine if active module needs to be added
     # declList -- a list of lists of accumulated processed declaration statements
     # indexed by pragma number
     # execList -- a list of lists of accumulated processed exec statements
@@ -567,20 +588,13 @@ class UnitPostProcessor(object):
     # determining whether or not inlining should occur in the next statements
     # (if there was a comment to begin replacement), and a replacement pragma
     # number
-    def __processDecl(self,aDecl,Decls,Execs,UseStmtSeen,declList=[],
+    def __processDecl(self,aDecl,Decls,Execs,pendingUse,declList=[],
                       execList=[],replacementNum=0):
         try:
             DebugManager.debug('[Line '+str(aDecl.lineNumber)+']:')
-            if isinstance(aDecl, fs.UseStmt):
-                # add old use stmt
-                Decls.append(aDecl)
-                if not UseStmtSeen: # add the active module
-                    newDecl = self.__addActiveModule(aDecl)
-                    # build rawlines for the new declarations
-                    newDecl.lead = self.__myUnit.uinfo.lead+''
-                    UseStmtSeen = True
-                    Decls.append(newDecl)
-            elif aDecl.is_comment():
+            if pendingUse.beginStmt and not pendingUse.lead and not aDecl.is_comment():
+                pendingUse.lead=aDecl.lead
+            if aDecl.is_comment():
                 if self._mode == 'reverse':
                     comments = aDecl.rawline.splitlines()
                     (declList,Decls,inline,newRepNum) = \
@@ -597,11 +611,29 @@ class UnitPostProcessor(object):
                     Decls.append(aDecl)
             elif isinstance(aDecl,fs.DrvdTypeDecl):
                 newDecl = self.__rewriteActiveType(aDecl)
-                UseStmtSeen = False
                 Decls.append(newDecl)
+            elif isinstance(aDecl,fs.InterfaceStmt):
+                if (pendingUse.inInterface):
+                    raise PostProcessError('logic error assume to be in interface already',aDecl.lineNumber)
+                pendingUse.inInterface=True
+                Decls.append(aDecl)
+            elif isinstance(aDecl,fs.EndInterfaceStmt):
+                if (not pendingUse.inInterface):
+                    raise PostProcessError('logic error assume to be in interface ',aDecl.lineNumber)                
+                pendingUse.inInterface=False
+                Decls.append(aDecl)
+            elif pendingUse.inInterface and any(map(lambda l: isinstance(aDecl,l),[fs.SubroutineStmt,fs.FunctionStmt])):
+                Decls.append(aDecl)
+                pendingUse.beginStmt=aDecl
+            elif pendingUse.inInterface and any(map(lambda l: isinstance(aDecl,l),[fs.EndSubroutineStmt,fs.EndFunctionStmt])):
+                Decls.append(aDecl)
+                if  any(map(lambda l: isinstance(self.__myUnit.uinfo,l),[fs.SubroutineStmt,fs.FunctionStmt,fs.ProgramStmt,fs.ModuleStmt ])):
+                    Decls.insert(Decls.index(pendingUse.beginStmt)+1,
+                                 fs.UseAllStmt(moduleName='OAD_active',lead=pendingUse.lead,renameList=None))
+                pendingUse.beginStmt=None
+                pendingUse.lead=None
             elif isinstance(aDecl,fs.StmtFnStmt):
                 newDecl = self.__processStmtFnStmt(aDecl)
-                UseStmtSeen = False
                 if not isinstance(newDecl,fs.AssignStmt):
                     Decls.append(newDecl)
                 else:
@@ -609,11 +641,10 @@ class UnitPostProcessor(object):
             else:
                 DebugManager.debug('Statement "'+str(aDecl)+'" is assumed to require no post-processing')
                 Decls.append(aDecl)
-                UseStmtSeen = False
             if self._mode == 'reverse':
-                return (declList,Decls,execList,Execs,UseStmtSeen,replacementNum)
+                return (declList,Decls,execList,Execs,replacementNum)
             else:
-                return (Decls,Execs,UseStmtSeen)
+                return (Decls,Execs)
 
         except InferenceError,e:
             raise PostProcessError('Caught InferenceError: '+e.msg,aDecl.lineNumber)
@@ -657,12 +688,13 @@ class UnitPostProcessor(object):
     # RETURNS: a tuple containing a list of processed decls and a list of
     # processed execs.
     def __forwardProcessDeclsAndExecs(self):
-        UseStmtSeen = False
         execNum = 0;
         Execs = []; Decls = []
+        self.__addActiveModule(Decls)
+        pendingUse=self.UseActiveInInterface()
         for aDecl in self.__myUnit.decls:
-            (Decls,Execs,UseStmtSeen) =\
-                self.__processDecl(aDecl,Decls,Execs,UseStmtSeen)
+            (Decls,Execs) =\
+                self.__processDecl(aDecl,Decls,Execs,pendingUse)
         for anExec in self.__myUnit.execs:
             Execs = self.__processExec(anExec,Execs)
         return (Decls,Execs)
@@ -675,14 +707,16 @@ class UnitPostProcessor(object):
     # Execs[pragma] is all the execs that should be inserted in the template
     # for the given pragma.
     def __reverseProcessDeclsAndExecs(self):
-        UseStmtSeen = False; inline=False
+        inline=False
         replacementNum = 0 
         currentExecs = []; currentDecls = []
         Execs = []; Decls = []
+        self.__addActiveModule(currentDecls)
+        pendingUse=self.UseActiveInInterface()
         for aDecl in self.__myUnit.decls:
-            (Decls,currentDecls,Execs,currentExecs,UseStmtSeen,replacementNum) = \
-                self.__processDecl(aDecl,currentDecls,currentExecs,
-                                   UseStmtSeen,Decls,Execs,replacementNum)
+            (Decls,currentDecls,Execs,currentExecs,replacementNum) = \
+                self.__processDecl(aDecl,currentDecls,currentExecs,pendingUse,
+                                   Decls,Execs,replacementNum)
         if len(currentDecls) != 0:
             Decls.append(currentDecls)
         for anExec in self.__myUnit.execs:
