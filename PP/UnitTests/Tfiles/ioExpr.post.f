@@ -1,4 +1,5 @@
       SUBROUTINE head(X, Y)
+      use OAD_active
       IMPLICIT NONE
       type(active) :: X(1:2)
       type(active) :: Y(1:1)

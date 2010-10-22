@@ -1,6 +1,6 @@
       MODULE globals
-      use w2f__types
       use OAD_active
+      use w2f__types
       IMPLICIT NONE
       SAVE
 C
@@ -10,8 +10,8 @@ C
       END MODULE
 
       SUBROUTINE head(X, Y)
-      use w2f__types
       use OAD_active
+      use w2f__types
       use globals
       IMPLICIT NONE
 C
