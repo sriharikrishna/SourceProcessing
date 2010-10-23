@@ -44,14 +44,26 @@ class Ffile(object):
         if ext in ['.f90','.f95','.f03']:
             return 'free'
         return 'fixed'
+
+    __includeSearchPath=[]
+    
+    @staticmethod
+    def setIncludeSearchPath(directoryList):
+        Ffile.__includeSearchPath.extend(directoryList)
     
     __includePatn=re.compile('^\s*INCLUDE\s+[\'\"]([\w\.]+)[\'\"].*',re.I)
 
     @staticmethod
     def inject_include(fileName,includingFileName):
         ''' handle fortran include lines by explicitly injecting the file contents '''
+        def searchPath(fileName):
+            for p in Ffile.__includeSearchPath:
+                if (os.path.isfile(os.path.join(p,fileName))):
+                    return os.path.join(p,fileName)
+            return fileName
+        
         try:
-            fileHandle=open(fileName,'r')
+            fileHandle=open(searchPath(fileName),'r')
         except IOError:
             msg="Error cannot open file named: "+fileName
             if includingFileName:
@@ -67,7 +79,7 @@ class Ffile(object):
                 if not tempFileHandle: 
                     tempFileName=tempfile.mktemp()
                     tempFileHandle=open(tempFileName,'w')
-                    secondInputHandle=open(fileName,'r')
+                    secondInputHandle=open(searchPath(fileName),'r')
                     while (linesAhead>0):
                         tempFileHandle.write(secondInputHandle.readline())
                         linesAhead-=1

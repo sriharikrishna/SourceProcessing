@@ -44,24 +44,35 @@ def main():
         modeChoicesHelp+=k+" = "+v+"; "
     opt = OptionParser(usage=usage)
     opt.add_option('--outputFormat',
+                   metavar='{ fixed | free }',
                    dest='outputFormat',
                    help="<output_file> is in either 'fixed' or 'free' format",
                    default=None)
     opt.add_option('',
                    '--inputFormat',
+                   metavar='{ fixed | free }',
                    dest='inputFormat',
                    help="<input_file> is in either 'fixed' or 'free' format",
                    default=None)
     opt.add_option('','--inputLineLength',
                    dest='inputLineLength',
+                   metavar='INT',
                    type=int,
                    help='sets the max line length of the input file. The default line length is 72 for fixed format and 132 for free format.',
                    default=None)
     opt.add_option('','--outputLineLength',
                    dest='outputLineLength',
+                   metavar='INT',
                    type=int,
                    help='sets the max line length of the output file. The default line length is 72 for fixed format and 132 for free format.',
                    default=None)
+    opt.add_option('-I','',
+                   metavar='PATH',
+                   dest='includePaths',
+                   type='string',
+                   help='directory to be added to the search path for Fortran INCLUDE directives; (default is the current directory)',
+                   action='append',
+                   default=[])
     opt.add_option('-m','--mode',dest='mode',
                    type='choice', choices=modeChoices,
                    help='set default options for transformation mode with MODE being one of: '+ modeChoicesHelp+ '  reverse mode  implies -H but not -S; specific settings override the mode defaults.',
@@ -122,6 +133,7 @@ def main():
                    default=None)
     opt.add_option('--recursionLimit',
                    dest='recursionLimit',
+                   metavar='INT',
                    type='int',
                    help='recursion limit for the python interpreter (default: '+str(sys.getrecursionlimit())+'; setting it too high may permit a SEGV in the interpreter)')
     opt.add_option('--subroutinizeIntegerFunctions',
@@ -223,6 +235,8 @@ def main():
         DebugManager.warnOnlyOn(config.warn)
     if config.progress:
         DebugManager.dumpProgress()    
+    if config.includePaths:
+        Ffile.setIncludeSearchPath(config.includePaths)
     
     try: 
         if config.outputFile:
