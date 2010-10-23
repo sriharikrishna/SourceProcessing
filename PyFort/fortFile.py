@@ -16,12 +16,14 @@ from fixedfmt      import fixedfmt
 from process_fort_stmt import process_fort_stmt,process_fort_cmnt
 import flow
 import os
+import re
+import tempfile
 
 def _ident(s):
     return [s]
 
 class Ffile(object):
-    def __init__(self,fobj,free=False,c_action=cline,s_action=fline):
+    def __init__(self,fobj,free=False,c_action=cline,s_action=fline,isTemp=False):
         fmt      = (free and freefmt) or fixedfmt
         fl       = fortLine(fmt)
         s      = lambda x:process_fort_stmt(x,self.rawBufIter.myCounter,s_action)
@@ -35,18 +37,71 @@ class Ffile(object):
         self.rawBufIter = buf_iter(fobj)
         self.lines = vgen(a_line,self.rawBufIter,True)
         self.fobj  = fobj
+        self.isTemp = isTemp
 
     @staticmethod
     def get_format(ext):
         if ext in ['.f90','.f95','.f03']:
             return 'free'
         return 'fixed'
+    
+    __includePatn=re.compile('^\s*INCLUDE\s+[\'\"]([\w\.]+)[\'\"].*',re.I)
 
+    @staticmethod
+    def inject_include(fileName,includingFileName):
+        ''' handle fortran include lines by explicitly injecting the file contents '''
+        try:
+            fileHandle=open(fileName,'r')
+        except IOError:
+            msg="Error cannot open file named: "+fileName
+            if includingFileName:
+                msg+=" included by "+includingFileName
+            raise UserError(msg)
+        tempFileHandle=None
+        tempFileName=None
+        secondInputHandle=None
+        linesAhead=0
+        for line in fileHandle.readlines():
+            matchResult=re.match(Ffile.__includePatn,line)
+            if matchResult:
+                if not tempFileHandle: 
+                    tempFileName=tempfile.mktemp()
+                    tempFileHandle=open(tempFileName,'w')
+                    secondInputHandle=open(fileName,'r')
+                    while (linesAhead>0):
+                        tempFileHandle.write(secondInputHandle.readline())
+                        linesAhead-=1
+                    secondInputHandle.close()                
+                nestedIncludeName=matchResult.group(1)
+                try: 
+                    (nestedIncludeHandle,isTemp)=Ffile.inject_include(nestedIncludeName,fileName)
+                    tempFileHandle.writelines(nestedIncludeHandle.readlines())
+                    nestedIncludeHandle.close()
+                    if (isTemp):
+                        os.remove(nestedIncludeHandle.name)
+                except UserError, e:
+                    if includingFileName:
+                        e.msg+=" included by "+includingFileName
+                    raise e
+            else : 
+                if tempFileHandle: 
+                    tempFileHandle.write(line)
+                else:
+                    linesAhead+=1
+        if tempFileHandle:
+            tempFileHandle.close()
+            tempFileHandle=open(tempFileHandle.name,'r')
+            fileHandle.close()
+            return (tempFileHandle,True)
+        fileHandle.seek(0)
+        return (fileHandle,False)
+            
+        
     @staticmethod
     def file(name,c_action=cline,s_action=fline,inputFormat=None):
         import PyUtil.debugManager
         try:
-          f=open(name)
+            (f,isTemp)=Ffile.inject_include(name,None)
         except IOError:
           msg="Error cannot open file named: "+name
           raise UserError(msg)
@@ -56,7 +111,7 @@ class Ffile(object):
         if not inputFormat:
             inputFormat = Ffile.get_format(ext)
         flow.setInputFormat(inputFormat)
-        return Ffile(f,inputFormat=='free',c_action,s_action)
+        return Ffile(f,inputFormat=='free',c_action,s_action,isTemp=isTemp)
 
     @staticmethod
     def here(str,free=False,c_action=cline,s_action=fline):
@@ -82,3 +137,8 @@ class Ffile(object):
                 yield ll
         for (cls,meth) in lexi:
             cls.map = _ident
+
+    def __del__(self):
+        if self.isTemp:
+            self.fobj.close()
+            os.remove(self.fobj.name)

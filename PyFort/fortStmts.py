@@ -1267,8 +1267,11 @@ class IntrinsicStmt(Decl):
     def __init__(self,stmt_name=kw_str,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         Decl.__init__(self,lineNumber,label,lead,internal,rest)
 
-class IncludeStmt(Decl):
-    'Include stmt'
+class IncludeLine(Decl):
+    '''
+    Include line; the fortran standard says it is not a statement but a processor directive
+    after parsing it; it is immediately  replaced by the contents of the included file
+    '''
     kw    = 'include'
     kw_str = kw
 
@@ -1277,7 +1280,8 @@ class IncludeStmt(Decl):
         scan = filter(lambda x: x != ' ',ws_scan)
         form = seq(lit(IncludeStmt.kw)) # 0 = stmt_name
         (id,rest) = form(scan)
-        return IncludeStmt(lineNumber=lineNumber,rest=rest)
+        raise ParseError(lineNumber,scan,'Parsed Fortran include line which should have been replaced by the contents')
+        return IncludeLine(lineNumber=lineNumber,rest=rest)
 
     def __init__(self,stmt_name=kw_str,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         Decl.__init__(self,lineNumber,label,lead,internal,rest)
@@ -2781,7 +2785,7 @@ kwtbl = dict(assign          = DeletedAssignStmt,
              external        = ExternalStmt,
              allocatable     = AllocatableStmt,
              intrinsic       = IntrinsicStmt,
-             include         = IncludeStmt,
+             include         = IncludeLine,
              dimension       = DimensionStmt,
              subroutine      = SubroutineStmt,
              program         = ProgramStmt,
