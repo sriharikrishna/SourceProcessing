@@ -1,6 +1,6 @@
 MODULE globals
+  use OAD_active
   use w2f_types
-use OAD_active
   IMPLICIT NONE
   SAVE
   type(active) :: GX
@@ -21,8 +21,8 @@ subroutine OAD_globalVar_init()
 end subroutine
 
 SUBROUTINE bar(BARX, BARY)
+  use OAD_active
   use w2f__types
-use OAD_active
   IMPLICIT NONE
   REAL(w2f__8) BARX
   REAL(w2f__8) BARY

@@ -8,7 +8,7 @@ from PyFort.inference import InferenceError,expressionType,isArrayReference
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
 import PyFort.intrinsic as intrinsic
-from PyFort.fortUnit import fortUnitIterator
+from PyFort.fortUnit import fortUnitIterator, Unit
 from PP.templateExpansion import *
 import PyFort.flow as flow
 from PyFort.fortFile import Ffile
@@ -701,10 +701,12 @@ class UnitPostProcessor(object):
     # for the given pragma.
     def __reverseProcessDeclsAndExecs(self):
         '''processes all decls and execs, moving all decls which are transformed to assign statements by post processing to Execs list'''
-		inline=False
+        inline=False
         replacementNum = 0 
         currentExecs = []; currentDecls = []
         Execs = []; Decls = []
+        self.__addActiveModule(currentDecls)
+        pendingUse=self.UseActiveInInterface()
         for aDecl in self.__myUnit.decls:
             (Decls,currentDecls,Execs,currentExecs,replacementNum) = \
                 self.__processDecl(aDecl,currentDecls,currentExecs,pendingUse,

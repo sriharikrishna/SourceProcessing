@@ -8,6 +8,7 @@ subroutine OAD_globalVar_init()
 	call common_cb_init()
 end subroutine
 subroutine bar()
+  use OAD_active
   implicit none
   save /cb/
   common /cb/ G
