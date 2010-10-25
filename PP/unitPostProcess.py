@@ -188,11 +188,11 @@ class UnitPostProcessor(object):
             return theExpression
 
 
-    # transforms active types in a subroutine Call statement
     # PARAMS:
     # aSubCallStmt -- an instance of fs.CallStmt to be processed
     # RETURNS: a new fs.CallStmt with __value__ and __deriv__ calls replaced
     def __processSubCallStmt(self,aSubCallStmt):
+        '''transforms active types in a subroutine Call statement'''
         DebugManager.debug('unitPostProcessor.__processSubCallStmt called on: "'+str(aSubCallStmt)+"'")
         replacementArgs = []
         for anArg in aSubCallStmt.get_args():
@@ -206,10 +206,10 @@ class UnitPostProcessor(object):
                         lead=aSubCallStmt.lead)
         return replacementStatement    
 
-    # transforms __value__/__deriv__ in active type variables in any IOStmt instance
     # PARAMS:
     # anIOStmt -- the instance of fs.IOStmt to be processed
     def __processIOStmt(self,anIOStmt):
+        '''transforms __value__/__deriv__ in active type variables in any IOStmt instance'''
         DebugManager.debug('unitPostProcessor.__processIOStmt called on: "'\
                                +str(anIOStmt)+" "+str(anIOStmt.__class__)+"'")
         newItemList=[]
@@ -218,8 +218,6 @@ class UnitPostProcessor(object):
         anIOStmt.set_itemList(newItemList)
         return anIOStmt
 
-    # Does active type transformations on a StmtFnStmt; 
-    # reconstructs it as an AssignStmt if StmtFnStmt.name is "__value__"
     # PARAMS:
     # StmtFnStmt -- an instance of fs.StmtFnStmt to be processed. If the
     # processed statement has __value__ or __deriv__ as the statement name, it
@@ -230,6 +228,7 @@ class UnitPostProcessor(object):
     # RETURNS: a processed AssignStmt with all __value__ and __deriv__ calls 
     # replaced
     def __processStmtFnStmt(self, StmtFnStmt):
+        '''Performs active type transformations on a StmtFnStmt; reconstructs it as an AssignStmt if StmtFnStmt.name is "__value__"'''
         DebugManager.debug('unitPostProcessor.__processStmtFnStmt called on: "'+str(StmtFnStmt)+"'")
 
         new_args = map(self.__transformActiveTypesExpression,StmtFnStmt.args)
@@ -260,7 +259,6 @@ class UnitPostProcessor(object):
             replacementStatement = newStatement
         return replacementStatement
 
-    # Transforms active types on executable statements
     # PARAMS:
     # aStmt -- a generic fs.Exec statement to be processed
     # RETURNS: a transformed statement with all __value__ and __deriv__ calls
@@ -310,7 +308,6 @@ class UnitPostProcessor(object):
                     break
         return (aComment,inline)
 
-    # gets the replacement number from a begin replacement comment
     # PARAMS:
     # aComment -- a comment from the input file being processed
     # RETURNS: a pragma number for replacement, if the comment contained a begin
@@ -328,7 +325,6 @@ class UnitPostProcessor(object):
         else:
             return 0
 
-    # finds the end of a replacement
     # PARAMS:
     # aComment -- a comment from the input file being processed
     # RETURNS: True if an end replacement command is contained in the comment.
@@ -343,13 +339,12 @@ class UnitPostProcessor(object):
         else:
             return False
 
-    # removes all statements which should not be inserted
-    # from a unit (function) in the inline file
     # PARAMS:
     # function -- a unit from the inline file to be used in processing
     # RETURNS: a modified unit with all extraneous statements removed
     @staticmethod
     def __getInlineSubroutine(function):
+        '''removes all statements which should not be inserted from a unit (function) in the inline file'''
         pattern = 'C([ ]+)[$]openad[$]([ ]+)end([ ]+)decls'
         newDecls = []
         newExecs = []
@@ -374,9 +369,6 @@ class UnitPostProcessor(object):
         return function        
 
 
-    # Given new exec statement args (as determined from inline comment)
-    # replace inline args in given inline file subroutine with new args
-    # transform all active types, and return all new exec statements
     # PARAMS:
     # execStmtArgs -- arguments with which to replace the inline arguments in
     # the subroutine from the inline file
@@ -384,6 +376,7 @@ class UnitPostProcessor(object):
     # RETURNS: new exec statements created from statements from the inline file
     # and the execStmtArgs
     def __createNewExecs(self,execStmtArgs,stmt_lead):
+        '''Given new exec statement args (as determined from inline comment), replace inline args in given inline file subroutine with new args; transform all active types and return all new exec statements'''
         replacementArgs = []
         Execs = []; Stmts = []
         for anArg in execStmtArgs:
@@ -468,8 +461,6 @@ class UnitPostProcessor(object):
 
 
 
-    # processes the comments (used for reverse mode)
-    # determines if a comment declares inlining or pragma replacement
     # PARAMS:
     # Comments -- an instance of fs.Comments from the file being processed
     # replacementNum -- the replacement number for the pragma after which exec
@@ -484,6 +475,7 @@ class UnitPostProcessor(object):
     # statements should be inlined, and the current pragma (replacement) number
     def __processComments(self,Comments,replacementNum,commentList,
                           currentComments,inline=False):
+        '''processes the comments (used for reverse mode); determines if a comment declares inlining or pragma replacement'''
         for commentString in Comments:
             if commentString == '' or commentString.strip() == '':
                 continue
@@ -503,9 +495,6 @@ class UnitPostProcessor(object):
                     currentComments.append(Comment)
         return (commentList,currentComments,inline,replacementNum)
                     
-    # transforms all active types in an exec statement
-    # determines if inlining should occur (based on comments)
-    # creates new exec statements for inlining based on the inline file
     # PARAMS:
     # (in forward mode, only anExecStmt and Execs are used)
     # anExecStmt -- the exec statement to be processed
@@ -524,6 +513,7 @@ class UnitPostProcessor(object):
     # number
     def __processExec(self,anExecStmt,Execs,execList=[],
                       inline=False,replacementNum=0): 
+        '''transforms all active types in an exec statement; determines if inlining should occur (based on comments); creates new exec statements for inlining based on the inline file'''
         try:
             DebugManager.debug('[Line '+str(anExecStmt.lineNumber)+']:')
             newStmt = None
@@ -590,6 +580,7 @@ class UnitPostProcessor(object):
     # number
     def __processDecl(self,aDecl,Decls,Execs,pendingUse,declList=[],
                       execList=[],replacementNum=0):
+        '''transforms all active types in a declaration statement; determines if inlining or pragma replacement should occur (based on comments); creates new exec statements for inlining based on the inline file'''
         try:
             DebugManager.debug('[Line '+str(aDecl.lineNumber)+']:')
             if pendingUse.beginStmt and not pendingUse.lead and not aDecl.is_comment():
@@ -658,6 +649,7 @@ class UnitPostProcessor(object):
     # calls expandTemplate with the processed statements
     # updates self.__myUnit with all processed and added statements
     def __templateExpansion(self):
+        '''Determines if a template should be expanded (if it's not a Function or Module statement); processes the input file, and calls expandTemplate with the processed statements; updates self.__myUnit with all processed and added statements'''
         (Decls,Execs) = self.__reverseProcessDeclsAndExecs()
         if isinstance(self.__myUnit.uinfo,fs.ModuleStmt) \
                 or isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
@@ -688,6 +680,7 @@ class UnitPostProcessor(object):
     # RETURNS: a tuple containing a list of processed decls and a list of
     # processed execs.
     def __forwardProcessDeclsAndExecs(self):
+        '''processes all declaration and execution statements in forward mode'''
         execNum = 0;
         Execs = []; Decls = []
         self.__addActiveModule(Decls)
@@ -707,12 +700,11 @@ class UnitPostProcessor(object):
     # Execs[pragma] is all the execs that should be inserted in the template
     # for the given pragma.
     def __reverseProcessDeclsAndExecs(self):
-        inline=False
+        '''processes all decls and execs, moving all decls which are transformed to assign statements by post processing to Execs list'''
+		inline=False
         replacementNum = 0 
         currentExecs = []; currentDecls = []
         Execs = []; Decls = []
-        self.__addActiveModule(currentDecls)
-        pendingUse=self.UseActiveInInterface()
         for aDecl in self.__myUnit.decls:
             (Decls,currentDecls,Execs,currentExecs,replacementNum) = \
                 self.__processDecl(aDecl,currentDecls,currentExecs,pendingUse,
@@ -731,6 +723,7 @@ class UnitPostProcessor(object):
     # to inlineFileUnits for use in inlining
     @staticmethod
     def processInlineFile():
+        '''Parses the inline file into units, processes the units, and appends them to inlineFileUnits for use in inlining'''
         # may be None if so set in postProcess.py
         if not UnitPostProcessor._inlineFile:
             return
@@ -738,8 +731,147 @@ class UnitPostProcessor(object):
             newUnit = UnitPostProcessor.__getInlineSubroutine(aUnit)
             UnitPostProcessor._inlineFileUnits.append(newUnit)
 
+    @staticmethod
+    # fortStmt: a CommonStmt from a common block in the file being processed with 
+    # only active variables in the declList
+    # typeDecls: list of all type declarations for variables in the file
+    # being processed
+    # RETURNS: a new procedure initializing variables for the common block specified by fortStmt or None
+    def createInitProcedure(fortStmt,typeDecls):
+        '''creates an initialization subroutine for the active variables in a specified common block'''
+        if isinstance(fortStmt,fs.CommonStmt):
+            # create a new unit for the initializations
+            newUnit = Unit()
+            newUnit.uinfo = fs.SubroutineStmt('common_'+fortStmt.name+'_init',[])
+            # insert oad_active module
+            newDecl = fs.UseAllStmt(moduleName='OAD_active',renameList=None,lead='\t')
+            newUnit.decls.append(newDecl)
+            newStmt = fs.CommonStmt(fortStmt.name,copy.deepcopy(fortStmt.declList),lead='\t')
+            newUnit.decls.append(newStmt)
+            # insert type declarations for variables which occur in the common statement declList
+            for decl in typeDecls:
+                if isinstance(decl,fs.DrvdTypeDecl):
+                    newDecls = []
+                    for var in decl.get_decls():
+                        if str(var) in fortStmt.declList:
+                            newDecls.append(var)
+                            fortStmt.declList.remove(str(var))
+                    decl.set_decls(newDecls)
+                    if decl.get_mod()[0].lower() == UnitPostProcessor._abstract_type:
+                        decl.set_mod([UnitPostProcessor._replacement_type])
+                    decl.lead = '\t'
+                    if len(decl.get_decls()) > 0:
+                        newUnit.decls.append(decl)
+                else:
+                    for var in decl.get_decls():
+                        if str(var) in fortStmt.declList:
+                            newUnit.decls.append(decl)
+            
+            # create a new AssignStmt to initialize the derivative component to 0 for all 
+            # arguments in the common block's declList
+            for arg in newStmt.declList:
+                lhs = fe.Sel(arg,'d')
+                rhs = '0'
+                newExec = fs.AssignStmt(lhs,rhs,lead='\t')
+                newUnit.execs.append(newExec)
+            newUnit.end = [fs.EndSubroutineStmt()]
+            return newUnit
+        return None
+    
+    # initNames: a list of the names of subroutines which initialize active variables
+    # RETURNS: a procedure which calls all other initialization subroutines
+    @staticmethod
+    def createGlobalInitProcedure(initNames):
+        '''a procedure which initializes all active global variables by calling all initialization subroutines which have been created for modules or common blocks'''
+        newUnit = Unit()
+        newUnit.uinfo = fs.SubroutineStmt('OAD_globalVar_init',[])
+        for name in initNames:
+            if name[0:3] == 'mod':
+                mod_name = name[4:]
+                newStmt = fs.UseAllStmt(mod_name,[],lead='\t')
+                newUnit.decls.append(newStmt)
+                newStmt = fs.CallStmt(name+'_init',[],lead='\t')
+            else:
+                newStmt = fs.CallStmt('common_'+name+'_init',[],lead='\t')                
+            newUnit.execs.append(newStmt)
+        newUnit.end = [fs.EndSubroutineStmt()]
+        return newUnit
+
+    def __insertGlobalInitCall(self):
+        '''inserts a call to the global initialization procedure'''
+        newExec = fs.CallStmt('OAD_globalVar_init',[],lead='\t')
+        self.__myUnit.execs.insert(0,newExec)
+
+    # RETURNS: a new unit which is a contains block with a subroutine initializing active variables in the module
+    def __createModuleInitProcedure(self):
+        '''creates a contains block in the module with a new subroutine initializing all active variables within the module'''
+        activeTypeDecls = []
+        for decl in self.__myUnit.decls:
+            if isinstance(decl,fs.DrvdTypeDecl) and \
+                    (decl.get_mod()[0].lower() == self._abstract_type):
+                activeTypeDecls.append(decl)
+        if len(activeTypeDecls) == 0:
+            return None
+
+        subUnit = Unit()
+        subUnit.uinfo = fs.SubroutineStmt('mod_'+self.__myUnit.uinfo.name+'_init',[])
+        # insert oad_active module
+        newDecl = fs.UseAllStmt(moduleName='OAD_active',renameList=None,lead='\t')
+        subUnit.decls.append(newDecl)
+
+        for decl in activeTypeDecls:
+            if isinstance(decl,fs.DrvdTypeDecl):
+                if decl.get_mod()[0].lower() == UnitPostProcessor._abstract_type:
+                    decl.set_mod([UnitPostProcessor._replacement_type])
+                subUnit.decls.append(decl)
+            else:
+                subUnit.decls.append(decl)
+            for arg in decl.get_decls():
+                lhs = fe.Sel(arg,'d')
+                rhs = '0'
+                newExec = fs.AssignStmt(lhs,rhs,lead='\t')
+                subUnit.execs.append(newExec)
+        subUnit.end = [fs.EndSubroutineStmt()]
+        if len(self.__myUnit.contains) == 0:
+            self.__myUnit.contains.append(fs.ContainsStmt())
+        return subUnit
+
+    # find all common block variables to be initialized
+    # initNames: contains the names of subroutines which will be called in the global init procedure
+    # typeDecls: type declarations for all variables
+    def getInitCommonStmts(self,initSet,initNames,typeDecls):
+        '''find all common block variables to be initialized and the names of all the initialization procedures which will be created so they can be called later in the global initialization procedure'''
+        if isinstance(self.__myUnit.uinfo,fs.ModuleStmt):
+            if not self.__myUnit.uinfo.name in initNames:
+                for decl in self.__myUnit.decls:
+                    # if there is an active variable in the module, add the the name of 
+                    # the initialization subroutine which will be created (in processUnit)
+                    # to initNames
+                    if isinstance(decl,fs.DrvdTypeDecl) and \
+                            (decl.get_mod()[0].lower() == self._abstract_type):
+                        initNames.append('mod_'+self.__myUnit.uinfo.name)
+                        return
+        initCommonStmt = None
+        for decl in self.__myUnit.decls:
+            if isinstance(decl,fs.CommonStmt):
+                # create a new common statement with a declList that contains all 
+                # active variables from the original common statement 
+                initCommonStmt = fs.CommonStmt(decl.name,[])
+                initDecls = []
+                for var in decl.declList:
+                    # lookup in symtab
+                    var_type = self.__myUnit.symtab.lookup_name(var).type
+                    if not isinstance(var_type[1][0],fs._Kind) and (var_type[1][0].lower() == self._abstract_type):
+                        initCommonStmt.declList.append(var)
+                # avoid initializing variables twice
+                if not initCommonStmt.name in initNames:
+                    initSet.add(initCommonStmt)
+                    initNames.append(decl.name)
+            if isinstance(decl,fs.TypeDecl):
+                typeDecls.add(decl)
+
     # Processes all statements in the unit
-    def processUnit(self):
+    def processUnit(self,insertGlobalInitCall=False):
         ''' post-process a unit '''
         DebugManager.debug(('+'*55)+' Begin post-processing unit <'+str(self.__myUnit.uinfo)+'> '+(55*'+'))
         DebugManager.debug('local '+self.__myUnit.symtab.debug())
@@ -750,10 +882,18 @@ class UnitPostProcessor(object):
             UnitPostProcessor(subUnit).processUnit()
 
         if self._mode == 'reverse':
+            if isinstance(self.__myUnit.uinfo,fs.ModuleStmt):
+                # create init subroutine & add it inside module
+                subUnit = self.__createModuleInitProcedure()
+                if subUnit is not None:
+                    subUnit.parent = self.__myUnit
+                    self.__myUnit.ulist.append(subUnit)
             inline = False
             self.__templateExpansion()
             self.__myUnit.decls = self.__myNewDecls
             self.__myUnit.execs = self.__myNewExecs
+            if insertGlobalInitCall:
+                self.__insertGlobalInitCall()
         else:
             (Decls,Execs) = self.__forwardProcessDeclsAndExecs()
             self.__myUnit.decls = Decls
