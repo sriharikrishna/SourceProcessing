@@ -799,11 +799,6 @@ class UnitPostProcessor(object):
         newUnit.end = [fs.EndSubroutineStmt()]
         return newUnit
 
-    def __insertGlobalInitCall(self):
-        '''inserts a call to the global initialization procedure'''
-        newExec = fs.CallStmt('OAD_globalVar_init',[],lead='\t')
-        self.__myUnit.execs.insert(0,newExec)
-
     # RETURNS: a new unit which is a contains block with a subroutine initializing active variables in the module
     def __createModuleInitProcedure(self):
         '''creates a contains block in the module with a new subroutine initializing all active variables within the module'''
@@ -873,7 +868,7 @@ class UnitPostProcessor(object):
                 typeDecls.add(decl)
 
     # Processes all statements in the unit
-    def processUnit(self,insertGlobalInitCall=False):
+    def processUnit(self):
         ''' post-process a unit '''
         DebugManager.debug(('+'*55)+' Begin post-processing unit <'+str(self.__myUnit.uinfo)+'> '+(55*'+'))
         DebugManager.debug('local '+self.__myUnit.symtab.debug())
@@ -894,8 +889,6 @@ class UnitPostProcessor(object):
             self.__templateExpansion()
             self.__myUnit.decls = self.__myNewDecls
             self.__myUnit.execs = self.__myNewExecs
-            if insertGlobalInitCall:
-                self.__insertGlobalInitCall()
         else:
             (Decls,Execs) = self.__forwardProcessDeclsAndExecs()
             self.__myUnit.decls = Decls

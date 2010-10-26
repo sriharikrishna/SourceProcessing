@@ -301,13 +301,12 @@ def main():
         # set whitespace
         fe.setWhitespace(config.whitespace)
 
-        insertGlobalInitCall = False; initSubroutinesAdded = False
+        initSubroutinesAdded = False
         initSet = set([]); initNames = []; typeDecls = set([])
         if config.mode == 'r':
             # get common block variables to initialize if processing in reverse mode
             for aUnit in fortUnitIterator(inputFile,config.inputFormat):
                 UnitPostProcessor(aUnit).getInitCommonStmts(initSet,initNames,typeDecls)
-            insertGlobalInitCall = (len(initNames) > 0)
         if splitUnits:
             (base,ext) = os.path.splitext(inputFile)
             unitNumExt = "%0"+str(unitNameWidth)+"d"
@@ -325,11 +324,7 @@ def main():
                 output = base + unitNumExt % unit_num + ext; unit_num
                 out = open(output,'w')
                 outFileNameList.append(output)
-                if isinstance(aUnit.uinfo,fs.SubroutineStmt) and len(initNames) > 0 and insertGlobalInitCall:
-                    UnitPostProcessor(aUnit).processUnit(insertGlobalInitCall).printit(out)
-                    insertGlobalInitCall = False
-                else:
-                    UnitPostProcessor(aUnit).processUnit().printit(out)                    
+                UnitPostProcessor(aUnit).processUnit().printit(out)                    
                 out.close()
                 if (config.progress):
                     msg='SourceProcessing: progress: done with unit '+aUnit.uinfo.name
@@ -375,11 +370,7 @@ def main():
                     # add new init procedures & global init procedure after module declarations
                     initSubroutinesAdded = addInitProcedures(initSet,initNames,typeDecls,out)
                 # postprocess the unit and print it
-                if isinstance(aUnit.uinfo,fs.SubroutineStmt) and len(initNames) > 0 and insertGlobalInitCall:
-                    UnitPostProcessor(aUnit).processUnit(insertGlobalInitCall).printit(out)
-                    insertGlobalInitCall = False
-                else:
-                    UnitPostProcessor(aUnit).processUnit().printit(out)
+                UnitPostProcessor(aUnit).processUnit().printit(out)
             out.close()
         else: 
             out=None
@@ -392,11 +383,7 @@ def main():
                 if not isinstance(aUnit.uinfo,fs.ModuleStmt) and not initSubroutinesAdded:
                     # add new init procedures & global init procedure after module declarations
                     initSubroutinesAdded = addInitProcedures(initSet,initNames,typeDecls,out)
-                if isinstance(aUnit.uinfo,fs.SubroutineStmt) and len(initNames) > 0 and insertGlobalInitCall:
-                    UnitPostProcessor(aUnit).processUnit(insertGlobalInitCall).printit(out)
-                    insertGlobalInitCall = False
-                else:
-                    UnitPostProcessor(aUnit).processUnit().printit(out)
+                UnitPostProcessor(aUnit).processUnit().printit(out)
             if config.output: 
                 out.close()
 
