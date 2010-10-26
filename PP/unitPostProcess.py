@@ -854,14 +854,14 @@ class UnitPostProcessor(object):
                 # create a new common statement with a declList that contains all 
                 # active variables from the original common statement 
                 initCommonStmt = fs.CommonStmt(decl.name,[])
-                initDecls = []
                 for var in decl.declList:
                     # lookup in symtab
                     var_type = self.__myUnit.symtab.lookup_name(var).type
                     if not isinstance(var_type[1][0],fs._Kind) and (var_type[1][0].lower() == self._abstract_type):
                         initCommonStmt.declList.append(var)
                 # avoid initializing variables twice
-                if not initCommonStmt.name in initNames:
+                # don't create subroutines for common blocks with no active variables
+                if not (len(initCommonStmt.declList)==0) and not initCommonStmt.name in initNames:
                     initSet.add(initCommonStmt)
                     initNames.append(decl.name)
             if isinstance(decl,fs.TypeDecl):
