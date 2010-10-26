@@ -52,7 +52,7 @@ def addInitProcedures(initSet,initNames,typeDecls,output=None,base='',unitNumExt
         if newUnit is not None:
             # print new output file
             if splitUnits:
-                output = base + unitNumExt % unit_num + ext; unit_num += 1
+                output = base + unitNumExt % unit_num + ext; unit_num+=1
                 out = open(output,'w')
                 outFileNameList.append(output)
                 # print new output file
@@ -63,7 +63,7 @@ def addInitProcedures(initSet,initNames,typeDecls,output=None,base='',unitNumExt
     if len(initNames) > 0:
         newUnit = UnitPostProcessor.createGlobalInitProcedure(initNames)
         if splitUnits:
-            output = base + unitNumExt % unit_num + ext; unit_num += 1
+            output = base + unitNumExt % unit_num + ext
             out = open(output,'w')
             outFileNameList.append(output)
             newUnit.printit(out)
@@ -315,7 +315,7 @@ def main():
             if (config.timing):
                 unitStartTime=datetime.datetime.utcnow()
             for aUnit in fortUnitIterator(inputFile,config.inputFormat):
-                output = base + unitNumExt % unit_num + ext; unit_num
+                output = base + unitNumExt % unit_num + ext; unit_num+=1
                 out = open(output,'w')
                 outFileNameList.append(output)
                 UnitPostProcessor(aUnit).processUnit().printit(out)                    
@@ -330,7 +330,8 @@ def main():
             # add new init procedures & global init procedure at end
             newOutFiles = addInitProcedures(initSet,initNames,typeDecls,base=base,unitNumExt=unitNumExt,\
                                       unit_num=unit_num,ext=ext,splitUnits=splitUnits)
-            outFileNameList.extend(newOutFiles)
+            if newOutFiles is not None:
+                outFileNameList.extend(newOutFiles)
 
             makeOut = open('postProcess.make','w')
             makeOut.write("POSTPROCESSEDFILES=")
