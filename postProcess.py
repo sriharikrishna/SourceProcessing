@@ -68,10 +68,10 @@ def addInitProcedures(initSet,initNames,typeDecls,output=None,base='',unitNumExt
             outFileNameList.append(output)
             newUnit.printit(out)
             out.close()
-            return (newUnit!=None,unit_num,outFileNameList)
+            return outFileNameList
         else:
             newUnit.printit(output)
-            return (newUnit!=None)
+            return
 
 def main():
     usage = '%prog [options] <input_file>'
@@ -315,12 +315,6 @@ def main():
             if (config.timing):
                 unitStartTime=datetime.datetime.utcnow()
             for aUnit in fortUnitIterator(inputFile,config.inputFormat):
-                if not isinstance(aUnit.uinfo,fs.ModuleStmt) and not initSubroutinesAdded:
-                    # add new init procedures & global init procedure after module declarations
-                    (initSubroutinesAdded,unit_num,newOutFiles) = \
-                        addInitProcedures(initSet,initNames,typeDecls,base=base,unitNumExt=unitNumExt,\
-                                              unit_num=unit_num,ext=ext,splitUnits=splitUnits)
-                    outFileNameList.extend(newOutFiles)
                 output = base + unitNumExt % unit_num + ext; unit_num
                 out = open(output,'w')
                 outFileNameList.append(output)
@@ -333,6 +327,11 @@ def main():
                         msg+=' took: '+str(nTime-unitStartTime)
                         unitStartTime=nTime
                     print msg
+            # add new init procedures & global init procedure at end
+            newOutFiles = addInitProcedures(initSet,initNames,typeDecls,base=base,unitNumExt=unitNumExt,\
+                                      unit_num=unit_num,ext=ext,splitUnits=splitUnits)
+            outFileNameList.extend(newOutFiles)
+
             makeOut = open('postProcess.make','w')
             makeOut.write("POSTPROCESSEDFILES=")
             for outFileName in outFileNameList:
@@ -366,11 +365,10 @@ def main():
                         out = open(newOutputFile,'w')
                 elif not out:
                     raise PostProcessError('option separateOutput specified, no output file can be determined for the first unit',0)
-                if not isinstance(aUnit.uinfo,fs.ModuleStmt) and not initSubroutinesAdded:
-                    # add new init procedures & global init procedure after module declarations
-                    initSubroutinesAdded = addInitProcedures(initSet,initNames,typeDecls,out)
                 # postprocess the unit and print it
                 UnitPostProcessor(aUnit).processUnit().printit(out)
+            # add new init procedures & global init procedure after module declarations
+            addInitProcedures(initSet,initNames,typeDecls,out)
             out.close()
         else: 
             out=None
@@ -380,10 +378,9 @@ def main():
             else:
                 out=sys.stdout
             for aUnit in fortUnitIterator(inputFile,config.inputFormat):
-                if not isinstance(aUnit.uinfo,fs.ModuleStmt) and not initSubroutinesAdded:
-                    # add new init procedures & global init procedure after module declarations
-                    initSubroutinesAdded = addInitProcedures(initSet,initNames,typeDecls,out)
                 UnitPostProcessor(aUnit).processUnit().printit(out)
+            # add new init procedures & global init procedure after module declarations
+            addInitProcedures(initSet,initNames,typeDecls,out)
             if config.output: 
                 out.close()
 
