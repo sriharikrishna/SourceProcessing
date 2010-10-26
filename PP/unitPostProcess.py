@@ -817,12 +817,6 @@ class UnitPostProcessor(object):
         subUnit.decls.append(newDecl)
 
         for decl in activeTypeDecls:
-            if isinstance(decl,fs.DrvdTypeDecl):
-                if decl.get_mod()[0].lower() == UnitPostProcessor._abstract_type:
-                    decl.set_mod([UnitPostProcessor._replacement_type])
-                subUnit.decls.append(decl)
-            else:
-                subUnit.decls.append(decl)
             for arg in decl.get_decls():
                 lhs = fe.Sel(arg,'d')
                 rhs = '0'
