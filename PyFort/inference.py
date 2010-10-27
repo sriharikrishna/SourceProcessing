@@ -18,7 +18,11 @@ class InferenceError(Exception):
    '''exception for ...'''
    def __init__(self,msg,lineNumber=None):
        self.msg  = msg
-       self.lineNumber = lineNumber
+       if lineNumber is not None:
+          self.msg += ' from line '+str(lineNumber)
+
+   def __str__(self):
+      return (self.msg)
 
 def kw2type(s): return(fortStmts.kwtbl[s.lower()])
 def lenfn(n): return [fortStmts._F77Len(str(n))]
@@ -229,7 +233,7 @@ def expressionType(anExpression,localSymtab,lineNumber):
        DebugManager.debug(' it\'s a SLICE EXPRESSION')
        return (fortStmts.IntegerStmt, [])
     else:
-        raise InferenceError('inference.expressionType: No type could be determined for expression "'+str(anExpression)+'" (represented as '+repr(anExpression)+' )',lineNumber)
+       raise InferenceError('inference.expressionType: No type could be determined for expression "'+str(anExpression)+'" (represented as '+repr(anExpression)+' )',lineNumber)
 
 def canonicalTypeClass(typeClass,modList):
    if modList:
