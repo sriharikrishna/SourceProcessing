@@ -180,6 +180,11 @@ def main():
                    dest='filenameSuffix',
                    help='for use with --separateOutput: append this suffix to the name of the corresponding input file (defaults to an empty string)',
                    default='')
+    opt.add_option('--explicitInit',
+                   dest='explicitInit',
+                   help='create subroutines for the explicit initialization of active variables in common blocks and modules',
+                   action='store_true',
+                   default=False)
     opt.add_option('--recursionLimit',
                    dest='recursionLimit',
                    type='int',
@@ -267,6 +272,8 @@ def main():
                 opt.error("option -i requires reverse mode ( -m r )")
             if (config.template):
                 opt.error("option -t requires reverse mode ( -m r )")
+            if (config.explicitInit):
+                opt.error("option --explicitInit requires reverse mode ( -m r )")
         if config.mode == 'f':
             UnitPostProcessor.setMode('forward')
         if config.mode == 'r':
@@ -280,6 +287,8 @@ def main():
             UnitPostProcessor.processInlineFile()
             templateFile = config.template or 'ad_template.f'
             TemplateExpansion.setTemplateFile(templateFile)
+            if (config.explicitInit):
+                UnitPostProcessor.setExplicitInit()
 
         # set options for splitting compile units
         if config.width:
@@ -328,10 +337,11 @@ def main():
                         unitStartTime=nTime
                     print msg
             # add new init procedures & global init procedure at end
-            newOutFiles = addInitProcedures(initSet,initNames,typeDecls,base=base,unitNumExt=unitNumExt,\
-                                      unit_num=unit_num,ext=ext,splitUnits=splitUnits)
-            if newOutFiles is not None:
-                outFileNameList.extend(newOutFiles)
+            if (config.explicitInit):
+                newOutFiles = addInitProcedures(initSet,initNames,typeDecls,base=base,unitNumExt=unitNumExt,\
+                                                    unit_num=unit_num,ext=ext,splitUnits=splitUnits)
+                if newOutFiles is not None:
+                    outFileNameList.extend(newOutFiles)
 
             makeOut = open('postProcess.make','w')
             makeOut.write("POSTPROCESSEDFILES=")
@@ -369,7 +379,8 @@ def main():
                 # postprocess the unit and print it
                 UnitPostProcessor(aUnit).processUnit().printit(out)
             # add new init procedures & global init procedure after module declarations
-            addInitProcedures(initSet,initNames,typeDecls,out)
+            if (config.explicitInit):
+                addInitProcedures(initSet,initNames,typeDecls,out)
             out.close()
         else: 
             out=None
@@ -381,7 +392,8 @@ def main():
             for aUnit in fortUnitIterator(inputFile,config.inputFormat):
                 UnitPostProcessor(aUnit).processUnit().printit(out)
             # add new init procedures & global init procedure after module declarations
-            addInitProcedures(initSet,initNames,typeDecls,out)
+            if (config.explicitInit):
+                addInitProcedures(initSet,initNames,typeDecls,out)
             if config.output: 
                 out.close()
 
