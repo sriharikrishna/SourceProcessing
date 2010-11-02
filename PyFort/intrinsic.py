@@ -4,6 +4,7 @@ a predicate to test for a function being an intrinsic
 '''
 __intrinsics = (
     'abs',
+    'acos',
     'adjustl',
     'adjustr',
     'aimag',
@@ -14,6 +15,7 @@ __intrinsics = (
     'amin0',
     'amin1',
     'any',
+    'asin',
     'associated',
     'atan',
     'atan2',
@@ -22,13 +24,16 @@ __intrinsics = (
     'cos',
     'dabs',
     'dble',
+    'dcos',
     'dexp',
+    'dfloat',
     'dlog',
     'dmax1',
     'dmin1',
     'dmod',
     'dot_product',
     'dsign',
+    'dsin',
     'dsqrt',
     'exp',
     'float',
@@ -100,7 +105,7 @@ def getGenericName(op):
         return archaicName[1:-1]
     elif (archaicName[-1] in ('0','1') and archaicName[:-1] in ('max','min') ):
         return archaicName[:-1]
-    elif (archaicName[0] == 'd' and archaicName[1:] in ('sign','abs','log','sqrt','mod') ):
+    elif (archaicName[0] == 'd' and archaicName[1:] in ('sign','abs','log','sqrt','mod','sin','cos') ):
         return archaicName[1:]
     elif (archaicName[0] == 'i' and archaicName[1:] in ('abs') ):
         return archaicName[1:]
@@ -108,6 +113,8 @@ def getGenericName(op):
         return archaicName[1:]
     elif (archaicName == 'idint') :
         return 'int'
+    elif (archaicName == 'dfloat') :
+        return 'dble'
     else :
         return archaicName
     
