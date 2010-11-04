@@ -13,6 +13,7 @@ from PyIR.mutable_tree import _Mutable_T
 from PyUtil.chomp        import chomp
 from PyUtil.errors  import ParseError
 from PyUtil.l_assembler import AssemblerException as ListAssemblerException
+from PyUtil.debugManager import DebugManager
 
 from fortExp      import *
 from fixedfmt     import fixedfmt
@@ -1631,20 +1632,51 @@ class UseOnlyStmt(UseStmt):
                ','.join([str(anOnlyItem) for anOnlyItem in self.onlyList])\
                +''.join(self.internal)
 
-class EntryStmt(Decl):
-    'Entry stmt'
+class EntryStmt(Exec):
+    '''
+    entry stmt; the standard lists it as a non-executable but 
+    the unit parser pattern (fortUnit) knows only the two groups declaration and executable 
+    statements which don't mix so this one has to be treated 
+    as if it was an executable 
+    '''
     kw    = 'entry'
     kw_str = kw
 
     @staticmethod
     def parse(ws_scan,lineNumber) :
         scan = filter(lambda x: x != ' ',ws_scan)
-        form = seq(lit(EntryStmt.kw)) # 0 = stmt_name
-        (id,rest) = form(scan)
-        return EntryStmt(lineNumber=lineNumber,rest=rest)
+        entryPatn = seq(lit(EntryStmt.kw),
+                        id,
+                        zo1(seq(lit('('),
+                                cslist(id),
+                                lit(')'))),
+                        zo1(seq(lit('result'),
+                                lit('('),
+                                id,
+                                lit(')'))))
+        ((theKW,name,args,result),rest) = entryPatn(scan)
+        result = result and result[0][2] or None
+        args = args and args[0][1] or None
+        theStmt=EntryStmt(name,args,result,lineNumber=lineNumber,rest=rest)
+        DebugManager.warning('unstructured control flow: '+str(theStmt),lineNumber,DebugManager.WarnType.controlFlow)
+        return theStmt
 
-    def __init__(self,stmt_name=kw_str,lineNumber=0,label=False,lead='',internal=[],rest=[]):
-        Decl.__init__(self,lineNumber,label,lead,internal,rest)
+    def __init__(self,name,args=None,result=None,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.name=name
+        self.args=args
+        self.result=result
+        Exec.__init__(self,lineNumber,label,lead,internal,rest)
+        
+    def __repr__(self):
+        return self.__class__.__name__+('(%s,%s.%s)' % (self.name,repr(self.args),repr(self.result)))
+        
+    def __str__(self):
+        rStr=self.kw_str+' '+self.name
+        if self.args:
+            rStr+=' ( '+','.join(map(str,self.args))+' ) '
+        if self.result:
+            rStr+=' result ( '+self.result+' )'
+        return rStr
 
 class ExitStmt(Exec):
     kw = 'exit'

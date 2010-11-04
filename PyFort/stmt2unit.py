@@ -338,6 +338,53 @@ def _implicit_none(self,cur):
     DebugManager.debug('[Line '+str(self.lineNumber)+']: stmt2unit._implicit_none() implicit table is now '+str(cur.val.symtab.implicit)+str(cur.val.symtab))
     return self
 
+def _processEntry(self,cur):
+    '''
+    add the entry name to 
+       1. The local symtab for the object
+       2. The unit symtab
+       3. The parent of the unit (if there is one)
+    '''   
+    currentSymtab = cur.val.symtab
+    if (currentSymtab.parent and (self.name in currentSymtab.parent.ids))  :
+        # this must be the definition of a previously  declared module procedure
+        mpSymTabEntry=currentSymtab.parent.ids[self.name]
+        if (mpSymTabEntry.entryKind!=SymtabEntry.ProcedureEntryKind
+            or
+            mpSymTabEntry.genericInfo is None):
+            raise SymtabError('parent symbol is not a module procedure')
+        entry = SymtabEntry(currentSymtab.lookup_name(cur.val.uinfo.name).entryKind)
+        mpSymTabEntry.entryKind=entry.entryKind
+        mpSymTabEntry.type=entry.type
+        entry.genericInfo=mpSymTabEntry.genericInfo
+        currentSymtab.enter_name(self.name,entry)
+        # if it is a function  - collect argument information
+        if (isinstance(cur.val.uinfo,fs.FunctionStmt)) :
+            genSymTabEntry=currentSymtab.parent.lookup_name(mpSymTabEntry.genericInfo.genericName)
+            if (genSymTabEntry is None):
+                raise SymtabError('cannot find generic with name '+mpSymTabEntry.genericInfo.genericName)
+            argsTypeDict={}
+            for arg in self.args:
+                argsTypeDict[arg.lower()]=None # don't know the type yet
+            genSymTabEntry.genericInfo.resolvableTo[self.name.lower()]=argsTypeDict
+            DebugManager.debug('\tstmt2unit._processEntry(): argsTypeDict : '+str(id(argsTypeDict)))
+            DebugManager.debug('\tstmt2unit._processEntry() parent symboltable entry: '+mpSymTabEntry.debug(self.name)+' \n\t\tgeneric entry '+genSymTabEntry.debug(mpSymTabEntry.genericInfo.genericName)+' with argstypedict: '+str(id(argsTypeDict))+'\n\t\tself entry: '+entry.debug(self.name))
+        else :
+            DebugManager.debug('\tstmt2unit._processEntry() parent symboltable entry '+mpSymTabEntry.debug(self.name)+' self entry '+entry.debug(self.name))
+    else: 
+        entry = SymtabEntry(currentSymtab.lookup_name(cur.val.uinfo.name).entryKind)
+        currentSymtab.enter_name(self.name,entry)
+        DebugManager.debug('[Line '+str(self.lineNumber)+']: new unit symtab entry '+entry.debug(self.name))
+        if currentSymtab.parent:
+            parentSymtabEntry = currentSymtab.replicateEntry(self.name,str(cur.val.uinfo)+self.name)
+            currentSymtab.parent.enter_name(self.name,parentSymtabEntry)
+            DebugManager.debug('[Line '+str(self.lineNumber)+']: new PARENT unit symtab entry '+parentSymtabEntry.debug(self.name))
+    DebugManager.debug('[Line '+str(self.lineNumber)+']: stmt2unit._processEntry() for '+str(self)+': with symtab '+str(currentSymtab)+' with parent symtab '+str(currentSymtab.parent))
+    if (isinstance(self,fs.FunctionStmt)): 
+        cur.val._in_functionDecl=self
+    return self    
+    
+
 def _beginProcedureUnit(aProcedureDeclStmt,cur):
     '''
     called for function/subroutine statements within an interface block
@@ -528,7 +575,7 @@ fs.SubroutineStmt.decl2unitAction     = _beginProcedureUnit   # start declaratio
 fs.EndSubroutineStmt.decl2unitAction  = _endProcedureUnit     # end declaration   
 fs.FunctionStmt.decl2unitAction       = _beginProcedureUnit   # start declaration 
 fs.EndFunctionStmt.decl2unitAction    = _endProcedureUnit     # end declaration 
-fs.EndInterfaceStmt.decl2unitAction = _endInterface           # unsets unit.val._in_iface which affects is_decl return for some statement classes
+fs.EndInterfaceStmt.decl2unitAction   = _endInterface         # unsets unit.val._in_iface which affects is_decl return for some statement classes
 
 # special case turns an Exec statement into a Decl statement:
 # _is_stmt_fn determines if an assignment is a statement function and if yes
@@ -543,3 +590,4 @@ fs.ComputedGotoStmt.exec2unitAction = _processGotoLabels
 fs.AssignedGotoStmt.exec2unitAction = _processGotoLabels
 fs.ArithmIfStmt.exec2unitAction     = _processArithmIfLabels
 fs.IfNonThenStmt.exec2unitAction    = _processSons
+fs.EntryStmt.exec2unitAction        = _processEntry
