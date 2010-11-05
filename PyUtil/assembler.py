@@ -184,7 +184,7 @@ def vgen(a,src,mult_stmts=False):
         except AssemblerException, e:
             try:
                 msg=str(e.rest.next().uinfo.name)
-                msg="unable to assemble contents of unit named "+msg
+                msg="unable to assemble contents of unit named "+msg+" exception is: "+e.msg
                 raise AssemblerException(msg,e.rest)
             except StopIteration, se:
                 pass
