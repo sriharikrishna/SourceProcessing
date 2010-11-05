@@ -183,8 +183,14 @@ def vgen(a,src,mult_stmts=False):
                 yield v
         except AssemblerException, e:
             try:
-                msg=str(e.rest.next().uinfo.name)
-                msg="unable to assemble contents of unit named "+msg+" exception is: "+e.msg
+                from PyFort.fortUnit import Unit
+                something = e.rest.next()
+                msg="unable to assemble contents of a unit "
+                if (isinstance(something,Unit)):
+                    msg+="named "+str(something.uinfo.name)
+                else:
+                    msg+="starting with "+str(something)
+                msg+="\nexception is: "+e.msg
                 raise AssemblerException(msg,e.rest)
             except StopIteration, se:
                 pass
