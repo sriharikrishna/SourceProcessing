@@ -1658,7 +1658,7 @@ class EntryStmt(Exec):
         result = result and result[0][2] or None
         args = args and args[0][1] or None
         theStmt=EntryStmt(name,args,result,lineNumber=lineNumber,rest=rest)
-        DebugManager.warning('unstructured control flow: '+str(theStmt),lineNumber,DebugManager.WarnType.controlFlow)
+        DebugManager.warning('statement >'+str(theStmt)+'< implies unstructured control flow',lineNumber,DebugManager.WarnType.controlFlow)
         return theStmt
 
     def __init__(self,name,args=None,result=None,lineNumber=0,label=False,lead='',internal=[],rest=[]):
