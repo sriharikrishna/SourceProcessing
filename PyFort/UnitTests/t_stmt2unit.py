@@ -3,6 +3,7 @@ from _Setup import *
 from unittest import *
 
 from PyUtil.symtab import Symtab
+from inference import expressionType
 
 from stmt2unit import *
 from stmt2unit import _implicit
@@ -31,13 +32,13 @@ class C1(TestCase):
         s2 = pps('integer(special) a')
         t = (s2.__class__,s2.mod)
     
-        t1 = v.lookupType('foo')
+        t1 = expressionType('foo',v,0)
         ae(repr(t1),repr(t))
         
         s2 = pps('real a')
         t = (s2.__class__,s2.mod)
     
-        t1 = v.lookupType('zoo')
+        t1 = expressionType('zoo',v,0)
         ae(repr(t1),repr(t))
 
 s1 = makeSuite(C1)
