@@ -1423,7 +1423,7 @@ class SubroutineStmt(PUstart):
                  )
         ((dc,name,args),rst) = p1(scan)
         if args:
-            (dc,args,dc1) = args[0]
+            args = args[0][1]
 
         return SubroutineStmt(name,args,lineNumber=lineNumber,rest=rst)
 
