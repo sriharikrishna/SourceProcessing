@@ -7,6 +7,7 @@ from PyUtil.buf_iter import buf_iter
 from PyUtil.debugManager import DebugManager
 from PyUtil.flatten import flatten
 from PyUtil.symtab import Symtab
+from PyUtil.errors import ParseError
 
 import fortStmts as fs
 from fortFile import Ffile
@@ -41,6 +42,12 @@ def install_pat(cur):
         def _execAction(self):
             return self.exec2unitAction(cur)
         return _execAction
+
+    def outOfOrder(cur):
+        def _outOfOrder(self):
+            raise ParseError(self.lineNumber,str(self),fs.Exec,'obsolete language feature: non-executable statement following an executable statement (recommended practice: move the statement up to the declarations section)')
+            return
+        return _outOfOrder
     
     _ustart    = lambda s: s.is_ustart() # set in fortStmts, true for block data, module, function, subroutine, program
     _uend      = lambda s: s.is_uend() # set in fortStmts, true for the respective end statements
@@ -53,14 +60,15 @@ def install_pat(cur):
     # the "action" refers to the decl2unitAction of a Statement which is set in stmt2unit; this - however - is executed only when is_decl is true
     adecl      = treat(pred(lambda s: s.is_decl(cur)),declAction(cur))
     aexec      = treat(pred(lambda s: s.is_exec()),execAction(cur)) # is exec is set in fortStmts, true for Exec and all subclasses except for EndStmt and its subclasses
-
+    oooDecl    = treat(pred(lambda s: s.is_decl(cur)),outOfOrder(cur))
     # tuple of shorter names for the following:
-    (c,u,d,x,n,e) = (cblk,      # comment block
-                     startunit, # unit start
-                     adecl,     # declarations
-                     aexec,     # executable stmts
-                     ulist_pre, # contains being a predicate for subunits
-                     endunit)   # unit end
+    (c,u,d,x,o,n,e) = (cblk,      # comment block
+                       startunit, # unit start
+                       adecl,     # declarations
+                       aexec,     # executable stmts
+                       oooDecl,   # out of order declaration, to provide diagnostic
+                       ulist_pre, # contains being a predicate for subunits
+                       endunit)   # unit end
 
     fmod = cur.module_handler
 
@@ -81,13 +89,14 @@ def install_pat(cur):
     uh    = treat(seq(zo1(c),u),cur.uhead)         # comments and unit start, invoke uhead -> uinfo -> <stmt>.unit_entry
     udcl  = treat(star(cmst(d)),flatten,cur.udecl) # comments and declarations. invoke udecl
     uexc  = treat(star(cmst(x)),flatten,cur.uexec) # comments and executable statements
+    odecl = treat(star(cmst(o)),flatten)           # comments and out of order declarations
     cnth  = treat(cmst(n),cur.ucont)               # comments and CONTAINS, invoke ucont -> makes a new sub unit
     cntl  = treat(star(_ul),cur.ulist)             # recursive descent into sub units
     uctn  = zo1(seq(cnth,cntl))                    # contains block   
     uend  = treat(cmst(e),cur.uend,handle_mod)     # comments and unit end, invoke uend (makes new Unit) and handle_mod
 
-    uu    = treat(seq(uh,udcl,uexc,uctn,uend),lambda s:cur.fval) # apply cur.fval to the full assembly for a unit
-    ucm   = treat(c,cur.ucm,lambda s:cur.fval)     # apply ucm and cur.fval to he comments in c
+    uu    = treat(seq(uh,udcl,uexc,odecl,uctn,uend),lambda s:cur.fval) # apply cur.fval to the full assembly for a unit
+    ucm   = treat(c,cur.ucm,lambda s:cur.fval)     # apply ucm and cur.fval to the comments in c
     return disj(uu,ucm)                            # it is either a unit or some comments
 
 def _symtab_of(v):
