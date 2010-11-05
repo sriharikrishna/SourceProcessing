@@ -607,7 +607,7 @@ class UnitCanonicalizer(object):
         if isinstance(aDecl,fs.FunctionStmt):
             self.setFunctionBlockFlag(True)
             (self.__outParam,subroutineStmt) = function2subroutine.\
-                                               convertFunctionStmt(aDecl)
+                                               convertFunctionOrEntryStmt(aDecl)
             subroutineBlock.append(subroutineStmt)
             self.__resultDecl = function2subroutine.\
                          createResultDecl(aDecl,self.__outParam)

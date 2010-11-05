@@ -144,7 +144,7 @@ def intrinsicType(anIntrinsicApp,localSymtab,lineNumber):
         return (fortStmts.RealStmt, [])
     elif anIntrinsicApp.head.lower() in ['int','idint','size','lbound','ubound','shape']:
         return (fortStmts.IntegerStmt, [])
-    elif anIntrinsicApp.head.lower() in ['dble','dabs','dexp','dlog','dsqrt','dmod']:
+    elif anIntrinsicApp.head.lower() in ['dble','dfloat','dabs','dexp','dlog','dsqrt','dmod']:
         return (fortStmts.DoubleStmt, [])
     elif anIntrinsicApp.head.lower() == 'cmplx':
         return (fortStmts.ComplexStmt, [])

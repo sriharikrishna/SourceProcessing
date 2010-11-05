@@ -91,17 +91,22 @@ def convertInterfaceBlock(oldInterfaceBlock,oldFuncnewSubPairs):
             newInterfaceBlock.append(newDecl)
     return newInterfaceBlock
 
-def convertFunctionStmt(functionStmt):
-    DebugManager.debug(10*'-'+'>'+'called function2subroutine.convertFunctionStmt on '+str(functionStmt))
-    if functionStmt.result is None:
-        outParam = fs._NoInit(functionStmt.name.lower())
+def convertFunctionOrEntryStmt(theStmt):
+    DebugManager.debug(10*'-'+'>'+'called function2subroutine.convertFunctionOrEntryStmt on '+str(theStmt))
+    if (not (isinstance(theStmt,fs.FunctionStmt) or isinstance(theStmt,fs.EntryStmt))):
+        raise FunToSubError('convertFunctionOrEntryStmt called for '+str(theStmt))
+    if theStmt.result is None:
+        outParam = fs._NoInit(theStmt.name.lower())
     else:
-        outParam = fs._NoInit(functionStmt.result.lower())
-    args = copy.deepcopy(functionStmt.args) # if we don't do a deep copy here we update the function statement
+        outParam = fs._NoInit(theStmt.result.lower())
+    args = copy.deepcopy(theStmt.args) # if we don't do a deep copy here we update the function statement
     args.append(outParam)
-    name = name_init+functionStmt.name.lower()
-    subroutineStmt = fs.SubroutineStmt(name,args,lead=functionStmt.lead)
-    return (outParam,subroutineStmt)
+    name = name_init+theStmt.name.lower()
+    if isinstance(theStmt,fs.FunctionStmt):
+        convertedStmt = fs.SubroutineStmt(name,args,lead=theStmt.lead)
+    else:
+        convertedStmt = fs.EntryStmt(name,args,lead=theStmt.lead)
+    return (outParam,convertedStmt)
 
 def createResultDecl(functionStmt,outParam):
     DebugManager.debug(10*'-'+'>'+'called function2subroutine.createResultDecl ' \
@@ -151,7 +156,7 @@ def convertFunction(functionUnit,newExecs,newDecls):
                      + 'on function unit statement "'+str(functionUnit)+'",' \
                      +' with symtab "'+str(functionUnit.symtab)+'"')
     newSubUnit = Unit(parent=functionUnit.parent,fmod=functionUnit.fmod)
-    (outParam,newSubUnit.uinfo) = convertFunctionStmt(functionUnit.uinfo)
+    (outParam,newSubUnit.uinfo) = convertFunctionOrEntryStmt(functionUnit.uinfo)
     newSubUnit.cmnt = functionUnit.cmnt
     newSubUnit.contains = functionUnit.contains
     newSubUnit.ulist = functionUnit.ulist
@@ -185,7 +190,11 @@ def convertFunction(functionUnit,newExecs,newDecls):
         
     # iterate over execs for functionUnit
     for anExec in newExecs:
-        newSubUnit.execs.append(anExec)
+        if isinstance(anExec,fs.EntryStmt):
+            (anEntryOutParam,entryStmt) = convertFunctionOrEntryStmt(anExec)
+            newSubUnit.execs.append(entryStmt)
+        else:
+            newSubUnit.execs.append(anExec)
 
     # iterate over end stmts for functionUnit
     for endStmt in functionUnit.end:
