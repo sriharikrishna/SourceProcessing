@@ -90,11 +90,6 @@ class Symtab(object):
         if entry: return entry.lookupDimensions()
         return None
 
-    def lookupType(self,name):
-        (entry,level) = self.lookup_name_level(name)
-        if entry: return entry.lookupType(level.implicit[name[0]])
-        return self.implicit[name[0]]
-
     def _contextReplace(self,anExpression):
         '''
         replace an instances in anExpression of things that may be local to this context (such as renames)

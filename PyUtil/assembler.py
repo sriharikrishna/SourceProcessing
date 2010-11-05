@@ -181,7 +181,13 @@ def vgen(a,src,mult_stmts=False):
                     yield v
             else:
                 yield v
-        except AssemblerException:
+        except AssemblerException, e:
+            try:
+                msg=str(e.rest.next().uinfo.name)
+                msg="unable to assemble contents of unit named "+msg
+                raise AssemblerException(msg,e.rest)
+            except StopIteration, se:
+                pass
             break
 
 if __name__ == '__main__':

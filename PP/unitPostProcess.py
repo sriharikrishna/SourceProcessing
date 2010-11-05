@@ -61,6 +61,11 @@ class UnitPostProcessor(object):
     def setMode(mode):
         UnitPostProcessor._mode = mode
 
+    _explicitInit = False
+    @staticmethod
+    def setExplicitInit():
+        UnitPostProcessor._explicitInit = True
+
     _activeVariablesFileName=None
 
     @staticmethod
@@ -873,7 +878,7 @@ class UnitPostProcessor(object):
             UnitPostProcessor(subUnit).processUnit()
 
         if self._mode == 'reverse':
-            if isinstance(self.__myUnit.uinfo,fs.ModuleStmt):
+            if self._explicitInit and isinstance(self.__myUnit.uinfo,fs.ModuleStmt):
                 # create init subroutine & add it inside module
                 subUnit = self.__createModuleInitProcedure()
                 if subUnit is not None:
