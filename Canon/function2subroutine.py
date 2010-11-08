@@ -41,28 +41,32 @@ def convertFunctionDecl(aDecl,oldFuncnewSubPairs):
                      +' with oldFuncnewSubPairs = "'+str(oldFuncnewSubPairs)+'"')
     newDecl = copy.deepcopy(aDecl)
     modified = False
-    if hasattr(newDecl,"_sons"):
-        for aSon in newDecl.get_sons():
-            theSon = getattr(newDecl,aSon)
-            if isinstance(theSon,list):
+    if hasattr(newDecl,"_sons"): # list of attribute names of Decl instances
+        for anAttrName in newDecl.get_sons():
+            anAttrValue = getattr(newDecl,anAttrName)
+            if isinstance(anAttrValue,list):
                 if isinstance(newDecl,fs.VarAttrib):
-                    newSon = []
+                    newAttrValue = []
                     for anOldNewPair in oldFuncnewSubPairs :
-                        if anOldNewPair[0] in theSon:
-                            newSon.append(anOldNewPair[1])
-                            modified = True
-                    newDecl.set_son(aSon,newSon)
+                        for anAttrValuePart in anAttrValue:
+                            if (isinstance(anAttrValuePart,str) and anOldNewPair[0].lower()==anAttrValuePart.lower()):
+                                newAttrValue.append(anOldNewPair[1])
+                                modified = True
+                                break
+                    newDecl.set_son(anAttrName,newAttrValue)
                 else:
                     for anOldNewPair in oldFuncnewSubPairs :
-                        if anOldNewPair[0] in theSon:
-                            theSon.remove(anOldNewPair[0])
-                            theSon.append(anOldNewPair[1])
-                            newDecl.modified = True
-                            modified = True                    
-            else :
+                        for anAttrValuePart in anAttrValue:
+                            if (isinstance(anAttrValuePart,str) and anOldNewPair[0].lower()==anAttrValuePart.lower()):
+                                anAttrValue.remove(anAttrValuePart)
+                                anAttrValue.append(anOldNewPair[1])
+                                newDecl.modified = True
+                                modified = True
+                                break                    
+            else : # not a list 
                 for anOldNewPair in oldFuncnewSubPairs :
-                    if theSon == anOldNewPair[0] :
-                        newDecl.set_son(aSon,anOldNewPair[1])
+                    if (isinstance(anAttrValue,str) and anAttrValue.lower() == anOldNewPair[0].lower()) :
+                        newDecl.set_son(anAttrName,anOldNewPair[1])
                         modified = True
     return (newDecl,modified)
 
