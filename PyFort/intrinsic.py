@@ -80,12 +80,15 @@ __intrinsics = (
     )
 
 __nonStandard = (
+                 'etime',
                  'getuid',
                  'getpid',
                  'hostnam',
                  'hostnm',
                  'loc',
-                 'sleep'   
+                 'malloc',
+                 'sleep',
+                 'time'   
                  )
 
 def getNonStandard():
