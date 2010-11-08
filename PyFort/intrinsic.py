@@ -83,6 +83,7 @@ __nonStandard = (
                  'getuid',
                  'getpid',
                  'hostnam',
+                 'hostnm',
                  'loc',
                  'sleep'   
                  )
