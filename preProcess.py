@@ -20,6 +20,7 @@ from PyFort.fortUnit import Unit,fortUnitIterator
 from PyFort.fortFile import Ffile
 import PyFort.fortStmts as fs
 from PyFort.inference import InferenceError
+from PyFort.intrinsic import getNonStandard,useNonStandard
 
 from Canon.canon import UnitCanonicalizer,CanonError
 from Canon.subroutinizedIntrinsics import makeSubroutinizedIntrinsics,SubroutinizeError,getModuleName
@@ -125,6 +126,11 @@ def main():
                    help='enable the hoisting of string constant arguments to subroutine calls (defaults to False)',
                    action='store_true',
                    default=False)
+    opt.add_option('','--nonStandard',dest='nonStandard',
+                   type='choice', choices=getNonStandard(),
+                   help='allow non-standard intrinsics: ( '+' | '.join(getNonStandard())+' ) ; can be specified multiple times  (defaults to None).',
+                   action='append',
+                   default=[])
     opt.add_option('-o',
                    '--output',
                    dest='outputFile',
@@ -237,6 +243,8 @@ def main():
         DebugManager.dumpProgress()    
     if config.includePaths:
         Ffile.setIncludeSearchPath(config.includePaths)
+    if config.nonStandard:
+        useNonStandard(config.nonStandard)
     
     try: 
         if config.outputFile:

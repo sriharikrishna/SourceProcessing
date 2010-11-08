@@ -12,7 +12,7 @@ from PyUtil.symtab import SymtabEntry
 
 import fortStmts
 from fortExp import App,NamedParam,Sel,Unary,Ops,is_const,_id_re,_flonum_re,_int_re,_logicon_set,_quote_set,Slice,Zslice,Lslice,Rslice
-from intrinsic import is_intrinsic
+from intrinsic import is_intrinsic, getNonStandard
 
 class InferenceError(Exception):
    '''exception for ...'''
@@ -139,7 +139,7 @@ def identifierType(anId,localSymtab,lineNumber):
        raise InferenceError('inference.identifierType: No type could be determined for identifier "'+anId+'"',lineNumber)
     return returnType
 
-def intrinsicType(anIntrinsicApp,localSymtab,lineNumber):
+def __intrinsicType(anIntrinsicApp,localSymtab,lineNumber):
     if anIntrinsicApp.head.lower() in ['aimag','alog','real']:
         return (fortStmts.RealStmt, [])
     elif anIntrinsicApp.head.lower() in ['int','idint','size','lbound','ubound','shape']:
@@ -152,6 +152,9 @@ def intrinsicType(anIntrinsicApp,localSymtab,lineNumber):
         return (fortStmts.CharacterStmt, [])
     elif anIntrinsicApp.head.lower() in ['lge','lgt','lle','llt']:
         return (fortStmts.LogicalStmt, [])
+    #nonstandard ones: we check is_intrinsic before this is called.
+    elif anIntrinsicApp.head.lower() in getNonStandard():
+        return (fortStmts.IntegerStmt, [])
     else:
         return typemerge([expressionType(anArg,localSymtab,lineNumber) for anArg in anIntrinsicApp.args],
                          (None,None))
@@ -184,7 +187,7 @@ def appType(anApp,localSymtab,lineNumber):
     returnType = None
     # intrinsics: do a type merge
     if is_intrinsic(anApp.head):
-        returnType = intrinsicType(anApp,localSymtab,lineNumber)
+        returnType = __intrinsicType(anApp,localSymtab,lineNumber)
         DebugManager.debug(' It is an INTRINSIC of type '+str(returnType))
     # nonintrinsics: Look for it in the symbol table or for implicit type
     else:

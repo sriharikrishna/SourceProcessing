@@ -79,6 +79,23 @@ __intrinsics = (
     'ubound',
     )
 
+__nonStandard = (
+                 'getuid',
+                 'getpid',
+                 'hostnam',
+                 'loc',
+                 'sleep'   
+                 )
+
+def getNonStandard():
+    return __nonStandard
+
+__useNonStandard=[]
+def useNonStandard(aList):
+    global __useNonStandard
+    if aList: 
+        __useNonStandard=aList
+    
 __inquiry = (
     'any',
     'associated',
@@ -89,7 +106,7 @@ __inquiry = (
     )
 
 def is_intrinsic(op):
-    return op.lower() in __intrinsics
+    return (op.lower() in __intrinsics) or (op.lower() in __useNonStandard)
 
 def is_inquiry(op):
     return op.lower() in __inquiry
@@ -123,5 +140,3 @@ def isPolymorphic(op):
     if not is_intrinsic(op):
         raise Exception("argument "+op+" is not an intrinsic")
     return op.lower() in ('max','min','sign')
-
-    
