@@ -335,10 +335,10 @@ def arrayReferenceShape(arrRefApp,localSymtab,lineNumber):
        return tuple(dimensions)
     return None
 
-def intrinsicShape(anIntrinsicApp,localSymtab,lineNumber):
+def __intrinsicShape(anIntrinsicApp,localSymtab,lineNumber):
     if anIntrinsicApp.head.lower() in ['reshape','matmul']:
-        raise InferenceError('inference.intrinsicShape: not implemented for "'+anIntrinsicApp+'"',lineNumber)
-    if anIntrinsicApp.head.lower() in ['maxval','minval','lge','lgt','lle','llt']:
+        raise InferenceError('inference.__intrinsicShape: not implemented for "'+anIntrinsicApp+'"',lineNumber)
+    if anIntrinsicApp.head.lower() in ['maxval','minval','lge','lgt','lle','llt','time']:
        return None
     else:
         return shapemerge([expressionShape(anArg,localSymtab,lineNumber) for anArg in anIntrinsicApp.args],
@@ -360,7 +360,7 @@ def functionShape(aFunctionApp,localSymtab,lineNumber):
     returnShape = None
     # intrinsics: do a shape merge
     if is_intrinsic(aFunctionApp.head):
-        returnShape = intrinsicShape(aFunctionApp,localSymtab,lineNumber)
+        returnShape = __intrinsicShape(aFunctionApp,localSymtab,lineNumber)
         DebugManager.debug(' It is an INTRINSIC of shape '+str(returnShape))
     # nonintrinsics: Look for it in the symbol table or for implicit shape
     else:
