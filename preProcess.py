@@ -28,15 +28,32 @@ from Canon.function2subroutine import FunToSubError
 
 sys.setrecursionlimit(1500)
 
+ourOutFileNameList=[]
+ourOutFileHandle=None
+
 def cleanup(config):
     import os 
-    if ((not config.noCleanup) and (not config.outputFile is None) and  os.path.exists(config.outputFile)):
-        try: 
-            os.remove(config.outputFile)
-        except:
-            print >>sys.stderr,'Cannot remove output file '+config.outputFile
- 
+    if  ourOutFileHandle and not ourOutFileHandle.closed : 
+        ourOutFileHandle.close()
+    if (not config.noCleanup):
+        for fileName in ourOutFileNameList:
+            if os.path.exists(fileName):
+                try: 
+                    os.remove(config.outputFile)
+                except:
+                    print >>sys.stderr,'Cannot remove output file '+config.outputFile
+
+def mkOutputDir(config,head):
+    outputDirectory = config.pathPrefix+head+config.pathSuffix
+    if outputDirectory == '':
+        outputDirectory = './'
+    if not os.path.exists(outputDirectory): 
+        os.makedirs(outputDirectory)
+    return outputDirectory
+
 def main():
+    global ourOutFileNameList
+    global ourOutFileHandle
     usage = '%prog [options] <input_file> [additional input files]'
     modes={'f':'forward','r':'reverse'}
     modeChoices=modes.keys()
@@ -137,6 +154,25 @@ def main():
                    help='redirect output to  file OUTPUT (default output is stdout); If the "--outputFormat" option is not used, the output format is taken from the extension of this filename',
                    metavar='<output_file>',
                    default=None)
+    opt.add_option('--separateOutput',
+                   dest='separateOutput',
+                   help='split output into files corresponding to input files (defaults to False, conflicts with --output)',
+                   action='store_true',
+                   default=False)
+    opt.add_option('--pathPrefix',
+                   dest='pathPrefix',
+                   help='for use with --separateOutput: prepend this prefix to the directory name of the corresponding input file (defaults to an empty string)',
+                   default='')
+    opt.add_option('',
+                   '--pathSuffix',
+                   dest='pathSuffix',
+                   help='for use with --separateOutput: append this suffix to the directory name of the corresponding input file (defaults to "OAD")',
+                   default='OAD')
+    opt.add_option('',
+                   '--filenameSuffix',
+                   dest='filenameSuffix',
+                   help='for use with --separateOutput: append this suffix to the name of the corresponding input file (defaults to an empty string)',
+                   default='')   
     opt.add_option('--recursionLimit',
                    dest='recursionLimit',
                    metavar='INT',
@@ -222,6 +258,8 @@ def main():
             opt.error("outputLineLength option must be specified with a value >=72 and <=132")
         else:
             setOutputLineLength(config.outputLineLength)
+    if config.outputFile and config.separateOutput: 
+        opt.error("options --outputFile and --separateOutput are mutually exclusive")
 
     if config.removeFunction:
         UnitCanonicalizer.setKeepFunctionDef(False)
@@ -245,39 +283,55 @@ def main():
         Ffile.setIncludeSearchPath(config.includePaths)
     if config.nonStandard:
         useNonStandard(config.nonStandard)
-    
     try: 
-        if config.outputFile:
-            out = open(config.outputFile,'w')
-        else:
-            out = sys.stdout
+        if (not (config.outputFile or config.separateOutput)) :
+            ourOutFileHandle = sys.stdout
             if (len(inputFileList) > 1): # output the file start pragma for the subroutinized intrinsics
-                out.write('!$openad xxx file_start ['+getModuleName()+'.f90]\n')
-                out.flush()
+                ourOutFileHandle.write('!$openad xxx file_start ['+getModuleName()+'.f90]\n')
+                ourOutFileHandle.flush()
             for aUnit in makeSubroutinizedIntrinsics(False):
-                aUnit.printit(out)
+                aUnit.printit(ourOutFileHandle)
         currentInputFile = '<none>'
         for anInputFile in inputFileList:
+            if (config.outputFile and not ourOutFileHandle): 
+                ourOutFileNameList.append(config.outputFile)
+                ourOutFileHandle = open(config.outputFile,'w')
+            if (config.separateOutput):
+                if ourOutFileHandle: 
+                    ourOutFileHandle.close()
+                (head,tail) = os.path.split(anInputFile)
+                (base,extension) = os.path.splitext(tail)
+                outputDirectory = mkOutputDir(config, head) 
+                newOutputFile = os.path.join(outputDirectory,base+config.filenameSuffix+".f90")
+                ourOutFileNameList.append(newOutputFile)
+                ourOutFileHandle = open(newOutputFile,'w')                                    
             currentInputFile = anInputFile
             if (len(inputFileList) > 1): # output the file start pragma
-                out.write('!$openad xxx file_start ['+anInputFile+']\n')
-                out.flush()
+                ourOutFileHandle.write('!$openad xxx file_start ['+anInputFile+']\n')
+                ourOutFileHandle.flush()
             for aUnit in fortUnitIterator(anInputFile,config.inputFormat):
-                UnitCanonicalizer(aUnit).canonicalizeUnit().printit(out)
-        if config.outputFile:
-            out.close()
-            fName=tempfile.mktemp()
-            out = open(fName,'w')
+                UnitCanonicalizer(aUnit).canonicalizeUnit().printit(ourOutFileHandle)
+        if config.outputFile or config.separateOutput:
+            ourOutFileHandle.close()
+            if config.separateOutput:
+                outputDirectory = mkOutputDir(config, '') 
+                newOutputFile = os.path.join(outputDirectory,getModuleName()+'.f90')
+            if config.outputFile :
+                newOutputFile=tempfile.mktemp()
+            ourOutFileNameList.append(newOutputFile)
+            ourOutFileHandle=open(newOutputFile,'w')
             if (len(inputFileList) > 1): # output the file start pragma for the subroutinized intrinsics
-                out.write('!$openad xxx file_start ['+getModuleName()+'.f90]\n')
-                out.flush()
+                ourOutFileHandle.write('!$openad xxx file_start ['+getModuleName()+'.f90]\n')
+                ourOutFileHandle.flush()
             for aUnit in makeSubroutinizedIntrinsics(True):
-                aUnit.printit(out)
-            oFile=open(config.outputFile)
-            out.write(oFile.read())
-            oFile.close
-            out.close()
-            shutil.move(fName,config.outputFile)
+                aUnit.printit(ourOutFileHandle)
+            if (config.outputFile):
+                oFile=open(config.outputFile)
+                ourOutFileHandle.write(oFile.read())
+                oFile.close
+            ourOutFileHandle.close()
+            if (config.outputFile):
+                shutil.move(newOutputFile,config.outputFile)
         if (config.timing):
             print 'SourceProcessing: timing: '+str(datetime.datetime.utcnow()-startTime)
     except CanonError,e:
