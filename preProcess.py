@@ -14,6 +14,7 @@ from PyUtil.assembler import AssemblerException
 from PyUtil.l_assembler import AssemblerException as ListAssemblerException
 from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabError
+from PyUtil.options import addCanonOptions,CanonOptErrors,setCanonFlags
 
 from PyFort.flow import setOutputLineLength, setOutputFormat
 from PyFort.fortUnit import Unit,fortUnitIterator
@@ -39,9 +40,9 @@ def cleanup(config):
         for fileName in ourOutFileNameList:
             if os.path.exists(fileName):
                 try: 
-                    os.remove(config.outputFile)
+                    os.remove(fileName)
                 except:
-                    print >>sys.stderr,'Cannot remove output file '+config.outputFile
+                    print >>sys.stderr,'Cannot remove output file '+fileName
 
 def mkOutputDir(config,head):
     outputDirectory = config.pathPrefix+head+config.pathSuffix
@@ -55,234 +56,18 @@ def main():
     global ourOutFileNameList
     global ourOutFileHandle
     usage = '%prog [options] <input_file> [additional input files]'
-    modes={'f':'forward','r':'reverse'}
-    modeChoices=modes.keys()
-    modeChoicesHelp=""
-    for k,v in modes.items():
-        modeChoicesHelp+=k+" = "+v+"; "
     opt = OptionParser(usage=usage)
-    opt.add_option('--outputFormat',
-                   metavar='{ fixed | free }',
-                   dest='outputFormat',
-                   help="<output_file> is in either 'fixed' or 'free' format",
-                   default=None)
-    opt.add_option('',
-                   '--inputFormat',
-                   metavar='{ fixed | free }',
-                   dest='inputFormat',
-                   help="<input_file> is in either 'fixed' or 'free' format",
-                   default=None)
-    opt.add_option('','--inputLineLength',
-                   dest='inputLineLength',
-                   metavar='INT',
-                   type=int,
-                   help='sets the max line length of the input file. The default line length is 72 for fixed format and 132 for free format.',
-                   default=None)
-    opt.add_option('','--outputLineLength',
-                   dest='outputLineLength',
-                   metavar='INT',
-                   type=int,
-                   help='sets the max line length of the output file. The default line length is 72 for fixed format and 132 for free format.',
-                   default=None)
-    opt.add_option('-I','',
-                   metavar='PATH',
-                   dest='includePaths',
-                   type='string',
-                   help='directory to be added to the search path for Fortran INCLUDE directives; (default is the current directory)',
-                   action='append',
-                   default=[])
-    opt.add_option('-m','--mode',dest='mode',
-                   type='choice', choices=modeChoices,
-                   help='set default options for transformation mode with MODE being one of: '+ modeChoicesHelp+ '  reverse mode  implies -H but not -S; specific settings override the mode defaults.',
-                   default=None)
-    opt.add_option('-n',
-                   '--noCleanup',
-                   dest='noCleanup',
-                   help='do not remove the output file if an error was encountered (defaults to False)',
-                   action='store_true',
-                   default=False)
-    opt.add_option('--noWarnings',
-                   dest='noWarnings',
-                   help='suppress warning messages (defaults to False)',
-                   action='store_true',
-                   default=False)
-    opt.add_option('--warn',
-                   dest='warn',
-                   type='choice',
-                   choices=DebugManager.WarnType.getNames()[1:],
-                   help='issue warning messages only for the specified type which is one of ( '+' | '.join(name for name in DebugManager.WarnType.getNames()[1:])+' ); conflicts with --noWarnings',
-                   action='append',
-                   default=[])
-    opt.add_option('',
-                   '--keepGoing',
-                   dest='keepGoing',
-                   help="try to continue despite error messages; this is intended only to find trouble spots for the canonicalization, if problems occur the output may contain invalid code (defaults to False)",
-                   action='store_true',
-                   default=False)
-    opt.add_option('',
-                   '--removeFunction',
-                   dest='removeFunction',
-                   help="remove original function definition when it is transformed to a subroutine definitions",
-                   action='store_true',
-                   default=False)
-    opt.add_option('',
-                   '--r8',
-                   dest='r8',
-                   help="set default size of REAL to 8 bytes",
-                   action='store_true',
-                   default=False)
-    opt.add_option('-H',
-                   '--hoistNonStringConstants',
-                   dest='hoistConstantsFlag',
-                   help='enable the hoisting of non-string constant arguments to subroutine calls (defaults to False)',
-                   action='store_true',
-                   default=False)
-    opt.add_option('-S',
-                   '--hoistStringConstants',
-                   dest='hoistStringsFlag',
-                   help='enable the hoisting of string constant arguments to subroutine calls (defaults to False)',
-                   action='store_true',
-                   default=False)
-    opt.add_option('','--nonStandard',dest='nonStandard',
-                   type='choice', choices=getNonStandard(),
-                   help='allow non-standard intrinsics: ( '+' | '.join(getNonStandard())+' ) ; can be specified multiple times  (defaults to None).',
-                   action='append',
-                   default=[])
-    opt.add_option('-o',
-                   '--output',
-                   dest='outputFile',
-                   help='redirect output to  file OUTPUT (default output is stdout); If the "--outputFormat" option is not used, the output format is taken from the extension of this filename',
-                   metavar='<output_file>',
-                   default=None)
-    opt.add_option('--separateOutput',
-                   dest='separateOutput',
-                   help='split output into files corresponding to input files (defaults to False, conflicts with --output)',
-                   action='store_true',
-                   default=False)
-    opt.add_option('--pathPrefix',
-                   dest='pathPrefix',
-                   help='for use with --separateOutput: prepend this prefix to the directory name of the corresponding input file (defaults to an empty string)',
-                   default='')
-    opt.add_option('',
-                   '--pathSuffix',
-                   dest='pathSuffix',
-                   help='for use with --separateOutput: append this suffix to the directory name of the corresponding input file (defaults to "OAD")',
-                   default='OAD')
-    opt.add_option('',
-                   '--filenameSuffix',
-                   dest='filenameSuffix',
-                   help='for use with --separateOutput: append this suffix to the name of the corresponding input file (defaults to an empty string)',
-                   default='')   
-    opt.add_option('--recursionLimit',
-                   dest='recursionLimit',
-                   metavar='INT',
-                   type='int',
-                   help='recursion limit for the python interpreter (default: '+str(sys.getrecursionlimit())+'; setting it too high may permit a SEGV in the interpreter)')
-    opt.add_option('--subroutinizeIntegerFunctions',
-                   dest='subroutinizeIntegerFunctions',
-                   help='should integer function calls be subroutinized (defaults to False)',
-                   action='store_true',
-                   default=False)
-    opt.add_option('--timing',
-                   dest='timing',
-                   help='simple timing of the execution',
-                   action='store_true',
-                   default=False)
-    opt.add_option('--progress',
-                   dest='progress',
-                   help='issue progress message to stderr per opened input file (default is False)',
-                   action='store_true',
-                   default=False)
-    opt.add_option('-v',
-                   '--verbose',
-                   dest='isVerbose',
-                   help='turns on verbose debugging output',
-                   action='store_true',
-                   default=False)
+    addCanonOptions(opt)
     config, args = opt.parse_args()
 
-    if (config.recursionLimit):
-        sys.setrecusionlimit(config.recursionLimit);
-        
     startTime=None
     if (config.timing):
         startTime=datetime.datetime.utcnow()
 
-    # Set input file(s)
-    if len(args) == 0:
-        opt.error("expected at least one input file argument")
+    CanonOptErrors(config,args)
     inputFileList = args
+    setCanonFlags(config)
 
-    # configure forward/reverse mode
-    if config.mode:
-        if config.mode[0] == 'f':
-            UnitCanonicalizer.setHoistConstantsFlag(False)
-            UnitCanonicalizer.setHoistStringsFlag(False)
-        elif config.mode[0] == 'r':
-            UnitCanonicalizer.setHoistConstantsFlag(True)
-            UnitCanonicalizer.setHoistStringsFlag(False)
-
-    # set symtab type defaults
-    if config.r8:
-        Symtab.setTypeDefaults((fs.DoubleStmt,[]),(fs.IntegerStmt,[]))
-    else:
-        Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
-
-    # set free/fixed format
-    if (config.inputFormat<>'fixed') and \
-           (config.inputFormat<>'free') and \
-           (config.inputFormat is not None):
-        opt.error("inputFormat option must be specified with either 'fixed' or 'free' as an argument")
-    # set outputFormat explicitly if format or output file are supplied by user. 
-    # otherwise, outputFormat is set to inputFormat during parsing
-    if config.outputFormat == None:
-        if config.outputFile:
-            ext = os.path.splitext(config.outputFile)[1]
-            config.outputFormat = Ffile.get_format(ext)
-            setOutputFormat(config.outputFormat)
-    elif (config.outputFormat<>'fixed') and (config.outputFormat<>'free'):
-        opt.error("outputFormat option must be specified with either 'fixed' or 'free' as an argument")
-    else:
-        setOutputFormat(config.outputFormat)
-
-    if config.inputLineLength:
-        if config.inputLineLength < 72 or \
-           config.inputLineLength > 132:
-            opt.error("inputLineLength option must be specified with a value >=72 and <=132")
-        else:
-            # figure out what this does
-            pass
-    if config.outputLineLength:
-        if config.outputLineLength < 72 or \
-           config.outputLineLength > 132:
-            opt.error("outputLineLength option must be specified with a value >=72 and <=132")
-        else:
-            setOutputLineLength(config.outputLineLength)
-    if config.outputFile and config.separateOutput: 
-        opt.error("options --outputFile and --separateOutput are mutually exclusive")
-
-    if config.removeFunction:
-        UnitCanonicalizer.setKeepFunctionDef(False)
-    if config.hoistConstantsFlag:
-        UnitCanonicalizer.setHoistConstantsFlag(config.hoistConstantsFlag)
-    if config.hoistStringsFlag:
-        UnitCanonicalizer.setHoistStringsFlag(config.hoistStringsFlag)
-    if config.subroutinizeIntegerFunctions:
-        UnitCanonicalizer.setSubroutinizeIntegerFunctions(True)
-    if config.keepGoing:
-        CanonError.keepGoing()
-    DebugManager.setVerbose(config.isVerbose)
-    if (config.noWarnings and config.warn):
-        opt.error("Option --noWarnings conflicts with option --warn="+config.warn[0])
-    DebugManager.setQuiet(config.noWarnings)
-    if config.warn:
-        DebugManager.warnOnlyOn(config.warn)
-    if config.progress:
-        DebugManager.dumpProgress()    
-    if config.includePaths:
-        Ffile.setIncludeSearchPath(config.includePaths)
-    if config.nonStandard:
-        useNonStandard(config.nonStandard)
     try: 
         if (not (config.outputFile or config.separateOutput)) :
             ourOutFileHandle = sys.stdout

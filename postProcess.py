@@ -14,6 +14,7 @@ from PyUtil.assembler import AssemblerException
 from PyUtil.l_assembler import AssemblerException as ListAssemblerException
 from PyUtil.symtab import Symtab,SymtabError
 from PyUtil.debugManager import DebugManager
+from PyUtil.options import addPostProcessorOptions,PostProcessorOptErrors,setPostProcessFlags
 
 from PyIR.prog1 import Prog1
 
@@ -29,13 +30,20 @@ from PP.templateExpansion import TemplateExpansion
 
 sys.setrecursionlimit(1500)
 
-def cleanup(outFileNameList):
-    for outFile in outFileNameList:
-        if os.path.exists(outFile):
-            try: 
-                os.remove(outFile)
-            except:
-                print >>sys.stderr,'ERROR: cleanup - cannot remove output file '+outFile
+ourOutFileNameList=[]
+ourOutFileHandle=None
+
+def cleanup(config):
+    import os 
+    if  ourOutFileHandle and not ourOutFileHandle.closed : 
+        ourOutFileHandle.close()
+    if (not config.noCleanup):
+        for fileName in ourOutFileNameList:
+            if os.path.exists(fileName):
+                try: 
+                    os.remove(fileName)
+                except:
+                    print >>sys.stderr,'Cannot remove output file '+fileName
 
 # initSet: a set of common blocks occurring in the file which need variables initialized
 # initNames: a list of names of initialization subroutines to be called by the global
@@ -46,7 +54,6 @@ def cleanup(outFileNameList):
 # output2: the file to print the globalInitProcedure unit to if splitUnits is true
 def addInitProcedures(initSet,initNames,typeDecls,output=None,base='',unitNumExt='',unit_num=0,ext='',splitUnits=False):
     '''creates active variable derivative initialization procedures and prints them to specified output file(s)'''
-    outFileNameList=[]
     for elt in initSet:
         newUnit = UnitPostProcessor.createInitProcedure(elt,typeDecls)
         if newUnit is not None:
@@ -54,7 +61,7 @@ def addInitProcedures(initSet,initNames,typeDecls,output=None,base='',unitNumExt
             if splitUnits:
                 output = base + unitNumExt % unit_num + ext; unit_num+=1
                 out = open(output,'w')
-                outFileNameList.append(output)
+                ourOutFileNameList.append(output)
                 # print new output file
                 newUnit.printit(out)
                 out.close()
@@ -65,145 +72,21 @@ def addInitProcedures(initSet,initNames,typeDecls,output=None,base='',unitNumExt
         if splitUnits:
             output = base + unitNumExt % unit_num + ext
             out = open(output,'w')
-            outFileNameList.append(output)
+            ourOutFileNameList.append(output)
             newUnit.printit(out)
             out.close()
-            return outFileNameList
+            return
         else:
             newUnit.printit(output)
             return
 
 def main():
-    usage = '%prog [options] <input_file>'
-    modes={'f':'forward','r':'reverse'}
-    modeChoices=modes.keys()
-    modeChoicesHelp=""
-    for k,v in modes.items():
-        modeChoicesHelp+=k+" = "+v+"; "
+    global ourOutFileNameList
+    global ourOutFileHandle
+    usage = '%prog [options] <input_file> [additional input files]'
     opt = OptionParser(usage=usage)
-    opt.add_option('-d', '--deriv', dest='deriv',
-                   help='appends %d to deriv types instead of removing __deriv__',
-                   action='store_true',
-                   default=False)
-    opt.add_option('-i',
-                   '--inline',
-                   dest='inline',
-                   help='file with definitions for inlinable routines for reverse mode post processing (defaults to ad_inline.f); requires reverse mode ( -m r )',
-                   default=None) # cannot set default here because of required reverse mode
-    opt.add_option('','--inputLineLength',
-                   dest='inputLineLength',
-                   type=int,
-                   help='sets the max line length of the input file. The default line length is 72 for fixed format and 132 for free format.',
-                   default=None)
-    opt.add_option('','--outputLineLength',
-                   dest='outputLineLength',
-                   type=int,
-                   help='sets the max line length of the output file. The default line length is 72 for fixed format and 132 for free format.',
-                   default=None)
-    opt.add_option('-m','--mode',dest='mode',
-                   type='choice', choices=modeChoices,
-                   help='set default options for transformation mode with MODE being one of: '+ modeChoicesHelp+ ' (default is \'f\')',
-                   default='f')
-    opt.add_option('-o',
-                   '--output',
-                   dest='output',
-                   help='redirect output to  file OUTPUT (default output is stdout); cannot be specified together with --width; If the "--outputFormat" option is not used, the output format is taken from the extension of this filename',
-                   default=None)
-    opt.add_option('-p',
-                   '--progress',
-                   dest='progress',
-                   help='progress message to stdout per processed unit',
-                   action='store_true',
-                   default=False)
-    opt.add_option('-t',
-                   '--template',
-                   dest='template',
-                   help='file with subroutine template for reverse mode post processing (defaults to ad_template.f) for subroutines that do not have a template file specified via the template pragma; requires reverse mode ( -m r )',
-                   default=None) # cannot set default here because of required reverse mode
-    opt.add_option('-v',
-                   '--verbose',
-                   dest='verbose',
-                   help='verbose output to stdout',
-                   action='store_true',
-                   default=False)
-    opt.add_option('--abstractType',
-                   dest='abstractType',
-                   help='change the abstract active type name to be replaced  (see also --concreteType ) to ABSTRACTTYPE; defaults to \'oadactive\')',
-                   default='oadactive')
-    opt.add_option('--activeVariablesFile',
-                   dest='activeVariablesFile',
-                   help='write all active variable declarations into file ACTIVEVARIABLESFILEFILE.',
-                   default=None) 
-    opt.add_option('--concreteType',
-                   dest='concreteType',
-                   help='replace abstract active string (see also --abstractType ) with concrete active type CONCRETETYPE; defaults to \'active\'',
-                   default='active')
-    opt.add_option('--outputFormat',
-                   dest='outputFormat',
-                   help="<output_file> is in 'free' or 'fixed' format",
-                   default=None)
-    opt.add_option('--inputFormat',
-                   dest='inputFormat',
-                   help="<input_file> is in 'free' or 'fixed' format",
-                   default=None)
-    opt.add_option('--noCleanup',
-                   dest='noCleanup',
-                   help='do not remove the output file(s) if an error was encountered (defaults to False)',
-                   action='store_true',
-                   default=False)
-    opt.add_option('--noInline',
-                   dest='noInline',
-                   help='no inlining; overrides the defaults of the reverse mode settings; (defaults to False)',
-                   action='store_true',
-                   default=False)
-    opt.add_option('--noWarnings',
-                   dest='noWarnings',
-                   help='suppress warning messages (defaults to False)',
-                   action='store_true',
-                   default=False)
-    opt.add_option('--separateOutput',
-                   dest='separateOutput',
-                   help='split output into files as specified by the input file pragmas placed by preProcess.py (defaults to False)',
-                   action='store_true',
-                   default=False)
-    opt.add_option('--pathPrefix',
-                   dest='pathPrefix',
-                   help='for use with --separateOutput: prepend this prefix to the directory name of the corresponding input file (defaults to an empty string)',
-                   default='')
-    opt.add_option('-P',
-                   '--pathSuffix',
-                   dest='pathSuffix',
-                   help='for use with --separateOutput: append this suffix to the directory name of the corresponding input file (defaults to "OAD")',
-                   default='OAD')
-    opt.add_option('-F',
-                   '--filenameSuffix',
-                   dest='filenameSuffix',
-                   help='for use with --separateOutput: append this suffix to the name of the corresponding input file (defaults to an empty string)',
-                   default='')
-    opt.add_option('--explicitInit',
-                   dest='explicitInit',
-                   help='create subroutines for the explicit initialization of active variables in common blocks and modules',
-                   action='store_true',
-                   default=False)
-    opt.add_option('--recursionLimit',
-                   dest='recursionLimit',
-                   type='int',
-                   help='recursion limit for the python interpreter (default: '+str(sys.getrecursionlimit())+'; setting it too high may permit a SEGV in the interpreter)')
-    opt.add_option('--timing',
-                   dest='timing',
-                   help='simple timing of the execution',
-                   action='store_true',
-                   default=False)
-    opt.add_option('--width',
-                   dest='width',
-                   help='write one compile unit per output file with WIDTH digits prepended to the extension of <input_file>, e.g. for -n 2 and three compile units in an input file named \'a.f\' we create \'a.00.f\', a.01.f\', \'a.02.f\'; also creates a file named \'postProcess.make\' for reference within a makefile; cannot be specified together with -o')
-    opt.add_option('--whitespace',
-                   dest='whitespace',
-                   help='inserts whitespaces between tokens',
-                   action='store_true',
-                   default=False)
+    addPostProcessorOptions(opt)
 
-    outFileNameList=[]
     try:
         config, args = opt.parse_args()
 
@@ -211,105 +94,17 @@ def main():
         if (config.timing):
             startTime=datetime.datetime.utcnow()
 
-        if (config.recursionLimit):
-            sys.setrecusionlimit(config.recursionLimit);
-
-        # Set input file
-        if len(args) != 1:
-            opt.error("expect exactly one argument <input_file>, given are "+str(len(args))+" which are:"+str(args)+" and the following options: "+str(config))
-        inputFile = args[0]
-
-        if ((config.width and config.output) or
-            (config.width and config.separateOutput) or
-            (config.output and config.separateOutput)):
-            opt.error("cannot specify more than one of --width, --separateOutput, and -o")
-
-        # set symtab type defaults
-        Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
-
-        # set __deriv__ output format(__deriv__(v) -> "(v)%d" if -d option or "v" by default)
-        UnitPostProcessor.setDerivType(config.deriv)
-
-        # set free/fixed format
-        if (config.inputFormat<>'fixed') and \
-               (config.inputFormat<>'free') and \
-               (config.inputFormat is not None):
-            opt.error("inputFormat option must be specified with either 'fixed' or 'free' as an argument")
-        # set outputFormat explicitly if format or output file are supplied by user. 
-        # otherwise, outputFormat is set to inputFormat during parsing
-        if config.outputFormat == None:
-            if config.output:
-                ext = os.path.splitext(config.output)[1]
-                config.outputFormat = Ffile.get_format(ext)
-                setOutputFormat(config.outputFormat)
-        elif (config.outputFormat<>'fixed') and (config.outputFormat<>'free'):
-            opt.error("outputFormat option must be specified with either 'fixed' or 'free' as an argument")
-        else:
-            setOutputFormat(config.outputFormat)
-
-        if config.inputLineLength:
-            if config.inputLineLength < 72 or \
-                   config.inputLineLength > 132:
-                opt.error("inputLineLength option must be specified with a value >=72 and <=132")
-            else:
-                # figure out what this does
-                setInputLineLength(config.inputLineLength)
-        if config.outputLineLength:
-            if config.outputLineLength < 72 or \
-                   config.outputLineLength > 132:
-                opt.error("outputLineLength option must be specified with a value >=72 and <=132")
-            else:
-                setOutputLineLength(config.outputLineLength)
-        
-        if (config.activeVariablesFile):
-            UnitPostProcessor.setActiveVariablesFile(config.activeVariablesFile)
-            if (os.path.exists(config.activeVariablesFile)):
-                os.remove(config.activeVariablesFile)
-
-        # configure forward/reverse mode (including inline file for reverse mode)
-        if (config.mode != 'r'):
-            if (config.inline):
-                opt.error("option -i requires reverse mode ( -m r )")
-            if (config.template):
-                opt.error("option -t requires reverse mode ( -m r )")
-            if (config.explicitInit):
-                opt.error("option --explicitInit requires reverse mode ( -m r )")
-        if config.mode == 'f':
-            UnitPostProcessor.setMode('forward')
-        if config.mode == 'r':
-            UnitPostProcessor.setMode('reverse')
-            if (config.inline):
-                if (config.noInline):
-                    opt.error("option --noInline conflicts with option -i")
-                UnitPostProcessor.setInlineFile(config.inline)
-            if (config.noInline):
-                UnitPostProcessor.setInlineFile(None)
-            UnitPostProcessor.processInlineFile()
-            templateFile = config.template or 'ad_template.f'
-            TemplateExpansion.setTemplateFile(templateFile)
-            if (config.explicitInit):
-                UnitPostProcessor.setExplicitInit()
-
+        PostProcessorOptErrors(config,args)
+        setPostProcessFlags(config,args)
         # set options for splitting compile units
         if config.width:
             splitUnits = True
             unitNameWidth = config.width
         else:
             splitUnits = False
-
-        # set replacement type 
-        UnitPostProcessor.setReplacementType(config.concreteType)
-        # set abstract type 
-        UnitPostProcessor.setAbstractType(config.abstractType)
-
-        # set verbosity
-        DebugManager.setVerbose(config.verbose)
         DebugManager.debug("running for <input_file>:"+args[0]+" and the following options: "+str(config))
-        DebugManager.setQuiet(config.noWarnings)
 
-        # set whitespace
-        fe.setWhitespace(config.whitespace)
-
+        inputFile = args[0]
         initSubroutinesAdded = False
         initSet = set([]); initNames = []; typeDecls = set([])
         if config.mode == 'r':
@@ -324,9 +119,9 @@ def main():
             if (config.timing):
                 unitStartTime=datetime.datetime.utcnow()
             for aUnit in fortUnitIterator(inputFile,config.inputFormat):
-                output = base + unitNumExt % unit_num + ext; unit_num+=1
-                out = open(output,'w')
-                outFileNameList.append(output)
+                outputFile = base + unitNumExt % unit_num + ext; unit_num+=1
+                out = open(outputFile,'w')
+                ourOutFileNameList.append(outputFile)
                 UnitPostProcessor(aUnit).processUnit().printit(out)                    
                 out.close()
                 if (config.progress):
@@ -338,14 +133,12 @@ def main():
                     print msg
             # add new init procedures & global init procedure at end
             if (config.explicitInit):
-                newOutFiles = addInitProcedures(initSet,initNames,typeDecls,base=base,unitNumExt=unitNumExt,\
-                                                    unit_num=unit_num,ext=ext,splitUnits=splitUnits)
-                if newOutFiles is not None:
-                    outFileNameList.extend(newOutFiles)
+                addInitProcedures(initSet,initNames,typeDecls,base=base,unitNumExt=unitNumExt,\
+                                      unit_num=unit_num,ext=ext,splitUnits=splitUnits)
 
             makeOut = open('postProcess.make','w')
             makeOut.write("POSTPROCESSEDFILES=")
-            for outFileName in outFileNameList:
+            for outFileName in ourOutFileNameList:
                 makeOut.write(" \\\n"+outFileName)
             makeOut.write("\n")
             makeOut.close()
@@ -372,7 +165,7 @@ def main():
                         if setFormat:
                             config.outputFormat = Ffile.get_format(fileExtension)
                             setOutputFormat(config.outputFormat)
-                        outFileNameList.append(newOutputFile)
+                        ourOutFileNameList.append(newOutputFile)
                         out = open(newOutputFile,'w')
                 elif not out:
                     raise PostProcessError('option separateOutput specified, no output file can be determined for the first unit',0)
@@ -384,9 +177,9 @@ def main():
             out.close()
         else: 
             out=None
-            if config.output: 
-                out = open(config.output,'w')
-                outFileNameList.append(config.output)
+            if config.outputFile: 
+                out = open(config.outputFile,'w')
+                ourOutFileNameList.append(config.outputFile)
             else:
                 out=sys.stdout
             for aUnit in fortUnitIterator(inputFile,config.inputFormat):
@@ -394,7 +187,7 @@ def main():
             # add new init procedures & global init procedure after module declarations
             if (config.explicitInit):
                 addInitProcedures(initSet,initNames,typeDecls,out)
-            if config.output: 
+            if config.outputFile: 
                 out.close()
 
         if (config.timing):
@@ -405,7 +198,7 @@ def main():
         if (e.lineNumber>0) :
             sys.stderr.write(' on line '+str(e.lineNumber))
         sys.stderr.write(': '+e.msg+'\n')
-        cleanup(outFileNameList)
+        cleanup(config)
         return 1
 
     except SymtabError,e:
@@ -413,11 +206,11 @@ def main():
         if e.entry:
             symbolNameStr = e.symbolName or '<symbol name unknown>'
             print >>sys.stderr,'For entry', e.entry.debug(symbolNameStr)
-        cleanup(outFileNameList)
+        cleanup(config)
         return 1
     except UserError,e:
         print >>sys.stderr,'\nERROR: UserError:',e.msg
-        cleanup(outFileNameList)
+        cleanup(config)
         return 1 
     except ScanError,e: 
         print >>sys.stderr,'\nERROR: ScanError: scanner fails at line '+str(e.lineNumber)+':'
@@ -431,22 +224,22 @@ def main():
         else:
             print >>sys.stderr,"This failure is likely due to possibly legal but unconventional Fortran,"
             print >>sys.stderr,"such as unusual spacing. Please consider modifying your source code."
-        cleanup(outFileNameList)
+        cleanup(config)
         return 1 
     except ParseError,e: 
         print >>sys.stderr,'\nERROR: ParseError: parser fails to assemble tokens in scanned line '+str(e.lineNumber)+':'
         print >>sys.stderr,e.scannedLine
         if e.details: print >>sys.stderr,e.details
         if e.target: print >>sys.stderr,"tried to parse as",e.target
-        cleanup(outFileNameList)
+        cleanup(config)
         return 1 
     except AssemblerException,e:
         print >>sys.stderr,"\nERROR: AssemblerError: parser failed:",e.msg
-        cleanup(outFileNameList)
+        cleanup(config)
         return 1 
     except ListAssemblerException,e:
         print >>sys.stderr,"\nERROR: ListAssemblerError: parser failed:",e.msg
-        cleanup(outFileNameList)
+        cleanup(config)
         return 1 
     except RuntimeError,e:
         if (len(e.args)>=1 and "maximum recursion depth exceeded" <= e.args[0]):
