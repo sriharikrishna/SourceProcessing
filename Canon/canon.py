@@ -187,6 +187,10 @@ class UnitCanonicalizer(object):
            self.shouldSubroutinizeFunction(theExpression,parentStmt):
             DebugManager.debug('it is a function call to be subroutinized')
             return self.__canonicalizeFuncCall(theExpression,parentStmt)
+        # if argument is a variable or constant => don't hoist
+        if isinstance(theExpression,str):
+            return theExpression
+
         # Anything else: create an assignment to a temporary and return that temporary
         (theNewTemp,newTempType,newTempTypeMods) = self.__newTemp(theExpression,parentStmt)
         self.__myNewExecs.append(self.__canonicalizeAssignStmt(fs.AssignStmt(theNewTemp,
