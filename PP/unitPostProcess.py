@@ -14,7 +14,6 @@ import PyFort.flow as flow
 from PyFort.fortFile import Ffile
 import re
 import copy
-import itertools
 
 # Handles errors that occur during the postprocessing stage
 class PostProcessError(Exception):
@@ -23,6 +22,9 @@ class PostProcessError(Exception):
         self.msg = msg
         self.lineNumber = lineNumber
 
+    def __str__(self):
+        return (self.msg)
+        
 # Handles postprocessing
 class UnitPostProcessor(object):
     'class to facilitate post-processing on a per-unit basis'
@@ -89,29 +91,6 @@ class UnitPostProcessor(object):
         # temporary setting to figure out if we are within an interface
         self.inInterface=False
 
-    def __addActiveModule(self,Decls):
-        '''  
-        adds a UseAllStmt of the active module to Decls if necessary;
-        it should put it in the top level unit if there are subunits to avoid littering the subunits with the USE statements
-        '''
-        if (self.__myUnit.uinfo is None):
-            return
-        if (self.__myUnit.parent) : # done in parent
-            return
-        lead=self.__myUnit.uinfo.lead or ''
-        ncDeclsIter=itertools.ifilter(lambda l: not isinstance(l, fs.Comments),self.__myUnit.decls)
-        try : 
-            lead=ncDeclsIter.next().lead
-        except StopIteration, e:
-            ncExecIter=itertools.ifilter(lambda l: not isinstance(l, fs.Comments),self.__myUnit.execs)
-            try:
-                lead=ncExecIter.next().lead
-            except StopIteration, e: 
-                if (self.__myUnit.ulist):
-                    pass #  add it for the subunits that may need it
-                else:
-                    return   # no non-comment decls,  execs or subunits - don't bother
-        Decls.append(fs.UseAllStmt(moduleName='OAD_active',lead=lead,renameList=None))
 
     # Rewrites the active type in derived type declarations
     # returns the declaration
@@ -688,7 +667,7 @@ class UnitPostProcessor(object):
         '''processes all declaration and execution statements in forward mode'''
         execNum = 0;
         Execs = []; Decls = []
-        self.__addActiveModule(Decls)
+        Unit.addActiveModule(self.__myUnit,Decls)
         pendingUse=self.UseActiveInInterface()
         for aDecl in self.__myUnit.decls:
             (Decls,Execs) =\
@@ -710,7 +689,7 @@ class UnitPostProcessor(object):
         replacementNum = 0 
         currentExecs = []; currentDecls = []
         Execs = []; Decls = []
-        self.__addActiveModule(currentDecls)
+        Unit.addActiveModule(self.__myUnit,currentDecls)
         pendingUse=self.UseActiveInInterface()
         for aDecl in self.__myUnit.decls:
             (Decls,currentDecls,Execs,currentExecs,replacementNum) = \
