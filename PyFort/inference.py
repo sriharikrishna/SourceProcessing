@@ -235,6 +235,9 @@ def expressionType(anExpression,localSymtab,lineNumber):
     elif isinstance(anExpression,Slice) :
        DebugManager.debug(' it\'s a SLICE EXPRESSION')
        return (fortStmts.IntegerStmt, [])
+    elif isinstance(anExpression,fortStmts._NoInit):
+       DebugManager.debug(' it\'s a NO INIT EXPRESSION')
+       return expressionType(anExpression.lhs,localSymtab,lineNumber)
     else:
        raise InferenceError('inference.expressionType: No type could be determined for expression "'+str(anExpression)+'" (represented as '+repr(anExpression)+' )',lineNumber)
 
