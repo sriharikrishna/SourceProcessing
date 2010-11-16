@@ -50,6 +50,11 @@ def addSourceProcessingOptions(opt):
                    help='turns on verbose debugging output',
                    action='store_true',
                    default=False)
+    opt.add_option('--noWarnings',
+                   dest='noWarnings',
+                   help='suppress warning messages (defaults to False)',
+                   action='store_true',
+                   default=False)
     opt.add_option('-n',
                    '--noCleanup',
                    dest='noCleanup',
@@ -68,11 +73,6 @@ def addPrePostOptions(opt):
                    type='choice', choices=modeChoices,
                    help='set default options for transformation mode with MODE being one of: '+ modeChoicesHelp+ '  reverse mode  implies -H but not -S; specific settings override the mode defaults.',
                    default=None)
-    opt.add_option('--noWarnings',
-                   dest='noWarnings',
-                   help='suppress warning messages (defaults to False)',
-                   action='store_true',
-                   default=False)
     opt.add_option('--pathPrefix',
                    dest='pathPrefix',
                    help='for use with --separateOutput: prepend this prefix to the directory name of the corresponding input file (defaults to an empty string)',
@@ -231,6 +231,14 @@ def addTransformFileOptions(opt):
                    dest='outputDir',
                    help='for use with >1 input file (and not with --output): output each file in this directory, keeping the same file name (defaults to the local directory)',
                    default='')
+    opt.add_option('--abstractType',
+                   dest='abstractType',
+                   help='change the abstract active type name to be replaced  (see also --concreteType ) to ABSTRACTTYPE; defaults to \'oadactive\')',
+                   default='oadactive')
+    opt.add_option('--concreteType',
+                   dest='concreteType',
+                   help='replace abstract active string (see also --abstractType ) with concrete active type CONCRETETYPE; defaults to \'active\'',
+                   default='active')
 
 ############## CHECK OPTION ERRORS ##############    
 def SourceProcessingOptErrors(config,args):
@@ -288,7 +296,7 @@ def TransformFileOptErrors(config,args):
     if len(args) == 0:
         opt.error('expected at least one argument <input_file> ;' \
                  +' the following options were given: '+str(config))
-    if config.outputFile and len(inputFileList) > 1 :
+    if config.outputFile and len(args) > 1 :
             opt.error('No output file can be specified when more than one input file is given.' \
                      +' the following options were given: '+str(config))
 
@@ -296,8 +304,6 @@ def TransformFileOptErrors(config,args):
 ############## SET FLAGS ##############
 
 def setSourceProcessingFlags(config):
-    if (config.recursionLimit):
-        sys.setrecusionlimit(config.recursionLimit);
     # set outputFormat explicitly if format or output file are supplied by user. 
     # otherwise, outputFormat is set to inputFormat during parsing
     if config.outputFormat == None:
@@ -319,8 +325,13 @@ def setSourceProcessingFlags(config):
     DebugManager.setVerbose(config.isVerbose)
     DebugManager.setQuiet(config.noWarnings)
 
-def setCanonFlags(config):
+def setPrePostFlags(config):
     setSourceProcessingFlags(config)
+    if (config.recursionLimit):
+        sys.setrecusionlimit(config.recursionLimit);
+
+def setCanonFlags(config):
+    setPrePostFlags(config)
     # configure forward/reverse mode
     if config.mode:
         if config.mode[0] == 'f':
@@ -359,7 +370,9 @@ def setTransformFileFlags(config):
     UnitPostProcessor.setAbstractType(config.abstractType)
 
 def setPostProcessFlags(config,args):
-    setTransformFileFlags(config)
+    setPrePostFlags(config)
+    if (config.recursionLimit):
+        sys.setrecusionlimit(config.recursionLimit);
     # set __deriv__ output format(__deriv__(v) -> "(v)%d" if -d option or "v" by default)
     UnitPostProcessor.setDerivType(config.deriv)
     if (config.activeVariablesFile):
