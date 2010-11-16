@@ -11,6 +11,7 @@ import PyFort.fortStmts as fs
 import PyFort.fortExp as fe
 from Canon.canon import UnitCanonicalizer,CanonError
 from PP.unitPostProcess import UnitPostProcessor,PostProcessError
+from PP.transformActiveVariables import TransformActiveVariables,TransformError
 from PP.templateExpansion import TemplateExpansion
 
 ############## ADD OPTIONS TO OPT PARSER ##############
@@ -231,10 +232,6 @@ def addTransformFileOptions(opt):
                    dest='outputDir',
                    help='for use with >1 input file (and not with --output): output each file in this directory, keeping the same file name (defaults to the local directory)',
                    default='')
-    opt.add_option('--abstractType',
-                   dest='abstractType',
-                   help='change the abstract active type name to be replaced  (see also --concreteType ) to ABSTRACTTYPE; defaults to \'oadactive\')',
-                   default='oadactive')
     opt.add_option('--concreteType',
                    dest='concreteType',
                    help='replace abstract active string (see also --abstractType ) with concrete active type CONCRETETYPE; defaults to \'active\'',
@@ -365,9 +362,7 @@ def setCanonFlags(config):
 def setTransformFileFlags(config):
     setSourceProcessingFlags(config)
     # set replacement type 
-    UnitPostProcessor.setReplacementType(config.concreteType)
-    # set abstract type 
-    UnitPostProcessor.setAbstractType(config.abstractType)
+    TransformActiveVariables.setReplacementType(config.concreteType)
 
 def setPostProcessFlags(config,args):
     setPrePostFlags(config)
@@ -395,3 +390,7 @@ def setPostProcessFlags(config,args):
             UnitPostProcessor.setExplicitInit()
     # set whitespace
     fe.setWhitespace(config.whitespace)
+    # set replacement type 
+    UnitPostProcessor.setReplacementType(config.concreteType)
+    # set abstract type 
+    UnitPostProcessor.setAbstractType(config.abstractType)
