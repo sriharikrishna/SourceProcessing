@@ -190,7 +190,7 @@ class UnitCanonicalizer(object):
         # if argument is a variable reference then don't hoist
         if ((isinstance(theExpression,str) and fe.is_id(theExpression)) 
             or 
-            (isinstance(theExpression,fe.App) and isArrayReference(theExpressionself.__myUnit.symtab,parentStmt.lineNumber))
+            (isinstance(theExpression,fe.App) and isArrayReference(theExpression,self.__myUnit.symtab,parentStmt.lineNumber))
             or
             isinstance(theExpression,fe.Sel)):
             return theExpression
