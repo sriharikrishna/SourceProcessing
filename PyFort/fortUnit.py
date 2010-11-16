@@ -182,12 +182,15 @@ class Unit(object):
                 print >> out,anEndListEntry.flow(),
 
     # print everything but the comments and executable statements to \p out
-    def printDecls(self,out=sys.stdout):
+    def printDecls(self,out=sys.stdout,replacement_type='active'):
         if self.uinfo:
             print >> out,self.uinfo.flow(),
         for aDeclStmt in self.decls:
-            if not aDeclStmt.is_comment() :
-                print >> out,aDeclStmt.flow(),
+            if isinstance(aDecl,fs.CommonStmt):
+                print >> out, aDeclStmt.flow()
+            if isinstance(aDecl,fs.TypeDecl):
+                if len(aDeclStmt.mod)>0 and aDeclStmt.mod[0]==replacement_type:
+                    print >> out, aDeclStmt.flow()
         for aContainsEntry in self.contains:
             print >> out,aContainsEntry.flow(),
         for aSubUnit in self.ulist:
