@@ -2936,3 +2936,37 @@ _kw_parse = parse
 if __name__ == '__main__':
     from _Setup.testit import *
 '''
+
+def getVarName(anExpression,lineNumber,lhs=True):
+    if isinstance(anExpression,str):
+        DebugManager.debug(' it\'s an IDENTIFIER OR CONSTANT')
+        return anExpression.lower()
+    elif isinstance(anExpression,Unary):
+        DebugManager.debug(' it\'s a UNARY EXPRESSION')
+        return getVarName(anExpression.exp,lineNumber)
+    elif isinstance(anExpression,Ops):
+        DebugManager.debug(' it\'s a BINARY EXPRESSION')        
+        if lhs:
+            return getVarName(anExpression.a1,lineNumber)
+        else:
+            return getVarName(anExpression.a2,lineNumber)
+    elif isinstance(anExpression,App):
+        DebugManager.debug(' it\'s an APPLICATION')
+        return getVarName(anExpression.head,lineNumber)
+    elif isinstance(anExpression,NamedParam):
+        DebugManager.debug(' it\'s a NAMED PARAMETER')
+        if lhs:
+            return getVarName(anExpression.myId,lineNumber)
+        else:
+            return getVarName(anExpression.myRHS,lineNumber)
+    elif isinstance(anExpression,Sel):
+       DebugManager.debug(' it\'s a SELECTION EXPRESSION')
+       return getVarName(anExpression.head,lineNumber)
+    elif isinstance(anExpression,Slice) :
+       DebugManager.debug(' it\'s a SLICE EXPRESSION')
+       return getVarName(anExpression.arg,lineNumber)
+    elif isinstance(anExpression,_NoInit):
+       DebugManager.debug(' it\'s a NO INIT EXPRESSION')
+       return getVarName(anExpression.lhs,lineNumber)
+    else:
+        raise ParseError('Encountered unrecognized type while attempting to get variable name for '+str(anExpression),lineNumber)
