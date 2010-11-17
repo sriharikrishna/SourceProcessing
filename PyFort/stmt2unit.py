@@ -265,6 +265,8 @@ def _unit_entry(self,cur):
        2. The unit symtab
        3. The parent of the unit (if there is one)
     '''
+    if (cur.val.nestLevel==2) : 
+        DebugManager.warning('Open64 front-end handling of doubly nested module procedures is fragile; check >'+self.name+'< for correct handling.',self.lineNumber,DebugManager.WarnType.nesting)
     currentSymtab = cur.val.symtab
     if (currentSymtab.parent and (self.name in currentSymtab.parent.ids))  :
         # this must be the definition of a previously  declared module procedure

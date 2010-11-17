@@ -129,6 +129,10 @@ class Unit(object):
         self.ulist     = []
         self.end       = []
         self.parent    = parent
+	if parent:
+		self.nestLevel = parent.nestLevel+1
+        else:
+		self.nestLevel = 0
         self.symtab    = Symtab(_symtab_of(parent))
         self.fmod      = fmod
         self._in_iface = False
