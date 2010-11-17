@@ -186,9 +186,9 @@ class Unit(object):
         if self.uinfo:
             print >> out,self.uinfo.flow(),
         for aDeclStmt in self.decls:
-            if isinstance(aDecl,fs.CommonStmt):
+            if isinstance(aDeclStmt,fs.CommonStmt):
                 print >> out, aDeclStmt.flow()
-            if isinstance(aDecl,fs.TypeDecl):
+            if isinstance(aDeclStmt,fs.TypeDecl):
                 if len(aDeclStmt.mod)>0 and aDeclStmt.mod[0]==replacement_type:
                     print >> out, aDeclStmt.flow()
         for aContainsEntry in self.contains:
