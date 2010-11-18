@@ -40,13 +40,13 @@ def main():
         # suppress missing module warnings???
         # AL: shouldnt be necessary now that we're putting everything in the active variables file
         TransformActiveVariables.getActiveDecls(config.vardefs,\
-                                                config.inputFormat)
+                                                    config.inputFormat)
         # only one input file
         if len(inputFileList) == 1 :
             currentFile = inputFileList[0]
             out = config.outputFile and open(config.outputFile,'w') \
                                  or sys.stdout
-            for aUnit in fortUnitIterator(inputFileList[0],config.inputFormat):
+            for aUnit in fortUnitIterator(currentFile,config.inputFormat):
                 TransformActiveVariables(aUnit).transformUnit().printit(out)
             if config.outputFile :
                 out.close()
@@ -54,8 +54,8 @@ def main():
         else :
             for anInputFile in inputFileList :
                 currentFile = anInputFile
-                out = open(os.path.join(config.outputDir,anInputFile),'w')
-                for aUnit in fortUnitIterator(anInputFile,config.inputFormat):
+                out = open(os.path.join(config.outputDir,currentFile),'w')
+                for aUnit in fortUnitIterator(currentFile,config.inputFormat):
                     TransformActiveVariables(aUnit).transformUnit().printit(out)
                 out.close()
 

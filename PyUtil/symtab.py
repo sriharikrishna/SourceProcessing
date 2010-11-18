@@ -155,7 +155,9 @@ class Symtab(object):
                 self.ids[anOnlyItem.lhs] = aModuleUnit.symtab.replicateEntry(anOnlyItem.rhs,'module:'+aModuleUnit.name())
                 self.ids[anOnlyItem.lhs].renameSource = anOnlyItem.rhs
             else:
-                self.ids[anOnlyItem] = aModuleUnit.symtab.replicateEntry(anOnlyItem,'module:'+aModuleUnit.name())
+                symtabEntry = self.lookup_name(anOnlyItem)
+                if symtabEntry:
+                    self.ids[anOnlyItem] = aModuleUnit.symtab.replicateEntry(anOnlyItem,'module:'+aModuleUnit.name())
 
     def enterLabelRef(self,label,labelRef):
         if self.labelRefs.has_key(label) :
