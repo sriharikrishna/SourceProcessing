@@ -34,6 +34,10 @@ class CanonError(Exception):
         self.msg  = msg
         self.lineNumber = lineNumber
 
+    def __str__(self):
+        errString='\nERROR: CanonError at line '+str(self.lineNumber)+': '+str(self.msg)
+        return (errString)
+
 class UnitCanonicalizer(object):
     'class to facilitate canonicalization on a per-unit basis'
 

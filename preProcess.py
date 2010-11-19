@@ -119,61 +119,10 @@ def main():
                 shutil.move(newOutputFile,config.outputFile)
         if (config.timing):
             print 'SourceProcessing: timing: '+str(datetime.datetime.utcnow()-startTime)
-    except CanonError,e:
-        print >>sys.stderr,'\nERROR: CanonError in '+currentInputFile+' at line '+str(e.lineNumber)+': ',e.msg
+    except (CanonError,SymtabError,UserError,ScanError,ParseError,InferenceError,AssemblerException,ListAssemblerException,FunToSubError),e:
+        sys.stderr.write(str(e))
         cleanup(config)
         return 1
-    except SymtabError,e:
-        print >>sys.stderr,'\nERROR: SymtabError in '+currentInputFile+' at line '+str(e.lineNumber)+':',e.msg
-        if e.entry:
-            symbolNameStr = e.symbolName or '<symbol name unknown>'
-            print >>sys.stderr,'For entry', e.entry.debug(symbolNameStr)
-        cleanup(config)
-        return 1
-    except UserError,e:
-        print >>sys.stderr,'\nERROR: UserError in '+currentInputFile+':',e.msg
-        cleanup(config)
-        return 1 
-    except ScanError,e: 
-        print >>sys.stderr,'\nERROR: ScanError: scanner fails in '+currentInputFile+' at line '+str(e.lineNumber)+':'
-        print >>sys.stderr,e.aFortLine
-        print >>sys.stderr,(len(e.aFortLine)-len(e.rest))*' '+'^'
-        print >>sys.stderr,''
-        print >>sys.stderr,"Tokens scanned ok: ", e.scanned,'\tUnable to scan: "'+e.rest+'"'
-        print >>sys.stderr,''
-        if (e.rest == '&' and (config.inputFormat=='fixed')):
-            print >>sys.stderr,"This failure is likely due to running this script on free-formatted code without specifying the --inputFormat=free flag."
-        else:
-            print >>sys.stderr,"This failure is likely due to possibly legal but unconventional Fortran,"
-            print >>sys.stderr,"such as unusual spacing. Please consider modifying your source code."
-        cleanup(config)
-        return 1 
-    except ParseError,e: 
-        print >>sys.stderr,'\nERROR: ParseError: parser fails to assemble tokens in '+currentInputFile+' at scanned line '+str(e.lineNumber)+':'
-        print >>sys.stderr,e.scannedLine
-        if e.details: print >>sys.stderr,e.details
-        if e.target: print >>sys.stderr,"tried to parse as",e.target
-        cleanup(config)
-        return 1 
-    except InferenceError,e: 
-        print >>sys.stderr,'\nERROR: InferenceError:  in '+currentInputFile+' at line '+str(e.lineNumber)+':'
-        if e.msg: print >>sys.stderr,e.msg
-        cleanup(config)
-        return 1 
-    except AssemblerException,e:
-        print >>sys.stderr,'\nERROR: AssemblerError: parser failed in '+currentInputFile+':',e.msg
-        cleanup(config)
-        return 1 
-    except ListAssemblerException,e:
-        print >>sys.stderr,'\nERROR: ListAssemblerError: parser failed in '+currentInputFile+':',e.msg
-        print >>sys.stderr,'rest =', e.rest
-        cleanup(config)
-        return 1 
-    except FunToSubError,e: 
-        print >>sys.stderr,'\nERROR: FunToSubError:  in '+currentInputFile+':'
-        if e.msg: print >>sys.stderr,e.msg
-        cleanup(config)
-        return 1 
     except RuntimeError,e:
         if (len(e.args)>=1 and "maximum recursion depth exceeded" <= e.args[0]):
             print >>sys.stderr,'\nERROR: RuntimeError: python interpreter failed with: ',e.args[0]

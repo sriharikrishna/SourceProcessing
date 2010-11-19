@@ -28,6 +28,14 @@ class SymtabError(Exception):
         self.entry = entry
         self.lineNumber = lineNumber
 
+    def __str__(self):
+        errString='\nERROR: SymtabError at line '+str(self.lineNumber)+':'+str(self.msg)
+        if self.entry:
+            symbolNameStr = self.symbolName or '<symbol name unknown>'
+            errString+='\nFor entry'+str(self.entry.debug(symbolNameStr))
+        return (errString)
+
+
 class Symtab(object):
     @staticmethod
     def setTypeDefaults(defaultReal=None,defaultInt=None):

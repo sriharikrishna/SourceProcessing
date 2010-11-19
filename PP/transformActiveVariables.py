@@ -14,6 +14,9 @@ class TransformError(Exception):
         self.msg = msg
         self.lineNumber = lineNumber
 
+    def __str__(self):
+        errString='\nERROR: TransformError at line '+str(self.lineNumber)+':'+str(self.msg)
+        return (errString)
 
 class TransformActiveVariables(object):
     'class to perform rudimentary tranformations of active variables on non-transformed files'
