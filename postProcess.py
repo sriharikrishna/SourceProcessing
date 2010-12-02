@@ -193,54 +193,10 @@ def main():
         if (config.timing):
             print 'SourceProcessing: timing: '+str(datetime.datetime.utcnow()-startTime)
 
-    except PostProcessError,e:
-        sys.stderr.write('\nERROR: PostProcessError')
-        if (e.lineNumber>0) :
-            sys.stderr.write(' on line '+str(e.lineNumber))
-        sys.stderr.write(': '+e.msg+'\n')
+    except (PostProcessError,UserError,AssemblerException,ListAssemblerException,ParseError,ScanError),e:
+        sys.stderr.write(str(e))
         cleanup(config)
         return 1
-
-    except SymtabError,e:
-        print >>sys.stderr,'\nERROR: SymtabError at line '+str(e.lineNumber)+':',e.msg
-        if e.entry:
-            symbolNameStr = e.symbolName or '<symbol name unknown>'
-            print >>sys.stderr,'For entry', e.entry.debug(symbolNameStr)
-        cleanup(config)
-        return 1
-    except UserError,e:
-        print >>sys.stderr,'\nERROR: UserError:',e.msg
-        cleanup(config)
-        return 1 
-    except ScanError,e: 
-        print >>sys.stderr,'\nERROR: ScanError: scanner fails at line '+str(e.lineNumber)+':'
-        print >>sys.stderr,e.aFortLine
-        print >>sys.stderr,(len(e.aFortLine)-len(e.rest))*' '+'^'
-        print >>sys.stderr,''
-        print >>sys.stderr,"Tokens scanned ok: ", e.scanned,'\tUnable to scan: "'+e.rest+'"'
-        print >>sys.stderr,''
-        if (e.rest == '&' and (config.inputFormat=='fixed')):
-            print >>sys.stderr,"This failure is likely due to running this script on free-formatted code without specifying the --inputFormat=free flag."
-        else:
-            print >>sys.stderr,"This failure is likely due to possibly legal but unconventional Fortran,"
-            print >>sys.stderr,"such as unusual spacing. Please consider modifying your source code."
-        cleanup(config)
-        return 1 
-    except ParseError,e: 
-        print >>sys.stderr,'\nERROR: ParseError: parser fails to assemble tokens in scanned line '+str(e.lineNumber)+':'
-        print >>sys.stderr,e.scannedLine
-        if e.details: print >>sys.stderr,e.details
-        if e.target: print >>sys.stderr,"tried to parse as",e.target
-        cleanup(config)
-        return 1 
-    except AssemblerException,e:
-        print >>sys.stderr,"\nERROR: AssemblerError: parser failed:",e.msg
-        cleanup(config)
-        return 1 
-    except ListAssemblerException,e:
-        print >>sys.stderr,"\nERROR: ListAssemblerError: parser failed:",e.msg
-        cleanup(config)
-        return 1 
     except RuntimeError,e:
         if (len(e.args)>=1 and "maximum recursion depth exceeded" <= e.args[0]):
             print >>sys.stderr,'\nERROR: RuntimeError: python interpreter failed with: ',e.args[0]

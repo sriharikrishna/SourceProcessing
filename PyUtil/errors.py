@@ -9,6 +9,9 @@ class UserError(Exception):
     def __init__(self,msg):
         self.msg  = msg
 
+    def __str__(self):
+        errString='\nERROR: UserError :'+str(self.msg)
+        return (errString)
 
 class ScanError(Exception):
     '''
@@ -20,6 +23,18 @@ class ScanError(Exception):
         self.aFortLine=aFortLine
 	self.scanned=scanned
 	self.rest=rest
+
+    def __str__(self):
+        errString='\nERROR: ScanError at line '+str(self.lineNumber)+':'
+        errString+=str(self.aFortLine)
+        errString+=(len(self.aFortLine)-len(self.rest))*' '+'^'
+        errString+="\nTokens scanned ok: "+str(self.scanned)+'\tUnable to scan: "'+str(self.rest)+'"'
+        if (self.rest == '&' and (config.inputFormat=='fixed')):
+            errString+="\nThis failure is likely due to running this script on free-formatted code without specifying the --inputFormat=free flag."
+        else:
+            errString+="\nThis failure is likely due to possibly legal but unconventional Fortran,"
+            errString+="such as unusual spacing. Please consider modifying your source code."
+        return str(errString)
 
 class ParseError(Exception):
     '''
@@ -36,3 +51,9 @@ class ParseError(Exception):
         self.target=target
         self.details=details
 
+    def __str__(self):
+        errString='\nERROR: ParseError: parser fails to assemble tokens in scanned line '+str(self.lineNumber)+':'
+        errString+=str(self.scannedLine)
+        if self.details: errString+=str(self.details)
+        if self.target: errString+="tried to parse as"+str(self.target)
+        return (errString)

@@ -43,6 +43,10 @@ class AssemblerException(Exception):
         self.msg  = msg
         self.rest = rest
 
+    def __str__(self):
+        errString='\nERROR: AssemblerError: parser failed :'+str(e.msg)
+        return (errString)
+
 def pred(p):
     '''produce an assembler based on predicate p
     if p(stream.next()), then return that value, otherwise AssemblerException

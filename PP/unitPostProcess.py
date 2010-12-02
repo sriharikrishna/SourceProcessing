@@ -19,11 +19,12 @@ import copy
 class PostProcessError(Exception):
     '''Exception for errors that occur during postprocessing'''
     def __init__(self,msg,lineNumber):
-        self.msg = msg
         self.lineNumber = lineNumber
+        self.msg = msg
 
     def __str__(self):
-        return (self.msg)
+        errString='\nERROR: PostProcessError at line '+str(self.lineNumber)+': '+str(self.msg)+'\n'
+        return (errString)
         
 # Handles postprocessing
 class UnitPostProcessor(object):

@@ -18,11 +18,14 @@ class InferenceError(Exception):
    '''exception for ...'''
    def __init__(self,msg,lineNumber=None):
        self.msg  = msg
-       if lineNumber is not None:
-          self.msg += ' from line '+str(lineNumber)
+       self.lineNumber=lineNumber
 
    def __str__(self):
-      return (self.msg)
+        errString='\nERROR: InferenceError: '
+        if self.lineNumber is not None:
+           errString+='at line '+str(self.lineNumber)+':'
+        if self.msg: errString+=str(self.msg)
+        return (errString)
 
 def kw2type(s): return(fortStmts.kwtbl[s.lower()])
 def lenfn(n): return [fortStmts._F77Len(str(n))]

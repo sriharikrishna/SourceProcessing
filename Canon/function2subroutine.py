@@ -18,6 +18,10 @@ class FunToSubError(Exception):
     def __init__(self,msg):
         self.msg  = msg
 
+    def __str__(self):
+        errString='\nERROR: FunToSubError: '+str(self.msg)
+        return (errString)
+
 name_init = 'oad_s_'
 
 def createTypeDecl(type_kw,mod,attrs,outParam,aLead):
