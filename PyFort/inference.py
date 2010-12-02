@@ -472,17 +472,27 @@ def genericResolve(aFunctionApp,localSymtab,lineNumber):
 def isRangeExpression(theExpression):
    return (isinstance(theExpression,Ops) and theExpression.op==':')
 
-def selPrefix(aSel,localSymtab):
+def __selPrefix(aSel,localSymtab):
+    '''
+    the prefix for a symbol table lookup of aSel is the type name
+    here we determine the type name
+    '''
     prefix=""
     if (isinstance(aSel.head,Sel)):
-        prefix=selSymtabName(aSel.head,localSymtab,lineNumber)
+        prefix=__selSymtabName(aSel.head,localSymtab,lineNumber)
         prefix=(localSymtab.lookup_name(prefix+":"+aSel.proj).type)[1][0]
     else:
-        prefix=(localSymtab.lookup_name(aSel.head).type)[1][0]
+        name=''
+        if (isinstance(aSel.head,App)):
+            name=aSel.head.head
+        else:
+            name=aSel.head
+        prefix=(localSymtab.lookup_name(name).type)[1][0]
     return prefix
 
-def selSymtabName(aSel,localSymtab):
-    return selPrefix(aSel,localSymtab)+":"+aSel.proj
+def __selSymtabName(aSel,localSymtab):
+    ''' for aSel the name to be used for a symbol table lookup is "<type_name>:<member name>" '''
+    return __selPrefix(aSel,localSymtab)+":"+aSel.proj
     
 def isArrayReference(theApp,localSymtab,lineNumber):
     if not isinstance(theApp,App):
@@ -490,7 +500,7 @@ def isArrayReference(theApp,localSymtab,lineNumber):
     DebugManager.debug('inference.isArrayReference: Application Expression "'+str(theApp))
     lookupName=""
     if isinstance(theApp.head,Sel): # example type%member(1)
-        lookupName=selSymtabName(theApp.head,localSymtab)
+        lookupName=__selSymtabName(theApp.head,localSymtab)
     else:
         lookupName=theApp.head
     theSymtabEntry=localSymtab.lookup_name(lookupName)
