@@ -1337,10 +1337,10 @@ class DimensionStmt(Decl):
         return '%s %s' % (self.stmt_name,','.join([str(l) for l in self.lst]))\
                +''.join(self.internal)
 
-    def get_lst(self):
+    def get_decls(self):
         return self.lst
 
-    def set_lst(self,newLst):
+    def set_decls(self,newLst):
         self.lst = newLst
         self.modified = True
 
