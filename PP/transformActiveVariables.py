@@ -27,11 +27,11 @@ class TransformActiveVariables(object):
     def setReplacementType(replacementType):
         TransformActiveVariables._replacement_type = replacementType
 
-    _activeVars = []
+    _commonBlockActiveVars = []
     # common blocks which contain active variables
     _commonBlocks = set([])
-    # populates the activeVars array with the variable names of all active
-    # variables
+    _activeVars = set([])
+	# populates the commonBlocks array with the names of all common blocks which contain active variables
     @staticmethod
     def getActiveDecls(file,inputFormat=None):
         for aUnit in fortUnitIterator(file,inputFormat):
@@ -40,7 +40,7 @@ class TransformActiveVariables(object):
                     (stmtClass,[expType])=expressionType(aDeclStmt.declList[0],aUnit.symtab,aDeclStmt.lineNumber)
                     if expType=='active':
                         TransformActiveVariables._commonBlocks.add(aDeclStmt.name)
-        DebugManager.debug('TransformActiveVariables: finished populating list of active variables: '+str(TransformActiveVariables._activeVars))
+        DebugManager.debug('TransformActiveVariables: finished populating list of names of common blocks with active variables: '+str(TransformActiveVariables._commonBlocks))
 
     def __init__(self, aUnit):
         self.__myUnit = aUnit
@@ -72,8 +72,9 @@ class TransformActiveVariables(object):
         DebugManager.debug('TransformActiveVariables.__transformActiveTypes returning '+str(Exp))
         return Exp
         
-    # get common block active vars by comparing common blocks from this file with common blocks in activeVariables file
-    # & then adding NEW common block var names (from current file) to self._activeVars.
+    # get common block active vars by comparing common blocks from this file with 
+    # common blocks in activeVariables file then adding NEW common block var
+    # names (from current file) to self._commonBlockActiveVars.
     # Add new method to be called before getEquivalencedVars
     def __getCommonBlockActiveVars(self):
         for aDecl in self.__myUnit.decls:
@@ -81,7 +82,7 @@ class TransformActiveVariables(object):
                     aDecl.name.lower() in self._commonBlocks:
                 for decl in aDecl.declList:
                     TransformActiveVariables.\
-                        _activeVars.append(fs.getVarName(decl,aDecl.lineNumber))
+                        _commonBlockActiveVars.append(fs.getVarName(decl,aDecl.lineNumber))
 
     def __getVarsEquivalencedToActive(self):
         # get list of vars which are equivalenced to active variables (and therefore need to be active)
@@ -96,7 +97,14 @@ class TransformActiveVariables(object):
                             for var in item:
                                 # if one variable is active, they all need to be active;
                                 # add non-active vars to a list of vars to be activated
-                                if fs.getVarName(var,aDecl.lineNumber) in self._activeVars:
+                                (stmtClass,expType)=expressionType(var,self.__myUnit.symtab,aDecl.lineNumber)
+                                # if equivalenced to an active variable not found in a common block, the type
+                                # inference should find that it's active
+                                if isinstance(expType,list) and len(expType)>0 and expType[0]=='active':
+                                    active=True
+                                # if equivalenced to an active variable from a common block, the variable will
+                                # be in commonBlockActiveVars
+                                elif fs.getVarName(var,aDecl.lineNumber) in self._commonBlockActiveVars:
                                     active=True
                                 else:
                                     newList.append(fs.getVarName(var,aDecl.lineNumber))
@@ -104,37 +112,42 @@ class TransformActiveVariables(object):
                         varsToActivate.extend(newList)
         return varsToActivate
 
+    # helper function for createActiveTypeDecls
+    # gets a variable name from the input variable 'var' and adds it to the activeDeclList 
+    # if it is in the list of varsToActivate
+    # This activeDeclList is used to create a new active type declaration with all active variables
+    # from the variables declared in theDecl
     def __getVarToActivateFromTypeDecl(self,varsToActivate,var,theDecl,oldDeclList,activeDeclList):
         strippedVar=fs.getVarName(var,theDecl.lineNumber)
         if strippedVar in varsToActivate:
             # accumulate var to make new active decl later
             activeDeclList.append(var)
-            # add to active variables file
-            self._activeVars.append(strippedVar)
+            self._activeVars.add(strippedVar)
             oldDeclList.remove(var)
             theDecl.modified=True
         return activeDeclList
 
+    # helper function for createActiveTypeDecls
+    # adds a new active declaration to the list of declarations
     def __insertNewActiveTypeDecl(self,activeDecls,oldDecl,oldDeclList):
         if len(activeDecls)>0:
             newDecl=fs.DrvdTypeDecl([self._replacement_type],[],activeDecls,lead=oldDecl.lead)
             self.__newDecls.append(newDecl)
-            if len(oldDeclList)!=0:
-                self.__newDecls.append(oldDecl)
+        if len(oldDeclList)>0:
+            oldDecl.modified=True
+            self.__newDecls.append(oldDecl)
 
+    # for each type or dimension declaration in the unit, determine if any of the
+    # variables declared are active variables; If so, create a new active type
+    # declaration and add it to the list of declarations
     def __createActiveTypeDecls(self,varsToActivate):
         # activate variables in list of varsToActivate
         for aDecl in self.__myUnit.decls:
-            if isinstance(aDecl,fs.TypeDecl):
+            if isinstance(aDecl,fs.TypeDecl) or isinstance(aDecl,fs.DimensionStmt):
                 decls = []
-                for var in aDecl.decls:
-                    decls = self.__getVarToActivateFromTypeDecl(varsToActivate,var,aDecl,aDecl.decls,decls)
-                self.__insertNewActiveTypeDecl(decls,aDecl,aDecl.decls)
-            elif isinstance(aDecl,fs.DimensionStmt):
-                decls = []
-                for var in aDecl.lst:
-                    decls = self.__getVarToActivateFromTypeDecl(varsToActivate,var,aDecl,aDecl.lst,decls)
-                self.__insertNewActiveTypeDecl(decls,aDecl,aDecl.lst)
+                for var in aDecl.get_decls():
+                    decls = self.__getVarToActivateFromTypeDecl(varsToActivate,var,aDecl,aDecl.get_decls(),decls)
+                self.__insertNewActiveTypeDecl(decls,aDecl,aDecl.get_decls())
             else:
                 self.__newDecls.append(aDecl)
 
