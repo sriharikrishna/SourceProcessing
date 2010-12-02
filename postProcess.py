@@ -50,8 +50,8 @@ def cleanup(config):
 # init procedure
 # typeDecls: a list of variable type declarations from the common blocks
 # output: the file to which new units are printed
+# base,unitNumExt,unit_num,ext: used to create a new output file if splitUnits is true
 # splitUnits: True if units are being split and printed to different files
-# output2: the file to print the globalInitProcedure unit to if splitUnits is true
 def addInitProcedures(initSet,initNames,typeDecls,output=None,base='',unitNumExt='',unit_num=0,ext='',splitUnits=False):
     '''creates active variable derivative initialization procedures and prints them to specified output file(s)'''
     for elt in initSet:
@@ -75,10 +75,9 @@ def addInitProcedures(initSet,initNames,typeDecls,output=None,base='',unitNumExt
             ourOutFileNameList.append(output)
             newUnit.printit(out)
             out.close()
-            return
         else:
             newUnit.printit(output)
-            return
+    return
 
 def main():
     global ourOutFileNameList
@@ -105,12 +104,7 @@ def main():
         DebugManager.debug("running for <input_file>:"+args[0]+" and the following options: "+str(config))
 
         inputFile = args[0]
-        initSubroutinesAdded = False
         initSet = set([]); initNames = []; typeDecls = set([])
-        if config.mode == 'r':
-            # get common block variables to initialize if processing in reverse mode
-            for aUnit in fortUnitIterator(inputFile,config.inputFormat):
-                UnitPostProcessor(aUnit).getInitCommonStmts(initSet,initNames,typeDecls)
         if splitUnits:
             (base,ext) = os.path.splitext(inputFile)
             unitNumExt = "%0"+str(unitNameWidth)+"d"
@@ -119,6 +113,8 @@ def main():
             if (config.timing):
                 unitStartTime=datetime.datetime.utcnow()
             for aUnit in fortUnitIterator(inputFile,config.inputFormat):
+                if (config.explicitInit):
+                    UnitPostProcessor(aUnit).getInitCommonStmts(initSet,initNames,typeDecls)
                 outputFile = base + unitNumExt % unit_num + ext; unit_num+=1
                 out = open(outputFile,'w')
                 ourOutFileNameList.append(outputFile)
@@ -149,17 +145,18 @@ def main():
             if config.outputFormat == None:
                 setFormat = True
             for aUnit in fortUnitIterator(inputFile,config.inputFormat):
+                if (config.explicitInit):
+                    UnitPostProcessor(aUnit).getInitCommonStmts(initSet,initNames,typeDecls)
                 # We expect to find file pragmas in the cmnt section of units exclusively
                 if aUnit.cmnt:
                     if (re.search('openad xxx file_start',aUnit.cmnt.rawline,re.IGNORECASE)):
-                        if out: # close the previous output file (if any)
-                            out.close()
+                        # close the previous output file (if any)
+                        if out: out.close()
                         # extract the new output file location (and add path and filename suffixes)
                         (head,tail) = os.path.split(aUnit.cmnt.rawline.split('start [')[1].split(']')[0])
                         (fileName,fileExtension) = os.path.splitext(tail)
                         outputDirectory = config.pathPrefix+head+config.pathSuffix
-                        if outputDirectory == '':
-                            outputDirectory = './'
+                        if outputDirectory == '': outputDirectory = './'
                         if not os.path.exists(outputDirectory): os.makedirs(outputDirectory)
                         newOutputFile = os.path.join(outputDirectory,fileName+config.filenameSuffix+fileExtension)
                         if setFormat:
@@ -183,6 +180,8 @@ def main():
             else:
                 out=sys.stdout
             for aUnit in fortUnitIterator(inputFile,config.inputFormat):
+                if (config.explicitInit):
+                    UnitPostProcessor(aUnit).getInitCommonStmts(initSet,initNames,typeDecls)
                 UnitPostProcessor(aUnit).processUnit().printit(out)
             # add new init procedures & global init procedure after module declarations
             if (config.explicitInit):
