@@ -103,9 +103,7 @@ class UnitPostProcessor(object):
         ''' convert abstract to concrete active type 
         only applied to type declaration statements '''
         DebugManager.debug('unitPostProcessor.__rewriteActiveType called on: "'+str(DrvdTypeDecl)+"'")
-        newDecls = []
-        for decl in DrvdTypeDecl.get_decls():
-            newDecls.append(self.__transformActiveTypesExpression(decl))
+        newDecls=[self.__transformActiveTypesExpression(decl) for decl in DrvdTypeDecl.get_decls()]
         DrvdTypeDecl.set_decls(newDecls)
         if DrvdTypeDecl.get_mod()[0].lower() == self._abstract_type:
             DrvdTypeDecl.set_mod([self._replacement_type])
@@ -151,17 +149,12 @@ class UnitPostProcessor(object):
         else:
             if hasattr(replacementExpression, "_sons"):
                 for aSon in replacementExpression.get_sons():
-                    theSon = getattr(replacementExpression,aSon)
-                    newSon = self.__transformActiveTypesExpression(theSon)
+                    newSon = self.__transformActiveTypesExpression(getattr(replacementExpression,aSon))
                     replacementExpression.set_son(aSon,newSon)
             elif isinstance(replacementExpression,fs._NoInit):
                 replacementExpression = fs._NoInit(self.__transformActiveTypesExpression(replacementExpression.lhs))
             elif isinstance(replacementExpression,list):
-                newList = []
-                for item in replacementExpression:
-                    newItem = self.__transformActiveTypesExpression(item)
-                    newList.append(self.__transformActiveTypesExpression(item))
-                replacementExpression = newList
+                replacementExpression=[self.__transformActiveTypesExpression(item) for item in replacementExpression]
 
         self.__recursionDepth -= 1
         if self.__recursionDepth == self.__inquiryRecursionLevel:
@@ -179,9 +172,7 @@ class UnitPostProcessor(object):
     def __processSubCallStmt(self,aSubCallStmt):
         '''transforms active types in a subroutine Call statement'''
         DebugManager.debug('unitPostProcessor.__processSubCallStmt called on: "'+str(aSubCallStmt)+"'")
-        replacementArgs = []
-        for anArg in aSubCallStmt.get_args():
-           replacementArgs.append(self.__transformActiveTypesExpression(anArg))
+        replacementArgs=[self.__transformActiveTypesExpression(arg) for arg in aSubCallStmt.get_args()]
         replacementStatement = \
             fs.CallStmt(aSubCallStmt.get_head(),
                         replacementArgs,
@@ -197,9 +188,7 @@ class UnitPostProcessor(object):
         '''transforms __value__/__deriv__ in active type variables in any IOStmt instance'''
         DebugManager.debug('unitPostProcessor.__processIOStmt called on: "'\
                                +str(anIOStmt)+" "+str(anIOStmt.__class__)+"'")
-        newItemList=[]
-        for item in anIOStmt.get_itemList():
-            newItemList.append((self.__transformActiveTypesExpression(item)))
+        newItemList=[self.__transformActiveTypesExpression(item) for item in anIOStmt.get_itemList()]
         anIOStmt.set_itemList(newItemList)
         return anIOStmt
 
@@ -224,20 +213,12 @@ class UnitPostProcessor(object):
                           lineNumber=StmtFnStmt.lineNumber,
                           label=StmtFnStmt.label,
                           lead=StmtFnStmt.lead)
-        if newStatement.name == '__value__':
+        if newStatement.name == '__value__' or newStatement.name=='__deriv__':
             newApp = self.__transformActiveTypesExpression(fe.App(newStatement.name,newStatement.args))
             replacementStatement = \
                 fs.AssignStmt(newApp,
                               newStatement.body,
                               lineNumber=newStatement.lineNumber,
-                              label=newStatement.label,
-                              lead=newStatement.lead)
-        elif newStatement.name == '__deriv__':
-            newApp = self.__transformActiveTypesExpression(fe.App(newStatement.name,newStatement.args))
-            replacementStatement = \
-                fs.AssignStmt(newApp,
-                              newStatement.body,
-                              newStatement.lineNumber,
                               label=newStatement.label,
                               lead=newStatement.lead)
         else:
@@ -257,7 +238,7 @@ class UnitPostProcessor(object):
         
         for aSon in aStmt.get_sons():
             theSon = getattr(aStmt,aSon)
-            newSon = self.__transformActiveTypesExpression(theSon)    
+            newSon = self.__transformActiveTypesExpression(theSon)
             if newSon is not theSon:
                 aStmt.set_son(aSon,newSon)
         return aStmt
@@ -276,8 +257,7 @@ class UnitPostProcessor(object):
         '''Retrieves the unit to be inlined'''
         function = None
         inline = False
-        match = re.search('C[ ]+[$]openad[$][ ]+inline',\
-                              aComment.rawline,re.IGNORECASE)
+        match=re.search('C[ ]+[$]openad[$][ ]+inline',aComment.rawline,re.IGNORECASE)
         if match:
             p = re.compile(r'\(')
             # get name of inlined function
@@ -307,8 +287,7 @@ class UnitPostProcessor(object):
             if num_match:
                 replacementNum = num_match.group(0)
                 return int(replacementNum)
-        else:
-            return 0
+        return 0
 
     # PARAMS:
     # aComment -- a comment from the input file being processed
@@ -321,8 +300,7 @@ class UnitPostProcessor(object):
                       aComment.rawline,re.IGNORECASE)
         if end_match:
             return True
-        else:
-            return False
+        return False
 
     # PARAMS:
     # function -- a unit from the inline file to be used in processing
@@ -330,26 +308,21 @@ class UnitPostProcessor(object):
     @staticmethod
     def __getInlineSubroutine(function):
         '''removes all statements which should not be inserted from a unit (function) in the inline file'''
-        pattern = 'C([ ]+)[$]openad[$]([ ]+)end([ ]+)decls'
-        newDecls = []
+        pattern = re.compile('C([ ]+)[$]openad[$]([ ]+)end([ ]+)decls',re.IGNORECASE)
+        function.decls = (filter(lambda l:isinstance(l,fs.StmtFnStmt),function.decls))
         newExecs = []
-
-        for aDecl in function.decls:
-            if isinstance(aDecl,fs.StmtFnStmt):
-                newDecls.append(aDecl)
-
+        newExecsAppend=newExecs.append
         for anExec in function.execs:
             if anExec.is_comment():
-                match=re.search(pattern,anExec.get_rawline(),re.IGNORECASE)
+                match=pattern.search(anExec.get_rawline())
                 if match:
                     cmnt = anExec.get_rawline()[:match.start()]+anExec.get_rawline()[match.end():]
-                    newExecs.append(fs.Comments(cmnt.strip()))
+                    newExecsAppend(fs.Comments(cmnt.strip()))
                 else:
-                    newExecs.append(anExec)
+                    newExecsAppend(anExec)
             else:
-                newExecs.append(anExec)            
+                newExecsAppend(anExec)            
 
-        function.decls = newDecls
         function.execs = newExecs
         return function        
 
@@ -364,17 +337,14 @@ class UnitPostProcessor(object):
         '''Given new exec statement args (as determined from inline comment), replace inline args in given inline file subroutine with new args; transform all active types and return all new exec statements'''
         replacementArgs = []
         Execs = []; Stmts = []
+        ExecsAppend=Execs.append
         for anArg in execStmtArgs:
             if isinstance(anArg,fe.App):
-                newArg = self.__transformActiveTypesExpression(anArg)
-                replacementArgs.append(newArg)
-            else:
-                replacementArgs.append(anArg)
+                anArg = self.__transformActiveTypesExpression(anArg)
+            replacementArgs.append(anArg)
         inlineArgs = self.__inlineUnit.uinfo.args
-        for decl in self.__inlineUnit.decls:
-            Stmts.append(copy.deepcopy(decl))
-        for Exec in self.__inlineUnit.execs:
-            Stmts.append(copy.deepcopy(Exec))
+        map(lambda l:map(lambda e:Stmts.append(copy.deepcopy(e)),l),
+            [self.__inlineUnit.decls,self.__inlineUnit.execs])
         self.__inlineUnit = None
 
         for Stmt in Stmts:
@@ -382,36 +352,30 @@ class UnitPostProcessor(object):
             argReps -= 1
             if isinstance(Stmt,fs.Comments):
                 Stmt.set_rawline(replaceArgs(argReps,Stmt.get_rawline(),inlineArgs,replacementArgs))
-                Execs.append(Stmt)
+                ExecsAppend(Stmt)
             elif isinstance(Stmt,fs.AssignStmt):
                 lhs = replaceArgs(argReps,str(Stmt.get_lhs()),inlineArgs,replacementArgs)
                 rhs = replaceArgs(argReps,str(Stmt.get_rhs()),inlineArgs,replacementArgs)
                 newStmt = fs.AssignStmt(lhs,rhs,lead=stmt_lead)
-                Execs.append(newStmt)
+                ExecsAppend(newStmt)
             elif isinstance(Stmt,fs.StmtFnStmt):
                 name=replaceArgs\
                       (argReps,str(Stmt.get_name()),inlineArgs,replacementArgs)
-                newArgs = []
-                for arg in Stmt.get_args():
-                    newArgs.append(replaceArgs\
-                                   (argReps,str(arg),inlineArgs,replacementArgs))
+                newArgs=[replaceArgs(argReps,str(arg),inlineArgs,replaceArgs) for arg in Stmt.get_args()]
                 body=replaceArgs\
                       (argReps,str(Stmt.get_body()),inlineArgs,replacementArgs)
                 newStmt = fs.StmtFnStmt(name,newArgs,body,lead=stmt_lead)
-                Execs.append(newStmt)
+                ExecsAppend(newStmt)
             elif isinstance(Stmt,fs.IOStmt):
-                newItemList = []
-                for item in Stmt.get_itemList():
-                    newItem=replaceArgs(argReps,str(item),inlineArgs,replacementArgs)
-                    newItemList.append(newItem)
+                newItemList=[replaceArgs(argReps,str(item),inlineArgs,replacementArgs) for item in Stmt.get_itemList()]
                 Stmt.set_itemList(newItemList)
                 Stmt.lead = stmt_lead
-                Execs.append(Stmt)
+                ExecsAppend(Stmt)
             elif isinstance(Stmt,fs.AllocateStmt) \
               or isinstance(Stmt,fs.DeallocateStmt) :
                 Stmt.set_rawline(replaceArgs(argReps,Stmt.get_rawline(),inlineArgs,replacementArgs)+''.join(Stmt.internal))
                 Stmt.lead = stmt_lead
-                Execs.append(Stmt)
+                ExecsAppend(Stmt)
             elif isinstance(Stmt,fs.WhileStmt) or \
                      isinstance(Stmt,fs.DoStmt):
                 for aSon in Stmt.get_sons():
@@ -420,13 +384,11 @@ class UnitPostProcessor(object):
                     	newSon = replaceArgs(argReps,str(theSon),inlineArgs,replacementArgs)
                         Stmt.set_son(aSon,newSon)
                 Stmt.lead = stmt_lead
-                Execs.append(Stmt)
+                ExecsAppend(Stmt)
             elif hasattr(Stmt, "_sons"):
                 for aSon in Stmt.get_sons():
                     theSon = getattr(Stmt,aSon) 
-                    if theSon is None:
-                        continue
-                    elif isinstance(theSon,list):
+                    if isinstance(theSon,list):
                         index = 0
                         while index < len(theSon):
                             arg = theSon[index]
@@ -435,11 +397,11 @@ class UnitPostProcessor(object):
                                 theSon[index] = newSon
                                 Stmt.modified = True
                             index += 1
-                    else:
+                    elif theSon is not None:
                         newSon = replaceSon(argReps,theSon,inlineArgs,replacementArgs)
                         Stmt.set_son(aSon,newSon)
                 Stmt.lead = stmt_lead
-                Execs.append(Stmt)
+                ExecsAppend(Stmt)
             else:
                 raise PostProcessError('unitPostProcess.py.__createNewExecs: don\'t know how to handle exec statement "'+Stmt+'"')
         return Execs
@@ -461,6 +423,8 @@ class UnitPostProcessor(object):
     def __processComments(self,Comments,replacementNum,commentList,
                           currentComments,inline=False):
         '''processes the comments (used for reverse mode); determines if a comment declares inlining or pragma replacement'''
+        commentListAppend=commentList.append
+        currentCommentsAppend=currentComments.append
         for commentString in Comments:
             if commentString == '' or commentString.strip() == '':
                 continue
@@ -469,15 +433,15 @@ class UnitPostProcessor(object):
             if newRepNum != 0:
                 replacementNum = newRepNum
                 if replacementNum == 1:
-                    commentList.append(currentComments)
+                    commentListAppend(currentComments)
                     currentComments = []
             elif (self.__endReplacement(newComment)):
-                commentList.append(currentComments)
+                commentListAppend(currentComments)
                 currentComments = []
             else:
                 (Comment,inline) = self.__getInlinedFunction(newComment)
                 if Comment is not None:
-                    currentComments.append(Comment)
+                    currentCommentsAppend(Comment)
         return (commentList,currentComments,inline,replacementNum)
                     
     # PARAMS:
@@ -638,18 +602,10 @@ class UnitPostProcessor(object):
         (Decls,Execs) = self.__reverseProcessDeclsAndExecs()
         if isinstance(self.__myUnit.uinfo,fs.ModuleStmt) \
                 or isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
-            i = 0
-            while i < len(Decls):
-                for aDecl in Decls[0]:
-                    if aDecl is not None:
-                        self.__myNewDecls.append(aDecl)
-                i += 1
-            i = 0
-            while i < len(Execs):
-                for anExec in Execs[0]:
-                    if anExec is not None:
-                        self.__myNewExecs.append(anExec)
-                i += 1
+            if len(Decls)>0:
+                map(self.__myNewDecls.append,filter(lambda l: l is not None,Decls[0]))
+            if len(Execs)>0:
+                map(self.__myNewExecs.append,filter(lambda l: l is not None,Execs[0]))
             return
 
         template = TemplateExpansion(self.__myUnit)
@@ -714,9 +670,10 @@ class UnitPostProcessor(object):
         # may be None if so set in postProcess.py
         if not UnitPostProcessor._inlineFile:
             return
+        inlineUnitAppend=UnitPostProcessor._inlineFileUnits.append
         for aUnit in fortUnitIterator(UnitPostProcessor._inlineFile):
             newUnit = UnitPostProcessor.__getInlineSubroutine(aUnit)
-            UnitPostProcessor._inlineFileUnits.append(newUnit)
+            inlineUnitAppend(newUnit)
 
     @staticmethod
     # fortStmt: a CommonStmt from a common block in the file being processed with 
@@ -788,10 +745,11 @@ class UnitPostProcessor(object):
     def __createModuleInitProcedure(self):
         '''creates a contains block in the module with a new subroutine initializing all active variables within the module'''
         activeTypeDecls = []
+        activeTypeDeclsAppend=activeTypeDecls.append
         for decl in self.__myUnit.decls:
             if isinstance(decl,fs.DrvdTypeDecl) and \
                     (decl.get_mod()[0].lower() == self._abstract_type):
-                activeTypeDecls.append(decl)
+                activeTypeDeclsAppend(decl)
         if len(activeTypeDecls) == 0:
             return None
 
@@ -801,12 +759,13 @@ class UnitPostProcessor(object):
         newDecl = fs.UseAllStmt(moduleName='OAD_active',renameList=None,lead='\t')
         subUnit.decls.append(newDecl)
 
+        subUnitExecsAppend=subUnit.execs.append
         for decl in activeTypeDecls:
             for arg in decl.get_decls():
                 lhs = fe.Sel(arg,'d')
                 rhs = '0'
                 newExec = fs.AssignStmt(lhs,rhs,lead='\t')
-                subUnit.execs.append(newExec)
+                subUnitExecsAppend(newExec)
         subUnit.end = [fs.EndSubroutineStmt()]
         if len(self.__myUnit.contains) == 0:
             self.__myUnit.contains.append(fs.ContainsStmt())

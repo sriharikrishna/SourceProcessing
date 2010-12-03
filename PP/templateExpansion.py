@@ -24,7 +24,10 @@ class TemplateExpansion(object):
         self.__myNewExecs = []
         # the current unit being inserted from the inline file (reverse mode)
         self.__inlineUnit = None
-        
+
+    # appends non-empty/non-null statements from oldList to newList
+    def __appendNonEmptyStmt(self,oldList,newList):
+        newList.extend(filter(lambda l:l is not None and len(l.rawline)!=0,oldList))
 
     # This function inserts the exec statements into self.__myNewExecs
     # in the order determined by the template file
@@ -35,20 +38,18 @@ class TemplateExpansion(object):
     # (all decls in pragma 1 -- specified by Begin Replacement & 
     #  End Replacement comments --  in Decls[1])
     def __expandTemplateDecls(self,aUnit,Decls):
+        pat = re.compile(
+            "[ ]*[!][ ]*[$]template[_]pragma[_]declarations",
+            re.IGNORECASE)
         for aDecl in aUnit.decls:
             if aDecl.is_comment():
-                pat = re.compile(
-                    "[ ]*[!][ ]*[$]template[_]pragma[_]declarations",
-                    re.IGNORECASE)
                 match = pat.search(aDecl.rawline)
                 if match:
                     newStmt = fs.Comments(aDecl.rawline[:match.start()])
                     self.__myNewDecls.append(newStmt)
                     # return to input
                     if len(Decls) > 0:
-                        for decl in Decls[0]:
-                            if decl is not None and len(decl.rawline) != 0:
-                                self.__myNewDecls.append(decl)
+                        self.__appendNonEmptyStmt(Decls[0],self.__myNewDecls)
                         Decls[0] = None
                     # continue template
                     newStmt = fs.Comments(aDecl.rawline[match.end():])
@@ -57,16 +58,10 @@ class TemplateExpansion(object):
             self.__myNewDecls.append(aDecl)
 
         if Decls[0] != None:
-            for decl in Decls[0]:
-                if decl is not None and len(decl.rawline) != 0:
-                    self.__myNewDecls.append(decl)            
-        i = 1; j = 0
+            self.__appendNonEmptyStmt(Decls[0],self.__myNewDecls)
+        i = 1
         while i < len(Decls):
-            for aDecl in Decls[i]:
-                if aDecl is not None and len(aDecl.rawline) != 0:
-                    self.__myNewDecls.append(aDecl)
-                j += 1
-            j = 0
+            self.__appendNonEmptyStmt(Decls[i],self.__myNewDecls)
             i += 1        
 
     # This function inserts the exec statements into self.__myNewExecs
@@ -78,22 +73,17 @@ class TemplateExpansion(object):
     # (all execs in pragma 1 -- specified by Begin Replacement & 
     #  End Replacement comments --  in Execs[1])
     def __expandTemplateExecs(self, aUnit, Execs):
-        j = 0
         if len(Execs) > 0:
-            for anInputExec in Execs[0]:
-                if anInputExec is not None:
-                    if anInputExec is not None and \
-                            len(anInputExec.rawline) != 0:
-                        self.__myNewExecs.append(anInputExec)
-                j += 1
+            self.__appendNonEmptyStmt(Execs[0],self.__myNewExecs)
         execRepNum = 0
         firstIter = True
+        pragma_pat = re.compile(
+            "[!][ ]*[$]placeholder[_]pragma[$][ ]+id[=]",
+            re.IGNORECASE)
+        num_pat = re.compile("[0-9]+")
         for anExecStmt in aUnit.execs:
             if anExecStmt.is_comment():
-                pat = re.compile(
-                    "[!][ ]*[$]placeholder[_]pragma[$][ ]+id[=]",
-                    re.IGNORECASE)
-                match = pat.search(anExecStmt.rawline)
+                match = pragma_pat.search(anExecStmt.rawline)
                 if match:
                     stmt = anExecStmt.rawline[:match.start()]
                     if len(stmt.strip()) != 0:
@@ -107,13 +97,9 @@ class TemplateExpansion(object):
                         pragma = int(anExecStmt.rawline[match.end()].strip())
                     if pragma < len(Execs):
                         # return to input
-                        for anInputExec in Execs[pragma]:
-                            if anInputExec is not None and \
-                                    len(anInputExec.rawline) != 0:
-                                self.__myNewExecs.append(anInputExec)
+                        self.__appendNonEmptyStmt(Execs[pragma],self.__myNewExecs)
                     # continue template
-                    pat = re.compile("[0-9]+")
-                    newmatch = pat.search(anExecStmt.rawline[match.end():])
+                    newmatch = num_pat.search(anExecStmt.rawline[match.end():])
                     stmt = anExecStmt.rawline[match.end()+newmatch.end():]
                     if len(stmt.strip()) != 0:
                         newStmt = self.__insertSubroutineName(aUnit,fs.Comments(stmt))
@@ -134,21 +120,12 @@ class TemplateExpansion(object):
                 self.__getTemplateFromComment(self.__myUnit.cmnt)
             if template is not None:
                 return template
-        for aDecl in self.__myUnit.decls:
-            if aDecl.is_comment():
-                template = self.__getTemplateFromComment(aDecl)
-                if template is not None:
-                    return template
-        for anExec in self.__myUnit.execs:
-            if anExec.is_comment():
-                template = self.__getTemplateFromComment(anExec)
-                if template is not None:
-                    return template
-        for aStmt in self.__myUnit.end:
-            if aStmt.is_comment():
-                template = self.__getTemplateFromComment(aStmt)
-                if template is not None:
-                    return template
+        stmtList=[]
+        map(stmtList.extend,[self.__myUnit.decls,self.__myUnit.execs,self.__myUnit.end])
+        for aStmt in filter(lambda l: l.is_comment(),stmtList):
+            template = self.__getTemplateFromComment(aStmt)
+            if template is not None:
+                return template
         return TemplateExpansion._templateFile #default template file
 
     # extracts the template name from a comment
@@ -173,17 +150,18 @@ class TemplateExpansion(object):
     # anExecStmt: an executive statement in which to replace all instances of
     # '__SRNAME__'
     def __insertSubroutineName(self,Unit,anExecStmt):
-        match = re.search('__SRNAME__',anExecStmt.rawline,re.IGNORECASE)
+        srname=re.compile('__SRNAME__',re.IGNORECASE)
+        match = srname.search(anExecStmt.rawline)
         if match:
             if isinstance(anExecStmt,fs.Comments):
                 plainLine = anExecStmt.rawline
             else:
                 plainLine=str(anExecStmt) # the line w/o continuation+linebreaks
 
-            plMatch=re.search('__SRNAME__',plainLine,re.IGNORECASE)
+            plMatch=srname.search(plainLine)
             while plMatch:
                 plainLine=plainLine[:plMatch.start()]+Unit.uinfo.name+plainLine[plMatch.end():]
-                plMatch=re.search('__SRNAME__',plainLine,re.IGNORECASE)
+                plMatch=srname.search(plainLine)
 
             if isinstance(anExecStmt,fs.Comments):
                 aNewExecStmt = fs.Comments(plainLine)
@@ -211,8 +189,7 @@ class TemplateExpansion(object):
         aUnit=getTemplateUnit(template)    
         if aUnit.cmnt is not None:
             if self.__myUnit.cmnt is not None:
-                self.__myUnit.cmnt.rawline = \
-                    aUnit.cmnt.rawline+self.__myUnit.cmnt.rawline
+                self.__myUnit.cmnt.rawline = ''.join([aUnit.cmnt.rawline,self.__myUnit.cmnt.rawline])
             else:
                 self.__myUnit.cmnt = aUnit.cmnt
             
@@ -224,10 +201,11 @@ class TemplateExpansion(object):
         self.__expandTemplateExecs(aUnit, Execs)
 
         newEndStmts = []
+        template=re.compile("template",re.IGNORECASE)
         for endStmt in aUnit.end:
             newEndStmts = []
             if isinstance(endStmt,fs.EndStmt):
-                match = re.search("template",endStmt.rawline,re.IGNORECASE)
+                match = template.search(endStmt.rawline)
                 if match:
                     newEndStmt=endStmt.__class__(self.__myUnit.uinfo.name,\
                                                  lineNumber=endStmt.lineNumber,\

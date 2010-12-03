@@ -5,7 +5,7 @@ from PyFort.fortUnit import fortUnitIterator, Unit
 from PyFort.inference import expressionType
 import PyFort.fortStmts as fs
 import PyFort.fortExp as fe
-import re,copy
+import copy
 from PyUtil.symtab import Symtab
 
 class TransformError(Exception):

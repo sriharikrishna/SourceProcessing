@@ -11,7 +11,6 @@ from PyUtil.symtab import Symtab,SymtabError
 import PyFort.fortStmts as fs
 import PyFort.fortExp as fe
 import copy
-import re
 
 class FunToSubError(Exception):
     '''exception for errors that occur during the transformation of function unit definitions to subroutine definitions'''
