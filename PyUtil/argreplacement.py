@@ -1,4 +1,5 @@
 import PyFort.fortExp as fe
+import re
 
 # Replaces inline args with the given replacement args
 # PARAMS:
@@ -11,25 +12,13 @@ import PyFort.fortExp as fe
 # RETURNS: a modified strings with all inlineArgs replaced by the 
 # appropriate argument from replacementArgs
 def replaceArgs(argReps,string,inlineArgs,replacementArgs):
-    while argReps >= 0:
-        string = replaceArg(string,\
-                            str(inlineArgs[argReps]),\
-                            str(replacementArgs[argReps]))
+    arg_re = r'\b%s\b'
+    while argReps>=0:
+        argSplit=re.compile(arg_re % str(inlineArgs[argReps]))
+        strList = argSplit.split(string)
+        string=str(replacementArgs[argReps]).join(strList)
         argReps -= 1
     return string
-    
-# Replace every instance of one particular argument in a string
-def replaceArg(string,inlineArg,replacementArg):
-    strList = string.split(inlineArg)
-    i = 1
-    while i < len(strList):
-        if (strList[i-1])[-1:].isalnum() or (strList[i])[:1].isalnum():
-            strList[i-1] = strList[i-1]+inlineArg+strList[i]
-            strList.pop(i)
-        else:
-            i += 1
-    newStr = replacementArg.join(strList)
-    return newStr
 
 # Replaces inline args with the given args
 # called on _son attributes
@@ -43,47 +32,35 @@ def replaceArg(string,inlineArg,replacementArg):
 # RETURNS: a modified expression to replace the old son in the statement
 # being processed
 def replaceSon(argReps,arg,inlineArgs,replacementArgs):
+    index=inlineArgs.index
     newSon = arg
     if isinstance(arg,fe.Sel):
-        try:
-            index = inlineArgs.index(arg.head)
-            head = replacementArgs[index]
-            newSon = fe.Sel(head,arg.proj)
-        except:
-            pass
+        if arg.head in inlineArgs and len(replacementArgs)>index(arg.head):
+            head=replacementArgs[index(arg.head)]
+            newSon=fe.Sel(head,arg.proj)
     elif isinstance(arg,fe.App):
         head = arg.head
         args = arg.args
         newArgs = []
-        i = 0
-        while i < len(arg.args):
-            anArg = arg.args[i]
+        newArgsAppend=newArgs.append
+        for anArg in args:
             if isinstance(anArg,fe.App) or isinstance(anArg,fe.Sel):
-                newArgs.append(replaceSon(argReps,anArg,inlineArgs,replacementArgs))
+                newArgsAppend(replaceSon(argReps,anArg,inlineArgs,replacementArgs))
             else:
-                try:
-                    index = inlineArgs.index(anArg)
-                    newArg = replacementArgs[index]
-                    newArgs.append(newArg)
-                except:
-                    newArgs.append(anArg)
-            i += 1
+                if anArg in inlineArgs and len(replacementArgs)>index(anArg):
+                    newArg=replacementArgs[index(anArg)]
+                    newArgsAppend(newArg)
+                else:
+                    newArgsAppend(anArg)
         if len(newArgs) != 0:
             args = newArgs
-        try:
-            index = inlineArgs.index(arg.head)
-            head = replacementArgs[index]
-        except:
-            pass
+        if head in inlineArgs and len(replacementArgs)>index(head):
+            head=replacementArgs[index(head)]
         newSon = fe.App(head,newArgs)
     elif isinstance(arg,fe.Ops):
         newSon=fe.Ops(arg.op,
                       replaceArgs(argReps,str(arg.a1),inlineArgs,replacementArgs),
                       replaceArgs(argReps,str(arg.a2),inlineArgs,replacementArgs))
-    else:
-        try:
-            index = inlineArgs.index(arg)
-            newSon = replacementArgs[index]
-        except:
-            pass
+    elif arg in inlineArgs and len(replacementArgs)>index(arg):
+            newSon=replacementArgs[index(arg)]
     return newSon
