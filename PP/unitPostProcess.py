@@ -361,7 +361,7 @@ class UnitPostProcessor(object):
             elif isinstance(Stmt,fs.StmtFnStmt):
                 name=replaceArgs\
                       (argReps,str(Stmt.get_name()),inlineArgs,replacementArgs)
-                newArgs=[replaceArgs(argReps,str(arg),inlineArgs,replaceArgs) for arg in Stmt.get_args()]
+                newArgs=[replaceArgs(argReps,str(arg),inlineArgs,replacementArgs) for arg in Stmt.get_args()]
                 body=replaceArgs\
                       (argReps,str(Stmt.get_body()),inlineArgs,replacementArgs)
                 newStmt = fs.StmtFnStmt(name,newArgs,body,lead=stmt_lead)
@@ -424,7 +424,6 @@ class UnitPostProcessor(object):
                           currentComments,inline=False):
         '''processes the comments (used for reverse mode); determines if a comment declares inlining or pragma replacement'''
         commentListAppend=commentList.append
-        currentCommentsAppend=currentComments.append
         for commentString in Comments:
             if commentString == '' or commentString.strip() == '':
                 continue
@@ -441,7 +440,7 @@ class UnitPostProcessor(object):
             else:
                 (Comment,inline) = self.__getInlinedFunction(newComment)
                 if Comment is not None:
-                    currentCommentsAppend(Comment)
+                    currentComments.append(Comment)
         return (commentList,currentComments,inline,replacementNum)
                     
     # PARAMS:
