@@ -163,7 +163,7 @@ class TransformActiveVariables(object):
                                                                                                   aDecl,decls,
                                                                                                   alreadyActivated,
                                                                                                   removeDeclList)
-                map(aDecl.decls.remove,removeDeclList)
+                map(aDecl.get_decls().remove,removeDeclList)
                 if len(removeDeclList)>0: aDecl.modified=True
                 self.__insertNewActiveTypeDecl(decls,aDecl,aDecl.get_decls())
             else:
