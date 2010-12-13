@@ -283,24 +283,17 @@ def constantShape(e,lineNumber):
        return None
     raise InferenceError('inference.constantShape: No shape could be determined for "'+e+'"',lineNumber)
     
-
-def identifierShape(anId,localSymtab,lineNumber):
+def __identifierShape(anId,localSymtab,lineNumber):
+    returnShape=None
     (symtabEntry,containingSymtab) = localSymtab.lookup_name_level(anId)
-    # a shape is known -> return it
-    if symtabEntry and symtabEntry.dimensions:
+    if symtabEntry:
         returnShape = symtabEntry.dimensions
-        DebugManager.debug('with symtab entry '+symtabEntry.debug(anId)+' -> returning shape '+str(returnShape))
-    elif symtabEntry and symtabEntry.entryKind==SymtabEntry.InterfaceEntryKind and symtabEntry.genericInfo:
-       if len(symtabEntry.genericInfo.resolvableTo)==1:
-          specificName=(symtabEntry.genericInfo.resolvableTo.keys())[0]
-          returnShape=identifierShape(specificName,containingSymtab,lineNumber)
-          DebugManager.debug('with symtab entry '+containingSymtab.lookup_name_level(specificName)[0].debug(specificName)+' -> returning shape '+str(returnShape))
-       else :
-          return None
-    else: # no symtab entry or an entry exists with no shape
-       return None
-    if not returnShape:
-        raise InferenceError('inference.identifierShape: No shape could be determined for identifier "'+anId+'"',lineNumber)
+        dbgStr='with symtab entry '+symtabEntry.debug(anId)+' -> returning shape '
+        if returnShape:
+           dbgStr+=str(returnShape)
+        else:
+           dbgStr+='None'
+        DebugManager.debug(dbgStr)
     return returnShape
 
 def arrayReferenceShape(arrRefApp,localSymtab,lineNumber):
@@ -381,7 +374,7 @@ def selectionShape(aSelectionExpression,localSymtab,lineNumber):
     # lookup type of head
     dType=expressionType(aSelectionExpression.head,localSymtab,lineNumber)
     # lookup the projection shape
-    pShape=identifierShape(dType[1][0]+":"+aSelectionExpression.proj,localSymtab,lineNumber)
+    pShape=__identifierShape(dType[1][0]+":"+aSelectionExpression.proj,localSymtab,lineNumber)
     return pShape
 
 def expressionShape(anExpression,localSymtab,lineNumber):
@@ -392,7 +385,7 @@ def expressionShape(anExpression,localSymtab,lineNumber):
         return rShape
     elif isinstance(anExpression,str) and _id_re.match(anExpression):
         DebugManager.debug(' it\'s an IDENTIFIER')
-        return identifierShape(anExpression,localSymtab,lineNumber)
+        return __identifierShape(anExpression,localSymtab,lineNumber)
     elif isinstance(anExpression,Unary):
         DebugManager.debug(' it\'s a UNARY EXPRESSION')
         return expressionShape(anExpression.exp,localSymtab,lineNumber)
