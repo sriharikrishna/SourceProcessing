@@ -416,7 +416,8 @@ def expressionShape(anExpression,localSymtab,lineNumber):
     else:
         raise InferenceError('inference.expressionShape: No shape could be determined for expression "'+str(anExpression)+'"',lineNumber)
 
-def genericResolve(aFunctionApp,localSymtab,lineNumber):
+def __genericResolve(aFunctionApp,localSymtab,lineNumber):
+    ''' returns tuple (<specificName>,<symtabEntry>) for generic aFunctionApp '''
     # find the symbol:
     sName=aFunctionApp.head
     symtabEntry=localSymtab.lookup_name(aFunctionApp.head)
@@ -432,7 +433,7 @@ def genericResolve(aFunctionApp,localSymtab,lineNumber):
        signature=symtabEntry.genericInfo.resolvableTo[sName]
        # we don't cover optional arguments here - yet
        if len(signature)!=len(aFunctionApp.args):
-          DebugManager.debug('genericResolve signature length mismatch at specific '+
+          DebugManager.debug('inference.__genericResolve signature length mismatch at specific '+
                              str(sName)+'('+','.join(signature.keys())+
                              ') for generic call '+
                              aFunctionApp.head+'('+','.join([str(arg) for arg in aFunctionApp.args]))
@@ -440,7 +441,7 @@ def genericResolve(aFunctionApp,localSymtab,lineNumber):
        matched=True
        for formal,actual in zip(signature.keys(),aFunctionApp.args):
           if signature[formal]!=expressionType(actual,localSymtab,lineNumber) :
-             DebugManager.debug('genericResolve argument type mismatch for specific "'+
+             DebugManager.debug('inference.__genericResolve argument type mismatch for specific "'+
                                 str(sName)+'" at formal "'+
                                 str(formal)+'"('+str(signature[formal])+')'
                                 ' for call to generic "'+
@@ -458,7 +459,7 @@ def genericResolve(aFunctionApp,localSymtab,lineNumber):
           if (actualShape):
              actualRank=len(actualShape)
           if formalRank!=actualRank:
-             DebugManager.debug('genericResolve argument rank mismatch for specific "'+
+             DebugManager.debug('inference.__genericResolve argument rank mismatch for specific "'+
                                 str(sName)+'" at formal "'+
                                 str(formal)+'"('+str(formalRank)+')'
                                 ' for call to generic "'+
@@ -469,7 +470,7 @@ def genericResolve(aFunctionApp,localSymtab,lineNumber):
        if (not matched):
           continue
        return (sName,localSymtab.lookup_name(sName))
-    raise InferenceError('inference.genericResolve: could not resolve generic "'+aFunctionApp.head+'"',lineNumber)
+    raise InferenceError('inference.__genericResolve: could not resolve generic "'+aFunctionApp.head+'"',lineNumber)
 
 def isRangeExpression(theExpression):
    return (isinstance(theExpression,Ops) and theExpression.op==':')
