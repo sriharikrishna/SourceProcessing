@@ -5,7 +5,7 @@ from PyFort.fortUnit import fortUnitIterator, Unit
 from PyFort.inference import expressionType
 import PyFort.fortStmts as fs
 import PyFort.fortExp as fe
-import re,copy
+import copy
 from PyUtil.symtab import Symtab
 
 class TransformError(Exception):
@@ -27,24 +27,35 @@ class TransformActiveVariables(object):
     def setReplacementType(replacementType):
         TransformActiveVariables._replacement_type = replacementType
 
-    _commonBlockActiveVars = []
     # common blocks which contain active variables
     _commonBlocks = set([])
     _activeVars = set([])
-	# populates the commonBlocks array with the names of all common blocks which contain active variables
+    # list of (subroutine name, indices of input variables which are active...)
+    _subroutinesToModify=[]
+    _subroutineActiveInputVarIndices=dict()
+    # populates the commonBlocks array with the names of all common blocks which contain active variables
     @staticmethod
-    def getActiveDecls(file,inputFormat=None):
+    def getCommonBlocksWithActiveVars(file,inputFormat=None):
         for aUnit in fortUnitIterator(file,inputFormat):
             for aDeclStmt in aUnit.decls:
                 if isinstance(aDeclStmt,fs.CommonStmt):
                     (stmtClass,[expType])=expressionType(aDeclStmt.declList[0],aUnit.symtab,aDeclStmt.lineNumber)
                     if expType=='active':
-                        TransformActiveVariables._commonBlocks.add(aDeclStmt.name)
+                        TransformActiveVariables._commonBlocks.add(aDeclStmt.name.lower())
         DebugManager.debug('TransformActiveVariables: finished populating list of names of common blocks with active variables: '+str(TransformActiveVariables._commonBlocks))
 
     def __init__(self, aUnit):
         self.__myUnit = aUnit
         self.__newDecls=[]
+
+    def __isActive(self,Exp,parentStmt):
+        varName=fs.getVarName(Exp,parentStmt.lineNumber)
+        (stmtClass,expType)=expressionType(varName,
+                                           self.__myUnit.symtab,parentStmt.lineNumber)
+        if (len(expType)>0 and expType[0]=='active') or \
+                (varName.lower() in self._activeVars):
+            return True
+        return False
 
     # recursively transforms an expression if it contains a variable in
     # the activeVars array by adding %v to it
@@ -54,14 +65,12 @@ class TransformActiveVariables(object):
             Exp = [self.__transformActiveTypes(s,parentStmt) for s in Exp]
         elif isinstance(Exp,str) or isinstance(Exp,fe.Sel) or isinstance(Exp,fe.App):
             try:
-                (stmtClass,[expType])=expressionType(Exp,self.__myUnit.symtab,parentStmt.lineNumber)
-                if fs.getVarName(Exp,parentStmt.lineNumber) in self._activeVars or expType=='active':
+                if self.__isActive(Exp,parentStmt):
                     Exp = fe.Sel(Exp,"v")
                     parentStmt.modified = True
                 if hasattr(Exp,'args'):
-                    for arg in Exp.args:
-                        arg=self.__transformActiveTypes(arg,parentStmt)
-                        parentStmt.modified=True
+                    Exp.args=[self.__transformActiveTypes(arg,parentStmt) for arg in Exp.args]
+                    parentStmt.modified=True
             except:
                 pass
         elif hasattr(Exp, "_sons"):
@@ -74,15 +83,14 @@ class TransformActiveVariables(object):
         
     # get common block active vars by comparing common blocks from this file with 
     # common blocks in activeVariables file then adding NEW common block var
-    # names (from current file) to self._commonBlockActiveVars.
+    # names (from current file) to self._activeVars.
     # Add new method to be called before getEquivalencedVars
     def __getCommonBlockActiveVars(self):
         for aDecl in self.__myUnit.decls:
             if isinstance(aDecl,fs.CommonStmt) and \
                     aDecl.name.lower() in self._commonBlocks:
-                for decl in aDecl.declList:
-                    TransformActiveVariables.\
-                        _commonBlockActiveVars.append(fs.getVarName(decl,aDecl.lineNumber))
+                map(lambda l: TransformActiveVariables._activeVars.add(fs.getVarName(l,aDecl.lineNumber)),
+                    aDecl.declList)
 
     def __getVarsEquivalencedToActive(self):
         # get list of vars which are equivalenced to active variables (and therefore need to be active)
@@ -92,6 +100,7 @@ class TransformActiveVariables(object):
                 for nlist in aDecl.nlists:
                     newList = []
                     active = False
+                    append=newList.append
                     for item in nlist:
                         if isinstance(item,list):
                             for var in item:
@@ -103,11 +112,11 @@ class TransformActiveVariables(object):
                                 if isinstance(expType,list) and len(expType)>0 and expType[0]=='active':
                                     active=True
                                 # if equivalenced to an active variable from a common block, the variable will
-                                # be in commonBlockActiveVars
-                                elif fs.getVarName(var,aDecl.lineNumber) in self._commonBlockActiveVars:
+                                # be in activeVars
+                                elif fs.getVarName(var,aDecl.lineNumber) in self._activeVars:
                                     active=True
                                 else:
-                                    newList.append(fs.getVarName(var,aDecl.lineNumber))
+                                    append(fs.getVarName(var,aDecl.lineNumber))
                     if len(newList)>0 and active:
                         varsToActivate.extend(newList)
         return varsToActivate
@@ -117,15 +126,17 @@ class TransformActiveVariables(object):
     # if it is in the list of varsToActivate
     # This activeDeclList is used to create a new active type declaration with all active variables
     # from the variables declared in theDecl
-    def __getVarToActivateFromTypeDecl(self,varsToActivate,var,theDecl,oldDeclList,activeDeclList):
+    def __getVarToActivateFromTypeDecl(self,varsToActivate,var,theDecl,activeDeclList,alreadyActivated,removeDeclList):
         strippedVar=fs.getVarName(var,theDecl.lineNumber)
         if strippedVar in varsToActivate:
             # accumulate var to make new active decl later
-            activeDeclList.append(var)
+            if strippedVar not in alreadyActivated:
+                activeDeclList.append(strippedVar)
+                alreadyActivated.append(strippedVar)
+            if isinstance(theDecl,fs.TypeDecl):
+                removeDeclList.append(var)
             self._activeVars.add(strippedVar)
-            oldDeclList.remove(var)
-            theDecl.modified=True
-        return activeDeclList
+        return (activeDeclList,alreadyActivated,removeDeclList)
 
     # helper function for createActiveTypeDecls
     # adds a new active declaration to the list of declarations
@@ -142,14 +153,21 @@ class TransformActiveVariables(object):
     # declaration and add it to the list of declarations
     def __createActiveTypeDecls(self,varsToActivate):
         # activate variables in list of varsToActivate
+        alreadyActivated=[]
+        append=self.__newDecls.append
         for aDecl in self.__myUnit.decls:
             if isinstance(aDecl,fs.TypeDecl) or isinstance(aDecl,fs.DimensionStmt):
-                decls = []
+                decls = []; removeDeclList=[]
                 for var in aDecl.get_decls():
-                    decls = self.__getVarToActivateFromTypeDecl(varsToActivate,var,aDecl,aDecl.get_decls(),decls)
+                    (decls,alreadyActivated,removeDeclList) = self.__getVarToActivateFromTypeDecl(varsToActivate,var,
+                                                                                                  aDecl,decls,
+                                                                                                  alreadyActivated,
+                                                                                                  removeDeclList)
+                map(aDecl.get_decls().remove,removeDeclList)
+                if len(removeDeclList)>0: aDecl.modified=True
                 self.__insertNewActiveTypeDecl(decls,aDecl,aDecl.get_decls())
             else:
-                self.__newDecls.append(aDecl)
+                append(aDecl)
 
     # transforms all exec statements in the file if they contain a variable
     # in the activeVars array and returns the unit
@@ -168,6 +186,10 @@ class TransformActiveVariables(object):
         # activate variables which are equivalenced to active variables
         self.__getCommonBlockActiveVars()
         varsToActivate = self.__getVarsEquivalencedToActive()
+        if self.__myUnit.uinfo.name.lower() in self._subroutinesToModify:
+            #need to add appropriate input var to activeVars list
+            valueList=self._subroutineActiveInputVarIndices.get(self.__myUnit.uinfo.name.lower())
+            varsToActivate.extend([self.__myUnit.uinfo.args[l].lower() for l in valueList])
         if len(varsToActivate)>0:
             self.__createActiveTypeDecls(varsToActivate)
         else:
@@ -180,7 +202,18 @@ class TransformActiveVariables(object):
                                lineNumber=anExec.lineNumber)
             if isinstance(anExec,fs.AllocateStmt) or \
                isinstance(anExec,fs.DeallocateStmt) : continue
-            if hasattr(anExec, "_sons"):
+            if isinstance(anExec,fs.CallStmt):
+                i=0
+                listEntry=[]
+                while i<len(anExec.args):
+                    if self.__isActive(anExec.args[i],anExec):
+                        # append input index of active variable to list entry
+                        listEntry.append(i)
+                    i+=1
+                if len(listEntry)>0:
+                    self._subroutinesToModify.append(anExec.head.lower())
+                    self._subroutineActiveInputVarIndices[anExec.head.lower()]=listEntry
+            elif hasattr(anExec, "_sons"):
                 for aSon in anExec.get_sons() :
                     theSon = getattr(anExec,aSon)
                     if isinstance(theSon,fs.AllocateStmt) or isinstance(theSon,fs.DeallocateStmt) :
