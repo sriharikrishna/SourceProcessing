@@ -4,6 +4,7 @@
 '''
 
 import re
+import copy
 
 from _Setup import *
 
@@ -11,7 +12,7 @@ from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import SymtabEntry
 
 import fortStmts
-from fortExp import App,NamedParam,Sel,Unary,Ops,is_const,_id_re,_flonum_re,_int_re,_logicon_set,_quote_set,Slice,Zslice,Lslice,Rslice
+from fortExp import App,NamedParam,Sel,Unary,Ops,is_const,is_id,_id_re,_flonum_re,_int_re,_logicon_set,_quote_set,Slice,Zslice,Lslice,Rslice
 from intrinsic import is_intrinsic, getNonStandard
 
 class InferenceError(Exception):
@@ -342,31 +343,80 @@ def __intrinsicShape(anIntrinsicApp,localSymtab,lineNumber):
         return shapemerge([expressionShape(anArg,localSymtab,lineNumber) for anArg in anIntrinsicApp.args],
                          (None,None))
 
-def genericFunctionShape(aFunctionApp,localSymtab,lineNumber):
-    DebugManager.debug('inference.genericFunctionShape called on '+str(aFunctionApp)+'...',newLine=False)
-    specInfo=genericResolve(aFunctionApp,localSymtab,lineNumber)
-    if specInfo:
-       return localSymtab.lookup_name(specInfo[0]).dimensions
-    return None
-   
+__ourMissingFuncDefs=set()
+def __functionShape(aFunctionApp,localSymtab,lineNumber):
+    class MapParams:
+       
+       def __init__(self,aFunctionApp,aSymtabEntry,lineNumber):
+          self.argDict={}          
+          for pos,arg in enumerate(aFunctionApp.args):
+             if isinstance(arg,NamedParam):
+                if (arg.myId in self.argDict.keys()):
+                   raise InferenceError('formal parameter for actual named parameter: '+str(arg)+
+                                        ' is already in the  mapping dictionary for positional parameter '+
+                                        str(argDict[arg.myId][1])+' at position '+str(argDict[arg.myId][0]),lineNumber)
+                namedParmFormalPosition=symtabEntry.funcFormalArgs.positionOf(arg.myId)
+                if (namedParmFormalPosition in map(lambda l: l[0],self.argDict.values())):
+                   raise InferenceError('formal parameter position '+namedParmFormalPosition+' for actual named parameter: '+str(arg)+
+                                        ' is already in the  mapping dictionary as '+
+                                        str(argDict[arg.myId][1]),lineNumber)
+                self.argDict[arg.myId]=(symtabEntry.funcFormalArgs.positionOf(arg.myId),arg.myRHS)
+             else:
+                formalParm=symtabEntry.funcFormalArgs.nameByPosition(pos)
+                if (formalParm in self.argDict.keys() or pos in map(lambda l: l[0],self.argDict.values())):
+                   raise InferenceError('Formal parameter: '+formalParm+' for position '+str(pos)+
+                                        ' is already in the  mapping dictionary with actual parameter value '+str(self.argDict[arg.myId][1]),lineNumber)
+                self.argDict[formalParm]=(pos,arg)
+          
+       def replaceFormalWithActual(self,dimExpr):
+          ''' this modifies dimExpr'''
+          if  isinstance(dimExpr,Unary):
+             dimExpr.exp=self.replaceFormalWithActual(dimExpr.exp)
+          elif isinstance(dimExpr,Ops):
+             dimExpr.a1=self.replaceFormalWithActual(dimExpr.a1)
+             dimExpr.a2=self.replaceFormalWithActual(dimExpr.a2)
+          elif isinstance(dimExpr,App):
+             args=[]
+             for arg in dimExpr.args:
+                args.append(self.replaceFormalWithActual(arg))
+             dimExpr.args=args
+          elif isinstance(dimExpr,str) and is_id(dimExpr) and dimExpr in self.argDict.keys():
+             dimExpr=copy.deepcopy(self.argDict[dimExpr][1])
+          return dimExpr
 
-def functionShape(aFunctionApp,localSymtab,lineNumber):
-    DebugManager.debug('inference.functionShape called on '+str(aFunctionApp)+'...',newLine=False)
+    DebugManager.debug('inference.__functionShape called on '+str(aFunctionApp)+'...',newLine=False)
     # example: bbb(3)(2:14)
     if isinstance(aFunctionApp.head,App):
-        return functionShape(aFunctionApp.head,localSymtab,lineNumber)
+        return __functionShape(aFunctionApp.head,localSymtab,lineNumber)
     returnShape = None
     # intrinsics: do a shape merge
     if is_intrinsic(aFunctionApp.head):
         returnShape = __intrinsicShape(aFunctionApp,localSymtab,lineNumber)
         DebugManager.debug(' It is an INTRINSIC of shape '+str(returnShape))
-    # nonintrinsics: Look for it in the symbol table or for implicit shape
+    # non-intrinsics: Look for it in the symbol table
     else:
-        returnShape = identifierShape(aFunctionApp.head,localSymtab,lineNumber)
-        if (returnShape is None) :
-           # this must be a generic
-           returnShape=genericFunctionShape(aFunctionApp,localSymtab,lineNumber)
-        DebugManager.debug(' It is an NONINTRINSIC of shape '+str(returnShape))
+       (symtabEntry,containingSymtab) = localSymtab.lookup_name_level(aFunctionApp.head)
+       if symtabEntry:
+          returnShape = symtabEntry.dimensions
+       if (returnShape is None) :
+          # this may be a generic
+          DebugManager.debug('inference.__genericFunctionShape called on '+str(aFunctionApp)+'...',newLine=False)
+          specInfo=__genericResolve(aFunctionApp,localSymtab,lineNumber)
+          if specInfo:
+             symtabEntry=specInfo[1]
+             returnShape=specInfo[1].dimensions
+       DebugManager.debug(' It is an NONINTRINSIC of shape '+str(returnShape))
+       if (aFunctionApp.args and symtabEntry is None):
+          global __ourMissingFuncDefs
+          if (not (aFunctionApp.head.lower() in __ourMissingFuncDefs)) :
+              __ourMissingFuncDefs.add(aFunctionApp.head.lower())
+              DebugManager.warning('no explicit definition for function "'+str(aFunctionApp.head)+'" called as "'+str(aFunctionApp)+'" found within the current compile unit.',lineNumber,DebugManager.WarnType.noDefinition)
+       if (returnShape and aFunctionApp.args and symtabEntry and symtabEntry.funcFormalArgs):
+         # the dimensions need to be checked for references to formal parameters
+         aMapParams=MapParams(aFunctionApp,symtabEntry,lineNumber)
+         returnShape=copy.deepcopy(returnShape) # don't want to modify the original
+         for dim in returnShape:
+            aMapParams.replaceFormalWithActual(dim)
     return returnShape
 
 def selectionShape(aSelectionExpression,localSymtab,lineNumber):
@@ -399,7 +449,7 @@ def expressionShape(anExpression,localSymtab,lineNumber):
         if isArrayReference(anExpression,localSymtab,lineNumber):
            return arrayReferenceShape(anExpression,localSymtab,lineNumber)
         else : 
-           return functionShape(anExpression,localSymtab,lineNumber)
+           return __functionShape(anExpression,localSymtab,lineNumber)
     elif isinstance(anExpression,NamedParam):
         DebugManager.debug(' it\'s a NAMED PARAMETER')
         return expressionShape(anExpression.myRHS,localSymtab,lineNumber)
