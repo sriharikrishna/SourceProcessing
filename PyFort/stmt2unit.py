@@ -2,9 +2,10 @@
 '''
 
 import string
+import copy
 from _Setup import *
 
-from PyUtil.symtab import Symtab,SymtabEntry,SymtabError, GenericInfo
+from PyUtil.symtab import Symtab,SymtabEntry,SymtabError, GenericInfo, FormalArgs
 from PyUtil.debugManager import DebugManager
 
 import fortStmts     as fs
@@ -311,13 +312,24 @@ def _unit_exit(self,cur):
     '''
     if cur.val._in_functionDecl:
         theSymtabEntry=cur.val.symtab.lookup_name(cur.val._in_functionDecl.name)
+        parentSymtabEntry=None
+        if cur.val.symtab.parent:
+            parentSymtabEntry=cur.val.symtab.parent.lookup_name(cur.val._in_functionDecl.name)
         if (theSymtabEntry.type is None and cur.val._in_functionDecl.result):
-            # try to get the tupe from the result symbol
+            # try to get the type from the result symbol
             theResultEntry=cur.val.symtab.lookup_name(cur.val._in_functionDecl.result)
             if (theResultEntry):
                 theSymtabEntry.enterType(theResultEntry.type)
-                if cur.val.symtab.parent:  # update the copy in the parent
-                    cur.val.symtab.parent.lookup_name(cur.val._in_functionDecl.name).enterType(theResultEntry.type)
+                if parentSymtabEntry:  # update the copy in the parent
+                    parentSymtabEntry.enterType(theResultEntry.type)
+        # set the arguments list:
+        theSymtabEntry.funcFormalArgs=FormalArgs()
+        if parentSymtabEntry:
+            parentSymtabEntry.funcFormalArgs=FormalArgs()
+        for pos,arg in enumerate(cur.val._in_functionDecl.args):
+            theSymtabEntry.funcFormalArgs.args[arg]=(pos,cur.val.symtab.lookup_name(arg))
+            if (parentSymtabEntry):
+                parentSymtabEntry.funcFormalArgs.args[arg]=(pos,copy.deepcopy(cur.val.symtab.lookup_name(arg)))
         cur.val._in_functionDecl=None         
     return self
 
