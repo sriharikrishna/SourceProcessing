@@ -125,7 +125,6 @@ def identifierType(anId,localSymtab,lineNumber):
     # an entry exists with no type -> try to type implicitly
     elif symtabEntry and symtabEntry.entryKind==SymtabEntry.InterfaceEntryKind:
        DebugManager.debug('with symtab entry'+symtabEntry.debug(anId)+' (is an interface name).')
-       # needs to be resolved by genericResolve
        return None
     elif symtabEntry:
        #try local implicit typing
