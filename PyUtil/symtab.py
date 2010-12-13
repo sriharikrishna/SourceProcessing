@@ -3,6 +3,7 @@
 '''
 
 import copy
+import itertools
 
 from _Setup import *
 
@@ -35,6 +36,20 @@ class SymtabError(Exception):
             errString+='\nFor entry'+str(self.entry.debug(symbolNameStr))
         return (errString)
 
+class FormalArgs(object):
+    def __init__(self):
+        self.args = {} # <name>:(<position>.<symtabEntry>) 
+
+    def nameByPosition(self,position):
+        argsIter=itertools.ifilter(lambda l: position==l[1][0],self.args.items())
+        try : 
+            return argsIter.next()[0]
+        except StopIteration, e:
+            raise SymtabError("no formal argument known for position "+str(position))
+
+    def debug(self):
+        outString = 'formal args: '+str(self.args)
+        return outString
 
 class Symtab(object):
     @staticmethod
@@ -135,8 +150,9 @@ class Symtab(object):
         theNewEntry.length = theLocalEntry.length
         # set the origin
         theNewEntry.updateOrigin(localOrigin)
-        # keep a ref to the same generic Info:
+        # keep a ref to the same generic Info, arg list
         theNewEntry.genericInfo=theLocalEntry.genericInfo
+        theNewEntry.funcFormalArgs=theLocalEntry.funcFormalArgs
         return theNewEntry
 
     def update_w_module_all(self,aModuleUnit,renameList):
@@ -190,7 +206,10 @@ class SymtabEntry(object):
         self.origin = origin # None | [<parent origin>'|'](| 'local' | 'external' | 'temp' | 'common:'[<common block name])
         self.renameSource = renameSource
         self.isPrivate = isPrivate
-        self.genericInfo = None
+        # takes a GenericInfo instance when used for generic functions/subroutines (interfaces)
+        self.genericInfo = None 
+        # for functions takes a FormalArgs instance when used for the specific (non-generic) parameter list 
+        self.funcFormalArgs = None 
         self.memberOfDrvdType = None
 
     @staticmethod
@@ -270,7 +289,7 @@ class SymtabEntry(object):
         self.memberOfDrvdType=aDrvdTypeName
 
     def debug(self,name='<symbol name unknown>'):
-        return '[SymtabEntry "'+name+'" -> entryKind='+str(self.entryKind)+\
+        return '[SymtabEntry('+str(self)+') "'+name+'" -> entryKind='+str(self.entryKind)+\
                                          ', type='+str(self.type)+\
                                          ', dimensions='+str(self.dimensions)+\
                                          ', length='+str(self.length)+\
@@ -278,6 +297,7 @@ class SymtabEntry(object):
                                          ', renameSource='+str(self.renameSource)+\
                                          ', isPrivate='+str(self.isPrivate)+\
                                          ', genericInfo='+((self.genericInfo and str(self.genericInfo.debug())) or 'None')+\
+                                         ', funcFormalArgs='+((self.funcFormalArgs and str(self.funcFormalArgs.debug())) or 'None')+\
                                          ', memberOfDrvdType='+((self.memberOfDrvdType and self.memberOfDrvdType) or 'None')+\
                                          ']'
     
