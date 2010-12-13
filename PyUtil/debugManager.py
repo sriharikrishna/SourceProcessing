@@ -36,7 +36,7 @@ class DebugManager(object):
     def processedFile():
         return DebugManager._processedFile
 
-    WarnType = enum.Enum(['undefined', 'implicit','hoisting','ifStmtToIfConstr','controlFlow','nesting'])
+    WarnType = enum.Enum(['undefined','implicit','hoisting','ifStmtToIfConstr','controlFlow','nesting','noDefinition'])
         
     _warnOnlyTypeList=[]
     
