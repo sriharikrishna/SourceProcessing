@@ -186,7 +186,7 @@ class TransformActiveVariables(object):
         # activate variables which are equivalenced to active variables
         self.__getCommonBlockActiveVars()
         varsToActivate = self.__getVarsEquivalencedToActive()
-        if self.__myUnit.uinfo.name.lower() in self._subroutinesToModify:
+        if (self.__myUnit.uinfo is not None) and (self.__myUnit.uinfo.name.lower() in self._subroutinesToModify):
             #need to add appropriate input var to activeVars list
             valueList=self._subroutineActiveInputVarIndices.get(self.__myUnit.uinfo.name.lower())
             varsToActivate.extend([self.__myUnit.uinfo.args[l].lower() for l in valueList])
