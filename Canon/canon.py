@@ -540,7 +540,7 @@ class UnitCanonicalizer(object):
                 for anArg in anExp.args:
                     newArgs.append(self.__expandStmtFunExp(anArg))
                 if anExp.head == stmtFnStmt.name:
-                    newSon = stmtFnStmt.body
+                    newSon = fe.ParenExp(stmtFnStmt.body)
                     # replace args
                     newSon = replaceArgs(len(anExp.args)-1,str(newSon),stmtFnStmt.args,newArgs)
                 else:
