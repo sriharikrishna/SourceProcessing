@@ -66,7 +66,7 @@ class C1(TestCase):
         compareFiles(self.assertEquals,'derived-type-arr.f90','derived-type-arr.ok.f90',format='free')
 
     def test5(self):
-        'preserve inline comments for statements that have been altered during canonicalization'
+        'do not preserve inline comments for statements that have been altered during canonicalization'
         compareFiles(self.assertEquals,'inlineComment.f90','inlineComment.pre.f90',format='free')
 
     def test5(self):

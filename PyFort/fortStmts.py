@@ -355,7 +355,7 @@ class NonComment(GenStmt):
                            ','.join([repr(aSon) for aSon in self._sons]))
 
     def __str__(self):
-        return self.__class__.kw_str+''.join(self.internal)
+        return self.__class__.kw_str
 
     def flow(self):
         """formats a statement for printing by concatenating the label
@@ -483,8 +483,7 @@ class TypeDecl(Decl):
         return '%s%s%s :: %s' % (self.__class__.kw_str,
                                  modstr,
                                  attr_str,
-                                 ','.join([str(d) for d in self.decls]))\
-                                 +''.join(self.internal)
+                                 ','.join([str(d) for d in self.decls]))
 
     def get_mod(self):
         return self.mod
@@ -541,8 +540,7 @@ class DrvdTypeDecl(TypeDecl):
         return '%s(%s)%s :: %s' % (self.__class__.kw_str,
                                    str(self.mod[0]),
                                    attr_str,
-                                   ','.join([str(d) for d in self.decls]))\
-                                   +''.join(self.internal)
+                                   ','.join([str(d) for d in self.decls]))
 
 class DrvdTypeDefn(Decl):
     '''
@@ -559,7 +557,7 @@ class DrvdTypeDefn(Decl):
         return 'DrvdTypeDefn(%s)' % repr(self.name)
 
     def __str__(self):
-        return 'type %s' % str(self.name)+''.join(self.internal)
+        return 'type %s' % str(self.name)
     
     @staticmethod
     def parse(ws_scan,lineNumber):
@@ -592,9 +590,9 @@ class InterfaceStmt(Decl):
 
     def __str__(self,whitespace=False):
         if self.name:
-            return 'interface %s' % self.name+''.join(self.internal)
+            return 'interface %s' % self.name
         else:
-            return 'interface'+''.join(self.internal)
+            return 'interface'
 
     def get_name(self):
         return self.name
@@ -635,8 +633,7 @@ class ProcedureStmt(Decl):
                                                   or ''
         return '%s%s %s' % (moduleKeywordStr,
                             self.__class__.kw_str,
-                            ','.join([str(aProcedureItem) for aProcedureItem in self.procedureList]))\
-                           +''.join(self.internal)
+                            ','.join([str(aProcedureItem) for aProcedureItem in self.procedureList]))
 
 
 class TypePseudoStmt(GenStmt):
@@ -779,8 +776,7 @@ class CommonStmt(Decl):
 
     def __str__(self):
         return self.kw + '/%s/ %s' % \
-              (self.name,','.join(str(item) for item in self.declList))+ \
-              ''.join(self.internal)
+              (self.name,','.join(str(item) for item in self.declList))
 
 class _ImplicitDoConstruct(object):
     '''implicit do construct for DATA statements'''
@@ -851,8 +847,7 @@ class DataStmt(Decl):
             rstr+=','.join(str(v) for v in thePair[1])
             rstr+='/'
             return rstr
-        return '%s %s' % (self.stmt_name,','.join(map(dumpObjectValuePair,self.objectValuePairList))\
-                          +''.join(self.internal))
+        return '%s %s' % (self.stmt_name,','.join(map(dumpObjectValuePair,self.objectValuePairList)))
 
     def __repr__(self):
         return self.__class__.__name__ + \
@@ -917,7 +912,7 @@ class VarAttrib(Decl):
         rem   = ''
         if self.vlist:
             rem = ' :: %s' % ','.join([str(v) for v in self.vlist])
-        return s_key+rem+''.join(self.internal)
+        return s_key+rem
 
 class PrivateStmt(VarAttrib):
     kw     = 'private'
@@ -1007,8 +1002,7 @@ class ImplicitStmt(Decl):
             return rstr+' ('+','.join([str(l) for l in p[1]])+')'  
         rstr=ImplicitStmt.kw+' '
         rstr+=','.join(map(dumpPair,self.lst))
-        return rstr\
-               +''.join(self.internal)
+        return rstr
 
 class EquivalenceStmt(Decl):
     kw = 'equivalence'
@@ -1062,7 +1056,7 @@ class ParameterStmt(Decl):
         return 'ParamterStmt(%s)' % ','.join([repr(aNamedParam) for aNamedParam in self.namedParamList])
 
     def __str__(self):
-        return 'parameter (%s)' % ','.join([itemstr(aNamedParam) for aNamedParam in self.namedParamList])+''.join(self.internal)
+        return 'parameter (%s)' % ','.join([itemstr(aNamedParam) for aNamedParam in self.namedParamList])
 
 class SaveStmt(Decl):
     'Save statement'
@@ -1095,8 +1089,7 @@ class StmtFnStmt(Decl):
     def __str__(self):
         return '%s(%s) = %s' % (str(self.name),
                                 ','.join([str(l) for l in self.args]),
-                                str(self.body))\
-                                +''.join(self.internal)
+                                str(self.body))
 
     def get_name(self):
         return self.name
@@ -1145,8 +1138,7 @@ class ExternalStmt(Decl):
     def __str__(self):
         return self.kw+' '+','.join([str(aProcedureName)
                                      for aProcedureName in
-                                     self.procedureNames])\
-                                     +''.join(self.internal)
+                                     self.procedureNames])
 
 class AllocatableStmt(Decl):
     _sons = ['lst']
@@ -1170,8 +1162,7 @@ class AllocatableStmt(Decl):
         return self.__class__.__name__+'('+repr(self.lst)+')'
 
     def __str__(self):
-        return self.kw+' '+','.join([str(aName) for aName in self.lst])\
-               +''.join(self.internal)
+        return self.kw+' '+','.join([str(aName) for aName in self.lst])
 
 class CharacterStmt(TypeDecl):
     kw = 'character'
@@ -1250,8 +1241,7 @@ class CharacterStmt(TypeDecl):
             
         return '%s%s%s :: %s' % (self.stmt_name,modstr,
                                  attr_str,
-                                 ','.join([str(d) for d in self.decls]))\
-                                 +''.join(self.internal)
+                                 ','.join([str(d) for d in self.decls]))
 
 class IntrinsicStmt(Decl):
     'Intrinsic stmt'
@@ -1334,8 +1324,7 @@ class DimensionStmt(Decl):
         return '%s(%s)' % (self.__class__.__name__,repr(self.lst))
 
     def __str__(self):
-        return '%s %s' % (self.stmt_name,','.join([str(l) for l in self.lst]))\
-               +''.join(self.internal)
+        return '%s %s' % (self.stmt_name,','.join([str(l) for l in self.lst]))
 
     def get_decls(self):
         return self.lst
@@ -1439,8 +1428,7 @@ class SubroutineStmt(PUstart):
                               repr(self.args))
     def __str__(self):
         return '%s %s(%s)' % (self.stmt_name,self.name,
-                                      ','.join([str(d) for d in self.args]))\
-                                      +''.join(self.internal)
+                                      ','.join([str(d) for d in self.args]))
 
 class ProgramStmt(PUstart):
     kw = 'program'
@@ -1464,7 +1452,7 @@ class ProgramStmt(PUstart):
         return '%s(%s)' % (self.__class__.__name__,repr(self.name))
 
     def __str__(self):
-        return '%s %s' % (self.stmt_name,self.name)+''.join(self.internal)
+        return '%s %s' % (self.stmt_name,self.name)
 
 class FunctionStmt(PUstart):
     kw = 'function'
@@ -1528,8 +1516,7 @@ class FunctionStmt(PUstart):
                                    self.kw,
                                    str(self.name),
                                    ','.join([str(l) for l in self.args]),
-                                   resultStr)\
-                                   +''.join(self.internal)
+                                   resultStr)
 
 class ModuleStmt(PUstart):
     kw = 'module'
@@ -1552,7 +1539,7 @@ class ModuleStmt(PUstart):
         return '%s(%s)' % (self.__class__.__name__,
                               repr(self.name))
     def __str__(self):
-        return 'module %s' % self.name+''.join(self.internal)
+        return 'module %s' % self.name
 
 class UseStmt(Decl):
     kw     = 'use'
@@ -1615,8 +1602,7 @@ class UseAllStmt(UseStmt):
                         ','.join([str(aRenameItem)
                                   for aRenameItem in self.renameList]) \
                                          or ''
-        return self.stmt_name+' '+str(self.moduleName)+renameListStr\
-               +''.join(self.internal)
+        return self.stmt_name+' '+str(self.moduleName)+renameListStr
 
 class UseOnlyStmt(UseStmt):
     _sons  = ['onlyList']
@@ -1629,8 +1615,7 @@ class UseOnlyStmt(UseStmt):
 
     def __str__(self):
         return self.stmt_name+' '+str(self.moduleName)+', only: '+\
-               ','.join([str(anOnlyItem) for anOnlyItem in self.onlyList])\
-               +''.join(self.internal)
+               ','.join([str(anOnlyItem) for anOnlyItem in self.onlyList])
 
 class EntryStmt(Exec):
     '''
@@ -1702,7 +1687,7 @@ class ExitStmt(Exec):
     def __str__(self) :
         optionalDoConstructStr = self.optionalDoConstructName and ' '+self.optionalDoConstructName \
                                                                or '' 
-        return '%s%s' % (self.stmt_name,optionalDoConstructStr)+''.join(self.internal)
+        return '%s%s' % (self.stmt_name,optionalDoConstructStr)
 
 
 class EnddoStmt(Exec):
@@ -1728,7 +1713,7 @@ class EnddoStmt(Exec):
     def __str__(self) :
         optionalDoConstructStr = self.doConstructName and ' '+self.doConstructName \
                                                        or '' 
-        return '%s %s' % (self.stmt_name,optionalDoConstructStr)+''.join(self.internal)
+        return '%s %s' % (self.stmt_name,optionalDoConstructStr)
 
 
 class CycleStmt(Exec) :
@@ -1755,7 +1740,7 @@ class CycleStmt(Exec) :
     def __str__(self) :
         optionalDoConstructStr = self.doConstructName and ' '+self.doConstructName \
                                                        or '' 
-        return '%s%s' % (self.stmt_name,optionalDoConstructStr)+''.join(self.internal)
+        return '%s%s' % (self.stmt_name,optionalDoConstructStr)
 
 
 class CallStmt(Exec):
@@ -1785,8 +1770,7 @@ class CallStmt(Exec):
 
     def __str__(self):
         return '%s %s(%s)' % (self.stmt_name,str(self.head),
-                                ','.join([str(l) for l in self.args]))\
-                                +''.join(self.internal)
+                                ','.join([str(l) for l in self.args]))
 
     def get_head(self):
         return self.head
@@ -1825,7 +1809,7 @@ class AssignStmt(Exec):
         return 'AssignStmt(%s,%s)' % (repr(self.lhs),repr(self.rhs))
 
     def __str__(self):
-        return '%s = %s' % (str(self.lhs),str(self.rhs))+''.join(self.internal)
+        return '%s = %s' % (str(self.lhs),str(self.rhs))
 
     def get_lhs(self):
         return self.lhs
@@ -1864,7 +1848,7 @@ class PointerAssignStmt(Exec):
         return 'PointerAssignStmt(%s,%s)' % (repr(self.lhs),repr(self.rhs))
 
     def __str__(self):
-        return '%s => %s' % (str(self.lhs),str(self.rhs))+''.join(self.internal)
+        return '%s => %s' % (str(self.lhs),str(self.rhs))
 
 
 class IOStmt(Exec):
@@ -1899,8 +1883,7 @@ class SimpleSyntaxIOStmt(IOStmt):
         rstr=self.kwString+' '+str(self.ioCtrlSpecList[0])
         if self.itemList:
             rstr+=','+','.join(map(str,self.itemList))
-        return '%s' % (rstr\
-                       +''.join(self.internal))
+        return '%s' % (rstr)
 
 class PrintStmt(SimpleSyntaxIOStmt):
     kw = 'print'
@@ -1929,8 +1912,7 @@ class ComplexSyntaxIOStmt(IOStmt):
     def __str__(self):
         return '%s(%s) %s' % (self.kwString,
                               ','.join(map(str,self.ioCtrlSpecList)),
-                              ','.join(map(str,self.itemList))\
-                              +''.join(self.internal))
+                              ','.join(map(str,self.itemList)))
 
 class SimpleReadStmt(SimpleSyntaxIOStmt):
     ''' 
@@ -2077,8 +2059,7 @@ class ArithmIfStmt(IfStmt): #arithmetic if
         return self.__class__.__name__+'(%s,%s)' % (repr(self.expr),repr(self.labelTriple))
 
     def __str__(self):
-        return '%s (%s) %s' % (self.kw_str,str(self.expr),','.join(self.labelTriple))\
-               +''.join(self.internal)
+        return '%s (%s) %s' % (self.kw_str,str(self.expr),','.join(self.labelTriple))
                    
 class IfThenStmt(IfStmt):
     _sons = ['test']
@@ -2093,8 +2074,7 @@ class IfThenStmt(IfStmt):
         return 'IfThenStmt(%s)' % (repr(self.test),)
 
     def __str__(self):
-        return '%s (%s) %s' % (self.ifFormatStr,str(self.test),self.thenFormatStr)\
-               +''.join(self.internal)
+        return '%s (%s) %s' % (self.ifFormatStr,str(self.test),self.thenFormatStr)
 
 class IfNonThenStmt(IfStmt):
     _sons = ['test','stmt']
@@ -2110,8 +2090,7 @@ class IfNonThenStmt(IfStmt):
                                                     repr(self.stmt))
 
     def __str__(self):
-        return '%s (%s) %s' % (self.ifFormatStr,str(self.test),str(self.stmt))\
-               +''.join(self.internal)
+        return '%s (%s) %s' % (self.ifFormatStr,str(self.test),str(self.stmt))
 
 class ElseifStmt(Exec):
     kw = 'elseif'
@@ -2136,8 +2115,7 @@ class ElseifStmt(Exec):
         return 'ElseifStmt(%s)' % (repr(self.test),)
 
     def __str__(self):
-        return '%s (%s) %s' % (self.stmt_name,str(self.test),self.stmt_name2)\
-               +''.join(self.internal)
+        return '%s (%s) %s' % (self.stmt_name,str(self.test),self.stmt_name2)
     
 class ElseStmt(Leaf):
     kw = 'else'
@@ -2177,8 +2155,7 @@ class WhereStmt(Exec):
                                      or ''
         return '%s (%s)%s' % (self.kw,
                                str(self.conditional),
-                               assignStr)\
-                               +''.join(self.internal)
+                               assignStr)
 
 class ElsewhereStmt(Leaf):
     kw = 'elsewhere'
@@ -2323,8 +2300,7 @@ class DoStmt(Exec):
                                       or ''
         loopControlString = self.loopControl and ' '+str(self.loopControl) \
                                               or ''
-        return '%s%s%s%s' % (doNameString,self.doFormatStr,doLabelString,loopControlString)\
-               +''.join(self.internal)
+        return '%s%s%s%s' % (doNameString,self.doFormatStr,doLabelString,loopControlString)
 
 
 class WhileStmt(Exec):
@@ -2352,7 +2328,7 @@ class WhileStmt(Exec):
         Exec.__init__(self,lineNumber,label,lead,internal,rest)
 
     def __str__(self):
-        return 'do while (%s)' % str(self.testExpression)+''.join(self.internal)
+        return 'do while (%s)' % str(self.testExpression)
 
 
 class ContinueStmt(Leaf):
@@ -2388,7 +2364,7 @@ class SelectCaseStmt(Exec):
         Exec.__init__(self,lineNumber,label,lead,internal,rest)
 
     def __str__(self):
-        return '%s (%s)' % (self.stmt_name,str(self.caseExpression))+''.join(self.internal)
+        return '%s (%s)' % (self.stmt_name,str(self.caseExpression))
 
 class EndSelectCaseStmt(Leaf):
     #FIXME: optional case construct name 
@@ -2421,7 +2397,7 @@ class CaseDefaultStmt(Exec):
         Exec.__init__(self,lineNumber,label,lead,internal,rest)
 
     def __str__(self):
-        return 'case default'+''.join(self.internal)
+        return 'case default'
 
 class CaseRangeListStmt(Exec):
     #FIXME: optional case construct name 
@@ -2455,8 +2431,7 @@ class CaseRangeListStmt(Exec):
 
     def __str__(self):
         return '%s (%s)' % (self.stmt_name,
-                            ','.join([str(range) for range in self.caseRangeList]))\
-                            +''.join(self.internal)
+                            ','.join([str(range) for range in self.caseRangeList]))
 
 class GotoStmt(Exec):
     kw = 'goto'
@@ -2494,8 +2469,7 @@ class SimpleGotoStmt(GotoStmt):
         Exec.__init__(self,lineNumber,label,lead,internal,rest)
         
     def __str__(self):
-        return self.__class__.kw_str+' '+self.targetLabel\
-               +''.join(self.internal)
+        return self.__class__.kw_str+' '+self.targetLabel
 
 class AssignedGotoStmt(GotoStmt):
     _sons = ['var','labelList']
@@ -2509,8 +2483,7 @@ class AssignedGotoStmt(GotoStmt):
         rStr=self.__class__.kw_str+' '+self.var
         if self.labelList:
             rStr+=' ('+','.join(self.labelList)+')'
-        return rStr\
-               +''.join(self.internal)
+        return rStr
                    
 class ComputedGotoStmt(GotoStmt):
     _sons = ['labelList','expr']
@@ -2521,8 +2494,7 @@ class ComputedGotoStmt(GotoStmt):
         Exec.__init__(self,lineNumber,label,lead,internal,rest)
         
     def __str__(self):
-        return self.__class__.kw_str+' ('+','.join(l for l in self.labelList)+') '+str(self.expr)\
-               +''.join(self.internal)
+        return self.__class__.kw_str+' ('+','.join(l for l in self.labelList)+') '+str(self.expr)
 
 class AllocateStmt(Exec):
     '''
@@ -2565,8 +2537,7 @@ class AllocateStmt(Exec):
                                    or ''
         return '%s(%s%s)' % (self.allocateFormatStr,
                              ','.join([str(arg) for arg in self.argList]),
-                             statVarStr)\
-                             +''.join(self.internal)
+                             statVarStr)
 
 class DeallocateStmt(Exec):
     kw = 'deallocate'
@@ -2589,8 +2560,7 @@ class DeallocateStmt(Exec):
         Exec.__init__(self,lineNumber,label,lead,internal,rest)
 
     def __str__(self):
-        return '%s(%s)' % (self.kw,','.join([str(arg) for arg in self.argList]))\
-               +''.join(self.internal)
+        return '%s(%s)' % (self.kw,','.join([str(arg) for arg in self.argList]))
 
 class NullifyStmt(Exec):
     kw = 'nullify'
@@ -2680,8 +2650,7 @@ class DeletedAssignStmt(Exec):
         return self.__class__.__name__+'('+self.assignedLabel+','+self.var+')'
 
     def __str__(self):
-        return '%s %s %s %s' % (self.kwString,self.assignedLabel,self.toString,self.var\
-                                +''.join(self.internal))
+        return '%s %s %s %s' % (self.kwString,self.assignedLabel,self.toString,self.var)
 
 class BuiltinExec(Exec):
 
@@ -2727,8 +2696,7 @@ class BuiltinExec(Exec):
                 pCount+=1
                 rstr+=str(self.paramsDict[p])
         rstr+=')'
-        return rstr\
-               +''.join(self.internal)
+        return rstr
 
 class RewindStmt(BuiltinExec):
     kw = 'rewind'

@@ -69,7 +69,7 @@ c
 
     def test1(self):
         'fline class, rawline,line,and internal_comments attributes'
-        internal_c = '! concatenation comment for fun||c Internal comment|c|! another shout comment'
+        internal_c = '! concatenation comment for fun|\n|c Internal comment\n|c\n|! another shout comment'
         ae = self.assertEquals
         aa = self.assert_
 

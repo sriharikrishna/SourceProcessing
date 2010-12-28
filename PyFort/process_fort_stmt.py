@@ -2,6 +2,7 @@ from _Setup import *
 import flow
 import PyFort.fortStmts as fs
 from PyUtil.flatten import flatten
+from PyUtil.chomp import chomp
 
 import re
 import sys
@@ -46,16 +47,16 @@ def process_fort_stmt(stmt_tuple,lineNumber,jlf):
     # rawline shouldn't be assigned, because each obj in the list already has one
     # assigned
     if isinstance(obj,list):
-        #obj[0].internal = intl
-        obj[0].internal = []
+        obj[0].internal = intl
+        #obj[0].internal = []
         obj[0].label = label
         for anObj in obj:
             anObj.lead = lead
     else:
         ## assign rawline, internal comments, label, and lead to the statement obj
-        #obj.rawline = obj.rawline+''.join(intl)
-        #obj.internal = intl
-        obj.internal = []
+        obj.rawline = chomp(obj.rawline+'\n'+''.join(intl))
+        obj.internal = intl
+        #obj.internal = []
         obj.label = label
         obj.lead = lead
     return obj

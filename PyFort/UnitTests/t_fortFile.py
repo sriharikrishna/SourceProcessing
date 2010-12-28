@@ -24,11 +24,11 @@ class fixedfile(TestCase):
         self.ff.close()
 
     def test1(self):
-        '''Ffile object removes leads, internal comments, and line continuations from the rawline (fixed format test)'''
+        '''Ffile object removes leads, internal comments, and line continuations from the line (fixed format test)'''
         ff = self.ff
         out = open_t('f1.out.f')
 
-        self.assertEquals(''.join([l.rawline+'\n' for l in Ffile.file(self.fname).lines]),
+        self.assertEquals(''.join([l.line+'\n' for l in Ffile.file(self.fname).lines]),
                           ''.join(out.readlines()))
         out.close()
 
@@ -36,7 +36,8 @@ class fixedfile(TestCase):
         '''Test that Ffile object preserves the correct leads (fixed format test)'''
         out = open_t('f1.formatted.f')
 
-        self.assertEquals(''.join([l.lead+l.rawline+'\n' for l in Ffile.file(self.fname).lines]),
+        unit_str='\n'.join([l.lead+l.rawline for l in Ffile.file(self.fname).lines])+'\n'
+        self.assertEquals(unit_str,
                           ''.join(out.readlines()))
 
         out.close()
@@ -45,16 +46,8 @@ class fixedfile(TestCase):
         '''Test that embedded comments are preserved (fixed format test) -- KNOWN TO FAIL (internal comments are not currently being preserved, see https://trac.mcs.anl.gov/projects/openAD/ticket/187)'''
         out = open_t('f1.comments.f')
 
-        lines = []
-        for l in Ffile.file(self.fname).lines:
-            line = l.rawline+'\n'
-            if len(l.internal) > 0:
-                internal = '\n'.join(l.internal)
-                lines.append(line+internal+'\n')
-            else:
-                lines.append(line)
-
-        self.assertEquals(''.join(lines),
+        unit_str='\n'.join([l.rawline for l in Ffile.file(self.fname).lines])+'\n'
+        self.assertEquals(unit_str,
                           ''.join(out.readlines()))
         out.close()
 
@@ -67,11 +60,11 @@ class freefile(TestCase):
         self.ff.close()
 
     def test1(self):
-        '''Ffile object removes leads, internal comments, and line continuations from the rawline (free format test)'''
+        '''Ffile object removes leads, internal comments, and line continuations from the line (free format test)'''
         ff = self.ff
         out = open_t('f1.out.f90')
 
-        self.assertEquals(''.join([l.rawline+'\n' for l in Ffile.file(self.fname).lines]),
+        self.assertEquals(''.join([l.line+'\n' for l in Ffile.file(self.fname).lines]),
                           ''.join(out.readlines()))
         out.close()
 
@@ -79,7 +72,7 @@ class freefile(TestCase):
         '''Test that Ffile object preserves the correct leads (free format test)'''
         out = open_t('f1.formatted.f90')
 
-        self.assertEquals(''.join([l.lead+l.rawline+'\n' for l in Ffile.file(self.fname).lines]),
+        self.assertEquals(''.join([l.lead+l.line+'\n' for l in Ffile.file(self.fname).lines]),
                           ''.join(out.readlines()))
 
         out.close()
@@ -88,16 +81,8 @@ class freefile(TestCase):
         '''Test that embedded comments are preserved (free format test) -- KNOWN TO FAIL (internal comments are not currently being preserved, see https://trac.mcs.anl.gov/projects/openAD/ticket/187)'''
         out = open_t('f1.comments.f90')
 
-        lines = []
-        for l in Ffile.file(self.fname).lines:
-            line = l.rawline+'\n'
-            if len(l.internal) > 0:
-                internal = ''.join(l.internal)
-                lines.append(line+internal)
-            else:
-                lines.append(line)
-
-        self.assertEquals(''.join(lines),
+        unit_str='\n'.join([l.rawline for l in Ffile.file(self.fname).lines])+'\n'
+        self.assertEquals(unit_str,
                           ''.join(out.readlines()))
         out.close()
 
@@ -156,10 +141,8 @@ c
         ff = heretst.ff
         f  = heretst.f
         ae = self.assertEquals
-        for (here,ffi) in izip(f,
-                               (l.rawline+'\n'
-                                for l in ff.lines
-                                for ll in l.rawline.splitlines(True))):
+        for (here,ffi) in izip(f,(l.line+'\n'
+                                  for l in ff.lines)):
             ae(here,ffi)
             
 class maptest(TestCase):

@@ -47,10 +47,10 @@ def _fjoin(dta):
     internal_comments = []
     (line,c)          = kill_bang_comment(chomp(dta[0]))
     if not c == '':
-        internal_comments.append(chomp(c))
+        internal_comments.append(c)
 
     for cont in dta[1]:
-        internal_comments.extend([ chomp(l) for l in cont[0]])
+        internal_comments.extend(cont[0])
         (l,c) = kill_bang_comment(chomp(cont[1])[6:])
         if not c == '':
             internal_comments.append(chomp(c))

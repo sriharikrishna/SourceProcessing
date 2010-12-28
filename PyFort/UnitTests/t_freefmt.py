@@ -44,7 +44,7 @@ class T1(TestCase):
         ae(len(ll),1)
         a_(isinstance(ll[0],fline))
         ae(ll[0].line,'logical subroutine(x,y,  z) ')
-        ae(ll[0].rawline,'logical subroutine(x,y,  z)! test it')
+        ae(ll[0].rawline,'logical subroutine(x,y,  z) \n! test it')
 
     def test3(self):
         'uncontinued free format string with ! comments -- KNOWN TO FAIL (internal comments are not currently being preserved, see https://trac.mcs.anl.gov/projects/openAD/ticket/187)'
@@ -59,7 +59,7 @@ function foo(x,y) ! test it
         ae(len(ll),1)
         a_(isinstance(ll[0],fline))
         ae(ll[0].line,'function foo(x,y) ')
-        ae(ll[0].rawline,'function foo(x,y)! test it  ')
+        ae(ll[0].rawline,'function foo(x,y) \n! test it  ')
 
     def test4(self):
         'decl with ! comment'
@@ -86,8 +86,9 @@ function foo(x,y) ! test it
         ae(len(ll),1)
         a_(isinstance(ll[0],fline))
 	compLine='IF (ABSSB.GE.APMWHD(20,IPMP).OR.ABS(WB).GE.APMWHD(19,IPMP))  GO TO 2000 '
+        compRawLine='IF (ABSSB.GE.APMWHD(20,IPMP).OR.ABS(WB).GE.APMWHD(19,IPMP))  GO TO 2000 \n!PFLW.169!PFLW.170'
         ae(ll[0].line,compLine)
-        ae(ll[0].rawline,compLine)
+        ae(ll[0].rawline,compRawLine)
 
 s1 = asuite(T1)
 suite = asuite(T1)
