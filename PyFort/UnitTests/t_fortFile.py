@@ -8,6 +8,31 @@ from PyUtil.chomp     import chomp
 
 import fortLine as fl
 
+# internal comments should be preserved it the "internal" array, but NOT in the rawline
+def compareFiles(assertFunc,originalFileName,RefFileName,format):
+    try:
+        (fd,testFileName) = tempfile.mkstemp()
+        testFile  = open(testFileName,'w')
+        Ffile.file(originalFileName).printit(testFile,format=='free')
+        testFile.close()
+        testFile = open(testFileName,'r')
+        testFileLines = testFile.readlines()
+        refFile = open(fname_t(RefFileName),'r')
+        refFileLines = refFile.readlines()
+        assertFunc(len(testFileLines),len(refFileLines),'transformation result ('+testFileName+') and reference file ('+RefFileName+') have disparate line counts')
+        for testLine,refLine in zip(testFileLines,refFileLines):
+            try : 
+                assertFunc(testLine,refLine)
+            except AssertionError, e:
+                print >> sys.stderr, '\ncomparing produced output('+testFileName+') and reference file ('+RefFileName+') fails with:\n'+str(e)
+                raise e
+        refFile.close()
+        testFile.close()
+        os.remove(testFileName)
+    except UserError,e:
+        print >>sys.stderr,"Error: ",e.msg
+        return 1
+
 class C1(TestCase):
     def test1(self):
         'file gets lines'
@@ -34,22 +59,11 @@ class fixedfile(TestCase):
 
     def test2(self):
         '''Test that Ffile object preserves the correct leads (fixed format test)'''
-        out = open_t('f1.formatted.f')
-
-        unit_str='\n'.join([l.lead+l.rawline for l in Ffile.file(self.fname).lines])+'\n'
-        self.assertEquals(unit_str,
-                          ''.join(out.readlines()))
-
-        out.close()
+        compareFiles(self.assertEquals,self.fname,'f1.formatted.f','fixed')
 
     def test3(self):
-        '''Test that embedded comments are preserved (fixed format test) -- KNOWN TO FAIL (internal comments are not currently being preserved, see https://trac.mcs.anl.gov/projects/openAD/ticket/187)'''
-        out = open_t('f1.comments.f')
-
-        unit_str='\n'.join([l.rawline for l in Ffile.file(self.fname).lines])+'\n'
-        self.assertEquals(unit_str,
-                          ''.join(out.readlines()))
-        out.close()
+        '''Test that embedded comments are removed from rawline (fixed format test)'''
+        compareFiles(self.assertEquals,self.fname,'f1.comments.f','fixed')
 
 class freefile(TestCase):
     def setUp(self):
@@ -70,21 +84,11 @@ class freefile(TestCase):
 
     def test2(self):
         '''Test that Ffile object preserves the correct leads (free format test)'''
-        out = open_t('f1.formatted.f90')
-
-        self.assertEquals(''.join([l.lead+l.line+'\n' for l in Ffile.file(self.fname).lines]),
-                          ''.join(out.readlines()))
-
-        out.close()
+        compareFiles(self.assertEquals,self.fname,'f1.formatted.f90','free')
 
     def test3(self):
-        '''Test that embedded comments are preserved (free format test) -- KNOWN TO FAIL (internal comments are not currently being preserved, see https://trac.mcs.anl.gov/projects/openAD/ticket/187)'''
-        out = open_t('f1.comments.f90')
-
-        unit_str='\n'.join([l.rawline for l in Ffile.file(self.fname).lines])+'\n'
-        self.assertEquals(unit_str,
-                          ''.join(out.readlines()))
-        out.close()
+        '''Test that embedded comments are removed from rawline (free format test)'''
+        compareFiles(self.assertEquals,self.fname,'f1.comments.f90','free')
 
 class fileops(TestCase):
     def setUp(self):

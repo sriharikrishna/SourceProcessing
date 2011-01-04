@@ -129,9 +129,12 @@ class Ffile(object):
     def here(str,free=False,c_action=cline,s_action=fline):
         return Ffile(StringIO(str),free,c_action,s_action)
 
-    def printit(self,out=sys.stdout):
+    def printit(self,out=sys.stdout,free=False):
+        fmtLead=''
+        if not free:
+            fmtLead='      '
         for l in self.lines:
-            line = l.lead+l.rawline
+            line = fmtLead+l.lead+l.rawline
             print >> out,line
     
     def write(self,fname):
