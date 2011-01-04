@@ -154,13 +154,15 @@ class C1(TestCase):
 
     def test12(self):
         'test initialization of derivative components of active variables within a module'
-        UnitPostProcessor.setExplicitInit()
+        UnitPostProcessor.setExplicitInit(True)
         compareFiles(self.assertEquals,'module_init.f90','module_init.post.f90',format='free',mode='reverse',templateFile='dummy.template.f',inlineFile='dummy.inline.f')
+        UnitPostProcessor.setExplicitInit(False)
 
     def test13(self):
         'test initialization of derivative components of active variables within a common block'
         UnitPostProcessor.setExplicitInit()
         compareFiles(self.assertEquals,'common_init.f90','common_init.post.f90',format='free',mode='reverse',templateFile='dummy.template.f',inlineFile='dummy.inline.f')
+        UnitPostProcessor.setExplicitInit(False)
 
 suite = asuite(C1)
 

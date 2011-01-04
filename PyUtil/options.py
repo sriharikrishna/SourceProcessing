@@ -281,8 +281,6 @@ def PostProcessorOptErrors(config,args):
             opt.error("option -i requires reverse mode ( -m r )")
         if (config.template):
             opt.error("option -t requires reverse mode ( -m r )")
-        if (config.explicitInit):
-            opt.error("option --explicitInit requires reverse mode ( -m r )")
     if (config.inline):
         if (config.noInline):
             opt.error("option --noInline conflicts with option -i")
@@ -374,6 +372,8 @@ def setPostProcessFlags(config,args):
         UnitPostProcessor.setActiveVariablesFile(config.activeVariablesFile)
         if (os.path.exists(config.activeVariablesFile)):
             os.remove(config.activeVariablesFile)
+    if (config.explicitInit):
+        UnitPostProcessor.setExplicitInit()
     # configure forward/reverse mode (including inline file for reverse mode)
     if config.mode == 'f':
         UnitPostProcessor.setMode('forward')
@@ -386,8 +386,6 @@ def setPostProcessFlags(config,args):
         UnitPostProcessor.processInlineFile()
         templateFile = config.template or 'ad_template.f'
         TemplateExpansion.setTemplateFile(templateFile)
-        if (config.explicitInit):
-            UnitPostProcessor.setExplicitInit()
     # set whitespace
     fe.setWhitespace(config.whitespace)
     # set replacement type 

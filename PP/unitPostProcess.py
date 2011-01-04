@@ -66,8 +66,8 @@ class UnitPostProcessor(object):
 
     _explicitInit = False
     @staticmethod
-    def setExplicitInit():
-        UnitPostProcessor._explicitInit = True
+    def setExplicitInit(explicitInit=True):
+        UnitPostProcessor._explicitInit = explicitInit
 
     _activeVariablesFileName=None
 
@@ -815,13 +815,14 @@ class UnitPostProcessor(object):
             DebugManager.debug(str(subUnit))
             UnitPostProcessor(subUnit).processUnit()
 
+        if self._explicitInit and isinstance(self.__myUnit.uinfo,fs.ModuleStmt):
+            # create init subroutine & add it inside module
+            subUnit = self.__createModuleInitProcedure()
+            if subUnit is not None:
+                subUnit.parent = self.__myUnit
+                self.__myUnit.ulist.append(subUnit)
+
         if self._mode == 'reverse':
-            if self._explicitInit and isinstance(self.__myUnit.uinfo,fs.ModuleStmt):
-                # create init subroutine & add it inside module
-                subUnit = self.__createModuleInitProcedure()
-                if subUnit is not None:
-                    subUnit.parent = self.__myUnit
-                    self.__myUnit.ulist.append(subUnit)
             inline = False
             self.__templateExpansion()
             self.__myUnit.decls = self.__myNewDecls
