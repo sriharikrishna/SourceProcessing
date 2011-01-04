@@ -337,7 +337,7 @@ def arrayReferenceShape(arrRefApp,localSymtab,lineNumber):
 def __intrinsicShape(anIntrinsicApp,localSymtab,lineNumber):
     if anIntrinsicApp.head.lower() in ['reshape','matmul']:
         raise InferenceError('inference.__intrinsicShape: not implemented for "'+anIntrinsicApp+'"',lineNumber)
-    if anIntrinsicApp.head.lower() in ['maxval','minval','lge','lgt','lle','llt','time']:
+    if anIntrinsicApp.head.lower() in ['maxval','minval','lge','lgt','lle','llt','size','time']:
        return None
     else:
         return shapemerge([expressionShape(anArg,localSymtab,lineNumber) for anArg in anIntrinsicApp.args],
