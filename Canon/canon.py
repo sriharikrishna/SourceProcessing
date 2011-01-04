@@ -239,12 +239,12 @@ class UnitCanonicalizer(object):
                 aSymtabEntry=self.__myUnit.symtab.lookup_name(theExpression.head)
                 # see if it is  a statement function and expand it
                 if (aSymtabEntry and aSymtabEntry.entryKind==SymtabEntry.StatementFunctionEntryKind):
-                    parentStmt.beenModified = True
+                    parentStmt.modified = True
                     replacementExpression=self.__expandStmtFunExp(fe.App(replacementHead,replacementArgs))
                 # check whether we need to convert the function to the generic name (e.g. alog => log)
                 else: 
                     if (is_intrinsic(theExpression.head) and theExpression.head.lower() != getGenericName(theExpression.head)) :
-                      parentStmt.beenModified = True
+                      parentStmt.modified = True
                       replacementHead = getGenericName(theExpression.head)
                     replacementExpression = fe.App(replacementHead,replacementArgs)
         # Unary operation -> recursively canonicalize the sole subexpression
@@ -334,8 +334,7 @@ class UnitCanonicalizer(object):
                                              self.__canonicalizeExpression(anAssignStmt.get_rhs(),anAssignStmt),
                                              lineNumber=anAssignStmt.lineNumber,
                                              label=anAssignStmt.label,
-                                             lead=anAssignStmt.lead,
-                                             internal=anAssignStmt.internal)
+                                             lead=anAssignStmt.lead)
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|_')
         self.__recursionDepth -= 1
         return replacementStatement
@@ -577,8 +576,8 @@ class UnitCanonicalizer(object):
         # We were previously working with the assumption that an original statement is modified as part of the canonicalization process
         # if and only if at least one new statement has been added.
         # This is not true, as for example we canonicalize y = alog(x) to y = log(x)
-        # hence, we have added a flag "beenModified" which indicates that an expression should be replaced by the canonicalized version
-        anExecStmt.beenModified = False
+        # hence, we have added a flag "modified" which indicates that an expression should be replaced by the canonicalized version
+        anExecStmt.modified = False
         newExecsLength = len(self.__myNewExecs) # store the current number of execs (to determine afterwards whether we've added some)
         replacementStatement = anExecStmt
         replacementStatement = self.__expandStmtFunction(replacementStatement)
@@ -605,7 +604,7 @@ class UnitCanonicalizer(object):
         if self.__recursionDepth != 0:
             raise CanonError('Recursion depth did not resolve to zero when canonicalizing '+str(anExecStmt),anExecStmt.lineNumber)
         # determine whether a change was made
-        if anExecStmt.beenModified or \
+        if anExecStmt.modified or \
            len(self.__myNewExecs) > newExecsLength: # some new statements were inserted
             self.__myNewExecs.append(replacementStatement) # => replace anExecStmt with the canonicalized version
         else: # no new statements were inserted
