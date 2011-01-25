@@ -145,7 +145,7 @@ def identifierType(anId,localSymtab,lineNumber):
 def __intrinsicType(anIntrinsicApp,localSymtab,lineNumber):
     if anIntrinsicApp.head.lower() in ['aimag','alog','real']:
         return (fortStmts.RealStmt, [])
-    elif anIntrinsicApp.head.lower() in ['int','idint','size','lbound','ubound','shape']:
+    elif anIntrinsicApp.head.lower() in ['int','idint','lbound','ubound','scan','shape','size']:
         return (fortStmts.IntegerStmt, [])
     elif anIntrinsicApp.head.lower() in ['dble','dfloat','dabs','dexp','dlog','dsqrt','dmod']:
         return (fortStmts.DoubleStmt, [])
@@ -337,7 +337,7 @@ def arrayReferenceShape(arrRefApp,localSymtab,lineNumber):
 def __intrinsicShape(anIntrinsicApp,localSymtab,lineNumber):
     if anIntrinsicApp.head.lower() in ['reshape','matmul']:
         raise InferenceError('inference.__intrinsicShape: not implemented for "'+anIntrinsicApp+'"',lineNumber)
-    if anIntrinsicApp.head.lower() in ['maxval','minval','lge','lgt','lle','llt','size','time']:
+    if anIntrinsicApp.head.lower() in ['maxval','minval','lge','lgt','lle','llt','scan','size','time']:
        return None
     else:
         return shapemerge([expressionShape(anArg,localSymtab,lineNumber) for anArg in anIntrinsicApp.args],
