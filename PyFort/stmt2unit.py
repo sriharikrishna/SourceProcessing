@@ -135,21 +135,21 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
 def _processDimensionStmt(aDimensionStmt,curr):
     localSymtab = curr.val.symtab
     DebugManager.debug('[Line '+str(aDimensionStmt.lineNumber)+']: stmt2unit._processDimensionStmt('+str(aDimensionStmt)+') with symbol table '+str(localSymtab))
-    for anApp in aDimensionStmt.lst:
+    for aDimensionSpec in aDimensionStmt.lst:
         try:
-            theSymtabEntry = localSymtab.lookup_name_local(anApp.head)
+            theSymtabEntry = localSymtab.lookup_name_local(aDimensionSpec.arrayName)
             if theSymtabEntry:
-                DebugManager.debug('\tvariable "'+anApp.head+'" already present in local symbol table as '+theSymtabEntry.debug(anApp.head))
-                theSymtabEntry.enterDimensions(tuple(anApp.args))
+                DebugManager.debug('\tvariable "'+aDimensionSpec.arrayName+'" already present in local symbol table as '+theSymtabEntry.debug(aDimensionSpec.arrayName))
+                theSymtabEntry.enterDimensions(tuple(aDimensionSpec.arraySpec))
             else:
                 newSymtabEntry = SymtabEntry(SymtabEntry.VariableEntryKind,
-                                             dimensions=tuple(anApp.args),
+                                             dimensions=tuple(aDimensionSpec.arraySpec),
                                              origin='local')
-                DebugManager.debug('\tvariable "'+anApp.head+'" NOT already present in symbol table -- adding '+newSymtabEntry.debug(anApp.head))
-                localSymtab.enter_name(anApp.head,newSymtabEntry)
+                DebugManager.debug('\tvariable "'+aDimensionSpec.arrayName+'" NOT already present in symbol table -- adding '+newSymtabEntry.debug(aDimensionSpec.arrayName))
+                localSymtab.enter_name(aDimensionSpec.arrayName,newSymtabEntry)
         except SymtabError,e: # add lineNumber and symbol name to any SymtabError we encounter
             e.lineNumber = e.lineNumber or aDimensionStmt.lineNumber
-            e.symbolName = e.symbolName or anApp.head
+            e.symbolName = e.symbolName or aDimensionSpec.arrayName
             raise e
     return aDimensionStmt
 

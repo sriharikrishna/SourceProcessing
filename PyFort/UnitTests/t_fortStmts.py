@@ -5,7 +5,7 @@ from unittest  import *
 
 from fortExp import LoopControl
 from fortStmts import *
-from fortStmts import _F90Len,_F90ExplLen,_Star,_NoInit,_Kind,_Prec,_ExplKind,_AssignInit,_PointerInit,_ImplicitDoConstruct
+from fortStmts import _F90Len,_F90ExplLen,_Star,_NoInit,_Kind,_Prec,_ExplKind,_AssignInit,_PointerInit,_ImplicitDoConstruct,_DimensionArraySpec
 from useparse  import *
 
 class C2(TestCase):
@@ -617,13 +617,13 @@ class TestDimensionStmt(TestCase):
     def test1(self):
         'dimension m(4,4), v(1000)'
         self.assertEquals(repr(pps('dimension m(4,4), v(1000)')),
-                          repr(DimensionStmt([App('m',['4', '4']),
-                                              App('v',['1000'])])))
+                          repr(DimensionStmt([_DimensionArraySpec('m',['4', '4']),
+                                              _DimensionArraySpec('v',['1000'])])))
 
     def test2(self):
         'dimension helio (-3:3, 4, 3:9)'
         self.assertEquals(repr(pps('dimension helio (-3:3, 4, 3:9)')),
-                          repr(DimensionStmt([App('helio',
+                          repr(DimensionStmt([_DimensionArraySpec('helio',
                                                   [Ops(':',Umi('3'),'3'),
                                                    '4',
                                                    Ops(':','3','9')])])))
@@ -631,9 +631,16 @@ class TestDimensionStmt(TestCase):
     def test3(self):
         'dimension a(hi, hi*3 + lo )'
         self.assertEquals(repr(pps('dimension a(hi, hi*3 + lo )')),
-                          repr(DimensionStmt([App('a',
+                          repr(DimensionStmt([_DimensionArraySpec('a',
                                                   ['hi',
                                                    Ops('+',Ops('*','hi','3'),'lo')])])))
+
+    def test4(self):
+        'dimension c(*),n(igm+ipm)'
+        self.assertEquals(repr(pps('dimension c(*),n(igm+ipm)')),
+                          repr(DimensionStmt([_DimensionArraySpec('c',['*']),
+                                              _DimensionArraySpec('n',
+                                                                  [Ops('+','igm','ipm')])])))
 
 class TestDoStmt(TestCase):
     '''Do statements'''

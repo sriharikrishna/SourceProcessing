@@ -77,6 +77,40 @@ class _F77Len(_FLenMod):
         app = self.len
         return ([_F77Len(app.head)],app.args)
 
+class _DimensionSpecifier(object):
+    '''generic dimension array specifier for dimension attributes or dimension statements'''
+
+    form = seq(lit('('),
+               cslist(disj(lit('*'),
+                           Exp)),
+               lit(')'))
+    form = treat(form,lambda x: x[1])
+
+class _DimensionAttribute(object):
+    '''dimension attribute for type declarations'''
+    form = seq(lit('dimension'),
+               _DimensionSpecifier.form)
+    form = treat(form,lambda x: App(x[0],x[1]))
+
+class _DimensionArraySpec(_Mutable_T):
+    'dimension array name and array specifier for dimension statements'
+    _sons=['dimId','dimSpec']
+
+    form = seq(id,
+               _DimensionSpecifier.form)
+    form = treat(form,lambda x: _DimensionArraySpec(x[0],x[1]))
+
+    def __init__(self, arrayName, arraySpec,lineNumber=0):
+        self.arrayName = arrayName
+        self.arraySpec = arraySpec
+        self.lineNumber = lineNumber
+
+    def __repr__(self):
+        return '%s(%s,%s)' % (self.__class__.__name__,repr(self.arrayName),repr(self.arraySpec))
+
+    def __str__(self):
+        return '%s(%s)' % (self.arrayName,','.join(str(l) for l in self.arraySpec))
+
 class _Prec(_TypeMod):
     pat = '*%s'
 
@@ -150,18 +184,7 @@ def _ta_listify(asm):
         rv.append(item)
     return rv
 
-class _DimensionSpecifier(object):
-    '''specifier for the dimension attribute in type declarations
-       (currently not used dimension statements)'''
-
-    form = seq(lit('dimension'),
-               lit('('),
-               cslist(disj(lit('*'),
-                           Exp)),
-               lit(')'))
-    form = treat(form,lambda x: App(x[0],x[2]))
-
-typeAttributeExpression = disj(_DimensionSpecifier.form,
+typeAttributeExpression = disj(_DimensionAttribute.form,
                                Exp)
 
 type_attr_list = star(seq(lit(','),
@@ -1210,7 +1233,6 @@ class CharacterStmt(TypeDecl):
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
-        
         p1 = seq(CharacterStmt.spec,type_attr_list,zo1(lit('::')),
                  cslist(char_decl_item))
         try: 
@@ -1301,6 +1323,7 @@ class DoubleCplexStmt(TypeDecl):
     kw     = 'doublecomplex'
     kw_str = 'double complex'
 
+
 class DimensionStmt(Decl):
     kw = 'dimension'
     kw_str = kw
@@ -1309,9 +1332,10 @@ class DimensionStmt(Decl):
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
+
         p1 = seq(lit(DimensionStmt.kw),
                  zo1(lit('::')),
-                 cslist(app))
+                 cslist(_DimensionArraySpec.form))
         ((dc,sep,lst),rest) = p1(scan)
         return DimensionStmt(lst,dc,lineNumber,rest=rest)
 
@@ -2933,6 +2957,9 @@ def getVarName(anExpression,lineNumber,lhs=True):
     elif isinstance(anExpression,Slice) :
        DebugManager.debug(' it\'s a SLICE EXPRESSION')
        return getVarName(anExpression.arg,lineNumber)
+    elif isinstance(anExpression,_DimensionArraySpec):
+        DebugManager.debug(' it\'s a DIMENSION ARRAY SPEC EXPRESSION')
+        return anExpression.arrayName
     elif isinstance(anExpression,_NoInit):
        DebugManager.debug(' it\'s a NO INIT EXPRESSION')
        return getVarName(anExpression.lhs,lineNumber)
