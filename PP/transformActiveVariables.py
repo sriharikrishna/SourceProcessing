@@ -3,6 +3,7 @@ from PyUtil.debugManager import DebugManager
 from PP.unitPostProcess import PostProcessError
 from PyFort.fortUnit import fortUnitIterator, Unit
 from PyFort.inference import expressionType
+from PyFort.intrinsic import is_intrinsic,getGenericName
 import PyFort.fortStmts as fs
 import PyFort.fortExp as fe
 import copy
@@ -63,6 +64,9 @@ class TransformActiveVariables(object):
         DebugManager.debug('TransformActiveVariables.__transformActiveTypes called on "'+str(Exp)+'"')
         if isinstance(Exp,list) :
             Exp = [self.__transformActiveTypes(s,parentStmt) for s in Exp]
+        elif isinstance(Exp,fe.App) and is_intrinsic(Exp.head):
+            Exp.head=getGenericName(Exp.head)
+            Exp.args=[self.__transformActiveTypes(arg,parentStmt) for arg in Exp.args]
         elif isinstance(Exp,str) or isinstance(Exp,fe.Sel) or isinstance(Exp,fe.App):
             try:
                 if self.__isActive(Exp,parentStmt):
