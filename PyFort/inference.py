@@ -36,7 +36,7 @@ _modhash = { fortStmts._Prec     : 0,
              fortStmts._ExplKind : 2,
              }
 
-def modcompare(m1,m2):
+def __modCompare(m1,m2,addLength):
     'compare type modifiers'
     if not m1: return m2
     if not m2: return m1
@@ -56,6 +56,8 @@ def modcompare(m1,m2):
           return m2
        # they could be integers
        try :
+          if (addLength):
+              return [fortStmts._F90Len(Ops('+',mm1.len,mm2.len))] 
           l1=int(mm1.len)
           l2=int(mm2.len)
           if l1>l2:
@@ -64,12 +66,12 @@ def modcompare(m1,m2):
              return m2
        # if they are not both integers there could be some parameter name etc.
        except ValueError:
-          raise InferenceError('modcompare: cannot compare length specifiers '+mm1.len+' and '+mm2.len)
+          raise InferenceError('__modCompare: cannot compare length specifiers '+mm1.len+' and '+mm2.len)
     if _modhash[c1] >= _modhash[c2]: return m1
     return m2
 
-def typecompare(t1,t2):
-    DebugManager.debug('inference.typecompare called on t1 = "'+str(t1)+'\tt2 = "'+str(t2)+'"')
+def __typeCompare(t1,t2,addLength):
+    DebugManager.debug('inference.__typeCompare called on t1 = "'+str(t1)+'\tt2 = "'+str(t2)+'"')
     mergeit = dict(character=0,
                    logical=1,
                    integer=2,
@@ -80,19 +82,19 @@ def typecompare(t1,t2):
                    )
 
     if t1[0] == t2[0]:
-        return(t1[0],modcompare(t1[1],t2[1]))
+        return(t1[0],__modCompare(t1[1],t2[1],addLength))
 
     if mergeit[t1[0].kw] > mergeit[t2[0].kw]: return t1
 
     return t2
 
-def typemerge(lst,default):
+def typemerge(lst,default,addLength=False):
     DebugManager.debug('inference.typemerge called on '+str(lst)+'...',newLine=False)
     if not lst: return default
     if len(lst) == 1: return lst[0]
-    t1 = typecompare(lst[0],lst[1])
+    t1 = __typeCompare(lst[0],lst[1],addLength)
     for l in lst[2:]:
-        t1 = typecompare(t1,l)
+        t1 = __typeCompare(t1,l,addLength)
     DebugManager.debug(' result is '+str(t1))
     return t1
 
@@ -139,7 +141,7 @@ def identifierType(anId,localSymtab,lineNumber):
        if (returnType):
            DebugManager.warning('inference.identifierType: implicit typing: '+SymtabEntry.ourTypePrint(returnType)+' '+anId,lineNumber,DebugManager.WarnType.implicit)
     if not returnType:
-       raise InferenceError('inference.identifierType: No type could be determined for identifier "'+anId+'"',lineNumber)
+        raise InferenceError('inference.identifierType: No type could be determined for identifier "'+anId+'"',lineNumber)
     return returnType
 
 def __intrinsicType(anIntrinsicApp,localSymtab,lineNumber):
@@ -222,10 +224,15 @@ def expressionType(anExpression,localSymtab,lineNumber):
         DebugManager.debug(' it\'s a UNARY EXPRESSION')
         return expressionType(anExpression.exp,localSymtab,lineNumber)
     elif isinstance(anExpression,Ops):
-        DebugManager.debug(' it\'s a BINARY EXPRESSION')
-        return typemerge([expressionType(anExpression.a1,localSymtab,lineNumber),
-                          expressionType(anExpression.a2,localSymtab,lineNumber)],
-                                   (None,None))
+        if (anExpression.op =='//'):
+            return typemerge([expressionType(anExpression.a1,localSymtab,lineNumber),
+                              expressionType(anExpression.a2,localSymtab,lineNumber)],
+                              (None,None),True)
+        else: 
+            DebugManager.debug(' it\'s a BINARY EXPRESSION')
+            return typemerge([expressionType(anExpression.a1,localSymtab,lineNumber),
+                              expressionType(anExpression.a2,localSymtab,lineNumber)],
+                              (None,None))
     elif isinstance(anExpression,App):
         DebugManager.debug(' it\'s an APPLICATION')
         return appType(anExpression,localSymtab,lineNumber)
