@@ -102,8 +102,8 @@ class UnitCanonicalizer(object):
         try:
             (funcType,modifier) = appType(theApp,self.__myUnit.symtab,parentStmt.lineNumber)
         except InferenceError,errorObj:
-            sys.stdout.flush()
-            raise CanonError('UnitCanonicalizer.shouldSubroutinizeFunction:InferenceError: '+errorObj.msg,parentStmt.lineNumber)
+            DebugManager.warning("cannot determine return type and canonicalize function call to "+theApp.head,parentStmt.lineNumber)
+            return False
         if is_intrinsic(theApp.head):
             DebugManager.debug('UnitCanonicalizer.shouldSubroutinizeFunction: It\'s an intrinsic of type '+str(funcType))
             return subroutinizedIntrinsics.shouldSubroutinize(theApp) and (UnitCanonicalizer._subroutinizeIntegerFunctions or not funcType == fs.IntegerStmt)
@@ -278,9 +278,16 @@ class UnitCanonicalizer(object):
             if isinstance(anArg,fe.NamedParam):
                 paramName=anArg.myId
                 anArg=anArg.myRHS
-            #TODO: remove perens when the whole argument is in them??
+            #TODO: remove parenthesis when the whole argument is in them??
             DebugManager.debug((self.__recursionDepth - 1)*'|\t'+'|- argument "'+str(anArg)+'" ',newLine=False)
-            (argType,argTypeMod) = expressionType(anArg,self.__myUnit.symtab,aSubCallStmt.lineNumber)
+            argType=None
+            argTypeMod=None
+            try: 
+                (argType,argTypeMod) = expressionType(anArg,self.__myUnit.symtab,aSubCallStmt.lineNumber)
+            except InferenceError, e :
+                DebugManager.warning("cannot canonicalize argument >"+str(anArg)+"<",aSubCallStmt.lineNumber)
+                replacementArgs.append(anArg)
+                continue
             # constant character expressions
             if argType == fs.CharacterStmt:
                 if not self._hoistStringsFlag:
