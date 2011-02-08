@@ -852,6 +852,13 @@ class TestFunctionStmt(TestCase):
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
+    def test6(self):
+        '''recursive function statement with type real (with modifier) and result specifier'''
+        s = 'recursive real(kind = 16) function foo(x) result(y)'
+        r = FunctionStmt((RealStmt,[_ExplKind('16')]),'foo',['x'],'y',True)
+        self.assertEquals(repr(pps(s)),repr(r))
+        self.assertEquals(s,str(r))
+
 class TestSelectCaseStmt(TestCase):
     '''select case statements'''
     def test0(self):
@@ -1002,6 +1009,13 @@ class TestSubroutineStmt(TestCase):
         'simple subroutine stmt'
         theString  = 'subroutine foo(x,y,z)'
         theRepr = SubroutineStmt('foo',['x', 'y', 'z'])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,str(theRepr))
+
+    def test2(self):
+        'recursive subroutine stmt'
+        theString  = 'recursive subroutine foo(x,y,z)'
+        theRepr = SubroutineStmt('foo',['x', 'y', 'z'],True)
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 

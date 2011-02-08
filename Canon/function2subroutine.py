@@ -110,7 +110,7 @@ def convertFunctionOrEntryStmt(theStmt):
     args.append(outParam)
     name = name_init+theStmt.name.lower()
     if isinstance(theStmt,fs.FunctionStmt):
-        convertedStmt = fs.SubroutineStmt(name,args,lead=theStmt.lead)
+        convertedStmt = fs.SubroutineStmt(name,args,recursive=theStmt.recursive,lead=theStmt.lead)
     else:
         convertedStmt = fs.EntryStmt(name,args,lead=theStmt.lead)
     return (outParam,convertedStmt)

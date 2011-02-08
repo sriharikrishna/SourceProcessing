@@ -1430,28 +1430,34 @@ class SubroutineStmt(PUstart):
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
-        p1 = seq(lit(SubroutineStmt.kw),
+        p1 = seq(zo1(lit('recursive')),
+                 lit(SubroutineStmt.kw),
                  id,
                  zo1(seq(lit('('),cslist(id),lit(')')))
                  )
-        ((dc,name,args),rst) = p1(scan)
+        ((rc,theKW,name,args),rst) = p1(scan)
         if args:
             args = args[0][1]
 
-        return SubroutineStmt(name,args,lineNumber=lineNumber,rest=rst)
+        return SubroutineStmt(name,args,(len(rc)==1),lineNumber=lineNumber,rest=rst)
 
-    def __init__(self,name,args,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+    def __init__(self,name,args,recursive=False,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         self.name = name
         self.args = args
+        self.recursive=recursive
         self.stmt_name = stmt_name
         PUstart.__init__(self,lineNumber,label,lead,internal,rest)
 
     def __repr__(self):
-        return '%s(%s,%s)' % (self.__class__.__name__,
-                              repr(self.name),
-                              repr(self.args))
+        return '%s(%s,%s,%s)' % (self.__class__.__name__,
+                                 repr(self.name),
+                                 repr(self.args),
+                                 repr(self.recursive))
     def __str__(self):
-        return '%s %s(%s)' % (self.stmt_name,self.name,
+        rStr=''
+        if (self.recursive):
+            rStr+='recursive '
+        return '%s%s %s(%s)' % (rStr,self.stmt_name,self.name,
                                       ','.join([str(d) for d in self.args]))
 
 class ProgramStmt(PUstart):
@@ -1489,7 +1495,8 @@ class FunctionStmt(PUstart):
         scan = filter(lambda x: x != ' ',ws_scan)
         drvdTypeSpec=seq(lit('type'), lit('('), id, lit(')'))
         drvdTypeSpec=treat(drvdTypeSpec,lambda l: DrvdTypeDecl([l[2]],[],[],lineNumber=lineNumber))
-        p1 = seq(zo1(disj(type_pat_sem,drvdTypeSpec)),
+        p1 = seq(zo1(lit('recursive')),
+                 zo1(disj(type_pat_sem,drvdTypeSpec)),
                  lit(FunctionStmt.kw),
                  id,
                  lit('('),
@@ -1499,14 +1506,14 @@ class FunctionStmt(PUstart):
                          lit('('),
                          id,
                          lit(')'))))
-        ((ty,dc,name,dc1,args,dc2,resultstuff),rest) = p1(scan)
+        ((rec,ty,dc,name,dc1,args,dc2,resultstuff),rest) = p1(scan)
         type = ty and ty[0] \
                    or None
         result = resultstuff and resultstuff[0][2] \
                               or None
-        return FunctionStmt(type,name,args,result,lineNumber,rest=rest)
+        return FunctionStmt(type,name,args,result,(len(rec)==1),lineNumber,rest=rest)
 
-    def __init__(self,ty,name,args,result,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+    def __init__(self,ty,name,args,result,recursive=False,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         '''
         typ = None
 
@@ -1519,6 +1526,7 @@ class FunctionStmt(PUstart):
         self.name = name
         self.args = args
         self.result = result
+        self.recursive=recursive
         PUstart.__init__(self,lineNumber,label,lead,internal,rest)
 
     def __repr__(self):
@@ -1526,21 +1534,26 @@ class FunctionStmt(PUstart):
                             or None
         resultRepr = self.result and repr(self.result) \
                                   or None
-        return '%s(%s,%s,%s,%s)' % (self.__class__.__name__,
-                                    typeRepr,
-                                    repr(self.name),
-                                    repr(self.args),
-                                    resultRepr)
+        return '%s(%s,%s,%s,%s,%s)' % (self.__class__.__name__,
+                                       typeRepr,
+                                       repr(self.name),
+                                       repr(self.args),
+                                       resultRepr,
+                                       repr(self.recursive))
     def __str__(self):
         typePrefix = self.ty and (typestr2(self.ty)+' ') \
                               or ''
         resultStr = self.result and ' result('+str(self.result)+')' \
                                  or ''
-        return '%s%s %s(%s)%s' % (typePrefix,
-                                   self.kw,
-                                   str(self.name),
-                                   ','.join([str(l) for l in self.args]),
-                                   resultStr)
+        rStr=''
+        if (self.recursive):
+            rStr+='recursive '
+        return '%s%s%s %s(%s)%s' % (rStr,
+                                    typePrefix,
+                                    self.kw,
+                                    str(self.name),
+                                    ','.join([str(l) for l in self.args]),
+                                    resultStr)
 
 class ModuleStmt(PUstart):
     kw = 'module'
@@ -2884,6 +2897,10 @@ def parse(ws_scan,lineNumber):
              len(scan) >=2 and kw2g(lscan[0:2]) and sqz(2,[scan]) or \
              lscan[0]
         if (kw in kwBuiltInTypesTbl.keys() or kw == 'type') and 'function' in lscan:
+            kw = 'function'
+        if (kw == 'recursive') and 'subroutine' in lscan:
+            kw = 'subroutine'
+        if (kw == 'recursive') and 'function' in lscan:
             kw = 'function'
         # special case for module procedure statements:
         elif (kw == 'module') and (lscan[1] == 'procedure') :
