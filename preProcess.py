@@ -120,7 +120,7 @@ def main():
         if (config.timing):
             print 'SourceProcessing: timing: '+str(datetime.datetime.utcnow()-startTime)
     except (CanonError,SymtabError,UserError,ScanError,ParseError,InferenceError,AssemblerException,ListAssemblerException,FunToSubError),e:
-        sys.stderr.write(str(e))
+        sys.stderr.write(str(e)+'\n')
         cleanup(config)
         return 1
     except RuntimeError,e:
