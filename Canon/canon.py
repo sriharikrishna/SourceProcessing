@@ -8,7 +8,7 @@ from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
 from PyUtil.argreplacement import replaceArgs
 
-from PyFort.intrinsic import is_intrinsic,getGenericName
+from PyFort.intrinsic import is_intrinsic,getGenericName, isUsedNonStandard
 from PyFort.inference import InferenceError,expressionType,appType,isArrayReference,canonicalTypeClass,expressionShape
 import PyFort.flow as flow
 import PyFort.fortExp as fe
@@ -273,56 +273,61 @@ class UnitCanonicalizer(object):
         self.__recursionDepth += 1
         # canonicalize each of the the expressions that serve as arguments
         replacementArgs = []
-        for anArg in aSubCallStmt.args:
-            paramName=None
-            if isinstance(anArg,fe.NamedParam):
-                paramName=anArg.myId
-                anArg=anArg.myRHS
-            #TODO: remove parenthesis when the whole argument is in them??
-            DebugManager.debug((self.__recursionDepth - 1)*'|\t'+'|- argument "'+str(anArg)+'" ',newLine=False)
-            argType=None
-            argTypeMod=None
-            try: 
-                (argType,argTypeMod) = expressionType(anArg,self.__myUnit.symtab,aSubCallStmt.lineNumber)
-            except InferenceError, e :
-                DebugManager.warning("cannot canonicalize argument >"+str(anArg)+"<",aSubCallStmt.lineNumber)
-                replacementArgs.append(anArg)
-                continue
-            # constant character expressions
-            if argType == fs.CharacterStmt:
-                if not self._hoistStringsFlag:
-                    DebugManager.debug('is a string expression (which we aren\'t hoisting)')
+        # certain non-standard intrinsics (e.g. free) are subroutines rather than functions
+        if (not isUsedNonStandard(aSubCallStmt.head)):
+            for anArg in aSubCallStmt.args:
+                paramName=None
+                if isinstance(anArg,fe.NamedParam):
+                    paramName=anArg.myId
+                    anArg=anArg.myRHS
+                #TODO: remove parenthesis when the whole argument is in them??
+                DebugManager.debug((self.__recursionDepth - 1)*'|\t'+'|- argument "'+str(anArg)+'" ',newLine=False)
+                argType=None
+                argTypeMod=None
+                try: 
+                    (argType,argTypeMod) = expressionType(anArg,self.__myUnit.symtab,aSubCallStmt.lineNumber)
+                except InferenceError, e :
+                    DebugManager.warning("cannot canonicalize argument >"+str(anArg)+"<",aSubCallStmt.lineNumber)
                     replacementArgs.append(anArg)
+                    continue
+                # constant character expressions
+                if argType == fs.CharacterStmt:
+                    if not self._hoistStringsFlag:
+                        DebugManager.debug('is a string expression (which we aren\'t hoisting)')
+                        replacementArgs.append(anArg)
+                    elif isinstance(anArg,str) and self.__myUnit.symtab.lookup_name(anArg):
+                        DebugManager.debug('is a string variable (which we aren\'t hoisting)')
+                        replacementArgs.append(anArg)
+                    elif isinstance(anArg,fe.App) and isArrayReference(anArg,self.__myUnit.symtab,aSubCallStmt.lineNumber):
+                        DebugManager.debug('is a character array reference (which we aren\'t hoisting)')
+                        replacementArgs.append(anArg)
+                    else:
+                        DebugManager.debug('is a string expression to be hoisted:',newLine=False)
+                        replacementArgs.append(self.__hoistExpression(anArg,aSubCallStmt,paramName))
+                # other constant expressions
+                elif fe.isConstantExpression(anArg):
+                    if not self._hoistConstantsFlag:
+                        DebugManager.debug('is a constant expression (which we aren\'t hoisting)')
+                        replacementArgs.append(anArg)
+                    else:
+                        DebugManager.debug('is a constant expression to be hoisted:',newLine=False)
+                        replacementArgs.append(self.__hoistExpression(anArg,aSubCallStmt,paramName))
+                # variables (with VariableEntry in symbol table) -> do nothing
                 elif isinstance(anArg,str) and self.__myUnit.symtab.lookup_name(anArg):
-                    DebugManager.debug('is a string variable (which we aren\'t hoisting)')
+                    symtabEntry = self.__myUnit.symtab.lookup_name(anArg)
+                    DebugManager.debug('is an identifier (variable,function,etc.)')
                     replacementArgs.append(anArg)
+                # Array References -> do nothing
                 elif isinstance(anArg,fe.App) and isArrayReference(anArg,self.__myUnit.symtab,aSubCallStmt.lineNumber):
-                    DebugManager.debug('is a character array reference (which we aren\'t hoisting)')
+                    DebugManager.debug('is an array reference')
                     replacementArgs.append(anArg)
+                # everything else -> hoist and create an assignment to a temp variable
                 else:
-                    DebugManager.debug('is a string expression to be hoisted:',newLine=False)
+                    DebugManager.debug('is a nontrivial expression to be hoisted:',newLine=False)
                     replacementArgs.append(self.__hoistExpression(anArg,aSubCallStmt,paramName))
-            # other constant expressions
-            elif fe.isConstantExpression(anArg):
-                if not self._hoistConstantsFlag:
-                    DebugManager.debug('is a constant expression (which we aren\'t hoisting)')
-                    replacementArgs.append(anArg)
-                else:
-                    DebugManager.debug('is a constant expression to be hoisted:',newLine=False)
-                    replacementArgs.append(self.__hoistExpression(anArg,aSubCallStmt,paramName))
-            # variables (with VariableEntry in symbol table) -> do nothing
-            elif isinstance(anArg,str) and self.__myUnit.symtab.lookup_name(anArg):
-                symtabEntry = self.__myUnit.symtab.lookup_name(anArg)
-                DebugManager.debug('is an identifier (variable,function,etc.)')
-                replacementArgs.append(anArg)
-            # Array References -> do nothing
-            elif isinstance(anArg,fe.App) and isArrayReference(anArg,self.__myUnit.symtab,aSubCallStmt.lineNumber):
-                DebugManager.debug('is an array reference')
-                replacementArgs.append(anArg)
-            # everything else -> hoist and create an assignment to a temp variable
-            else:
-                DebugManager.debug('is a nontrivial expression to be hoisted:',newLine=False)
-                replacementArgs.append(self.__hoistExpression(anArg,aSubCallStmt,paramName))
+        else :
+            DebugManager.warning('arguments in call to a non-standard intrinsic subroutine '+str(aSubCallStmt.head)+' are not hoisted',lineNumber=aSubCallStmt.lineNumber)
+            replacementArgs=aSubCallStmt.args
         # replace aCallStmt with the canonicalized version
         replacementStatement = fs.CallStmt(aSubCallStmt.head,
                                            replacementArgs,
