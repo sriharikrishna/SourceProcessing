@@ -82,6 +82,7 @@ __intrinsics = (
 
 __nonStandard = (
                  'etime',
+		 'free',
                  'getuid',
                  'getpid',
                  'hostnam',
@@ -100,7 +101,11 @@ def useNonStandard(aList):
     global __useNonStandard
     if aList: 
         __useNonStandard=aList
-    
+
+def isUsedNonStandard(op):
+    global __useNonStandard
+    return (op.lower() in __useNonStandard)
+
 __inquiry = (
     'any',
     'associated',
