@@ -56,17 +56,23 @@ def __modCompare(m1,m2,addLength):
           return m2
        # they could be integers
        try :
+          le1=mm1.len
+          if (isinstance(mm1.len,NamedParam) and mm1.len.myId.lower()=='len'):
+             le1=mm1.len.myRHS
+          le2=mm2.len
+          if (isinstance(mm2.len,NamedParam) and mm2.len.myId.lower()=='len'):
+             le2=mm2.len.myRHS
           if (addLength):
-              return [fortStmts._F90Len(Ops('+',mm1.len,mm2.len))] 
-          l1=int(mm1.len)
-          l2=int(mm2.len)
+              return [fortStmts._F90Len(Ops('+',le1,le2))] 
+          l1=int(le1)
+          l2=int(le2)
           if l1>l2:
              return m1
           else :
              return m2
        # if they are not both integers there could be some parameter name etc.
        except ValueError:
-          raise InferenceError('__modCompare: cannot compare length specifiers '+mm1.len+' and '+mm2.len)
+          raise InferenceError('__modCompare: cannot compare length specifiers '+str(mm1.len)+' and '+str(mm2.len))
     if _modhash[c1] >= _modhash[c2]: return m1
     return m2
 
