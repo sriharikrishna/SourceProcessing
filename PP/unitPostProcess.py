@@ -92,7 +92,13 @@ class UnitPostProcessor(object):
         # temporary setting to figure out if we are within an interface
         self.inInterface=False
 
-
+    def __isActiveInitSymtabType(self,oType):
+        ''' check symtab entry type given as oType, see class symtab.SymtabEntry '''
+        if (oType[0]==fs.DrvdTypeDecl):
+            if (oType[1][0].lower()==self._abstract_type+'_init'):
+                return True
+        return False
+    
     # Rewrites the active type in derived type declarations
     # returns the declaration
     # PARAMS:
@@ -105,7 +111,9 @@ class UnitPostProcessor(object):
         DebugManager.debug('unitPostProcessor.__rewriteActiveType called on: "'+str(DrvdTypeDecl)+"'")
         newDecls=[self.__transformActiveTypesExpression(decl) for decl in DrvdTypeDecl.get_decls()]
         DrvdTypeDecl.set_decls(newDecls)
-        if DrvdTypeDecl.get_mod()[0].lower() == self._abstract_type:
+        if ((DrvdTypeDecl.get_mod()[0].lower() == self._abstract_type)
+            or
+            (DrvdTypeDecl.get_mod()[0].lower() == self._abstract_type+'_init')): # with initialization
             DrvdTypeDecl.set_mod([self._replacement_type])
         return DrvdTypeDecl
 
@@ -243,6 +251,24 @@ class UnitPostProcessor(object):
                 aStmt.set_son(aSon,newSon)
         return aStmt
 
+    def __rewriteDataStmt(self,aDecl):
+        replObjectValuePairList=[]
+        changed=False
+        rDecl=aDecl
+        for o, v in aDecl.objectValuePairList:
+            replObjectList=[]
+            for varRef in o: 
+                varRefType=expressionType(varRef,self.__myUnit.symtab,aDecl.lineNumber)
+                if (varRefType and self.__isActiveInitSymtabType(varRefType)):
+                    replObjectList.append(fe.Sel(varRef,"v"))
+                    changed=True
+                else:
+                    replObjectList.append(varRef)
+            replObjectValuePairList.append((replObjectList,v))
+        if (changed) :
+            rDecl=fs.DataStmt(replObjectValuePairList,aDecl.stmt_name,aDecl.lineNumber,aDecl.label,aDecl.lead,aDecl.internal,aDecl.rest)
+        return rDecl
+        
     # Determines the function to be inlined (if there is one)
     # from the comment, and sets inlineUnit (the current unit being inlined)
     # to be the corresponding unit from the inline file's units
@@ -550,6 +576,9 @@ class UnitPostProcessor(object):
                     Decls.append(aDecl)
             elif isinstance(aDecl,fs.DrvdTypeDecl):
                 newDecl = self.__rewriteActiveType(aDecl)
+                Decls.append(newDecl)
+            elif isinstance(aDecl,fs.DataStmt):
+                newDecl = self.__rewriteDataStmt(aDecl)
                 Decls.append(newDecl)
             elif isinstance(aDecl,fs.InterfaceStmt):
                 if (pendingUse.inInterface):
