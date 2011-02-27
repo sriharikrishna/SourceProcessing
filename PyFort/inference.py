@@ -254,6 +254,9 @@ def expressionType(anExpression,localSymtab,lineNumber):
     elif isinstance(anExpression,fortStmts._NoInit):
        DebugManager.debug(' it\'s a NO INIT EXPRESSION')
        return expressionType(anExpression.lhs,localSymtab,lineNumber)
+    elif isinstance(anExpression,fortStmts._ImplicitDoConstruct):
+       DebugManager.debug(' it\'s a implicit DO')
+       return expressionType(anExpression.object,localSymtab,lineNumber)
     else:
        raise InferenceError('inference.expressionType: No type could be determined for expression "'+str(anExpression)+'" (represented as '+repr(anExpression)+' )',lineNumber)
 
