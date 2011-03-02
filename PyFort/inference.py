@@ -12,7 +12,7 @@ from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import SymtabEntry
 
 import fortStmts
-from fortExp import App,NamedParam,Sel,Unary,Ops,is_const,is_id,_id_re,_flonum_re,_int_re,_logicon_set,_quote_set,Slice,Zslice,Lslice,Rslice
+from fortExp import App,NamedParam,Sel,Unary,Ops,is_const,is_id,_id_re,_flonum_re,_int_re,_logicon_set,_quote_set,Slice,Zslice,Lslice,Rslice,ArrayConstructor
 from intrinsic import is_intrinsic, getNonStandard
 
 class InferenceError(Exception):
@@ -257,6 +257,9 @@ def expressionType(anExpression,localSymtab,lineNumber):
     elif isinstance(anExpression,fortStmts._ImplicitDoConstruct):
        DebugManager.debug(' it\'s a implicit DO')
        return expressionType(anExpression.object,localSymtab,lineNumber)
+    elif isinstance(anExpression,ArrayConstructor): # look at the first element in the list, they have to be consistent
+       DebugManager.debug(' it\'s an ARRAY CONSTRUCTOR')
+       return expressionType(anExpression.valueList[0],localSymtab,lineNumber)
     else:
        raise InferenceError('inference.expressionType: No type could be determined for expression "'+str(anExpression)+'" (represented as '+repr(anExpression)+' )',lineNumber)
 
@@ -472,6 +475,9 @@ def expressionShape(anExpression,localSymtab,lineNumber):
     elif isinstance(anExpression,Sel):
         DebugManager.debug(' it\'s a SELECTION EXPRESSION')
         return selectionShape(anExpression,localSymtab,lineNumber)
+    elif isinstance(anExpression,ArrayConstructor):  
+        DebugManager.debug(' it\'s an ARRAY CONSTRUCTOR')
+        return [len(anExpression.valueList)]
     else:
         raise InferenceError('inference.expressionShape: No shape could be determined for expression "'+str(anExpression)+'"',lineNumber)
 
