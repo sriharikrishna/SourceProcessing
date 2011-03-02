@@ -287,7 +287,7 @@ class UnitCanonicalizer(object):
                 try: 
                     (argType,argTypeMod) = expressionType(anArg,self.__myUnit.symtab,aSubCallStmt.lineNumber)
                 except InferenceError, e :
-                    DebugManager.warning("cannot canonicalize argument >"+str(anArg)+"<",aSubCallStmt.lineNumber)
+                    DebugManager.warning("cannot canonicalize argument >"+str(anArg)+"< parsed as "+repr(anArg),aSubCallStmt.lineNumber)
                     replacementArgs.append(anArg)
                     continue
                 # constant character expressions
