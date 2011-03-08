@@ -123,7 +123,7 @@ class UnitPostProcessor(object):
     # theExpression -- an fe.Exp object in which to transform active types
     # RETURNS: a transformed expression with all __value__ and __deriv__ calls
     # replaced
-    def __transformActiveTypesExpression(self,theExpression):
+    def __transformActiveTypesExpression(self,theExpression,inAssignment=False):
         'mutate __value__ and __deriv__ calls'
         # deepcopy allows for comparison of return value and input value in calling function
         if self.__recursionDepth is 0:
@@ -138,7 +138,7 @@ class UnitPostProcessor(object):
                 self.__inquiryExpression = True
                 self.__inquiryRecursionLevel = self.__recursionDepth
             replacementExpression.args = \
-                map(self.__transformActiveTypesExpression,replacementExpression.args)
+                map(lambda l: self.__transformActiveTypesExpression(l,inAssignment),replacementExpression.args)
             if replacementExpression.head == '__value__':
                 if self.__inquiryExpression and \
                         self.__inquiryRecursionLevel == self.__recursionDepth - 1:
@@ -148,7 +148,7 @@ class UnitPostProcessor(object):
                     replacementExpression = fe.Sel(nv,"v")
                 self.__expChanged=True
             elif replacementExpression.head == '__deriv__':
-                if self._transform_deriv:
+                if self._transform_deriv or inAssignment:
                     nv = replacementExpression.args[0]
                     replacementExpression = fe.Sel(nv,"d")
                 else:
@@ -157,12 +157,12 @@ class UnitPostProcessor(object):
         else:
             if hasattr(replacementExpression, "_sons"):
                 for aSon in replacementExpression.get_sons():
-                    newSon = self.__transformActiveTypesExpression(getattr(replacementExpression,aSon))
+                    newSon = self.__transformActiveTypesExpression(getattr(replacementExpression,aSon),inAssignment)
                     replacementExpression.set_son(aSon,newSon)
             elif isinstance(replacementExpression,fs._NoInit):
-                replacementExpression = fs._NoInit(self.__transformActiveTypesExpression(replacementExpression.lhs))
+                replacementExpression = fs._NoInit(self.__transformActiveTypesExpression(replacementExpression.lhs,inAssignment))
             elif isinstance(replacementExpression,list):
-                replacementExpression=[self.__transformActiveTypesExpression(item) for item in replacementExpression]
+                replacementExpression=[self.__transformActiveTypesExpression(item,inAssignment) for item in replacementExpression]
 
         self.__recursionDepth -= 1
         if self.__recursionDepth == self.__inquiryRecursionLevel:
@@ -246,7 +246,7 @@ class UnitPostProcessor(object):
         
         for aSon in aStmt.get_sons():
             theSon = getattr(aStmt,aSon)
-            newSon = self.__transformActiveTypesExpression(theSon)
+            newSon = self.__transformActiveTypesExpression(theSon,isinstance(aStmt,fs.AssignStmt))
             if newSon is not theSon:
                 aStmt.set_son(aSon,newSon)
         return aStmt
