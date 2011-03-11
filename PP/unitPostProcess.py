@@ -131,7 +131,7 @@ class UnitPostProcessor(object):
         else:
             replacementExpression = theExpression
 
-        DebugManager.debug(self.__recursionDepth*'|\t'+'unitPostProcessor.__transformActiveTypesExpression called on"'+str(theExpression)+'"')
+        DebugManager.debug(self.__recursionDepth*'|\t'+'unitPostProcessor.__transformActiveTypesExpression(theExpression='+str(theExpression)+',inAssignment='+str(inAssignment)+')')
         self.__recursionDepth += 1
         if (isinstance(replacementExpression, fe.App) and not isinstance(replacementExpression.head,fe.Sel)):
             if intrinsic.is_inquiry(replacementExpression.head):
@@ -206,32 +206,25 @@ class UnitPostProcessor(object):
     # must be reconstructed as an fs.AssignStmt. The parser processes these
     # statements as declarations, but after __value__ and __deriv__ calls are
     # transformed (active types replaced), the statements are in the form of
-    # Assign statements, and must become executive statements
+    # Assign statements, and become executable statements
     # RETURNS: a processed AssignStmt with all __value__ and __deriv__ calls 
     # replaced
     def __processStmtFnStmt(self, StmtFnStmt):
-        '''Performs active type transformations on a StmtFnStmt; reconstructs it as an AssignStmt if StmtFnStmt.name is "__value__"'''
+        '''Performs active type transformations on a StmtFnStmt;
+        reconstructs it as an AssignStmt if StmtFnStmt.name is "__value__" or "__deriv__" '''
         DebugManager.debug('unitPostProcessor.__processStmtFnStmt called on: "'+str(StmtFnStmt)+"'")
-
-        new_args = map(self.__transformActiveTypesExpression,StmtFnStmt.args)
-        newStatement = \
-            fs.StmtFnStmt(name=self.__transformActiveTypesExpression(StmtFnStmt.name),
-                          args=new_args,
-                          body=self.__transformActiveTypesExpression(StmtFnStmt.body),
-                          lineNumber=StmtFnStmt.lineNumber,
-                          label=StmtFnStmt.label,
-                          lead=StmtFnStmt.lead)
-        if newStatement.name == '__value__' or newStatement.name=='__deriv__':
-            newApp = self.__transformActiveTypesExpression(fe.App(newStatement.name,newStatement.args))
-            replacementStatement = \
-                fs.AssignStmt(newApp,
-                              newStatement.body,
-                              lineNumber=newStatement.lineNumber,
-                              label=newStatement.label,
-                              lead=newStatement.lead)
-        else:
-            replacementStatement = newStatement
-        return replacementStatement
+        if StmtFnStmt.name in ['__value__','__deriv__']:
+            return fs.AssignStmt(self.__transformActiveTypesExpression(fe.App(StmtFnStmt.name,copy.deepcopy(StmtFnStmt.args)),True), # new LHS
+                                 self.__transformActiveTypesExpression(StmtFnStmt.body,True), # new RHS
+                                 lineNumber=StmtFnStmt.lineNumber,
+                                 label=StmtFnStmt.label,
+                                 lead=StmtFnStmt.lead)
+        return fs.StmtFnStmt(name=self.__transformActiveTypesExpression(StmtFnStmt.name),
+                             args=map(self.__transformActiveTypesExpression,StmtFnStmt.args),
+                             body=self.__transformActiveTypesExpression(StmtFnStmt.body),
+                             lineNumber=StmtFnStmt.lineNumber,
+                             label=StmtFnStmt.label,
+                             lead=StmtFnStmt.lead)
 
     # PARAMS:
     # aStmt -- a generic fs.Exec statement to be processed
