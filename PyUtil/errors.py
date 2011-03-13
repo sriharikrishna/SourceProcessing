@@ -25,9 +25,9 @@ class ScanError(Exception):
 	self.rest=rest
 
     def __str__(self):
-        errString='\nERROR: ScanError at line '+str(self.lineNumber)+':'
-        errString+=str(self.aFortLine)
-        errString+=(len(self.aFortLine)-len(self.rest))*' '+'^'
+        errString='\nERROR: ScanError at line '+str(self.lineNumber)+':\n'
+        errString+=str(self.aFortLine)+'\n'
+        errString+=(len(str(self.aFortLine))-len(str(self.rest)))*' '+'^'
         errString+="\nTokens scanned ok: "+str(self.scanned)+'\tUnable to scan: "'+str(self.rest)+'"'
         if (self.rest == '&' and (config.inputFormat=='fixed')):
             errString+="\nThis failure is likely due to running this script on free-formatted code without specifying the --inputFormat=free flag."

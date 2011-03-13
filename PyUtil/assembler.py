@@ -44,7 +44,7 @@ class AssemblerException(Exception):
         self.rest = rest
 
     def __str__(self):
-        errString='\nERROR: AssemblerError: parser failed :'+str(e.msg)
+        errString='\nERROR: AssemblerError: parser failed :'+str(self.msg)
         return (errString)
 
 def pred(p):
