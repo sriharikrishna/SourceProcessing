@@ -46,7 +46,7 @@ semi_re  = r';'
 conc_re  = r'//'
 exp_re   = r'\*\*'
 cmpr_re  = r'(?:>|<|=|/)='
-symb_re  = r'[-+*/()=,%:<>]'
+symb_re  = r'[-+*/()\[\]=,%:<>]'
 dot_re   = r'''(?x)(?i)\.    # fortran "dotted" keywords
             (?:
                 eqv    |

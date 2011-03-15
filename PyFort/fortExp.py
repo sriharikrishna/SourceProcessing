@@ -571,17 +571,22 @@ class ArrayConstructorImpliedDo(_Exp) :
 
 
 class ArrayConstructor(_Exp):
-    '''assigning an entire array at once, like this: a = (/ 2, 3, 5, 7, 11, 13, 17 /)'''
+    '''assigning an entire array at once, like this: a = (/ 2, 3, 5, 7, 11, 13, 17 /)
+       or like this : a=[ 2, 3, 5, 7, 11, 13, 17 ]'''
     _sons = ['valueList']
 
     formValue = disj(Exp,
                      ArrayConstructorImpliedDo.form)
-    form = seq(lit('('),          # 0
-               lit('/'),          # 1
-               cslist(formValue), # 2 = valueList
-               lit('/'),          # 3
-               lit(')'))          # 4
-    form = treat(form, lambda x: ArrayConstructor(x[2]))
+    formOld = seq(lit('('),          # 0
+                  lit('/'),          # 1
+                  cslist(formValue), # 2 = valueList
+                  lit('/'),          # 3
+                  lit(')'))          # 4
+    formNew = seq(lit('['),          # 0 
+                  cslist(formValue), # 1 = valueList
+                  lit(']'))          # 2
+    form = disj(formOld,formNew)
+    form = treat(form, lambda x: len(x)==5 and ArrayConstructor(x[2]) or ArrayConstructor(x[1]))
 
     def __init__(self,valueList):
         self.valueList = valueList
