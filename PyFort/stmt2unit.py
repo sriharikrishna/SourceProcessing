@@ -35,7 +35,7 @@ def _beginDrvdTypeDefn(aDrvdTypeDefn,curr):
     'derived type definition -- record type in symbol table and set the name on the unit'
     localSymtab = curr.val.symtab
     theSymtabEntry = localSymtab.lookup_name_local(aDrvdTypeDefn.name)
-    isPrivate = False
+    access=None # DrvdTypeDefn currently cannot parse qualifiers
     curr.val._in_drvdType=aDrvdTypeDefn.name
     if theSymtabEntry: # already in symtab, shouldn't happen  
         theSymtabEntry.enterEntryKind(SymtabEntry.DerivedTypeEntryKind)
@@ -45,7 +45,7 @@ def _beginDrvdTypeDefn(aDrvdTypeDefn,curr):
                                      dimensions=None,
                                      length=None,
                                      origin='local',
-                                     isPrivate=isPrivate)
+                                     access=access)
         DebugManager.debug('defn "'+str(aDrvdTypeDefn)+'" NOT already present in symbol table => adding '+str(newSymtabEntry.debug(aDrvdTypeDefn.name)))
         localSymtab.enter_name(aDrvdTypeDefn.name,newSymtabEntry)
     return aDrvdTypeDefn
@@ -64,11 +64,11 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
     newLength = None
     dflt_d  = default_dims(aTypeDeclStmt.attrs)
     DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: stmt2unit._processTypedeclStmt('+str(aTypeDeclStmt)+') with default dimensions '+str(dflt_d))
-    isPrivate = False
+    access=None
     inDrvdTypeDefn=curr.val._in_drvdType
     for anAttribute in aTypeDeclStmt.attrs :
-        if isinstance(anAttribute,str) and anAttribute.lower() == 'private' :
-            isPrivate = True
+        if isinstance(anAttribute,str) and anAttribute.lower() in Symtab.ourSpecificAccessKWs :
+            access= anAttribute.lower()
     for aDecl in aTypeDeclStmt.decls:
         DebugManager.debug('\tProcessing decl '+repr(aDecl)+' ... ',newLine=False)
         (name,newDimensions) = typesep(aDecl,dflt_d)
@@ -108,7 +108,7 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                                              dimensions=newDimensions,
                                              length=newLength,
                                              origin='local',
-                                             isPrivate=isPrivate)
+                                             access=access)
                 if inDrvdTypeDefn:
                     newSymtabEntry.enterDrvdTypeName(inDrvdTypeDefn)
                 DebugManager.debug('decl "'+str(aDecl)+'" NOT already present in symbol table => adding '+str(newSymtabEntry.debug(name)))
@@ -260,6 +260,17 @@ def _use_module(aUseStmt,cur):
             DebugManager.warning('definition for module '+aUseStmt.moduleName+' not seen in the input.',aUseStmt.lineNumber)
     return aUseStmt
 
+def _setAccess(anAccessStmt,cur):
+    ''' set the access attributes '''
+    DebugManager.debug('[Line '+str(anAccessStmt.lineNumber)+']: stmt2unit._setAccess() for '+str(anAccessStmt))
+    accessAttr=anAccessStmt.__class__.kw
+    if (not anAccessStmt.vlist):
+        cur.val.symtab.setDefaultAccess(accessAttr)
+    else: 
+        for v in anAccessStmt.vlist:
+            currentSymtab.lookup_name(v).setAccess(accessAttr)        
+    return anAccessStmt
+    
 def _unit_entry(self,cur):
     '''enter a subroutine or function into:
        1. The local symtab for the object
@@ -577,6 +588,8 @@ fs.ExternalStmt.decl2unitAction       = _processExternalStmt
 fs.TypeDecl.decl2unitAction           = _processTypedeclStmt
 fs.CommonStmt.decl2unitAction         = _processCommonStmt
 fs.UseStmt.decl2unitAction            = _use_module
+fs.PrivateStmt.decl2unitAction        = _setAccess
+fs.PublicStmt.decl2unitAction         = _setAccess
 fs.ImplicitNone.decl2unitAction       = _implicit_none
 fs.ImplicitStmt.decl2unitAction       = _implicit
 fs.ProcedureStmt.decl2unitAction      = _processProcedureStmt # always in an interface

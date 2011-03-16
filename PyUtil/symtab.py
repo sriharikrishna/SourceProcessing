@@ -11,7 +11,7 @@ from PyUtil.caselessDict import caselessDict as cDict
 from PyUtil.debugManager import DebugManager
 
 from PyFort.fortExp import App
-from PyFort.fortStmts import _PointerInit,_Kind
+from PyFort.fortStmts import _PointerInit, _Kind, PrivateStmt, PublicStmt
 
 class GenericInfo(object):
     def __init__(self):
@@ -63,10 +63,14 @@ class Symtab(object):
             raise SymtabError('Symtab.getRealTypeDefault: no type set!')
         return Symtab._default_real
 
+    ourAccessPrefix='default'
+    ourSpecificAccessKWs=[PublicStmt.kw, PrivateStmt.kw]
     def __init__(self,parent=None):
-        self.ids    = cDict()
+        self.ids    = cDict() # string for the key and SymtabEntry for the value
         self.parent = parent
-        self.labelRefs = {} # list of statements refering to a given label 
+        self.labelRefs = {} # list of statements referring to a given label
+        # the following settings refer to the kw of the PublicStmt and PrivateStmt 
+        self.defaultAccess=None # None | 'default'{'private'|'public'}
         self.default_implicit()
 
     def default_implicit(self):
@@ -105,7 +109,10 @@ class Symtab(object):
         return entry
 
     def enter_name(self,name,val):
+        ''' val should be a SymtabEntry '''
         self.ids[name] = val
+        if (not val.access):
+            val.access=self.defaultAccess 
 
     def lookupDimensions(self,name):
         DebugManager.debug('Symtab.lookupDimensions: called on '+str(name))
@@ -128,10 +135,11 @@ class Symtab(object):
             raise SymtabError('Symtab._contextReplace: Error -- expression'+str(anExpression)+'is not a string and not an App!')
         return anExpression
 
-    def replicateEntry(self,aKey,localOrigin):
+    def replicateEntry(self,aKey,theOrigin):
         '''
         create and return a new symbol table entry that is for use in another context
-        In particular, anything that is the result of a local rename must be reverted to the original name for use in other contexts
+        we do not set the access attribute from theOrigin here because the access is
+        determined by the new context 
         '''
         theLocalEntry = self.ids[aKey]
         theNewEntry = SymtabEntry(theLocalEntry.entryKind)
@@ -149,7 +157,7 @@ class Symtab(object):
         # set the length
         theNewEntry.length = theLocalEntry.length
         # set the origin
-        theNewEntry.updateOrigin(localOrigin)
+        theNewEntry.updateOrigin(theOrigin)
         # keep a ref to the same generic Info, arg list
         theNewEntry.genericInfo=theLocalEntry.genericInfo
         theNewEntry.funcFormalArgs=theLocalEntry.funcFormalArgs
@@ -159,27 +167,28 @@ class Symtab(object):
         'update self with all ids from module "unit" symtab, making sure to enter local names whenever there are renames. module name = "name"'
         # go through everything in the module and add it to the local symbol table, being sure to check for it in the rename list
         for aKey in aModuleUnit.symtab.ids.keys():
-            if aModuleUnit.symtab.ids[aKey].isPrivate : continue
+            if aModuleUnit.symtab.ids[aKey].isPrivate() : continue
             noRename = True
             if renameList:
                 for aRenameItem in renameList:
                     if aRenameItem.rhs == aKey:
                         # add the local name to the symbol table
-                        self.ids[aRenameItem.lhs] = aModuleUnit.symtab.replicateEntry(aKey,'module:'+aModuleUnit.name())
+                        self.enter_name(aRenameItem.lhs,aModuleUnit.symtab.replicateEntry(aKey,'module:'+aModuleUnit.name()))
+                        # track the original name
                         self.ids[aRenameItem.lhs].renameSource = aKey
                         noRename = False
             if noRename:
-                self.ids[aKey] = aModuleUnit.symtab.replicateEntry(aKey,'module:'+aModuleUnit.name())
+                self.enter_name(aKey,aModuleUnit.symtab.replicateEntry(aKey,'module:'+aModuleUnit.name()))
 
     def update_w_module_only(self,aModuleUnit,onlyList):
         'update self with the subset of ids from module "unit" symtab specified in onlyList. module name = "name"'
         for anOnlyItem in onlyList:
             # rename items: add only the lhs of the pointer init
             if isinstance(anOnlyItem,_PointerInit):
-                self.ids[anOnlyItem.lhs] = aModuleUnit.symtab.replicateEntry(anOnlyItem.rhs,'module:'+aModuleUnit.name())
+                self.enter_name(anOnlyItem.lhs,aModuleUnit.symtab.replicateEntry(anOnlyItem.rhs,'module:'+aModuleUnit.name()))
                 self.ids[anOnlyItem.lhs].renameSource = anOnlyItem.rhs
             else:
-                self.ids[anOnlyItem] = aModuleUnit.symtab.replicateEntry(anOnlyItem,'module:'+aModuleUnit.name())
+                self.enter_name(anOnlyItem,aModuleUnit.symtab.replicateEntry(anOnlyItem,'module:'+aModuleUnit.name()))
 
     def enterLabelRef(self,label,labelRef):
         if self.labelRefs.has_key(label) :
@@ -187,9 +196,18 @@ class Symtab(object):
                 self.labelRefs[label].append(labelRef)
         else:
             self.labelRefs[label]=[labelRef]
+            
+    def setDefaultAccess(self,anAccessKW):
+        if ( not anAccessKW or not (anAccessKW in Symtab.ourSpecificAccessKWs )):
+            raise SymtabError(sys._getframe().f_code.co_name+": invalid  argument")    
+        if (self.defaultAccess):
+            raise SymtabError(sys._getframe().f_code.co_name+": already set")
+        self.defaultAccess=Symtab.ourAccessPrefix+anAccessKW
+        for     entry in self.ids.values(): 
+            entry.setDefaultAccess(anAccessKW)
 
     def debug(self):
-        outString = 'symbol table '+str(self)+':\n'
+        outString = 'symbol table '+str(self)+' (defaultAccess:'+((self.defaultAccess and self.defaultAccess) or 'None')+'):\n'
         for aKey in self.ids.keys():
             outString += '\t'+self.ids[aKey].debug(aKey)+'\n'
         outString+="\timplicit:"+str(self.implicit)+'\n'
@@ -198,14 +216,14 @@ class Symtab(object):
         return outString
 
 class SymtabEntry(object):
-    def __init__(self,entryKind,type=None,dimensions=None,length=None,origin=None,renameSource=None,isPrivate=False):
+    def __init__(self,entryKind,type=None,dimensions=None,length=None,origin=None,renameSource=None,access=None):
         self.entryKind = entryKind # some instanve of self.GenericEntryKind
         self.type = type # pair  (type class,type modifier) 
         self.dimensions = dimensions # None or list of expressions
         self.length = length
         self.origin = origin # None | [<parent origin>'|'](| 'local' | 'external' | 'temp' | 'common:'[<common block name])
         self.renameSource = renameSource
-        self.isPrivate = isPrivate
+        self.access = access# None | 'private' | 'public' | 'privatedefault' | 'publicdefault']
         # takes a GenericInfo instance when used for generic functions/subroutines (interfaces)
         self.genericInfo = None 
         # for functions takes a FormalArgs instance when used for the specific (non-generic) parameter list 
@@ -287,6 +305,29 @@ class SymtabEntry(object):
 
     def enterDrvdTypeName(self,aDrvdTypeName):
         self.memberOfDrvdType=aDrvdTypeName
+        
+    def isPrivate(self):
+        return (self.access and self.access in [PrivateStmt.kw,Symtab.ourAccessPrefix+PrivateStmt.kw])
+
+    def setDefaultAccess(self,anAccessKW):
+        if (self.access):
+            if (self.access in Symtab.ourSpecificAccessKWs):
+                pass  # default does not override specific
+            elif (anAccessKW!=self.access):
+                raise SymtabError(sys._getframe().f_code.co_name+": already set")
+        else:
+            if (not (anAccessKW  in Symtab.ourSpecificAccessKWs)):
+                raise SymtabError(sys._getframe().f_code.co_name+": invalid argument")
+            self.access=Symtab.ourAccessPrefix+anAccessKW
+            
+    def setSpecificAccess(self,anAccessKW):
+        if (self.access):
+            if (self.access in Symtab.ourSpecificAccessKWs):
+                raise SymtabError(sys._getframe().f_code.co_name+": already set")
+        if (not (anAccessKW  in Symtab.ourSpecificAccessKWs)):
+                raise SymtabError(sys._getframe().f_code.co_name+": invalid argument")
+        self.access=anAccessKW
+            
 
     def debug(self,name='<symbol name unknown>'):
         return '[SymtabEntry('+str(self)+') "'+name+'" -> entryKind='+str(self.entryKind)+\
@@ -295,7 +336,7 @@ class SymtabEntry(object):
                                          ', length='+str(self.length)+\
                                          ', origin='+str(self.origin)+\
                                          ', renameSource='+str(self.renameSource)+\
-                                         ', isPrivate='+str(self.isPrivate)+\
+                                         ', access='+((self.access and self.access) or 'None')+\
                                          ', genericInfo='+((self.genericInfo and str(self.genericInfo.debug())) or 'None')+\
                                          ', funcFormalArgs='+((self.funcFormalArgs and str(self.funcFormalArgs.debug())) or 'None')+\
                                          ', memberOfDrvdType='+((self.memberOfDrvdType and self.memberOfDrvdType) or 'None')+\
