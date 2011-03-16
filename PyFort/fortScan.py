@@ -14,9 +14,9 @@ from tokens import *
 def __str_intern(s):
     template = r"""
          (?:            # body of quote is a collection of chars
+            \\.     |   #    backslashed anything   OR
             [^%s]   |   #    non-quote OR
-            %s%s    |   #    repeated quote         OR
-            \\.         #    backslashed anything
+            %s%s        #    repeated quote 
          )*             # 0 or more
 """
     return template % (s,s,s)

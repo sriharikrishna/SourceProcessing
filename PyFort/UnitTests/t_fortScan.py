@@ -24,7 +24,7 @@ class qstrings(TestCase):
         re1 = re.compile('(' + q_re +')',re.X)
         s1  = "x4_ttxrebe = y5 + xy('foo bar bas gleem')"
         s2  = "xx(2:3) = 'this is a string with '' an embedded quote'"
-        s3  = r"yzzy = 'this is a string with \n '' \'' with stuff'"
+        s3  = r"yzzy = 'this is a string with \n '' \' with stuff'"
 
         ae  = self.assertEquals
 
@@ -35,7 +35,7 @@ class qstrings(TestCase):
         ae(mm.group(1),"'this is a string with '' an embedded quote'")
 
         mm  = re1.search(s3)
-        ae(mm.group(1),r"'this is a string with \n '' \'' with stuff'")
+        ae(mm.group(1),r"'this is a string with \n '' \' with stuff'")
 
     def test2(self):
         'double quoted strings'
@@ -43,7 +43,7 @@ class qstrings(TestCase):
         re1 = re.compile('(' + qq_re +')',re.X)
         s1  = 'x4_ttxrebe = y5 + xy("foo bar bas gleem")'
         s2  = 'xx(2:3) = "this is a string with "" an embedded quote"'
-        s3  = r'yzzy = "this is a string with \n "" \"" with stuff"'
+        s3  = r'yzzy = "this is a string with \n "" \" with stuff"'
 
         ae  = self.assertEquals
 
@@ -54,7 +54,7 @@ class qstrings(TestCase):
         ae(mm.group(1),'"this is a string with "" an embedded quote"')
 
         mm  = re1.search(s3)
-        ae(mm.group(1),r'"this is a string with \n "" \"" with stuff"')
+        ae(mm.group(1),r'"this is a string with \n "" \" with stuff"')
 
 class ro_qstrings(TestCase):
     def test1(self):
