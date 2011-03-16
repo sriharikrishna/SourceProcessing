@@ -1176,7 +1176,7 @@ class TestIOtmt(TestCase):
         self.assertEquals(theString,str(theRepr))
 
     def test9(self):
-        '''write statement with problematic forward slash in string constant (from SCALE: scalelib/html_M.f90)'''
+        '''write statement with problematic backslash in string constant (from SCALE: scalelib/html_M.f90)'''
         theString = "write(unit,'(a)') ' <APPLET \'"
         theRepr = WriteStmt(['unit',"'(a)'"],["' <APPLET '"])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
