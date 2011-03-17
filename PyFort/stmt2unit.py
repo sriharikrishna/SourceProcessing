@@ -52,6 +52,12 @@ def _beginDrvdTypeDefn(aDrvdTypeDefn,curr):
 
 def _endDrvdTypeDefn(aEndDrvdTypeDefnStmt,curr):
     'derived type definition end  -- unset the name on the unit'
+    if (curr.val._drvdTypeDefaultAccess):
+        prefix=curr.val._in_drvdType+':'
+        lenPrefix=len(prefix)
+        for name,entry in curr.val.symtab.ids.items():
+            if (len(name)>lenPrefix and name[:lenPrefix]==prefix):
+                entry.setDefaultAccess(curr.val._drvdTypeDefaultAccess)
     curr.val._in_drvdType=None
     return aEndDrvdTypeDefnStmt
 
@@ -268,12 +274,24 @@ def _use_module(aUseStmt,cur):
 def _setAccess(anAccessStmt,cur):
     ''' set the access attributes '''
     DebugManager.debug('[Line '+str(anAccessStmt.lineNumber)+']: stmt2unit._setAccess() for '+str(anAccessStmt))
+        
     accessAttr=anAccessStmt.__class__.kw
     if (not anAccessStmt.vlist):
-        cur.val.symtab.setDefaultAccess(accessAttr)
+        if (cur.val._in_drvdType):
+            cur.val._drvdTypeDefaultAccess=accessAttr # and process it at the end of rhe derived type definition
+        else: 
+            cur.val.symtab.setDefaultAccess(accessAttr)
     else: 
         for v in anAccessStmt.vlist:
-            currentSymtab.lookup_name(v).setAccess(accessAttr)        
+            if(cur.val._in_drvdType):
+                v=cur.val._in_drvdType+':'+v
+            theEntry=cur.val.symtab.lookup_name(v)
+            if (theEntry):
+                theEntry.setAccess(accessAttr)
+            else: # forward access declaration
+                theEntry=SymtabEntry(SymtabEntry.GenericEntryKind,
+                                     access=accessAttr)
+                cur.val.symtab.enter_name(v,theEntry)
     return anAccessStmt
     
 def _unit_entry(self,cur):
