@@ -287,7 +287,7 @@ def _setAccess(anAccessStmt,cur):
                 v=cur.val._in_drvdType+':'+v
             theEntry=cur.val.symtab.lookup_name(v)
             if (theEntry):
-                theEntry.setAccess(accessAttr)
+                theEntry.setSpecificAccess(accessAttr)
             else: # forward access declaration
                 theEntry=SymtabEntry(SymtabEntry.GenericEntryKind,
                                      access=accessAttr)
