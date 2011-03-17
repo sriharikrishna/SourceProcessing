@@ -120,7 +120,7 @@ class Symtab(object):
         if entry: return entry.lookupDimensions()
         return None
 
-    def _contextReplace(self,anExpression):
+    def __renamedToSource(self,anExpression):
         '''
         replace an instances in anExpression of things that may be local to this context (such as renames)
         with things that are applicable in a general context
@@ -130,28 +130,48 @@ class Symtab(object):
                 return self.ids[anExpression].renameSource
         elif isinstance(anExpression,App):
             for anArg in anExpression.args:
-                anArg = self._contextReplace(anArg)
+                anArg = self.__renamedToSource(anArg)
         else:
-            raise SymtabError('Symtab._contextReplace: Error -- expression'+str(anExpression)+'is not a string and not an App!')
+            raise SymtabError(sys._getframe().f_code.co_name+': expression'+str(anExpression)+'is not a string and not an App!')
         return anExpression
 
-    def replicateEntry(self,aKey,theOrigin):
+    def __sourceToRenamed(self,anExpression):
+        '''
+        replace an instances in anExpression of things that may be local to this context (such as renames)
+        with things that are applicable in a general context
+        '''
+        if isinstance(anExpression,str):
+            for name in self.ids.keys():
+                if (self.ids[name].renameSource and self.ids[name].renameSource==anExpression):
+                   return name
+        elif isinstance(anExpression,App):
+            for anArg in anExpression.args:
+                anArg = self.__sourceToRenamed(anArg)
+        else:
+            raise SymtabError(sys._getframe().f_code.co_name+': expression'+str(anExpression)+'is not a string and not an App!')
+        return anExpression
+
+    def __typeHandler(self,targetEntry,targetEntrySymtab):
+        if (targetEntry.type):
+            # look for attribute mod names in this symbol table.  If they are in there and have a rename, use the rename in the new entry
+            (typename,modifiers) = targetEntry.type
+            for aModifier in modifiers:
+                if isinstance(aModifier,_Kind):
+                    aModifier.mod = targetEntrySymtab.__sourceToRenamed(self.__renamedToSource(aModifier.mod))
+        
+        
+    def replicateEntry(self,aKey,theOrigin,newName,otherSymtab):
         '''
         create and return a new symbol table entry that is for use in another context
         we do not set the access attribute from theOrigin here because the access is
-        determined by the new context 
+        determined by the new context
+        the entry is added under otherName to newSymtab
         '''
         theLocalEntry = self.ids[aKey]
         theNewEntry = SymtabEntry(theLocalEntry.entryKind)
         # set the type
-        theNewEntry.type = theLocalEntry.type
-        if (theNewEntry.type):
-            DebugManager.debug('symtab.replicateEntry('+theLocalEntry.debug(aKey)+')')
-            # look for attribute mod names in this symbol table.  If they are in there and have a rename, use the rename in the new entry
-            (typename,modifiers) = theNewEntry.type
-            for aModifier in modifiers:
-                if isinstance(aModifier,_Kind):
-                    aModifier.mod = self._contextReplace(aModifier.mod)
+        theNewEntry.type = copy.deepcopy(theLocalEntry.type)
+        self.__typeHandler(theNewEntry,otherSymtab)
         # set the dimensions
         theNewEntry.dimensions = theLocalEntry.dimensions
         # set the length
@@ -161,8 +181,16 @@ class Symtab(object):
         # keep a ref to the same generic Info, arg list
         theNewEntry.genericInfo=theLocalEntry.genericInfo
         theNewEntry.funcFormalArgs=theLocalEntry.funcFormalArgs
+        otherSymtab.enter_name(newName,theNewEntry)
+        DebugManager.debug(sys._getframe().f_code.co_name+': original < '+theLocalEntry.debug(aKey)+' > replicated as < '+theNewEntry.debug(newName)+' >')
         return theNewEntry
 
+    def augmentParentEntry(self,origEntry,parentEntry,parentEntryName):
+        if (self.parent.ids[parentEntryName]!=parentEntry):
+            raise SymtabError(sys._getframe().f_code.co_name+": entry "+parentEntry.debug(parentEntryName)+" not in parent symbol table "+self.parend.debug())    
+        parentEntry._augmentParentEntryFrom(origEntry)
+        self.__typeHandler(parentEntry,self.parent)
+        
     def update_w_module_all(self,aModuleUnit,renameList):
         'update self with all ids from module "unit" symtab, making sure to enter local names whenever there are renames. module name = "name"'
         # go through everything in the module and add it to the local symbol table, being sure to check for it in the rename list
@@ -172,23 +200,20 @@ class Symtab(object):
             if renameList:
                 for aRenameItem in renameList:
                     if aRenameItem.rhs == aKey:
-                        # add the local name to the symbol table
-                        self.enter_name(aRenameItem.lhs,aModuleUnit.symtab.replicateEntry(aKey,'module:'+aModuleUnit.name()))
-                        # track the original name
-                        self.ids[aRenameItem.lhs].renameSource = aKey
+                        # add the local name to the symbol table and track the original name
+                        aModuleUnit.symtab.replicateEntry(aKey,'module:'+aModuleUnit.name(),aRenameItem.lhs,self).renameSource = aKey
                         noRename = False
             if noRename:
-                self.enter_name(aKey,aModuleUnit.symtab.replicateEntry(aKey,'module:'+aModuleUnit.name()))
+                aKey,aModuleUnit.symtab.replicateEntry(aKey,'module:'+aModuleUnit.name(),aKey,self)
 
     def update_w_module_only(self,aModuleUnit,onlyList):
         'update self with the subset of ids from module "unit" symtab specified in onlyList. module name = "name"'
         for anOnlyItem in onlyList:
             # rename items: add only the lhs of the pointer init
             if isinstance(anOnlyItem,_PointerInit):
-                self.enter_name(anOnlyItem.lhs,aModuleUnit.symtab.replicateEntry(anOnlyItem.rhs,'module:'+aModuleUnit.name()))
-                self.ids[anOnlyItem.lhs].renameSource = anOnlyItem.rhs
+                aModuleUnit.symtab.replicateEntry(anOnlyItem.rhs,'module:'+aModuleUnit.name(),anOnlyItem.lhs,self).renameSource=anOnlyItem.rhs
             else:
-                self.enter_name(anOnlyItem,aModuleUnit.symtab.replicateEntry(anOnlyItem,'module:'+aModuleUnit.name()))
+                aModuleUnit.symtab.replicateEntry(anOnlyItem,'module:'+aModuleUnit.name(),anOnlyItem,self)
 
     def enterLabelRef(self,label,labelRef):
         if self.labelRefs.has_key(label) :
@@ -278,7 +303,7 @@ class SymtabEntry(object):
         # for example, we can replace a procedureKind with a functionKind,
         # but we cannot replace a variableKind with a functionKind
         if not isinstance(newEntryKind(),self.entryKind):
-            raise SymtabError('name clash between symbols with kind '+str(self.entryKind)+' and kind '+str(newEntryKind)+' ',entry=self)
+            raise SymtabError(sys._getframe().f_code.co_name+': name clash between symbols with kind '+str(self.entryKind)+' and kind '+str(newEntryKind)+' ',entry=self)
         self.entryKind = newEntryKind
 
     def enterType(self,newType):
@@ -301,7 +326,7 @@ class SymtabEntry(object):
         if self.entryKind == self.ProcedureEntryKind:
             DebugManager.debug('\t\t\t(SymtabEntry.enterType: entering type information tells us that this procedure is a function)')
             self.entryKind = self.FunctionEntryKind
-        self.type = newType
+        self.type = copy.deepcopy(newType)
 
     def enterDimensions(self,newDimensions):
         DebugManager.debug('\t\tSymtab.enterDimensions: called on '+str(self)+' and setting dimensions to '+str(newDimensions))
@@ -343,7 +368,7 @@ class SymtabEntry(object):
     def isPrivate(self):
         return (self.access and self.access in [PrivateStmt.kw,Symtab.ourAccessPrefix+PrivateStmt.kw])
     
-    def augmentParentEntryFrom(self,other):
+    def _augmentParentEntryFrom(self,other):
         if (not self.type and other.type):
             self.enterType(other.type)
         if (not self.dimensions):
