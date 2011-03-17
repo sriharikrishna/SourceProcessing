@@ -97,11 +97,16 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                 if inDrvdTypeDefn:
                     theSymtabEntry.enterDrvdTypeName(inDrvdTypeDefn)
                 # for function/subroutine entries, also update this information in the parent symbol table
-                #if isinstance(theSymtabEntry.entryKind,SymtabEntry.ProcedureEntryKind):
+                # if isinstance(theSymtabEntry.entryKind,SymtabEntry.ProcedureEntryKind):
                 if localSymtab.parent and theSymtabEntry.entryKind in (SymtabEntry.FunctionEntryKind,SymtabEntry.SubroutineEntryKind):
-                    replacementParentSymtabEntry = localSymtab.replicateEntry(name,str(curr.val.uinfo)+':'+name)
-                    localSymtab.parent.enter_name(name,replacementParentSymtabEntry)
-                    DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: new PARENT unit symtab entry '+replacementParentSymtabEntry.debug(name))
+                    parentSymtabEntry=localSymtab.parent.lookup_name_local(name)
+                    if (not parentSymtabEntry):
+                        replacementParentSymtabEntry = localSymtab.replicateEntry(name,'local')
+                        localSymtab.parent.enter_name(name,replacementParentSymtabEntry)
+                        DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: new PARENT unit symtab entry '+replacementParentSymtabEntry.debug(name))
+                    else:
+                        parentSymtabEntry.augmentParentEntryFrom(theSymtabEntry)            
+                        DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: updated PARENT unit symtab entry '+parentSymtabEntry.debug(name))
             else: # no symtab entry -> create one
                 newSymtabEntry = SymtabEntry(SymtabEntry.GenericEntryKind,
                                              type=newType,
@@ -280,32 +285,39 @@ def _unit_entry(self,cur):
     if (cur.val.nestLevel==2) : 
         DebugManager.warning('Open64 front-end handling of doubly nested module procedures is fragile; check >'+self.name+'< for correct handling.',self.lineNumber,DebugManager.WarnType.nesting)
     currentSymtab = cur.val.symtab
-    if (currentSymtab.parent and (self.name in currentSymtab.parent.ids))  :
-        # this must be the definition of a previously  declared module procedure
-        mpSymTabEntry=currentSymtab.parent.ids[self.name]
-        if (mpSymTabEntry.entryKind!=SymtabEntry.ProcedureEntryKind
-            or
-            mpSymTabEntry.genericInfo is None):
-            raise SymtabError('parent symbol is not a module procedure')
-        entry = self.makeSymtabEntry(currentSymtab)
-        mpSymTabEntry.entryKind=entry.entryKind
-        mpSymTabEntry.type=entry.type
-        entry.genericInfo=mpSymTabEntry.genericInfo
-        currentSymtab.enter_name(self.name,entry)
-        # if it is a function  - collect argument information
-        if (isinstance(self,fs.FunctionStmt)) :
-            genSymTabEntry=currentSymtab.parent.lookup_name(mpSymTabEntry.genericInfo.genericName)
-            if (genSymTabEntry is None):
-                raise SymtabError('cannot find generic with name '+mpSymTabEntry.genericInfo.genericName)
-            argsTypeDict={}
-            for arg in self.args:
-                argsTypeDict[arg.lower()]=None # don't know the type yet
-            genSymTabEntry.genericInfo.resolvableTo[self.name.lower()]=argsTypeDict
-            DebugManager.debug('\tstmt2unit._unit_entry(): argsTypeDict : '+str(id(argsTypeDict)))
-            DebugManager.debug('\tstmt2unit._unit_entry() parent symboltable entry: '+mpSymTabEntry.debug(self.name)+' \n\t\tgeneric entry '+genSymTabEntry.debug(mpSymTabEntry.genericInfo.genericName)+' with argstypedict: '+str(id(argsTypeDict))+'\n\t\tself entry: '+entry.debug(self.name))
-        else :
-            DebugManager.debug('\tstmt2unit._unit_entry() parent symboltable entry '+mpSymTabEntry.debug(self.name)+' self entry '+entry.debug(self.name))
-    else: 
+    if (currentSymtab.parent and (self.name in currentSymtab.parent.ids)) :
+        mpSymtabEntry=currentSymtab.parent.ids[self.name]
+        if (mpSymtabEntry.entryKind==SymtabEntry.ProcedureEntryKind
+            and
+            mpSymtabEntry.genericInfo):
+            # this is the definition of a previously declared module procedure
+            entry = self.makeSymtabEntry(currentSymtab)
+            mpSymtabEntry.entryKind=entry.entryKind
+            mpSymtabEntry.type=entry.type
+            entry.genericInfo=mpSymtabEntry.genericInfo
+            currentSymtab.enter_name(self.name,entry)
+            # if it is a function  - collect argument information
+            if (isinstance(self,fs.FunctionStmt)) :
+                genSymTabEntry=currentSymtab.parent.lookup_name(mpSymtabEntry.genericInfo.genericName)
+                if (genSymTabEntry is None):
+                    raise SymtabError('cannot find generic with name '+mpSymtabEntry.genericInfo.genericName)
+                argsTypeDict={}
+                for arg in self.args:
+                    argsTypeDict[arg.lower()]=None # don't know the type yet
+                genSymTabEntry.genericInfo.resolvableTo[self.name.lower()]=argsTypeDict
+                DebugManager.debug('\tstmt2unit._unit_entry(): argsTypeDict : '+str(id(argsTypeDict)))
+                DebugManager.debug('\tstmt2unit._unit_entry() parent symboltable entry: '+mpSymtabEntry.debug(self.name)+' \n\t\tgeneric entry '+genSymTabEntry.debug(mpSymtabEntry.genericInfo.genericName)+' with argstypedict: '+str(id(argsTypeDict))+'\n\t\tself entry: '+entry.debug(self.name))
+            else :
+                DebugManager.debug('\tstmt2unit._unit_entry() parent symboltable entry '+mpSymtabEntry.debug(self.name)+' self entry '+entry.debug(self.name))
+        else: 
+            # this is some forward declaration as e.g. in public/private statement
+            entry = self.makeSymtabEntry(currentSymtab)
+            currentSymtab.enter_name(self.name,entry)
+            DebugManager.debug('[Line '+str(self.lineNumber)+']: new unit symtab entry '+entry.debug(self.name))
+            # update the parent info
+            mpSymtabEntry.augmentParentEntryFrom(entry)
+            DebugManager.debug('[Line '+str(self.lineNumber)+']: updated parent symtab entry '+mpSymtabEntry.debug(self.name))       
+    else: # nothing exists in parent
         entry = self.makeSymtabEntry(currentSymtab)
         currentSymtab.enter_name(self.name,entry)
         DebugManager.debug('[Line '+str(self.lineNumber)+']: new unit symtab entry '+entry.debug(self.name))
