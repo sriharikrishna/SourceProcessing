@@ -161,7 +161,8 @@ def convertFunction(functionUnit,newExecs,newDecls):
     '''converts a function unit definition to a subroutine unit definition'''
     DebugManager.debug(10*'-'+'>'+'called function2subroutine.convertFunction ' \
                      + 'on function unit statement "'+str(functionUnit)+'",' \
-                     +' with symtab "'+str(functionUnit.symtab)+'"')
+                     + 'with newDecls='+str(newDecls)+',' \
+                     +' with symtab "'+functionUnit.symtab.debug()+'"')
     newSubUnit = Unit(parent=functionUnit.parent,fmod=functionUnit.fmod)
     (outParam,newSubUnit.uinfo) = convertFunctionOrEntryStmt(functionUnit.uinfo)
     newSubUnit.cmnt = functionUnit.cmnt

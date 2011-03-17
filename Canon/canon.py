@@ -706,6 +706,10 @@ class UnitCanonicalizer(object):
 
     def __createNewSubroutine(self,aUnit,subroutineDecls):
         if isinstance(aUnit.uinfo,fs.FunctionStmt):
+            DebugManager.debug(5*'-'+'>'+'called __createNewSubroutine ' \
+                               + 'on unit "'+str(aUnit)+'",' \
+                               + 'with subroutineDecls='+str(subroutineDecls)+',' \
+                               +' with symtab "'+aUnit.symtab.debug()+'"')
             self.__processedFunctions.append(aUnit.uinfo.name)
             if self._keepFunctionDecl:
                 newUnit = function2subroutine.\
