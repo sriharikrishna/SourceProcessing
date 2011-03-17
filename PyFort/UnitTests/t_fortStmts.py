@@ -1064,6 +1064,15 @@ class TestIntegerStmt(TestCase):
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
+    def test2(self):
+        theString = 'integer,dimension(6) :: NA = [ 19,20,21,22,23,24 ]'
+        theOutString = 'integer,dimension(6) :: NA = (/19,20,21,22,23,24/)'
+        theRepr = IntegerStmt([],[App('dimension',['6'])],
+                              [_AssignInit('NA',ArrayConstructor(['19','20','21','22','23','24']))])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theOutString,str(theRepr))
+        self.assertEquals(theOutString,pps(theString).get_rawline())
+
 class TestAllocateStmt(TestCase):
     '''allocate istatements'''
 

@@ -218,6 +218,8 @@ class _AssignInit(_Init):
     def __init__(self,lhs,rhs):
         self.lhs = lhs
         self.rhs = rhs
+        if isinstance(rhs,ArrayConstructor):
+            TypeDecl.assignInitArrConst = True
     def __repr__(self):
         return '_AssignInit(%s,%s)' % (repr(self.lhs),
                                        repr(self.rhs))
@@ -470,6 +472,7 @@ class TypeDecl(Decl):
     kw_str = ''
     mod = None
     decls = []
+    assignInitArrConst = False
 
     spec=type_pat
     
@@ -489,6 +492,9 @@ class TypeDecl(Decl):
         self.attrs = attrs
         self.decls = decls
         Decl.__init__(self,lineNumber,label,lead,internal,rest)
+        if TypeDecl.assignInitArrConst:
+            self.modified = True
+            TypeDecl.assignInitArrConst=False
 
     def __repr__(self):
         return '%s(%s,%s,%s)' % (self.__class__.__name__,
@@ -1303,26 +1309,49 @@ class RealStmt(TypeDecl):
     kw = 'real'
     kw_str = kw
 
+    def __init__(self,mod,attrs,decls,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.stmt_name = stmt_name
+        TypeDecl.__init__(self,mod,attrs,decls,lineNumber,label,lead,internal,rest)
+
 class ComplexStmt(TypeDecl):
     kw = 'complex'
     kw_str = kw
+
+    def __init__(self,mod,attrs,decls,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.stmt_name = stmt_name
+        TypeDecl.__init__(self,mod,attrs,decls,lineNumber,label,lead,internal,rest)
 
 class IntegerStmt(TypeDecl):
     kw = 'integer'
     kw_str = kw
 
+    def __init__(self,mod,attrs,decls,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.stmt_name = stmt_name
+        TypeDecl.__init__(self,mod,attrs,decls,lineNumber,label,lead,internal,rest)
+
 class LogicalStmt(TypeDecl):
     kw = 'logical'
     kw_str = kw
+
+    def __init__(self,mod,attrs,decls,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.stmt_name = stmt_name
+        TypeDecl.__init__(self,mod,attrs,decls,lineNumber,label,lead,internal,rest)
 
 class DoubleStmt(TypeDecl):
     kw     = 'doubleprecision'
     kw_str = 'double precision'
 
+    def __init__(self,mod,attrs,decls,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.stmt_name = stmt_name
+        TypeDecl.__init__(self,mod,attrs,decls,lineNumber,label,lead,internal,rest)
+
 class DoubleCplexStmt(TypeDecl):
     kw     = 'doublecomplex'
     kw_str = 'double complex'
 
+    def __init__(self,mod,attrs,decls,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.stmt_name = stmt_name
+        TypeDecl.__init__(self,mod,attrs,decls,lineNumber,label,lead,internal,rest)
 
 class DimensionStmt(Decl):
     kw = 'dimension'
