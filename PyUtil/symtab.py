@@ -216,11 +216,45 @@ class Symtab(object):
         return outString
 
 class SymtabEntry(object):
+
+    class GenericEntryKind(object):
+        keyword = 'unknown'
+
+        def __init__(self):
+            pass
+
+    class InterfaceEntryKind(GenericEntryKind):
+        keyword = 'interface'
+
+    class StatementFunctionEntryKind(GenericEntryKind):
+        keyword = 'statement function'
+
+    class ProcedureEntryKind(GenericEntryKind):
+        keyword = 'procedure'
+
+    class FunctionEntryKind(ProcedureEntryKind):
+        keyword = 'function'
+
+    class SubroutineEntryKind(ProcedureEntryKind):
+        keyword = 'subroutine'
+
+    class ProgramEntryKind(ProcedureEntryKind):
+        keyword = 'program'
+
+    class VariableEntryKind(GenericEntryKind):
+        keyword = 'variable'
+
+    class CharacterEntryKind(VariableEntryKind):
+        keyword = 'character'
+
+    class DerivedTypeEntryKind(GenericEntryKind):
+        keyword = 'type'
+
     def __init__(self,entryKind,type=None,dimensions=None,length=None,origin=None,renameSource=None,access=None):
         self.entryKind = entryKind # some instanve of self.GenericEntryKind
         self.type = type # pair  (type class,type modifier) 
         self.dimensions = dimensions # None or list of expressions
-        self.length = length
+        self.length = length # specific for character statements, see stmt2unit
         self.origin = origin # None | [<parent origin>'|'](| 'local' | 'external' | 'temp' | 'common:'[<common block name])
         self.renameSource = renameSource
         self.access = access# None | 'private' | 'public' | 'privatedefault' | 'publicdefault']
@@ -308,6 +342,14 @@ class SymtabEntry(object):
         
     def isPrivate(self):
         return (self.access and self.access in [PrivateStmt.kw,Symtab.ourAccessPrefix+PrivateStmt.kw])
+    
+    def augmentParentEntryFrom(self,other):
+        if (not self.type and other.type):
+            self.enterType(other.type)
+        if (not self.dimensions):
+            self.dimensions=other.dimensions
+        if (self.entryKind==SymtabEntry.GenericEntryKind):
+            self.enterEntryKind(other.entryKind)  
 
     def setDefaultAccess(self,anAccessKW):
         if (self.access):
@@ -342,38 +384,6 @@ class SymtabEntry(object):
                                          ', memberOfDrvdType='+((self.memberOfDrvdType and self.memberOfDrvdType) or 'None')+\
                                          ']'
     
-    class GenericEntryKind(object):
-        keyword = 'unknown'
-
-        def __init__(self):
-            pass
-
-    class InterfaceEntryKind(GenericEntryKind):
-        keyword = 'interface'
-
-    class StatementFunctionEntryKind(GenericEntryKind):
-        keyword = 'statement function'
-
-    class ProcedureEntryKind(GenericEntryKind):
-        keyword = 'procedure'
-
-    class FunctionEntryKind(ProcedureEntryKind):
-        keyword = 'function'
-
-    class SubroutineEntryKind(ProcedureEntryKind):
-        keyword = 'subroutine'
-
-    class ProgramEntryKind(ProcedureEntryKind):
-        keyword = 'program'
-
-    class VariableEntryKind(GenericEntryKind):
-        keyword = 'variable'
-
-    class CharacterEntryKind(VariableEntryKind):
-        keyword = 'character'
-
-    class DerivedTypeEntryKind(GenericEntryKind):
-        keyword = 'type'
 
 '''
 if __name__ == '__main__':
