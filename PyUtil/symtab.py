@@ -349,7 +349,13 @@ class SymtabEntry(object):
         if (not self.dimensions):
             self.dimensions=other.dimensions
         if (self.entryKind==SymtabEntry.GenericEntryKind):
-            self.enterEntryKind(other.entryKind)  
+            self.enterEntryKind(other.entryKind)
+        if (not self.length):
+            self.length=other.length
+        if (not self.genericInfo):
+            self.genericInfo=other.genericInfo
+        if (not self.funcFormalArgs):
+            self.funcFormalArgs=other.funcFormalArgs    
 
     def setDefaultAccess(self,anAccessKW):
         if (self.access):
