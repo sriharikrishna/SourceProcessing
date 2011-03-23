@@ -63,6 +63,7 @@ class TransformActiveVariables(object):
 
     # recursively transforms an expression if it contains a variable in
     # the activeVars array by adding %v to it
+    # if variable is implicitly declared, create an active declaration for it & add it to list of newDecls
     def __transformActiveTypes(self,Exp,parentStmt):
         DebugManager.debug('TransformActiveVariables.__transformActiveTypes called on "'+str(Exp)+'"')
         if isinstance(Exp,list) :
@@ -101,13 +102,13 @@ class TransformActiveVariables(object):
 
     def __getVarsEquivalencedToActive(self):
         # get list of vars which are equivalenced to active variables (and therefore need to be active)
-        varsToActivate=[]
+        varsToActivate=set([])
         for aDecl in self.__myUnit.decls:
             if isinstance(aDecl,fs.EquivalenceStmt):
                 for nlist in aDecl.nlists:
-                    newList = []
+                    newList = set([])
                     active = False
-                    append=newList.append
+                    add=newList.add
                     for item in nlist:
                         if isinstance(item,list):
                             for var in item:
@@ -123,9 +124,9 @@ class TransformActiveVariables(object):
                                 elif fs.getVarName(var,aDecl.lineNumber) in self._localActiveVars:
                                     active=True
                                 else:
-                                    append(fs.getVarName(var,aDecl.lineNumber))
+                                    add(fs.getVarName(var,aDecl.lineNumber))
                     if len(newList)>0 and active:
-                        varsToActivate.extend(newList)
+                        varsToActivate.update(newList)
         return varsToActivate
 
     # helper function for createActiveTypeDecls
@@ -139,7 +140,7 @@ class TransformActiveVariables(object):
             # accumulate var to make new active decl later
             if strippedVar not in alreadyActivated:
                 activeDeclList.append(strippedVar)
-                alreadyActivated.append(strippedVar)
+                alreadyActivated.add(strippedVar)
             if isinstance(theDecl,fs.TypeDecl):
                 removeDeclList.append(var)
             self._localActiveVars.add(strippedVar)
@@ -160,10 +161,13 @@ class TransformActiveVariables(object):
     # declaration and add it to the list of declarations
     def __createActiveTypeDecls(self,varsToActivate):
         # activate variables in list of varsToActivate
-        alreadyActivated=[]
+        alreadyActivated=set([])
         append=self.__newDecls.append
+        beginTypeDecls=-1
         for aDecl in self.__myUnit.decls:
             if isinstance(aDecl,fs.TypeDecl) or isinstance(aDecl,fs.DimensionStmt):
+                if beginTypeDecls==-1:
+                    beginTypeDecls=self.__myUnit.decls.index(aDecl)-1
                 decls = []; removeDeclList=[]
                 for var in aDecl.get_decls():
                     (decls,alreadyActivated,removeDeclList) = self.__getVarToActivateFromTypeDecl(varsToActivate,var,
@@ -174,7 +178,13 @@ class TransformActiveVariables(object):
                 if len(removeDeclList)>0: aDecl.modified=True
                 self.__insertNewActiveTypeDecl(decls,aDecl,aDecl.get_decls())
             else:
+                if beginTypeDecls==-1 and not isinstance(aDecl,fs.UseStmt):
+                    begintypeDecls=self.__myUnit.decls.index(aDecl)-1
                 append(aDecl)
+        implicitlyTyped = varsToActivate.difference(alreadyActivated)
+        for var in implicitlyTyped:
+            newDecl=fs.DrvdTypeDecl([self._replacement_type],[],[var],lead=aDecl.lead)
+            self.__newDecls.insert(beginTypeDecls,newDecl)
 
     # transforms all exec statements in the file if they contain a variable
     # in the activeVars array and returns the unit
