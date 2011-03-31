@@ -826,6 +826,41 @@ class UnitPostProcessor(object):
             if isinstance(decl,fs.TypeDecl):
                 typeDecls.add(decl)
 
+    def __isActive(self,Exp,parentStmt):
+        varName=fs.getVarName(Exp,parentStmt.lineNumber)
+        (stmtClass,expType)=expressionType(varName,
+                                           self.__myUnit.symtab,parentStmt.lineNumber)
+        if (len(expType)>0 and expType[0]==self._abstract_type):
+            return True
+        return False
+
+    # recursively transforms an expression if it contains an active module variable
+    def __transformActiveModuleVariables(self,Exp,parentStmt):
+        DebugManager.debug('unitPostProcessor.__transformActiveModuleVariables called on "'+str(Exp)+'"')
+        if isinstance(Exp,list) :
+            Exp = [self.__transformActiveModuleVariables(s,parentStmt) for s in Exp]
+        elif isinstance(Exp,fe.App) and intrinsic.is_intrinsic(Exp.head) and not intrinsic.is_inquiry(Exp.head):
+            Exp.head=intrinsic.getGenericName(Exp.head)
+            Exp.args=[self.__transformActiveModuleVariables(arg,parentStmt) for arg in Exp.args]
+        elif isinstance(Exp,str) or isinstance(Exp,fe.Sel) or isinstance(Exp,fe.App):
+            try:
+                if self.__isActive(Exp,parentStmt):
+                    Exp = fe.Sel(Exp,"v")
+                    parentStmt.modified = True
+                if hasattr(Exp,'args'):
+                    Exp.args=[self.__transformActiveModuleVariables(arg,parentStmt) for arg in Exp.args]
+                    parentStmt.modified=True
+            except:
+                pass
+        elif hasattr(Exp, "_sons"):
+            for aSon in Exp.get_sons() :
+                theSon = getattr(Exp,aSon)
+                newSon = self.__transformActiveModuleVariables(theSon,parentStmt)
+                Exp.set_son(aSon,newSon)
+        DebugManager.debug('unitPostProcessor.__transformActiveModuleVariables returning '+str(Exp))
+        return Exp
+
+
     # Processes all statements in the unit
     def processUnit(self):
         ''' post-process a unit '''
@@ -843,6 +878,22 @@ class UnitPostProcessor(object):
             if subUnit is not None:
                 subUnit.parent = self.__myUnit
                 self.__myUnit.ulist.append(subUnit)
+
+        if isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
+            for anExec in self.__myUnit.execs:
+                DebugManager.debug('unitPostProcessor.processUnit: '\
+                                       +'processing exec statement "'+str(anExec)+'"',
+                                   lineNumber=anExec.lineNumber)
+                if isinstance(anExec,fs.AllocateStmt) or \
+                        isinstance(anExec,fs.DeallocateStmt) : continue
+                elif hasattr(anExec, "_sons"):
+                    for aSon in anExec.get_sons() :
+                        theSon = getattr(anExec,aSon)
+                        if isinstance(theSon,fs.AllocateStmt) or isinstance(theSon,fs.DeallocateStmt) :
+                            continue
+                        newSon = self.__transformActiveModuleVariables(theSon,anExec)
+                        anExec.set_son(aSon,newSon)
+                DebugManager.debug('unitPostProcessor.processUnit: resulting exec statement: "'+str(anExec)+'"')
 
         if self._mode == 'reverse':
             inline = False

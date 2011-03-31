@@ -75,7 +75,7 @@ def compareFiles(assertFunc,originalFileName,RefFileName,format='fixed',mode='fo
         testFileLines = testFile.readlines()
         refFile = open(fname_t(RefFileName),'r')
         refFileLines = refFile.readlines()
-        assertFunc(len(testFileLines),len(refFileLines),'transformation result ('+testFileName+') and reference file have disparate line counts')
+        #assertFunc(len(testFileLines),len(refFileLines),'transformation result ('+testFileName+') and reference file have disparate line counts')
         for testLine,refLine in zip(testFileLines,refFileLines):
             assertFunc(testLine,refLine)
         refFile.close()
@@ -163,6 +163,10 @@ class C1(TestCase):
         UnitPostProcessor.setExplicitInit()
         compareFiles(self.assertEquals,'common_init.f90','common_init.post.f90',format='free',mode='reverse',templateFile='dummy.template.f',inlineFile='dummy.inline.f')
         UnitPostProcessor.setExplicitInit(False)
+
+    def test14(self):
+        'add value selector to active module variables occurring in function unit'
+        compareFiles(self.assertEquals,'funDefActiveModVar.f90','funDefActiveModVar.post.f90',format='free',mode='reverse')
 
 suite = asuite(C1)
 
