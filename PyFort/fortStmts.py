@@ -2943,7 +2943,7 @@ def parse(ws_scan,lineNumber):
                     return parsed
                 except ListAssemblerException,e:
                     raise ParseError(lineNumber,scan,PointerAssignStmt,'l_assembler error:'+e.msg+' remainder:'+str(e.rest))
-            elif ('do' in scan) and (':' in scan):
+            elif (x.lower()=='do' for x in scan) and (':' in scan):
                 try:
                     parsed = DoStmt.parse(scan,lineNumber)
                     parsed.rawline = ''.join(ws_scan).strip()
