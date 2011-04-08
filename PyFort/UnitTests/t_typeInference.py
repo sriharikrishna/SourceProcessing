@@ -5,7 +5,7 @@ from useparse import *
 
 from PyUtil.symtab import Symtab
 
-from inference import expressionType,constantType,typemerge,kw2type,lenfn
+from inference import expressionType,_constantType,_typemerge,_kw2type,_lenfn 
 from fortStmts import LogicalStmt,CharacterStmt,IntegerStmt,RealStmt,DoubleStmt,ComplexStmt,DoubleCplexStmt
 from fortStmts import _Prec,_Kind,_F77Len
 
@@ -13,36 +13,36 @@ class TypeUtils(TestCase):
     '''Typing, and misc xform utilities
     '''
     def test1(self):
-        'kw2type'
-        self.assertEquals(kw2type('real'),RealStmt)
-        self.assertEquals(kw2type('doubleprecision'),DoubleStmt)
-        self.assertEquals(kw2type('integer'),IntegerStmt)
-        self.assertEquals(kw2type('logical'),LogicalStmt)
+        '_kw2type'
+        self.assertEquals(_kw2type('real'),RealStmt)
+        self.assertEquals(_kw2type('doubleprecision'),DoubleStmt)
+        self.assertEquals(_kw2type('integer'),IntegerStmt)
+        self.assertEquals(_kw2type('logical'),LogicalStmt)
 
     def test2(self):
-        'lenfn'
-        self.assertEquals(str(lenfn(15)[0]),'*15')
+        '_lenfn'
+        self.assertEquals(str(_lenfn(15)[0]),'*15')
 
 class TypeConstants(TestCase):
     def test0(self):
         'constants - numerical values without modifiers'
-        self.assertEquals(constantType(ep('3.787'),lineNumber=0),
+        self.assertEquals(_constantType(ep('3.787'),lineNumber=0),
                           (RealStmt,[]))
-        self.assertEquals(constantType(ep('3.787D00'),lineNumber=0),
+        self.assertEquals(_constantType(ep('3.787D00'),lineNumber=0),
                           (DoubleStmt,[]))
-        self.assertEquals(constantType(ep('3'),lineNumber=0),
+        self.assertEquals(_constantType(ep('3'),lineNumber=0),
                           (IntegerStmt,[]))
 
     def test1(self):
         'constants - numerical values with modifiers'
 
-        (type,typeModList) = constantType(ep('3.787_foo'),lineNumber=0)
+        (type,typeModList) = _constantType(ep('3.787_foo'),lineNumber=0)
         typeMod = typeModList[0]
         self.assertEquals(type,RealStmt)
         self.assert_(isinstance(typeMod,_Kind))
         self.assertEquals(typeMod.mod,'foo')
 
-        (type,typeModList) = constantType(ep('0_w2f__i8'),lineNumber=0)
+        (type,typeModList) = _constantType(ep('0_w2f__i8'),lineNumber=0)
         typeMod = typeModList[0]
         self.assertEquals(type,IntegerStmt)
         self.assert_(isinstance(typeMod,_Kind))
@@ -50,12 +50,12 @@ class TypeConstants(TestCase):
 
     def test2(self):
         'constants - logical values'
-        self.assertEquals(constantType(ep('.true.'),lineNumber=0),
+        self.assertEquals(_constantType(ep('.true.'),lineNumber=0),
                           (LogicalStmt,[]))
 
     def test3(self):
         'constants - strings'
-        (type,typeModList) = constantType(ep(r"'food'"),lineNumber=0)
+        (type,typeModList) = _constantType(ep(r"'food'"),lineNumber=0)
         typeMod = typeModList[0]
         self.assertEquals(type,CharacterStmt)
         self.assert_(isinstance(typeMod,_F77Len))
@@ -101,14 +101,14 @@ class TypeMerging(TestCase):
     def test00(self):
         'Merge unmodified real with None'
         t = (RealStmt,[])
-        self.assertEquals(typemerge([],
+        self.assertEquals(_typemerge([],
                                     t),
                           t)
 
     def test01(self):
         'Merge modified real with None'
         t = (RealStmt,[_Prec('4')])
-        self.assertEquals(typemerge([],
+        self.assertEquals(_typemerge([],
                                     t),
                           t)
 
@@ -123,14 +123,14 @@ class TypeMerging(TestCase):
         t5 = _gt('complex')
         t6 = _gt('integer')
 
-        ae(typemerge([],t1),t1)
-        ae(typemerge([t2],t1),t2)
-        ae(typemerge([t1,t1,t1],t2),t1)
-        ae(typemerge([t1,t2,t1],t1),t2)
-        ae(typemerge([t1,t2,t1,t3],t1),t3)
-        ae(typemerge([t6,t6,t6,t1],t1),t1)
-        ae(typemerge([t3,t4,],t1),t4)
-        ae(typemerge([t1,t2,t3,t4,t5,t6],t1),t5)
+        ae(_typemerge([],t1),t1)
+        ae(_typemerge([t2],t1),t2)
+        ae(_typemerge([t1,t1,t1],t2),t1)
+        ae(_typemerge([t1,t2,t1],t1),t2)
+        ae(_typemerge([t1,t2,t1,t3],t1),t3)
+        ae(_typemerge([t6,t6,t6,t1],t1),t1)
+        ae(_typemerge([t3,t4,],t1),t4)
+        ae(_typemerge([t1,t2,t3,t4,t5,t6],t1),t5)
 
 
 suite = asuite(TypeUtils,TypeConstants,TypeOpsExpressions,TypeMerging)
