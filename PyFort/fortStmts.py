@@ -111,14 +111,17 @@ class _DimensionArraySpec(_Mutable_T):
     def __str__(self):
         return '%s(%s)' % (self.arrayName,','.join(str(l) for l in self.arraySpec))
 
-class _Prec(_TypeMod):
+class _KindTypeMod(_TypeMod):
+    pass
+
+class _Prec(_KindTypeMod):
     pat = '*%s'
 
     def _separate_implicit_list(self):
         app = self.mod
         return ([_Prec(app.head)],app.args)
 
-class _Kind(_TypeMod):
+class _Kind(_KindTypeMod):
     pat = '(%s)'
 
     def _separate_implicit_list(self):
@@ -126,7 +129,7 @@ class _Kind(_TypeMod):
         return ([],self.mod)
 
 
-class _ExplKind(_TypeMod):
+class _ExplKind(_KindTypeMod):
     pat = '(kind = %s)'
 
 prec = seq(lit('*'),int)
