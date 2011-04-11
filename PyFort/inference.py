@@ -80,10 +80,20 @@ class _TypeContext:
          # if they are not both integers there could be some parameter name etc.
          except ValueError:
             raise InferenceError(sys._getframe().f_code.co_name+': Cannot compare length specifiers '+str(mm1.len)+' and '+str(mm2.len))
-   #    if (isinstance(mm1,fortStmts._KindTypeMod) and isinstance(mm2,fortStmts._KindTypeMod)) :
-   #       print "ju: ", mm1.mod, mm2.mod
-      if _modhash[c1] >= _modhash[c2]: return m1
-      return m2
+      if (isinstance(mm1,fortStmts._KindTypeMod) and isinstance(mm2,fortStmts._KindTypeMod)) :
+         k1=mm1.mod
+         if (is_id(k1)):
+             symtabEntry=self.localSymtab.lookup_name(k1)
+             if (symtabEntry and symtabEntry.constInit):
+                k1=symtabEntry.constInit
+         k2=mm2.mod
+         if (is_id(k2)):
+             symtabEntry=self.localSymtab.lookup_name(k2)
+             if (symtabEntry and symtabEntry.constInit):
+                k2=symtabEntry.constInit
+         if (k1==k2):
+            return m1
+      raise InferenceError(sys._getframe().f_code.co_name+': Do not know how to compare modification specifiers '+str(m1)+' and '+str(m2))
 
    def __typeCompare(self,t1,t2,addLength):
       DebugManager.debug(sys._getframe().f_code.co_name+' called on t1 = "'+str(t1)+'\tt2 = "'+str(t2)+'"')
