@@ -301,10 +301,12 @@ def is_int(t):
     return _int_re.match(t)
 
 def is_const(t):
+    ''' is \param t a literal constant'''
     t1 = t.lower()
     return t1[0] in _quote_set or t1 in _logicon_set or _num_re.match(t1)
 
 def isConstantExpression(anExpression):
+    ''' is \param anExpression an expression of literal constants'''
     if isinstance(anExpression,str):
         return is_const(anExpression)
     elif isinstance(anExpression,Unary):
