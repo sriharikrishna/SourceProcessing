@@ -8,7 +8,7 @@ from useparse import *
 
 from PyUtil.symtab import Symtab, SymtabEntry
 
-from inference import expressionShape,constantShape,shapemerge
+from inference import expressionShape
 from fortStmts import IntegerStmt,RealStmt,DimensionStmt
 from fortStmts import _Prec,_Kind,_F77Len
 from fortExp   import Ops

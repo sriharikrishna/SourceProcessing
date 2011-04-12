@@ -10,8 +10,9 @@ from _Setup import *
 from PyUtil.caselessDict import caselessDict as cDict
 from PyUtil.debugManager import DebugManager
 
-from PyFort.fortExp import App
+from PyFort.fortExp import App, Unary,Ops,is_const,_id_re
 from PyFort.fortStmts import _PointerInit, _Kind, PrivateStmt, PublicStmt
+from PyFort.intrinsic import is_intrinsic
 
 class GenericInfo(object):
     def __init__(self):
@@ -177,6 +178,8 @@ class Symtab(object):
         theNewEntry.dimensions = theLocalEntry.dimensions
         # set the length
         theNewEntry.length = theLocalEntry.length
+        # set the constInit
+        theNewEntry.constInit = theLocalEntry.constInit
         # set the origin
         theNewEntry.updateOrigin(theOrigin)
         # keep a ref to the same generic Info, arg list
@@ -234,6 +237,49 @@ class Symtab(object):
         for     entry in self.ids.values(): 
             entry.setDefaultAccess(anAccessKW)
 
+    def isConstInit(self,anExpression):
+        if isinstance(anExpression,str) and is_const(anExpression):
+            return True
+        elif isinstance(anExpression,str) and _id_re.match(anExpression):
+            stE=self.lookup_name(anExpression)
+            if (stE and stE.constInit):
+                return True
+        elif isinstance(anExpression,Unary):
+            return self.isConstInit(anExpression.exp)
+        elif isinstance(anExpression,Ops):
+            return self.isConstInit(anExpression.a1) and self.isConstInit(anExpression.a2)
+        elif isinstance(anExpression,App):
+            if is_intrinsic(anExpression.head):
+                return all(map(lambda l:self.isConstInit(l),anExpression.args))
+        return False
+
+    def getConstInit(self,anExpression):
+        if isinstance(anExpression,str) and is_const(anExpression):
+            return anExpression
+        elif isinstance(anExpression,str) and _id_re.match(anExpression):
+            stE=self.lookup_name(anExpression)
+            if (stE and stE.constInit):
+                return stE.constInit
+        elif isinstance(anExpression,Unary):
+            if (self.isConstInit(anExpression.exp)):
+                cpExpression=anExpression
+                cpExpression.exp=self.getConstInit(anExpression.exp)
+                return cpExpression
+        elif isinstance(anExpression,Ops):
+            if ( self.isConstInit(anExpression.a1) and self.isConstInit(anExpression.a2)):
+                cpExpression=anExpression
+                cpExpression.a1=self.getConstInit(anExpression.a1)
+                cpExpression.a2=self.getConstInit(anExpression.a2)
+                return cpExpression
+        elif isinstance(anExpression,App):
+            if is_intrinsic(anExpression.head):
+                if ( all(map(lambda l:self.isConstInit(l),anExpression.args))):
+                    cpExpression=anExpression
+                    cpExpression.args=map(lambda l:self.getConstInit(l),anExpression.args)
+                    return cpExpression
+        raise SymtabError(sys._getframe().f_code.co_name+": cannot get it for "+str(anExpression))
+
+                
     def debug(self):
         outString = 'symbol table '+str(self)+' (defaultAccess:'+((self.defaultAccess and self.defaultAccess) or 'None')+'):\n'
         for aKey in self.ids.keys():
@@ -283,6 +329,7 @@ class SymtabEntry(object):
         self.type = type # pair  (type class,type modifier) 
         self.dimensions = dimensions # None or list of expressions
         self.length = length # specific for character statements, see stmt2unit
+        self.constInit=None #  expression if initialized with a constant expression 
         self.origin = origin # None | [<parent origin>'|'](| 'local' | 'external' | 'temp' | 'common:'[<common block name])
         self.renameSource = renameSource
         self.access = access# None | 'private' | 'public' | 'privatedefault' | 'publicdefault']
@@ -349,6 +396,11 @@ class SymtabEntry(object):
             raise SymtabError('SymtabEntry.enterLength: Error -- current length "'+str(self.length)+'" and new length "'+str(newLength)+'" conflict!',entry=self)
         self.length = newLength
 
+    def enterConstInit(self,constInit):
+        if self.constInit and (self.constInit != constInit):
+            raise SymtabError('SymtabEntry.enterConstInit: Error -- already set',entry=self)
+        self.constInit = constInit
+
     def lookupDimensions(self):
         DebugManager.debug('SymtabEntry.lookupDimensions: returning '+str(self.dimensions))
         return self.dimensions
@@ -380,6 +432,8 @@ class SymtabEntry(object):
             self.enterEntryKind(other.entryKind)
         if (not self.length):
             self.length=other.length
+        if (not self.constInit):
+            self.constInit=other.constInit
         if (not self.genericInfo):
             self.genericInfo=other.genericInfo
         if (not self.funcFormalArgs):
@@ -410,6 +464,7 @@ class SymtabEntry(object):
                                          ', type='+str(self.type)+\
                                          ', dimensions='+str(self.dimensions)+\
                                          ', length='+str(self.length)+\
+                                         ', constInit='+((self.constInit and str(self.constInit)) or 'None')+\
                                          ', origin='+str(self.origin)+\
                                          ', renameSource='+str(self.renameSource)+\
                                          ', access='+((self.access and self.access) or 'None')+\

@@ -100,6 +100,8 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                 else:
                     theSymtabEntry.enterDimensions(newDimensions)
                 theSymtabEntry.enterLength(newLength)
+                if (isinstance(aDecl,fs._PointerInit) or isinstance(aDecl,fs._AssignInit) and localSymtab.isConstInit(aDecl.rhs)):
+                   theSymtabEntry.enterConstInit(localSymtab.getConstInit(aDecl.rhs))
                 if inDrvdTypeDefn:
                     theSymtabEntry.enterDrvdTypeName(inDrvdTypeDefn)
                 # for function/subroutine entries, also update this information in the parent symbol table
@@ -119,6 +121,8 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                                              length=newLength,
                                              origin='local',
                                              access=access)
+                if (isinstance(aDecl,fs._PointerInit) or isinstance(aDecl,fs._AssignInit) and localSymtab.isConstInit(aDecl.rhs)):
+                   newSymtabEntry.enterConstInit(localSymtab.getConstInit(aDecl.rhs))
                 if inDrvdTypeDefn:
                     newSymtabEntry.enterDrvdTypeName(inDrvdTypeDefn)
                 DebugManager.debug('decl "'+str(aDecl)+'" NOT already present in symbol table => adding '+str(newSymtabEntry.debug(name)))
