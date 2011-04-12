@@ -67,6 +67,7 @@ class Symtab(object):
     ourSpecificAccessKWs=[PublicStmt.kw, PrivateStmt.kw]
     def __init__(self,parent=None):
         self.ids    = cDict() # string for the key and SymtabEntry for the value
+        self.renames = cDict() # renameSource for the key and new name for the value
         self.parent = parent
         self.labelRefs = {} # list of statements referring to a given label
         # the following settings refer to the kw of the PublicStmt and PrivateStmt 
@@ -140,13 +141,13 @@ class Symtab(object):
         replace an instances in anExpression of things that may be local to this context (such as renames)
         with things that are applicable in a general context
         '''
-        if isinstance(anExpression,str):
-            for name in self.ids.keys():
-                if (self.ids[name].renameSource and self.ids[name].renameSource==anExpression):
-                   return name
-        elif isinstance(anExpression,App):
+        if isinstance(anExpression,App):
             for anArg in anExpression.args:
                 anArg = self.__sourceToRenamed(anArg)
+        elif isinstance(anExpression,str):
+            if anExpression in self.renames:
+                name=self.renames[anExpression]
+                return name
         else:
             raise SymtabError(sys._getframe().f_code.co_name+': expression'+str(anExpression)+'is not a string and not an App!')
         return anExpression
@@ -200,6 +201,7 @@ class Symtab(object):
             if renameList:
                 for aRenameItem in renameList:
                     if aRenameItem.rhs == aKey:
+                        self.renames[aKey]=aRenameItem.lhs
                         # add the local name to the symbol table and track the original name
                         aModuleUnit.symtab.replicateEntry(aKey,'module:'+aModuleUnit.name(),aRenameItem.lhs,self).renameSource = aKey
                         noRename = False
@@ -211,6 +213,7 @@ class Symtab(object):
         for anOnlyItem in onlyList:
             # rename items: add only the lhs of the pointer init
             if isinstance(anOnlyItem,_PointerInit):
+                self.renames[anOnlyItem.rhs]=anOnlyItem.lhs
                 aModuleUnit.symtab.replicateEntry(anOnlyItem.rhs,'module:'+aModuleUnit.name(),anOnlyItem.lhs,self).renameSource=anOnlyItem.rhs
             else:
                 aModuleUnit.symtab.replicateEntry(anOnlyItem,'module:'+aModuleUnit.name(),anOnlyItem,self)
