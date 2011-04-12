@@ -1357,6 +1357,14 @@ class TestDataStmt(TestCase):
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
 
+    def test12(self):
+        '''data statement with multiple non-comma-separated objectList-valueList pairs'''
+        theString = 'DATA NAME /"JOHN DOE"/ METERS /10*0/ AGE /20/'
+        theRepr = DataStmt([(['NAME'],['"JOHN DOE"']),(['METERS'],[Ops('*','10','0')]),(['AGE'],[20])],'DATA')
+        reprStr = 'DATA NAME /"JOHN DOE"/ METERS /10*0/ AGE /20/'
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theString,reprStr)
+
 class TestProcedureStmt(TestCase):
     '''procedure statements'''
 
