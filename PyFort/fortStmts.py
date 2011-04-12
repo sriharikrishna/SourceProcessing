@@ -852,7 +852,6 @@ class DataStmt(Decl):
         \todo we don't cover the full range of the DATA stmt syntax.
         among the exceptions are: 
          - from the dataObject pattern we subobject patterns combining App with Sel 
-         - the comma between the <dataObject,dataValue> pairs is optional 
         '''
         scan = filter(lambda x: x != ' ',ws_scan)
         dataObjectListPatn=cslist(disj(_ImplicitDoConstruct.form,app1,id))
