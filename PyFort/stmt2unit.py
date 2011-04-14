@@ -362,9 +362,9 @@ def _unit_exit(self,cur):
             # try to get the type from the result symbol
             theResultEntry=cur.val.symtab.lookup_name(cur.val._in_functionDecl.result)
             if (theResultEntry):
-                theSymtabEntry.enterType(theResultEntry.type)
+                theSymtabEntry.copyAndEnterType(theResultEntry.type)
                 if parentSymtabEntry:  # update the copy in the parent
-                    parentSymtabEntry.enterType(theResultEntry.type)
+                    parentSymtabEntry.copyAndEnterType(theResultEntry.type)
         # set the arguments list:
         theSymtabEntry.funcFormalArgs=FormalArgs()
         if parentSymtabEntry:
@@ -468,7 +468,7 @@ def _endProcedureUnit(anEndProcedureStmt,cur):
             # try to get the tupe from the result symbol
             theResultEntry=cur.val.symtab.lookup_name(cur.val._in_functionDecl.name)
             if (theResultEntry):
-                theSymtabEntry.enterType(theResultEntry.type)
+                theSymtabEntry.copyAndEnterType(theResultEntry.type)
         cur.val._in_functionDecl=None         
     if cur.val.symtab.parent :
         DebugManager.debug('[Line '+str(anEndProcedureStmt.lineNumber)+']: stmt2unit._endProcedureUnit:' \

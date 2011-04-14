@@ -18,6 +18,7 @@ from PyUtil.debugManager import DebugManager
 from fortExp      import *
 from fixedfmt     import fixedfmt
 import flow
+import copy
 
 class __FakeUnit(object):
     def __init__(self):
@@ -112,8 +113,12 @@ class _DimensionArraySpec(_Mutable_T):
         return '%s(%s)' % (self.arrayName,','.join(str(l) for l in self.arraySpec))
 
 class _KindTypeMod(_TypeMod):
-    pass
-
+    def __deepcopy__(self,memo):
+        if isinstance(self.mod,str):
+            return self.__class__(self.mod)
+        else:
+            return self.__class__(copy.deepcopy(self.mod))
+        
 class _Prec(_KindTypeMod):
     pat = '*%s'
 

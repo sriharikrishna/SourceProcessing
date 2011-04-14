@@ -172,7 +172,7 @@ class Symtab(object):
         theLocalEntry = self.ids[aKey]
         theNewEntry = SymtabEntry(theLocalEntry.entryKind)
         # set the type
-        theNewEntry.type = copy.deepcopy(theLocalEntry.type)
+        theNewEntry.type = SymtabEntry.copyType(theLocalEntry.type)
         self.__typeHandler(theNewEntry,otherSymtab)
         # set the dimensions
         theNewEntry.dimensions = theLocalEntry.dimensions
@@ -344,6 +344,13 @@ class SymtabEntry(object):
         rstr=type[0].kw_str
         rstr+=len(type[1]) and str(type[1][0]) or ''
         return rstr
+
+    @staticmethod
+    def copyType(type):
+        mods=[]
+        for m in type[1]:
+            mods.append(copy.deepcopy(m))
+        return (type[0],mods)
     
     def typePrint(self):
         return SymtabEntry.ourTypePrint(self.type)
@@ -362,33 +369,18 @@ class SymtabEntry(object):
             raise SymtabError('SymtabEntry.enterType: newType is None!',entry=self)
         if self.type : # assume a name clash
             raise SymtabError('SymtabEntry.enterType: Name clash -- the declaration for this symbol conflicts with an earlier declaration using the same name"',entry=self)
-           # The following code makes some (incomplete) effort to determine the equality of the current type and the new type.
-           # It is commented out because (1) it's incomplete and (2): it's not clear that fortran allows us to re-declare any type information for a particular symbol.
-           #(currentTypeClass,currentTypeModifier) = self.type
-           #(newTypeClass,newTypeModifier) = newType
-           #if (currentTypeClass != newTypeClass):
-           #    raise SymtabError('SymtabEntry.enterType: Error -- current type class "'+str(currentTypeClass)+
-           #                                                    '" and new type class "'+str(newTypeClass)+'" conflict!',entry=self)
-           #if (currentTypeModifier[0].mod != newTypeModifier[0].mod):
-           #    raise SymtabError('SymtabEntry.enterType: Error -- current type modifier "'+str(currentTypeModifier[0].mod)+
-           #                                                    '" and new type modifier "'+str(newTypeModifier[0].mod)+'" conflict!',entry=self)
-        # procedures: entering a type means we know it's a function
         if self.entryKind == self.ProcedureEntryKind:
             DebugManager.debug('\t\t\t(SymtabEntry.enterType: entering type information tells us that this procedure is a function)')
             self.entryKind = self.FunctionEntryKind
-        self.type = copy.deepcopy(newType)
+        self.type = newType
+
+    def copyAndEnterType(self,newType):
+        self.enterType(copyType(newType))
 
     def enterDimensions(self,newDimensions):
         DebugManager.debug('\t\tSymtab.enterDimensions: called on '+str(self)+' and setting dimensions to '+str(newDimensions))
         if self.dimensions and (self.dimensions != newDimensions):
             raise SymtabError('SymtabEntry.enterDimensions: Error -- current dimensions "'+str(self.dimensions)+'" and new dimensions "'+str(newDimensions)+'" conflict!',entry=self)
-       # The following code makes some (incomplete) effort to determine the equality of the current dimensions and the new dimensions.
-       # See the similar comment in enterType above for more details.
-       #if self.dimensions:
-       #    for currentDimItem,newDimItem in zip(self.dimensions,newDimensions):
-       #        if (currentDimItem != newDimItem):
-       #            raise SymtabError('SymtabEntry.enterDimensions: Error -- current dimensions "'+str(self.dimensions)+
-       #                                                                  '" and new dimensions "'+str(newDimensions)+'" conflict!',entry=self)
         self.dimensions = newDimensions
 
     def enterLength(self,newLength):
@@ -425,7 +417,7 @@ class SymtabEntry(object):
     
     def _augmentParentEntryFrom(self,other):
         if (not self.type and other.type):
-            self.enterType(other.type)
+            self.copyAndEnterType(other.type)
         if (not self.dimensions):
             self.dimensions=other.dimensions
         if (self.entryKind==SymtabEntry.GenericEntryKind):
