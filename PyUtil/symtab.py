@@ -347,6 +347,8 @@ class SymtabEntry(object):
 
     @staticmethod
     def copyType(type):
+        if not type:
+            return None
         mods=[]
         for m in type[1]:
             mods.append(copy.deepcopy(m))
