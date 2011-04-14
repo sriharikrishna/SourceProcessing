@@ -377,7 +377,7 @@ class SymtabEntry(object):
         self.type = newType
 
     def copyAndEnterType(self,newType):
-        self.enterType(copyType(newType))
+        self.enterType(SymtabEntry.copyType(newType))
 
     def enterDimensions(self,newDimensions):
         DebugManager.debug('\t\tSymtab.enterDimensions: called on '+str(self)+' and setting dimensions to '+str(newDimensions))
