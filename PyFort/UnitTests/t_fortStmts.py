@@ -855,7 +855,7 @@ class TestFunctionStmt(TestCase):
     def test6(self):
         '''recursive function statement with type real (with modifier) and result specifier'''
         s = 'recursive real(kind = 16) function foo(x) result(y)'
-        r = FunctionStmt((RealStmt,[_ExplKind('16')]),'foo',['x'],'y',True)
+        r = FunctionStmt((RealStmt,[_ExplKind('16')]),'foo',['x'],'y',['recursive'])
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
@@ -1015,7 +1015,7 @@ class TestSubroutineStmt(TestCase):
     def test2(self):
         'recursive subroutine stmt'
         theString  = 'recursive subroutine foo(x,y,z)'
-        theRepr = SubroutineStmt('foo',['x', 'y', 'z'],True)
+        theRepr = SubroutineStmt('foo',['x', 'y', 'z'],['recursive'])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 

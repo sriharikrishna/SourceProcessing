@@ -18,6 +18,7 @@ from PyUtil.debugManager import DebugManager
 from fortExp      import *
 from fixedfmt     import fixedfmt
 import flow
+import itertools
 import copy
 
 class __FakeUnit(object):
@@ -643,11 +644,12 @@ class ProcedureStmt(Decl):
     kw = 'procedure'
     kw_str = kw
     _sons = ['procedureList']
-
+    optKwPrefix='module'
+    
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
-        formprocedureStmt = seq(zo1(lit('module')),    #0 - module keyword (optional)
+        formprocedureStmt = seq(zo1(lit(ProcedureStmt.optKwPrefix)),    #0 - module keyword (optional)
                                 lit(ProcedureStmt.kw), #1
                                 cslist(id))            #2 - procedureList
         formprocedureStmt = treat(formprocedureStmt, lambda x : ProcedureStmt(x[0] and True or False, x[2],lineNumber))
@@ -666,7 +668,7 @@ class ProcedureStmt(Decl):
                               repr(self.procedureList))
 
     def __str__(self):
-        moduleKeywordStr = self.hasModuleKeyword and 'module ' \
+        moduleKeywordStr = self.hasModuleKeyword and ProcedureStmt.optKwPrefix+' ' \
                                                   or ''
         return '%s%s %s' % (moduleKeywordStr,
                             self.__class__.kw_str,
@@ -1457,7 +1459,11 @@ class NamelistStmt(Decl):
                 nameVarGroups += ' '+pair
         return '%s %s' % (self.kw_str,nameVarGroups)
 
-class SubroutineStmt(PUstart):
+class FuncOrSubStmt(PUstart):
+    ourQualifiers=['recursive','pure','elemental']
+    ourQualifierLits=map(lit,ourQualifiers)    
+
+class SubroutineStmt(FuncOrSubStmt):
     kw = 'subroutine'
     kw_str = kw
     utype_name = kw
@@ -1466,21 +1472,25 @@ class SubroutineStmt(PUstart):
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
-        p1 = seq(zo1(lit('recursive')),
+        subroutinePrefix=star(disj(*FuncOrSubStmt.ourQualifierLits))
+        p1 = seq(subroutinePrefix,
                  lit(SubroutineStmt.kw),
                  id,
                  zo1(seq(lit('('),cslist(id),lit(')')))
                  )
-        ((rc,theKW,name,args),rst) = p1(scan)
+        ((qualifiers,theKW,name,args),rst) = p1(scan)
         if args:
             args = args[0][1]
+        if (qualifiers and qualifiers[0]):
+            qualifiers=qualifiers[0]
+        else:
+            qualifiers=None
+        return SubroutineStmt(name,args,qualifiers,lineNumber=lineNumber,rest=rst)
 
-        return SubroutineStmt(name,args,(len(rc)==1),lineNumber=lineNumber,rest=rst)
-
-    def __init__(self,name,args,recursive=False,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+    def __init__(self,name,args,qualifiers=None,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         self.name = name
         self.args = args
-        self.recursive=recursive
+        self.qualifiers=qualifiers
         self.stmt_name = stmt_name
         PUstart.__init__(self,lineNumber,label,lead,internal,rest)
 
@@ -1488,13 +1498,13 @@ class SubroutineStmt(PUstart):
         return '%s(%s,%s,%s)' % (self.__class__.__name__,
                                  repr(self.name),
                                  repr(self.args),
-                                 repr(self.recursive))
+                                 repr(self.qualifiers))
     def __str__(self):
         rStr=''
-        if (self.recursive):
-            rStr+='recursive '
+        if (self.qualifiers):
+            rStr+=' '.join(self.qualifiers)+' '
         return '%s%s %s(%s)' % (rStr,self.stmt_name,self.name,
-                                      ','.join([str(d) for d in self.args]))
+                                ','.join([str(d) for d in self.args]))
 
 class ProgramStmt(PUstart):
     kw = 'program'
@@ -1520,7 +1530,7 @@ class ProgramStmt(PUstart):
     def __str__(self):
         return '%s %s' % (self.stmt_name,self.name)
 
-class FunctionStmt(PUstart):
+class FunctionStmt(FuncOrSubStmt):
     kw = 'function'
     kw_str = kw
     utype_name = kw
@@ -1531,8 +1541,8 @@ class FunctionStmt(PUstart):
         scan = filter(lambda x: x != ' ',ws_scan)
         drvdTypeSpec=seq(lit('type'), lit('('), id, lit(')'))
         drvdTypeSpec=treat(drvdTypeSpec,lambda l: DrvdTypeDecl([l[2]],[],[],lineNumber=lineNumber))
-        p1 = seq(zo1(lit('recursive')),
-                 zo1(disj(type_pat_sem,drvdTypeSpec)),
+        functionPrefix=star(disj(type_pat_sem,drvdTypeSpec,*FuncOrSubStmt.ourQualifierLits))
+        p1 = seq(zo1(functionPrefix),
                  lit(FunctionStmt.kw),
                  id,
                  lit('('),
@@ -1542,14 +1552,23 @@ class FunctionStmt(PUstart):
                          lit('('),
                          id,
                          lit(')'))))
-        ((rec,ty,dc,name,dc1,args,dc2,resultstuff),rest) = p1(scan)
-        type = ty and ty[0] \
-                   or None
+        ((prefix,dc,name,dc1,args,dc2,resultstuff),rest) = p1(scan)
+        type=None
+        qualifiers=None
+        if (prefix):
+            typeIter=itertools.ifilter(lambda l: not(l in FunctionStmt.ourQualifiers),prefix[0])
+            try:
+                type=typeIter.next()
+            except StopIteration, e:
+                pass
+            qualifiers=filter(lambda l: (l in FunctionStmt.ourQualifiers),prefix[0])
+            if (not qualifiers): # empty list
+                qualifiers=None
         result = resultstuff and resultstuff[0][2] \
                               or None
-        return FunctionStmt(type,name,args,result,(len(rec)==1),lineNumber,rest=rest)
+        return FunctionStmt(type,name,args,result,qualifiers,lineNumber,rest=rest)
 
-    def __init__(self,ty,name,args,result,recursive=False,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+    def __init__(self,ty,name,args,result,qualifiers=None,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         '''
         typ = None
 
@@ -1562,7 +1581,7 @@ class FunctionStmt(PUstart):
         self.name = name
         self.args = args
         self.result = result
-        self.recursive=recursive
+        self.qualifiers=qualifiers
         PUstart.__init__(self,lineNumber,label,lead,internal,rest)
 
     def __repr__(self):
@@ -1575,15 +1594,16 @@ class FunctionStmt(PUstart):
                                        repr(self.name),
                                        repr(self.args),
                                        resultRepr,
-                                       repr(self.recursive))
+                                       repr(self.qualifiers))
+
     def __str__(self):
         typePrefix = self.ty and (typestr2(self.ty)+' ') \
                               or ''
         resultStr = self.result and ' result('+str(self.result)+')' \
                                  or ''
         rStr=''
-        if (self.recursive):
-            rStr+='recursive '
+        if (self.qualifiers):
+            rStr+=' '.join(self.qualifiers)+' '
         return '%s%s%s %s(%s)%s' % (rStr,
                                     typePrefix,
                                     self.kw,
@@ -2932,15 +2952,16 @@ def parse(ws_scan,lineNumber):
         kw = len(scan) >=3 and kw3g(lscan[0:3]) and sqz(3,[scan]) or \
              len(scan) >=2 and kw2g(lscan[0:2]) and sqz(2,[scan]) or \
              lscan[0]
-        if (kw in kwBuiltInTypesTbl.keys() or kw == 'type') and 'function' in lscan:
-            kw = 'function'
-        if (kw == 'recursive') and 'subroutine' in lscan:
-            kw = 'subroutine'
-        if (kw == 'recursive') and 'function' in lscan:
-            kw = 'function'
+        if (kw in kwBuiltInTypesTbl.keys() or kw == 'type') and FunctionStmt.kw in lscan:
+            kw = FunctionStmt.kw
+        if (kw in FuncOrSubStmt.ourQualifiers):
+            if FunctionStmt.kw in lscan:
+                kw = FunctionStmt.kw
+            if SubroutineStmt.kw in lscan:
+                kw = SubroutineStmt.kw
         # special case for module procedure statements:
-        elif (kw == 'module') and (lscan[1] == 'procedure') :
-            kw = 'procedure'
+        elif (kw == ProcedureStmt.optKwPrefix) and (lscan[1] == ProcedureStmt.kw) :
+            kw = ProcedureStmt.kw
 
         if not kwtbl.get(kw):
             if '=>' in scan:

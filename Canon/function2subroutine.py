@@ -40,7 +40,7 @@ def createTypeDecl(type_kw,mod,attrs,outParam,aLead):
 
 def convertFunctionDecl(aDecl,oldFuncnewSubPairs):
     DebugManager.debug(10*'-'+'>'+'called function2subroutine.convertFunctionDecl ' \
-                     + 'on declaration statement "'+str(aDecl)+'"' \
+                       + 'on declaration statement "'+str(aDecl)+'"' \
                      +' with oldFuncnewSubPairs = "'+str(oldFuncnewSubPairs)+'"')
     newDecl = copy.deepcopy(aDecl)
     modified = False
@@ -110,7 +110,7 @@ def convertFunctionOrEntryStmt(theStmt):
     args.append(outParam)
     name = name_init+theStmt.name.lower()
     if isinstance(theStmt,fs.FunctionStmt):
-        convertedStmt = fs.SubroutineStmt(name,args,recursive=theStmt.recursive,lead=theStmt.lead)
+        convertedStmt = fs.SubroutineStmt(name,args,theStmt.qualifiers,lead=theStmt.lead)
     else:
         convertedStmt = fs.EntryStmt(name,args,lead=theStmt.lead)
     return (outParam,convertedStmt)
