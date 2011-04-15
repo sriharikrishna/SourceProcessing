@@ -1481,9 +1481,7 @@ class SubroutineStmt(FuncOrSubStmt):
         ((qualifiers,theKW,name,args),rst) = p1(scan)
         if args:
             args = args[0][1]
-        if (qualifiers and qualifiers[0]):
-            qualifiers=qualifiers[0]
-        else:
+        if (not qualifiers):
             qualifiers=None
         return SubroutineStmt(name,args,qualifiers,lineNumber=lineNumber,rest=rst)
 
@@ -1542,7 +1540,7 @@ class FunctionStmt(FuncOrSubStmt):
         drvdTypeSpec=seq(lit('type'), lit('('), id, lit(')'))
         drvdTypeSpec=treat(drvdTypeSpec,lambda l: DrvdTypeDecl([l[2]],[],[],lineNumber=lineNumber))
         functionPrefix=star(disj(type_pat_sem,drvdTypeSpec,*FuncOrSubStmt.ourQualifierLits))
-        p1 = seq(zo1(functionPrefix),
+        p1 = seq(functionPrefix,
                  lit(FunctionStmt.kw),
                  id,
                  lit('('),
@@ -1556,12 +1554,12 @@ class FunctionStmt(FuncOrSubStmt):
         type=None
         qualifiers=None
         if (prefix):
-            typeIter=itertools.ifilter(lambda l: not(l in FunctionStmt.ourQualifiers),prefix[0])
+            typeIter=itertools.ifilter(lambda l: not(l in FunctionStmt.ourQualifiers),prefix)
             try:
                 type=typeIter.next()
             except StopIteration, e:
                 pass
-            qualifiers=filter(lambda l: (l in FunctionStmt.ourQualifiers),prefix[0])
+            qualifiers=filter(lambda l: (l in FunctionStmt.ourQualifiers),prefix)
             if (not qualifiers): # empty list
                 qualifiers=None
         result = resultstuff and resultstuff[0][2] \
