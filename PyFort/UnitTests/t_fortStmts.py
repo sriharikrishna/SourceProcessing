@@ -3,7 +3,7 @@
 from Setup     import *
 from unittest  import *
 
-from fortExp import LoopControl
+from fortExp import LoopControl,Sel
 from fortStmts import *
 from fortStmts import _F90Len,_F90ExplLen,_Star,_NoInit,_Kind,_Prec,_ExplKind,_AssignInit,_PointerInit,_ImplicitDoConstruct,_DimensionArraySpec
 from useparse  import *
@@ -1358,12 +1358,20 @@ class TestDataStmt(TestCase):
         self.assertEquals(theString,str(pps(theString)))
 
     def test12(self):
-        '''data statement with multiple non-comma-separated objectList-valueList pairs'''
-        theString = 'DATA NAME /"JOHN DOE"/ METERS /10*0/ AGE /20/'
-        theRepr = DataStmt([(['NAME'],['"JOHN DOE"']),(['METERS'],[Ops('*','10','0')]),(['AGE'],[20])],'DATA')
-        reprStr = 'DATA NAME /"JOHN DOE"/ METERS /10*0/ AGE /20/'
+        '''data statement with multiple non-comma-separated objectList-valueList pairs--KNOWN TO FAIL. see https://trac.mcs.anl.gov/projects/openAD/ticket/245'''
+        theString = 'DATA NAME /"JOHN DOE"/ METERS /10*0/'
+        theRepr = DataStmt([(['NAME'],['"JOHN DOE"']),(['METERS'],[Ops('*','10','0')])],'DATA')
+        reprStr = 'DATA NAME /"JOHN DOE"/METERS /10*0/'
         self.assertEquals(repr(pps(theString)),repr(theRepr))
-        self.assertEquals(theString,reprStr)
+        self.assertEquals(reprStr,str(pps(theString)))
+
+    def test13(self):
+        '''data statement with selector in data-object-list'''
+        theString = 'data you % age, you % name / 35, "Fred Brown" /'
+        theRepr = DataStmt([([Sel('you','age'),Sel('you','name')],[35,'"Fred Brown"'])],'data')
+        reprStr = 'data you%age,you%name /35,"Fred Brown"/'
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(reprStr,str(theRepr))
 
 class TestProcedureStmt(TestCase):
     '''procedure statements'''
@@ -1575,7 +1583,6 @@ class TestCloseStmt(TestCase):
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
-
 
 
 suite = asuite(C2,C3,C4,C5,C6,C8,C9,
