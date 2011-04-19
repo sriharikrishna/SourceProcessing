@@ -766,6 +766,10 @@ class IfPUstart(DeclLeaf):
 class IfPUend(DeclLeaf):
     kw_str = '(If)prog_unit_end'
 
+class SequenceStmt(DeclLeaf):
+    kw_str = 'sequence'
+    kw=kw_str
+    
 class BlockdataStmt(PUstart):
     kw = 'blockdata'
     kw_str = 'block data'
@@ -2868,6 +2872,7 @@ kwtbl = dict(assign          = DeletedAssignStmt,
              parameter       = ParameterStmt,
              private         = PrivateStmt,
              public          = PublicStmt,
+             sequence        = SequenceStmt,
              type            = TypePseudoStmt,
              interface       = InterfaceStmt,
              contains        = ContainsStmt,
