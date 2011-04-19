@@ -130,7 +130,7 @@ class NamedParam(object):
 class Sel(_Exp):
     'selection expressions like foo(i,j)%k'
 
-    _sons = ['head']
+    _sons = ['head','proj']
     
     def __init__(self,head,proj):
         self.head = head
@@ -270,7 +270,7 @@ class ParenExp(Unary):
 
 class Ops(_Exp):
     'some sequence of binops'
-    _sons = ['a1','a2']
+    _sons = ['op','a1','a2']
 
     def __init__(self,op,a1,a2):
         self.op = op
