@@ -125,9 +125,19 @@ class UnitPostProcessor(object):
     # replaced
     def __transformActiveTypesExpression(self,theExpression,inAssignment=False):
         'mutate __value__ and __deriv__ calls'
-        # deepcopy allows for comparison of return value and input value in calling function
+        # explicit reassignment allows for comparison of return value and input value in calling function
         if self.__recursionDepth is 0:
-            replacementExpression = copy.deepcopy(theExpression)
+            if isinstance(theExpression,fs._NoInit):
+                replacementExpression = fs._NoInit(theExpression.lhs)
+            elif isinstance(theExpression,str) or isinstance(theExpression,list) or isinstance(theExpression,tuple):
+                replacementExpression = theExpression
+            elif theExpression is not None:
+                theSons = []
+                for son in theExpression.get_sons():
+                    theSons.append(getattr(theExpression,son))
+                replacementExpression = theExpression.__class__(*theSons)
+            else:
+                replacementExpression = theExpression
         else:
             replacementExpression = theExpression
 
@@ -276,11 +286,12 @@ class UnitPostProcessor(object):
         '''Retrieves the unit to be inlined'''
         function = None
         inline = False
-        match=re.search('C[ ]+[$]openad[$][ ]+inline',aComment.rawline,re.IGNORECASE)
-        if match:
-            p = re.compile(r'\(')
-            # get name of inlined function
-            inlineFunction = p.split(aComment.rawline[match.end():])[0].lstrip()
+        rawline = ''.join(aComment.rawline.split(' '))
+        search_str='c$openad$inline'
+        if search_str in rawline.lower():
+            fn_index=len(search_str)
+            fn_end=rawline[fn_index:].index('(')
+            inlineFunction = rawline[fn_index:fn_index+fn_end]
             aComment =\
                 fs.Comments("C!! requested inline of '"+inlineFunction+\
                                 "' has no defn\n")
@@ -298,11 +309,10 @@ class UnitPostProcessor(object):
     # replacement command. Otherwise 0
     def __getReplacementNum(self,aComment):
         '''Determines the pragma number for replacement'''
-        begin_match = \
-            re.search('C[ ]+[$]openad[$][ ]+begin[ ]+replacement[ ]+',
-                      aComment.rawline,re.IGNORECASE)
-        if begin_match:
-            num_match=re.search('[0-9]+',aComment.rawline[begin_match.end(0):])
+        rawline=''.join(aComment.rawline.split(' ')).lower()
+        search_str='c$openad$beginreplacement'
+        if search_str in rawline:
+            num_match=re.match('[0-9]+',rawline[len(search_str):])
             if num_match:
                 replacementNum = num_match.group(0)
                 return int(replacementNum)
@@ -314,10 +324,8 @@ class UnitPostProcessor(object):
     # False otherwise
     def __endReplacement(self,aComment):
         '''Finds the end of a replacement'''
-        end_match = \
-            re.search('C[ ]+[$]openad[$][ ]+end[ ]+replacement',
-                      aComment.rawline,re.IGNORECASE)
-        if end_match:
+        rawline=''.join(aComment.rawline.split(' ')).lower()
+        if 'c$openad$endreplacement' in rawline:
             return True
         return False
 
@@ -362,7 +370,7 @@ class UnitPostProcessor(object):
                 anArg = self.__transformActiveTypesExpression(anArg)
             replacementArgs.append(anArg)
         inlineArgs = self.__inlineUnit.uinfo.args
-        map(lambda l:map(lambda e:Stmts.append(copy.deepcopy(e)),l),
+        map(lambda l:map(lambda e:Stmts.append(e),l),
             [self.__inlineUnit.decls,self.__inlineUnit.execs])
         self.__inlineUnit = None
 
@@ -711,7 +719,10 @@ class UnitPostProcessor(object):
             # insert oad_active module
             newDecl = fs.UseAllStmt(moduleName='OAD_active',renameList=None,lead='\t')
             newUnit.decls.append(newDecl)
-            newStmt = fs.CommonStmt(fortStmt.name,copy.deepcopy(fortStmt.declList),lead='\t')
+            newDeclList=[]
+            for aDecl in fortStmt.declList:
+                newDeclList.append(aDecl)
+            newStmt = fs.CommonStmt(fortStmt.name,newDeclList,lead='\t')
             newUnit.decls.append(newStmt)
             # insert type declarations for variables which occur in the common statement declList
             for decl in typeDecls:
