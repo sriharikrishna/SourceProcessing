@@ -214,7 +214,7 @@ class UnitPostProcessor(object):
         reconstructs it as an AssignStmt if StmtFnStmt.name is "__value__" or "__deriv__" '''
         DebugManager.debug('unitPostProcessor.__processStmtFnStmt called on: "'+str(StmtFnStmt)+"'")
         if StmtFnStmt.name in ['__value__','__deriv__']:
-            return fs.AssignStmt(self.__transformActiveTypesExpression(fe.App(StmtFnStmt.name,copy.deepcopy(StmtFnStmt.args)),True), # new LHS
+            return fs.AssignStmt(self.__transformActiveTypesExpression(fe.App(StmtFnStmt.name,StmtFnStmt.args),True), # new LHS
                                  self.__transformActiveTypesExpression(StmtFnStmt.body,True), # new RHS
                                  lineNumber=StmtFnStmt.lineNumber,
                                  label=StmtFnStmt.label,
