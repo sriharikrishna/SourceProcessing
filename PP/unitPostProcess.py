@@ -370,7 +370,7 @@ class UnitPostProcessor(object):
                 anArg = self.__transformActiveTypesExpression(anArg)
             replacementArgs.append(anArg)
         inlineArgs = self.__inlineUnit.uinfo.args
-        map(lambda l:map(lambda e:Stmts.append(e),l),
+        map(lambda l:map(lambda e:Stmts.append(copy.deepcopy(e)),l),
             [self.__inlineUnit.decls,self.__inlineUnit.execs])
         self.__inlineUnit = None
 
