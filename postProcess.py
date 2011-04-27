@@ -60,21 +60,21 @@ def addInitProcedures(initSet,initNames,typeDecls,output=None,base='',unitNumExt
             # print new output file
             if splitUnits:
                 output = base + unitNumExt % unit_num + ext; unit_num+=1
-                out = open(output,'w')
+                ourOutFileHandle = open(output,'w')
                 ourOutFileNameList.append(output)
                 # print new output file
-                newUnit.printit(out)
-                out.close()
+                newUnit.printit(ourOutFileHandle)
+                ourOutFileHandle.close()
             else:
                 newUnit.printit(output)
     if len(initNames) > 0:
         newUnit = UnitPostProcessor.createGlobalInitProcedure(initNames)
         if splitUnits:
             output = base + unitNumExt % unit_num + ext
-            out = open(output,'w')
+            ourOutFileHandle = open(output,'w')
             ourOutFileNameList.append(output)
-            newUnit.printit(out)
-            out.close()
+            newUnit.printit(ourOutFileHandle)
+            ourOutFileHandle.close()
         else:
             newUnit.printit(output)
     return
@@ -116,10 +116,10 @@ def main():
                 if (config.explicitInit):
                     UnitPostProcessor(aUnit).getInitCommonStmts(initSet,initNames,typeDecls)
                 outputFile = base + unitNumExt % unit_num + ext; unit_num+=1
-                out = open(outputFile,'w')
+                ourOutFileHandle = open(outputFile,'w')
                 ourOutFileNameList.append(outputFile)
-                UnitPostProcessor(aUnit).processUnit().printit(out)                    
-                out.close()
+                UnitPostProcessor(aUnit).processUnit().printit(ourOutFileHandle)                    
+                ourOutFileHandle.close()
                 if (config.progress):
                     msg='SourceProcessing: progress: done with unit '+aUnit.uinfo.name
                     if (config.timing):
@@ -140,7 +140,7 @@ def main():
             makeOut.close()
         # SEPARATE OUTPUT INTO FILES AS SPECIFIED BY PRAGMAS
         elif config.separateOutput:
-            out = None
+            ourOutFileHandle = None
             setFormat = False
             if config.outputFormat == None:
                 setFormat = True
@@ -151,7 +151,7 @@ def main():
                 if aUnit.cmnt:
                     if (re.search('openad xxx file_start',aUnit.cmnt.rawline,re.IGNORECASE)):
                         # close the previous output file (if any)
-                        if out: out.close()
+                        if ourOutFileHandle: ourOutFileHandle.close()
                         # extract the new output file location (and add path and filename suffixes)
                         (head,tail) = os.path.split(aUnit.cmnt.rawline.split('start [')[1].split(']')[0])
                         (fileName,fileExtension) = os.path.splitext(tail)
@@ -163,31 +163,31 @@ def main():
                             config.outputFormat = Ffile.get_format(fileExtension)
                             setOutputFormat(config.outputFormat)
                         ourOutFileNameList.append(newOutputFile)
-                        out = open(newOutputFile,'w')
-                elif not out:
+                        ourOutFileHandle = open(newOutputFile,'w')
+                elif not ourOutFileHandle:
                     raise PostProcessError('option separateOutput specified, no output file can be determined for the first unit',0)
                 # postprocess the unit and print it
-                UnitPostProcessor(aUnit).processUnit().printit(out)
+                UnitPostProcessor(aUnit).processUnit().printit(ourOutFileHandle)
             # add new init procedures & global init procedure after module declarations
             if (config.explicitInit):
-                addInitProcedures(initSet,initNames,typeDecls,out)
-            out.close()
+                addInitProcedures(initSet,initNames,typeDecls,ourOutFileHandle)
+            ourOutFileHandle.close()
         else: 
-            out=None
+            ourOutFileHandle=None
             if config.outputFile: 
-                out = open(config.outputFile,'w')
+                ourOutFileHandle = open(config.outputFile,'w')
                 ourOutFileNameList.append(config.outputFile)
             else:
-                out=sys.stdout
+                ourOutFileHandle=sys.stdout
             for aUnit in fortUnitIterator(inputFile,config.inputFormat):
                 if (config.explicitInit):
                     UnitPostProcessor(aUnit).getInitCommonStmts(initSet,initNames,typeDecls)
-                UnitPostProcessor(aUnit).processUnit().printit(out)
+                UnitPostProcessor(aUnit).processUnit().printit(ourOutFileHandle)
             # add new init procedures & global init procedure after module declarations
             if (config.explicitInit):
-                addInitProcedures(initSet,initNames,typeDecls,out)
+                addInitProcedures(initSet,initNames,typeDecls,ourOutFileHandle)
             if config.outputFile: 
-                out.close()
+                ourOutFileHandle.close()
 
         if (config.timing):
             print 'SourceProcessing: timing: '+str(datetime.datetime.utcnow()-startTime)

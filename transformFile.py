@@ -17,6 +17,8 @@ from PyFort.flow import setInputLineLength, setOutputLineLength, setOutputFormat
 
 def cleanup(config):
     import os 
+    if  ourOutFileHandle and not ourOutFileHandle.closed : 
+        ourOutFileHandle.close()
     if ((not config.noCleanup) and (not config.outputFile is None) and  os.path.exists(config.outputFile)):
         try: 
             os.remove(config.outputFile)
@@ -42,20 +44,20 @@ def main():
         # only one input file
         if len(inputFileList) == 1 :
             currentFile = inputFileList[0]
-            out = config.outputFile and open(config.outputFile,'w') \
+            ourOutFileHandle = config.outputFile and open(config.outputFile,'w') \
                                  or sys.stdout
             for aUnit in fortUnitIterator(currentFile,config.inputFormat):
-                TransformActiveVariables(aUnit).transformUnit().printit(out)
+                TransformActiveVariables(aUnit).transformUnit().printit(ourOutFileHandle)
             if config.outputFile :
-                out.close()
+                ourOutFileHandle.close()
         # multiple input files
         else :
             for anInputFile in inputFileList :
                 currentFile = anInputFile
-                out = open(os.path.join(config.outputDir,currentFile),'w')
+                ourOutFileHandle = open(os.path.join(config.outputDir,currentFile),'w')
                 for aUnit in fortUnitIterator(currentFile,config.inputFormat):
-                    TransformActiveVariables(aUnit).transformUnit().printit(out)
-                out.close()
+                    TransformActiveVariables(aUnit).transformUnit().printit(ourOutFileHandle)
+                ourOutFileHandle.close()
 
     except (TransformError,SymtabError,UserError,ScanError,ParseError),e:
         sys.stderr.write(str(e))
