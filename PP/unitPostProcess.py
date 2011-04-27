@@ -127,17 +127,7 @@ class UnitPostProcessor(object):
         'mutate __value__ and __deriv__ calls'
         # explicit reassignment allows for comparison of return value and input value in calling function
         if self.__recursionDepth is 0:
-            if isinstance(theExpression,fs._NoInit):
-                replacementExpression = fs._NoInit(theExpression.lhs)
-            elif isinstance(theExpression,str) or isinstance(theExpression,list) or isinstance(theExpression,tuple):
-                replacementExpression = theExpression
-            elif theExpression is not None:
-                theSons = []
-                for son in theExpression.get_sons():
-                    theSons.append(getattr(theExpression,son))
-                replacementExpression = theExpression.__class__(*theSons)
-            else:
-                replacementExpression = theExpression
+            replacementExpression=fe.copyExp(theExpression)
         else:
             replacementExpression = theExpression
 
@@ -430,7 +420,7 @@ class UnitPostProcessor(object):
                 Stmt.lead = stmt_lead
                 ExecsAppend(Stmt)
             else:
-                raise PostProcessError('unitPostProcess.py.__createNewExecs: don\'t know how to handle exec statement "'+Stmt+'"')
+                raise PostProcessError('unitPostProcess.py.__createNewExecs: don\'t know how to handle exec statement "'+str(Stmt)+'"',Stmt.lineNumber)
         return Execs
 
 

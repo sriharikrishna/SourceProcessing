@@ -30,7 +30,7 @@ def createTypeDecl(type_kw,mod,attrs,outParam,aLead):
                      +' attrs = "'+str(attrs)+'",' \
                      +' outParam = "'+str(outParam)+'",'\
                      +' lead = "'+str(aLead)+'"')
-    newAttrs = copy.deepcopy(attrs)
+    newAttrs = attrs # should be deepcopied already, if necessary
     newAttrs.append(fe.App('intent',['out']))
     # look up the class in the kwBuiltInTypesTbl and invoke the ctor which has the same signature for all type classes
     if (type_kw in fs.kwBuiltInTypesTbl.keys()): 
@@ -106,7 +106,7 @@ def convertFunctionOrEntryStmt(theStmt):
         outParam = fs._NoInit(theStmt.name.lower())
     else:
         outParam = fs._NoInit(theStmt.result.lower())
-    args = copy.deepcopy(theStmt.args) # if we don't do a deep copy here we update the function statement
+    args = fe.copyExp(theStmt.args) # if we don't do a deep copy here we update the function statement incorrectly
     args.append(outParam)
     name = name_init+theStmt.name.lower()
     if isinstance(theStmt,fs.FunctionStmt):
@@ -151,7 +151,8 @@ def updateTypeDecl(aDecl,outParam,declList):
     else:
         for decl in declCopy.get_decls():
             if updateResultDecl(decl,outParam):
-                newDecl = createTypeDecl(declCopy.kw,declCopy.get_mod(),declCopy.get_attrs(),outParam,declCopy.lead)
+                # deep copy attrs so declCopy attrs aren't modified
+                newDecl = createTypeDecl(declCopy.kw,declCopy.get_mod(),fe.copyExp(declCopy.get_attrs()),outParam,declCopy.lead)
                 declCopy.decls.remove(decl)
                 declCopy.modified = True
                 resultDeclCreated = True

@@ -114,7 +114,7 @@ class _DimensionArraySpec(_Mutable_T):
         return '%s(%s)' % (self.arrayName,','.join(str(l) for l in self.arraySpec))
 
 class _KindTypeMod(_TypeMod):
-    def __deepcopy__(self,memo):
+    def __deepcopy__(self,memo={}):
         if isinstance(self.mod,str):
             return self.__class__(self.mod)
         else:
@@ -208,7 +208,8 @@ class _NoInit(_Init):
     def __init__(self,lhs): self.lhs = lhs
     def __repr__(self): return '_NoInit(%s)' % repr(self.lhs)
     def __str__(self): return str(self.lhs)
-
+    def __deepcopy__(self,memo={}):
+        return _NoInit(self.lhs)
 class _PointerInit(_Init):
     'pointer initialization'
 
@@ -221,7 +222,8 @@ class _PointerInit(_Init):
     def __str__(self):
         return '%s => %s' % (str(self.lhs),
                              str(self.rhs))
-
+    def __deepcopy__(self,memo={}):
+        return _PointerInit(self.lhs,self.rhs)
 class _AssignInit(_Init):
     'normal assignment-style initialization'
     def __init__(self,lhs,rhs):
@@ -235,6 +237,9 @@ class _AssignInit(_Init):
     def __str__(self):
         return '%s = %s' % (str(self.lhs),
                              str(self.rhs))
+
+    def __deepcopy__(self,memo={}):
+        return _AssignInit(self.lhs,self.rhs)
 
 def _handle_init(asm):
 
@@ -330,6 +335,18 @@ class GenStmt(_Mappable,_Mutable_T):
     def get_sons(self):
         return self._sons
 
+    def __deepcopy__(self,memo={}):
+        '''cheaper deepcopy implementation for copying statements'''
+        newSons=[]
+        for son in self.get_sons():
+            theSon = getattr(self,son)
+            newSon = theSon
+            newSon=copyExp(theSon)
+            newSons.append(newSon)
+        newStmt=self.__class__(*newSons,lead=self.lead)
+        newStmt.rawline=self.rawline
+        return newStmt
+
 class Skip(GenStmt):
     def __init__(self):
         self.scan = []
@@ -371,6 +388,9 @@ class Comments(GenStmt):
         return formattedOutput
 
     def is_comment(self,unit=_non): return True
+
+    def __deepcopy__(self,memo={}):
+        return Comments(self.rawline,self.lineNumber)
 
 def comment_bl(*comlines):
     return Comments('\n'.join(['c '+ chomp(s) for s in comlines])+'\n')
@@ -482,7 +502,7 @@ class TypeDecl(Decl):
     mod = None
     decls = []
     assignInitArrConst = False
-
+    _sons = ['mod','attrs','decls']
     spec=type_pat
     
     @classmethod
@@ -550,7 +570,7 @@ class DrvdTypeDecl(TypeDecl):
     Derived type declarations are treated as declarations of type "type,"
      with a modifier that is the name of the type.
     '''
-    _sons = ['attrs','decls']
+    _sons = ['mod','attrs','decls']
     kw     = 'type'
     kw_str = kw
 
@@ -586,6 +606,7 @@ class DrvdTypeDefn(Decl):
     '''
     kw_str = 'derivedDefn'
     kw     = kw_str
+    _sons  = ['name']
 
     def __init__(self,name,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         self.name = name
@@ -608,6 +629,7 @@ class DrvdTypeDefn(Decl):
 class InterfaceStmt(Decl):
     kw = 'interface'
     kw_str = kw
+    _sons =['name']
 
     @staticmethod
     def parse(ws_scan,lineNumber):
@@ -643,7 +665,7 @@ class InterfaceStmt(Decl):
 class ProcedureStmt(Decl):
     kw = 'procedure'
     kw_str = kw
-    _sons = ['procedureList']
+    _sons = ['hasModuleKeyword','procedureList']
     optKwPrefix='module'
     
     @staticmethod
@@ -961,16 +983,16 @@ class PrivateStmt(VarAttrib):
     kw_str = kw
     _sons = ['vlist']
     
-    def __init__(self,vlist,lineNumber=0,internal=[],rest=[]):
-        VarAttrib.__init__(self,vlist,lineNumber,internal,rest)
+    def __init__(self,vlist,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        VarAttrib.__init__(self,vlist,lineNumber,label,lead,internal,rest)
 
 class PublicStmt(VarAttrib):
     kw     = 'public'
     kw_str = kw
     _sons = ['vlist']
 
-    def __init__(self,vlist,lineNumber=0,internal=[],rest=[]):
-        VarAttrib.__init__(self,vlist,lineNumber,internal,rest)
+    def __init__(self,vlist,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        VarAttrib.__init__(self,vlist,lineNumber,label,lead,internal,rest)
 
 class ContainsStmt(DeclLeaf):
     kw     = 'contains'
@@ -1116,7 +1138,7 @@ class SaveStmt(Decl):
         Decl.__init__(self,lineNumber,label,lead,internal,rest)
 
 class StmtFnStmt(Decl):
-    _sons = ['args','body']
+    _sons = ['name','args','body']
 
     def __init__(self,name,args,body,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         self.name = name
@@ -1471,7 +1493,7 @@ class SubroutineStmt(FuncOrSubStmt):
     kw = 'subroutine'
     kw_str = kw
     utype_name = kw
-    _sons = ['args']
+    _sons = ['name','args']
 
     @staticmethod
     def parse(ws_scan,lineNumber):
@@ -1536,7 +1558,7 @@ class FunctionStmt(FuncOrSubStmt):
     kw = 'function'
     kw_str = kw
     utype_name = kw
-    _sons = ['ty','args']
+    _sons = ['ty','name','args','result','qualifiers']
 
     @staticmethod
     def parse(ws_scan,lineNumber):
@@ -1684,7 +1706,7 @@ class UseStmt(Decl):
         return theParsedStmt
 
 class UseAllStmt(UseStmt):
-    _sons  = ['renameList']
+    _sons  = ['moduleName','renameList']
 
     def __init__(self,moduleName,renameList,stmt_name=UseStmt.kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         self.moduleName = moduleName
@@ -1841,7 +1863,7 @@ class CycleStmt(Exec) :
 class CallStmt(Exec):
     kw = 'call'
     kw_str = kw
-    _sons = ['args']
+    _sons = ['head','args']
 
     @staticmethod
     def parse(ws_scan,lineNumber):
