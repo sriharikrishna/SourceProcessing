@@ -41,8 +41,6 @@ def hasOpenQuotation(line,delimiter):
     else:
         for d,theRe in _delimROpenREs.items():
             if (theRe.match(line)):
-                import pdb
-                pdb.set_trace()
                 return (True,d)
     return (False,None)
         
