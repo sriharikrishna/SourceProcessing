@@ -30,7 +30,7 @@ def createTypeDecl(type_kw,mod,attrs,outParam,aLead):
                      +' attrs = "'+str(attrs)+'",' \
                      +' outParam = "'+str(outParam)+'",'\
                      +' lead = "'+str(aLead)+'"')
-    newAttrs = copy.deepcopy(attrs)
+    newAttrs = attrs # should be deepcopied already, if necessary
     newAttrs.append(fe.App('intent',['out']))
     # look up the class in the kwBuiltInTypesTbl and invoke the ctor which has the same signature for all type classes
     if (type_kw in fs.kwBuiltInTypesTbl.keys()): 
@@ -40,7 +40,7 @@ def createTypeDecl(type_kw,mod,attrs,outParam,aLead):
 
 def convertFunctionDecl(aDecl,oldFuncnewSubPairs):
     DebugManager.debug(10*'-'+'>'+'called function2subroutine.convertFunctionDecl ' \
-                     + 'on declaration statement "'+str(aDecl)+'"' \
+                       + 'on declaration statement "'+str(aDecl)+'"' \
                      +' with oldFuncnewSubPairs = "'+str(oldFuncnewSubPairs)+'"')
     newDecl = copy.deepcopy(aDecl)
     modified = False
@@ -106,11 +106,11 @@ def convertFunctionOrEntryStmt(theStmt):
         outParam = fs._NoInit(theStmt.name.lower())
     else:
         outParam = fs._NoInit(theStmt.result.lower())
-    args = copy.deepcopy(theStmt.args) # if we don't do a deep copy here we update the function statement
+    args = fe.copyExp(theStmt.args) # if we don't do a deep copy here we update the function statement incorrectly
     args.append(outParam)
     name = name_init+theStmt.name.lower()
     if isinstance(theStmt,fs.FunctionStmt):
-        convertedStmt = fs.SubroutineStmt(name,args,recursive=theStmt.recursive,lead=theStmt.lead)
+        convertedStmt = fs.SubroutineStmt(name,args,theStmt.qualifiers,lead=theStmt.lead)
     else:
         convertedStmt = fs.EntryStmt(name,args,lead=theStmt.lead)
     return (outParam,convertedStmt)
@@ -151,7 +151,8 @@ def updateTypeDecl(aDecl,outParam,declList):
     else:
         for decl in declCopy.get_decls():
             if updateResultDecl(decl,outParam):
-                newDecl = createTypeDecl(declCopy.kw,declCopy.get_mod(),declCopy.get_attrs(),outParam,declCopy.lead)
+                # deep copy attrs so declCopy attrs aren't modified
+                newDecl = createTypeDecl(declCopy.kw,declCopy.get_mod(),fe.copyExp(declCopy.get_attrs()),outParam,declCopy.lead)
                 declCopy.decls.remove(decl)
                 declCopy.modified = True
                 resultDeclCreated = True
@@ -161,7 +162,8 @@ def convertFunction(functionUnit,newExecs,newDecls):
     '''converts a function unit definition to a subroutine unit definition'''
     DebugManager.debug(10*'-'+'>'+'called function2subroutine.convertFunction ' \
                      + 'on function unit statement "'+str(functionUnit)+'",' \
-                     +' with symtab "'+str(functionUnit.symtab)+'"')
+                     + 'with newDecls='+str(newDecls)+',' \
+                     +' with symtab "'+functionUnit.symtab.debug()+'"')
     newSubUnit = Unit(parent=functionUnit.parent,fmod=functionUnit.fmod)
     (outParam,newSubUnit.uinfo) = convertFunctionOrEntryStmt(functionUnit.uinfo)
     newSubUnit.cmnt = functionUnit.cmnt
@@ -190,7 +192,7 @@ def convertFunction(functionUnit,newExecs,newDecls):
             newSubUnit.decls.append(aDecl)
 
     if resultDecl is not None:
-        if len(newSubUnit.decls) != 0:
+        if (newSubUnit.decls and (not isinstance(newSubUnit.decls[-1],fs.Comments))):
             resultDecl.lead = newSubUnit.decls[-1].lead
         # append declaration for new out parameter
         newSubUnit.decls.append(resultDecl)

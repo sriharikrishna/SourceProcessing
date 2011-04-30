@@ -35,7 +35,7 @@ def _beginDrvdTypeDefn(aDrvdTypeDefn,curr):
     'derived type definition -- record type in symbol table and set the name on the unit'
     localSymtab = curr.val.symtab
     theSymtabEntry = localSymtab.lookup_name_local(aDrvdTypeDefn.name)
-    isPrivate = False
+    access=None # DrvdTypeDefn currently cannot parse qualifiers
     curr.val._in_drvdType=aDrvdTypeDefn.name
     if theSymtabEntry: # already in symtab, shouldn't happen  
         theSymtabEntry.enterEntryKind(SymtabEntry.DerivedTypeEntryKind)
@@ -45,13 +45,19 @@ def _beginDrvdTypeDefn(aDrvdTypeDefn,curr):
                                      dimensions=None,
                                      length=None,
                                      origin='local',
-                                     isPrivate=isPrivate)
+                                     access=access)
         DebugManager.debug('defn "'+str(aDrvdTypeDefn)+'" NOT already present in symbol table => adding '+str(newSymtabEntry.debug(aDrvdTypeDefn.name)))
         localSymtab.enter_name(aDrvdTypeDefn.name,newSymtabEntry)
     return aDrvdTypeDefn
 
 def _endDrvdTypeDefn(aEndDrvdTypeDefnStmt,curr):
     'derived type definition end  -- unset the name on the unit'
+    if (curr.val._drvdTypeDefaultAccess):
+        prefix=curr.val._in_drvdType+':'
+        lenPrefix=len(prefix)
+        for name,entry in curr.val.symtab.ids.items():
+            if (len(name)>lenPrefix and name[:lenPrefix]==prefix):
+                entry.setDefaultAccess(curr.val._drvdTypeDefaultAccess)
     curr.val._in_drvdType=None
     return aEndDrvdTypeDefnStmt
 
@@ -64,11 +70,11 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
     newLength = None
     dflt_d  = default_dims(aTypeDeclStmt.attrs)
     DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: stmt2unit._processTypedeclStmt('+str(aTypeDeclStmt)+') with default dimensions '+str(dflt_d))
-    isPrivate = False
+    access=None
     inDrvdTypeDefn=curr.val._in_drvdType
     for anAttribute in aTypeDeclStmt.attrs :
-        if isinstance(anAttribute,str) and anAttribute.lower() == 'private' :
-            isPrivate = True
+        if isinstance(anAttribute,str) and anAttribute.lower() in Symtab.ourSpecificAccessKWs :
+            access= anAttribute.lower()
     for aDecl in aTypeDeclStmt.decls:
         DebugManager.debug('\tProcessing decl '+repr(aDecl)+' ... ',newLine=False)
         (name,newDimensions) = typesep(aDecl,dflt_d)
@@ -94,21 +100,29 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                 else:
                     theSymtabEntry.enterDimensions(newDimensions)
                 theSymtabEntry.enterLength(newLength)
+                if (isinstance(aDecl,fs._PointerInit) or isinstance(aDecl,fs._AssignInit) and localSymtab.isConstInit(aDecl.rhs)):
+                   theSymtabEntry.enterConstInit(localSymtab.getConstInit(aDecl.rhs))
                 if inDrvdTypeDefn:
                     theSymtabEntry.enterDrvdTypeName(inDrvdTypeDefn)
                 # for function/subroutine entries, also update this information in the parent symbol table
-                #if isinstance(theSymtabEntry.entryKind,SymtabEntry.ProcedureEntryKind):
+                # if isinstance(theSymtabEntry.entryKind,SymtabEntry.ProcedureEntryKind):
                 if localSymtab.parent and theSymtabEntry.entryKind in (SymtabEntry.FunctionEntryKind,SymtabEntry.SubroutineEntryKind):
-                    replacementParentSymtabEntry = localSymtab.replicateEntry(name,str(curr.val.uinfo)+':'+name)
-                    localSymtab.parent.enter_name(name,replacementParentSymtabEntry)
-                    DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: new PARENT unit symtab entry '+replacementParentSymtabEntry.debug(name))
+                    parentSymtabEntry=localSymtab.parent.lookup_name_local(name)
+                    if (not parentSymtabEntry):
+                        localSymtab.replicateEntry(name,'local',name,localSymtab.parent)
+                        DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: new PARENT unit symtab entry (see above)')
+                    else:
+                        localSymtab.augmentParentEntry(theSymtabEntry,parentSymtabEntry,name)            
+                        DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: updated PARENT unit symtab entry '+parentSymtabEntry.debug(name))
             else: # no symtab entry -> create one
                 newSymtabEntry = SymtabEntry(SymtabEntry.GenericEntryKind,
                                              type=newType,
                                              dimensions=newDimensions,
                                              length=newLength,
                                              origin='local',
-                                             isPrivate=isPrivate)
+                                             access=access)
+                if (isinstance(aDecl,fs._PointerInit) or isinstance(aDecl,fs._AssignInit) and localSymtab.isConstInit(aDecl.rhs)):
+                   newSymtabEntry.enterConstInit(localSymtab.getConstInit(aDecl.rhs))
                 if inDrvdTypeDefn:
                     newSymtabEntry.enterDrvdTypeName(inDrvdTypeDefn)
                 DebugManager.debug('decl "'+str(aDecl)+'" NOT already present in symbol table => adding '+str(newSymtabEntry.debug(name)))
@@ -260,6 +274,29 @@ def _use_module(aUseStmt,cur):
             DebugManager.warning('definition for module '+aUseStmt.moduleName+' not seen in the input.',aUseStmt.lineNumber)
     return aUseStmt
 
+def _setAccess(anAccessStmt,cur):
+    ''' set the access attributes '''
+    DebugManager.debug('[Line '+str(anAccessStmt.lineNumber)+']: stmt2unit._setAccess() for '+str(anAccessStmt))
+        
+    accessAttr=anAccessStmt.__class__.kw
+    if (not anAccessStmt.vlist):
+        if (cur.val._in_drvdType):
+            cur.val._drvdTypeDefaultAccess=accessAttr # and process it at the end of rhe derived type definition
+        else: 
+            cur.val.symtab.setDefaultAccess(accessAttr)
+    else: 
+        for v in anAccessStmt.vlist:
+            if(cur.val._in_drvdType):
+                v=cur.val._in_drvdType+':'+v
+            theEntry=cur.val.symtab.lookup_name(v)
+            if (theEntry):
+                theEntry.setSpecificAccess(accessAttr)
+            else: # forward access declaration
+                theEntry=SymtabEntry(SymtabEntry.GenericEntryKind,
+                                     access=accessAttr)
+                cur.val.symtab.enter_name(v,theEntry)
+    return anAccessStmt
+    
 def _unit_entry(self,cur):
     '''enter a subroutine or function into:
        1. The local symtab for the object
@@ -269,39 +306,45 @@ def _unit_entry(self,cur):
     if (cur.val.nestLevel==2) : 
         DebugManager.warning('Open64 front-end handling of doubly nested module procedures is fragile; check >'+self.name+'< for correct handling.',self.lineNumber,DebugManager.WarnType.nesting)
     currentSymtab = cur.val.symtab
-    if (currentSymtab.parent and (self.name in currentSymtab.parent.ids))  :
-        # this must be the definition of a previously  declared module procedure
-        mpSymTabEntry=currentSymtab.parent.ids[self.name]
-        if (mpSymTabEntry.entryKind!=SymtabEntry.ProcedureEntryKind
-            or
-            mpSymTabEntry.genericInfo is None):
-            raise SymtabError('parent symbol is not a module procedure')
-        entry = self.makeSymtabEntry(currentSymtab)
-        mpSymTabEntry.entryKind=entry.entryKind
-        mpSymTabEntry.type=entry.type
-        entry.genericInfo=mpSymTabEntry.genericInfo
-        currentSymtab.enter_name(self.name,entry)
-        # if it is a function  - collect argument information
-        if (isinstance(self,fs.FunctionStmt)) :
-            genSymTabEntry=currentSymtab.parent.lookup_name(mpSymTabEntry.genericInfo.genericName)
-            if (genSymTabEntry is None):
-                raise SymtabError('cannot find generic with name '+mpSymTabEntry.genericInfo.genericName)
-            argsTypeDict={}
-            for arg in self.args:
-                argsTypeDict[arg.lower()]=None # don't know the type yet
-            genSymTabEntry.genericInfo.resolvableTo[self.name.lower()]=argsTypeDict
-            DebugManager.debug('\tstmt2unit._unit_entry(): argsTypeDict : '+str(id(argsTypeDict)))
-            DebugManager.debug('\tstmt2unit._unit_entry() parent symboltable entry: '+mpSymTabEntry.debug(self.name)+' \n\t\tgeneric entry '+genSymTabEntry.debug(mpSymTabEntry.genericInfo.genericName)+' with argstypedict: '+str(id(argsTypeDict))+'\n\t\tself entry: '+entry.debug(self.name))
-        else :
-            DebugManager.debug('\tstmt2unit._unit_entry() parent symboltable entry '+mpSymTabEntry.debug(self.name)+' self entry '+entry.debug(self.name))
-    else: 
+    if (currentSymtab.parent and (self.name in currentSymtab.parent.ids)) :
+        mpSymtabEntry=currentSymtab.parent.ids[self.name]
+        if (mpSymtabEntry.entryKind==SymtabEntry.ProcedureEntryKind
+            and
+            mpSymtabEntry.genericInfo):
+            # this is the definition of a previously declared module procedure
+            entry = self.makeSymtabEntry(currentSymtab)
+            mpSymtabEntry.entryKind=entry.entryKind
+            mpSymtabEntry.type=entry.type
+            entry.genericInfo=mpSymtabEntry.genericInfo
+            currentSymtab.enter_name(self.name,entry)
+            # if it is a function  - collect argument information
+            if (isinstance(self,fs.FunctionStmt)) :
+                genSymTabEntry=currentSymtab.parent.lookup_name(mpSymtabEntry.genericInfo.genericName)
+                if (genSymTabEntry is None):
+                    raise SymtabError('cannot find generic with name '+mpSymtabEntry.genericInfo.genericName)
+                argsTypeDict={}
+                for arg in self.args:
+                    argsTypeDict[arg.lower()]=None # don't know the type yet
+                genSymTabEntry.genericInfo.resolvableTo[self.name.lower()]=argsTypeDict
+                DebugManager.debug('\tstmt2unit._unit_entry(): argsTypeDict : '+str(id(argsTypeDict)))
+                DebugManager.debug('\tstmt2unit._unit_entry() parent symboltable entry: '+mpSymtabEntry.debug(self.name)+' \n\t\tgeneric entry '+genSymTabEntry.debug(mpSymtabEntry.genericInfo.genericName)+' with argstypedict: '+str(id(argsTypeDict))+'\n\t\tself entry: '+entry.debug(self.name))
+            else :
+                DebugManager.debug('\tstmt2unit._unit_entry() parent symboltable entry '+mpSymtabEntry.debug(self.name)+' self entry '+entry.debug(self.name))
+        else: 
+            # this is some forward declaration as e.g. in public/private statement
+            entry = self.makeSymtabEntry(currentSymtab)
+            currentSymtab.enter_name(self.name,entry)
+            DebugManager.debug('[Line '+str(self.lineNumber)+']: new unit symtab entry '+entry.debug(self.name))
+            # update the parent info
+            currentSymtab.augmentParentEntry(entry,mpSymtabEntry,self.name)
+            DebugManager.debug('[Line '+str(self.lineNumber)+']: updated parent symtab entry '+mpSymtabEntry.debug(self.name))       
+    else: # nothing exists in parent
         entry = self.makeSymtabEntry(currentSymtab)
         currentSymtab.enter_name(self.name,entry)
         DebugManager.debug('[Line '+str(self.lineNumber)+']: new unit symtab entry '+entry.debug(self.name))
         if currentSymtab.parent:
-            parentSymtabEntry = currentSymtab.replicateEntry(self.name,str(cur.val.uinfo)+self.name)
-            currentSymtab.parent.enter_name(self.name,parentSymtabEntry)
-            DebugManager.debug('[Line '+str(self.lineNumber)+']: new PARENT unit symtab entry '+parentSymtabEntry.debug(self.name))
+            currentSymtab.replicateEntry(self.name,str(cur.val.uinfo)+self.name,self.name,currentSymtab.parent)
+            DebugManager.debug('[Line '+str(self.lineNumber)+']: new PARENT unit symtab entry (see above)')
     DebugManager.debug('[Line '+str(self.lineNumber)+']: stmt2unit._unit_entry() for '+str(self)+': with symtab '+str(currentSymtab)+' with parent symtab '+str(currentSymtab.parent))
     if (isinstance(self,fs.FunctionStmt)): 
         cur.val._in_functionDecl=self
@@ -319,9 +362,9 @@ def _unit_exit(self,cur):
             # try to get the type from the result symbol
             theResultEntry=cur.val.symtab.lookup_name(cur.val._in_functionDecl.result)
             if (theResultEntry):
-                theSymtabEntry.enterType(theResultEntry.type)
+                theSymtabEntry.copyAndEnterType(theResultEntry.type)
                 if parentSymtabEntry:  # update the copy in the parent
-                    parentSymtabEntry.enterType(theResultEntry.type)
+                    parentSymtabEntry.copyAndEnterType(theResultEntry.type)
         # set the arguments list:
         theSymtabEntry.funcFormalArgs=FormalArgs()
         if parentSymtabEntry:
@@ -390,9 +433,8 @@ def _processEntry(self,cur):
         currentSymtab.enter_name(self.name,entry)
         DebugManager.debug('[Line '+str(self.lineNumber)+']: new unit symtab entry '+entry.debug(self.name))
         if currentSymtab.parent:
-            parentSymtabEntry = currentSymtab.replicateEntry(self.name,str(cur.val.uinfo)+self.name)
-            currentSymtab.parent.enter_name(self.name,parentSymtabEntry)
-            DebugManager.debug('[Line '+str(self.lineNumber)+']: new PARENT unit symtab entry '+parentSymtabEntry.debug(self.name))
+            currentSymtab.replicateEntry(self.name,str(cur.val.uinfo)+self.name,self.name,currentSymtab.parent)
+            DebugManager.debug('[Line '+str(self.lineNumber)+']: new PARENT unit symtab entry (see above)')
     DebugManager.debug('[Line '+str(self.lineNumber)+']: stmt2unit._processEntry() for '+str(self)+': with symtab '+str(currentSymtab)+' with parent symtab '+str(currentSymtab.parent))
     if (isinstance(self,fs.FunctionStmt)): 
         cur.val._in_functionDecl=self
@@ -426,7 +468,7 @@ def _endProcedureUnit(anEndProcedureStmt,cur):
             # try to get the tupe from the result symbol
             theResultEntry=cur.val.symtab.lookup_name(cur.val._in_functionDecl.name)
             if (theResultEntry):
-                theSymtabEntry.enterType(theResultEntry.type)
+                theSymtabEntry.copyAndEnterType(theResultEntry.type)
         cur.val._in_functionDecl=None         
     if cur.val.symtab.parent :
         DebugManager.debug('[Line '+str(anEndProcedureStmt.lineNumber)+']: stmt2unit._endProcedureUnit:' \
@@ -577,6 +619,8 @@ fs.ExternalStmt.decl2unitAction       = _processExternalStmt
 fs.TypeDecl.decl2unitAction           = _processTypedeclStmt
 fs.CommonStmt.decl2unitAction         = _processCommonStmt
 fs.UseStmt.decl2unitAction            = _use_module
+fs.PrivateStmt.decl2unitAction        = _setAccess
+fs.PublicStmt.decl2unitAction         = _setAccess
 fs.ImplicitNone.decl2unitAction       = _implicit_none
 fs.ImplicitStmt.decl2unitAction       = _implicit
 fs.ProcedureStmt.decl2unitAction      = _processProcedureStmt # always in an interface

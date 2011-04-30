@@ -18,6 +18,8 @@ from PyUtil.debugManager import DebugManager
 from fortExp      import *
 from fixedfmt     import fixedfmt
 import flow
+import itertools
+import copy
 
 class __FakeUnit(object):
     def __init__(self):
@@ -111,14 +113,21 @@ class _DimensionArraySpec(_Mutable_T):
     def __str__(self):
         return '%s(%s)' % (self.arrayName,','.join(str(l) for l in self.arraySpec))
 
-class _Prec(_TypeMod):
+class _KindTypeMod(_TypeMod):
+    def __deepcopy__(self,memo={}):
+        if isinstance(self.mod,str):
+            return self.__class__(self.mod)
+        else:
+            return self.__class__(copy.deepcopy(self.mod))
+        
+class _Prec(_KindTypeMod):
     pat = '*%s'
 
     def _separate_implicit_list(self):
         app = self.mod
         return ([_Prec(app.head)],app.args)
 
-class _Kind(_TypeMod):
+class _Kind(_KindTypeMod):
     pat = '(%s)'
 
     def _separate_implicit_list(self):
@@ -126,7 +135,7 @@ class _Kind(_TypeMod):
         return ([],self.mod)
 
 
-class _ExplKind(_TypeMod):
+class _ExplKind(_KindTypeMod):
     pat = '(kind = %s)'
 
 prec = seq(lit('*'),int)
@@ -199,7 +208,8 @@ class _NoInit(_Init):
     def __init__(self,lhs): self.lhs = lhs
     def __repr__(self): return '_NoInit(%s)' % repr(self.lhs)
     def __str__(self): return str(self.lhs)
-
+    def __deepcopy__(self,memo={}):
+        return _NoInit(self.lhs)
 class _PointerInit(_Init):
     'pointer initialization'
 
@@ -212,18 +222,24 @@ class _PointerInit(_Init):
     def __str__(self):
         return '%s => %s' % (str(self.lhs),
                              str(self.rhs))
-
+    def __deepcopy__(self,memo={}):
+        return _PointerInit(self.lhs,self.rhs)
 class _AssignInit(_Init):
     'normal assignment-style initialization'
     def __init__(self,lhs,rhs):
         self.lhs = lhs
         self.rhs = rhs
+        if isinstance(rhs,ArrayConstructor):
+            TypeDecl.assignInitArrConst = True
     def __repr__(self):
         return '_AssignInit(%s,%s)' % (repr(self.lhs),
                                        repr(self.rhs))
     def __str__(self):
         return '%s = %s' % (str(self.lhs),
                              str(self.rhs))
+
+    def __deepcopy__(self,memo={}):
+        return _AssignInit(self.lhs,self.rhs)
 
 def _handle_init(asm):
 
@@ -319,6 +335,18 @@ class GenStmt(_Mappable,_Mutable_T):
     def get_sons(self):
         return self._sons
 
+    def __deepcopy__(self,memo={}):
+        '''cheaper deepcopy implementation for copying statements'''
+        newSons=[]
+        for son in self.get_sons():
+            theSon = getattr(self,son)
+            newSon = theSon
+            newSon=copyExp(theSon)
+            newSons.append(newSon)
+        newStmt=self.__class__(*newSons,lead=self.lead)
+        newStmt.rawline=self.rawline
+        return newStmt
+
 class Skip(GenStmt):
     def __init__(self):
         self.scan = []
@@ -360,6 +388,9 @@ class Comments(GenStmt):
         return formattedOutput
 
     def is_comment(self,unit=_non): return True
+
+    def __deepcopy__(self,memo={}):
+        return Comments(self.rawline,self.lineNumber)
 
 def comment_bl(*comlines):
     return Comments('\n'.join(['c '+ chomp(s) for s in comlines])+'\n')
@@ -470,7 +501,8 @@ class TypeDecl(Decl):
     kw_str = ''
     mod = None
     decls = []
-
+    assignInitArrConst = False
+    _sons = ['mod','attrs','decls']
     spec=type_pat
     
     @classmethod
@@ -489,6 +521,9 @@ class TypeDecl(Decl):
         self.attrs = attrs
         self.decls = decls
         Decl.__init__(self,lineNumber,label,lead,internal,rest)
+        if TypeDecl.assignInitArrConst:
+            self.modified = True
+            TypeDecl.assignInitArrConst=False
 
     def __repr__(self):
         return '%s(%s,%s,%s)' % (self.__class__.__name__,
@@ -535,7 +570,7 @@ class DrvdTypeDecl(TypeDecl):
     Derived type declarations are treated as declarations of type "type,"
      with a modifier that is the name of the type.
     '''
-    _sons = ['attrs','decls']
+    _sons = ['mod','attrs','decls']
     kw     = 'type'
     kw_str = kw
 
@@ -571,6 +606,7 @@ class DrvdTypeDefn(Decl):
     '''
     kw_str = 'derivedDefn'
     kw     = kw_str
+    _sons  = ['name']
 
     def __init__(self,name,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         self.name = name
@@ -593,6 +629,7 @@ class DrvdTypeDefn(Decl):
 class InterfaceStmt(Decl):
     kw = 'interface'
     kw_str = kw
+    _sons =['name']
 
     @staticmethod
     def parse(ws_scan,lineNumber):
@@ -628,12 +665,13 @@ class InterfaceStmt(Decl):
 class ProcedureStmt(Decl):
     kw = 'procedure'
     kw_str = kw
-    _sons = ['procedureList']
-
+    _sons = ['hasModuleKeyword','procedureList']
+    optKwPrefix='module'
+    
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
-        formprocedureStmt = seq(zo1(lit('module')),    #0 - module keyword (optional)
+        formprocedureStmt = seq(zo1(lit(ProcedureStmt.optKwPrefix)),    #0 - module keyword (optional)
                                 lit(ProcedureStmt.kw), #1
                                 cslist(id))            #2 - procedureList
         formprocedureStmt = treat(formprocedureStmt, lambda x : ProcedureStmt(x[0] and True or False, x[2],lineNumber))
@@ -652,7 +690,7 @@ class ProcedureStmt(Decl):
                               repr(self.procedureList))
 
     def __str__(self):
-        moduleKeywordStr = self.hasModuleKeyword and 'module ' \
+        moduleKeywordStr = self.hasModuleKeyword and ProcedureStmt.optKwPrefix+' ' \
                                                   or ''
         return '%s%s %s' % (moduleKeywordStr,
                             self.__class__.kw_str,
@@ -750,6 +788,10 @@ class IfPUstart(DeclLeaf):
 class IfPUend(DeclLeaf):
     kw_str = '(If)prog_unit_end'
 
+class SequenceStmt(DeclLeaf):
+    kw_str = 'sequence'
+    kw=kw_str
+    
 class BlockdataStmt(PUstart):
     kw = 'blockdata'
     kw_str = 'block data'
@@ -846,7 +888,6 @@ class DataStmt(Decl):
         \todo we don't cover the full range of the DATA stmt syntax.
         among the exceptions are: 
          - from the dataObject pattern we subobject patterns combining App with Sel 
-         - the comma between the <dataObject,dataValue> pairs is optional 
         '''
         scan = filter(lambda x: x != ' ',ws_scan)
         dataObjectListPatn=cslist(disj(_ImplicitDoConstruct.form,app1,id))
@@ -942,16 +983,16 @@ class PrivateStmt(VarAttrib):
     kw_str = kw
     _sons = ['vlist']
     
-    def __init__(self,vlist,lineNumber=0,internal=[],rest=[]):
-        VarAttrib.__init__(self,vlist,lineNumber,internal,rest)
+    def __init__(self,vlist,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        VarAttrib.__init__(self,vlist,lineNumber,label,lead,internal,rest)
 
 class PublicStmt(VarAttrib):
     kw     = 'public'
     kw_str = kw
     _sons = ['vlist']
 
-    def __init__(self,vlist,lineNumber=0,internal=[],rest=[]):
-        VarAttrib.__init__(self,vlist,lineNumber,internal,rest)
+    def __init__(self,vlist,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        VarAttrib.__init__(self,vlist,lineNumber,label,lead,internal,rest)
 
 class ContainsStmt(DeclLeaf):
     kw     = 'contains'
@@ -1097,7 +1138,7 @@ class SaveStmt(Decl):
         Decl.__init__(self,lineNumber,label,lead,internal,rest)
 
 class StmtFnStmt(Decl):
-    _sons = ['args','body']
+    _sons = ['name','args','body']
 
     def __init__(self,name,args,body,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         self.name = name
@@ -1303,26 +1344,49 @@ class RealStmt(TypeDecl):
     kw = 'real'
     kw_str = kw
 
+    def __init__(self,mod,attrs,decls,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.stmt_name = stmt_name
+        TypeDecl.__init__(self,mod,attrs,decls,lineNumber,label,lead,internal,rest)
+
 class ComplexStmt(TypeDecl):
     kw = 'complex'
     kw_str = kw
+
+    def __init__(self,mod,attrs,decls,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.stmt_name = stmt_name
+        TypeDecl.__init__(self,mod,attrs,decls,lineNumber,label,lead,internal,rest)
 
 class IntegerStmt(TypeDecl):
     kw = 'integer'
     kw_str = kw
 
+    def __init__(self,mod,attrs,decls,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.stmt_name = stmt_name
+        TypeDecl.__init__(self,mod,attrs,decls,lineNumber,label,lead,internal,rest)
+
 class LogicalStmt(TypeDecl):
     kw = 'logical'
     kw_str = kw
+
+    def __init__(self,mod,attrs,decls,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.stmt_name = stmt_name
+        TypeDecl.__init__(self,mod,attrs,decls,lineNumber,label,lead,internal,rest)
 
 class DoubleStmt(TypeDecl):
     kw     = 'doubleprecision'
     kw_str = 'double precision'
 
+    def __init__(self,mod,attrs,decls,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.stmt_name = stmt_name
+        TypeDecl.__init__(self,mod,attrs,decls,lineNumber,label,lead,internal,rest)
+
 class DoubleCplexStmt(TypeDecl):
     kw     = 'doublecomplex'
     kw_str = 'double complex'
 
+    def __init__(self,mod,attrs,decls,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.stmt_name = stmt_name
+        TypeDecl.__init__(self,mod,attrs,decls,lineNumber,label,lead,internal,rest)
 
 class DimensionStmt(Decl):
     kw = 'dimension'
@@ -1421,30 +1485,36 @@ class NamelistStmt(Decl):
                 nameVarGroups += ' '+pair
         return '%s %s' % (self.kw_str,nameVarGroups)
 
-class SubroutineStmt(PUstart):
+class FuncOrSubStmt(PUstart):
+    ourQualifiers=['recursive','pure','elemental']
+    ourQualifierLits=map(lit,ourQualifiers)    
+
+class SubroutineStmt(FuncOrSubStmt):
     kw = 'subroutine'
     kw_str = kw
     utype_name = kw
-    _sons = ['args']
+    _sons = ['name','args']
 
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
-        p1 = seq(zo1(lit('recursive')),
+        subroutinePrefix=star(disj(*FuncOrSubStmt.ourQualifierLits))
+        p1 = seq(subroutinePrefix,
                  lit(SubroutineStmt.kw),
                  id,
                  zo1(seq(lit('('),cslist(id),lit(')')))
                  )
-        ((rc,theKW,name,args),rst) = p1(scan)
+        ((qualifiers,theKW,name,args),rst) = p1(scan)
         if args:
             args = args[0][1]
+        if (not qualifiers):
+            qualifiers=None
+        return SubroutineStmt(name,args,qualifiers,lineNumber=lineNumber,rest=rst)
 
-        return SubroutineStmt(name,args,(len(rc)==1),lineNumber=lineNumber,rest=rst)
-
-    def __init__(self,name,args,recursive=False,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+    def __init__(self,name,args,qualifiers=None,stmt_name=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         self.name = name
         self.args = args
-        self.recursive=recursive
+        self.qualifiers=qualifiers
         self.stmt_name = stmt_name
         PUstart.__init__(self,lineNumber,label,lead,internal,rest)
 
@@ -1452,13 +1522,13 @@ class SubroutineStmt(PUstart):
         return '%s(%s,%s,%s)' % (self.__class__.__name__,
                                  repr(self.name),
                                  repr(self.args),
-                                 repr(self.recursive))
+                                 repr(self.qualifiers))
     def __str__(self):
         rStr=''
-        if (self.recursive):
-            rStr+='recursive '
+        if (self.qualifiers):
+            rStr+=' '.join(self.qualifiers)+' '
         return '%s%s %s(%s)' % (rStr,self.stmt_name,self.name,
-                                      ','.join([str(d) for d in self.args]))
+                                ','.join([str(d) for d in self.args]))
 
 class ProgramStmt(PUstart):
     kw = 'program'
@@ -1484,19 +1554,19 @@ class ProgramStmt(PUstart):
     def __str__(self):
         return '%s %s' % (self.stmt_name,self.name)
 
-class FunctionStmt(PUstart):
+class FunctionStmt(FuncOrSubStmt):
     kw = 'function'
     kw_str = kw
     utype_name = kw
-    _sons = ['ty','args']
+    _sons = ['ty','name','args','result','qualifiers']
 
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
         drvdTypeSpec=seq(lit('type'), lit('('), id, lit(')'))
         drvdTypeSpec=treat(drvdTypeSpec,lambda l: DrvdTypeDecl([l[2]],[],[],lineNumber=lineNumber))
-        p1 = seq(zo1(lit('recursive')),
-                 zo1(disj(type_pat_sem,drvdTypeSpec)),
+        functionPrefix=star(disj(type_pat_sem,drvdTypeSpec,*FuncOrSubStmt.ourQualifierLits))
+        p1 = seq(functionPrefix,
                  lit(FunctionStmt.kw),
                  id,
                  lit('('),
@@ -1506,14 +1576,23 @@ class FunctionStmt(PUstart):
                          lit('('),
                          id,
                          lit(')'))))
-        ((rec,ty,dc,name,dc1,args,dc2,resultstuff),rest) = p1(scan)
-        type = ty and ty[0] \
-                   or None
+        ((prefix,dc,name,dc1,args,dc2,resultstuff),rest) = p1(scan)
+        type=None
+        qualifiers=None
+        if (prefix):
+            typeIter=itertools.ifilter(lambda l: not(l in FunctionStmt.ourQualifiers),prefix)
+            try:
+                type=typeIter.next()
+            except StopIteration, e:
+                pass
+            qualifiers=filter(lambda l: (l in FunctionStmt.ourQualifiers),prefix)
+            if (not qualifiers): # empty list
+                qualifiers=None
         result = resultstuff and resultstuff[0][2] \
                               or None
-        return FunctionStmt(type,name,args,result,(len(rec)==1),lineNumber,rest=rest)
+        return FunctionStmt(type,name,args,result,qualifiers,lineNumber,rest=rest)
 
-    def __init__(self,ty,name,args,result,recursive=False,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+    def __init__(self,ty,name,args,result,qualifiers=None,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         '''
         typ = None
 
@@ -1526,7 +1605,7 @@ class FunctionStmt(PUstart):
         self.name = name
         self.args = args
         self.result = result
-        self.recursive=recursive
+        self.qualifiers=qualifiers
         PUstart.__init__(self,lineNumber,label,lead,internal,rest)
 
     def __repr__(self):
@@ -1539,15 +1618,16 @@ class FunctionStmt(PUstart):
                                        repr(self.name),
                                        repr(self.args),
                                        resultRepr,
-                                       repr(self.recursive))
+                                       repr(self.qualifiers))
+
     def __str__(self):
         typePrefix = self.ty and (typestr2(self.ty)+' ') \
                               or ''
         resultStr = self.result and ' result('+str(self.result)+')' \
                                  or ''
         rStr=''
-        if (self.recursive):
-            rStr+='recursive '
+        if (self.qualifiers):
+            rStr+=' '.join(self.qualifiers)+' '
         return '%s%s%s %s(%s)%s' % (rStr,
                                     typePrefix,
                                     self.kw,
@@ -1626,7 +1706,7 @@ class UseStmt(Decl):
         return theParsedStmt
 
 class UseAllStmt(UseStmt):
-    _sons  = ['renameList']
+    _sons  = ['moduleName','renameList']
 
     def __init__(self,moduleName,renameList,stmt_name=UseStmt.kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         self.moduleName = moduleName
@@ -1783,7 +1863,7 @@ class CycleStmt(Exec) :
 class CallStmt(Exec):
     kw = 'call'
     kw_str = kw
-    _sons = ['args']
+    _sons = ['head','args']
 
     @staticmethod
     def parse(ws_scan,lineNumber):
@@ -2814,6 +2894,7 @@ kwtbl = dict(assign          = DeletedAssignStmt,
              parameter       = ParameterStmt,
              private         = PrivateStmt,
              public          = PublicStmt,
+             sequence        = SequenceStmt,
              type            = TypePseudoStmt,
              interface       = InterfaceStmt,
              contains        = ContainsStmt,
@@ -2896,15 +2977,16 @@ def parse(ws_scan,lineNumber):
         kw = len(scan) >=3 and kw3g(lscan[0:3]) and sqz(3,[scan]) or \
              len(scan) >=2 and kw2g(lscan[0:2]) and sqz(2,[scan]) or \
              lscan[0]
-        if (kw in kwBuiltInTypesTbl.keys() or kw == 'type') and 'function' in lscan:
-            kw = 'function'
-        if (kw == 'recursive') and 'subroutine' in lscan:
-            kw = 'subroutine'
-        if (kw == 'recursive') and 'function' in lscan:
-            kw = 'function'
+        if (kw in kwBuiltInTypesTbl.keys() or kw == 'type') and FunctionStmt.kw in lscan:
+            kw = FunctionStmt.kw
+        if (kw in FuncOrSubStmt.ourQualifiers):
+            if FunctionStmt.kw in lscan:
+                kw = FunctionStmt.kw
+            if SubroutineStmt.kw in lscan:
+                kw = SubroutineStmt.kw
         # special case for module procedure statements:
-        elif (kw == 'module') and (lscan[1] == 'procedure') :
-            kw = 'procedure'
+        elif (kw == ProcedureStmt.optKwPrefix) and (lscan[1] == ProcedureStmt.kw) :
+            kw = ProcedureStmt.kw
 
         if not kwtbl.get(kw):
             if '=>' in scan:
@@ -2914,7 +2996,7 @@ def parse(ws_scan,lineNumber):
                     return parsed
                 except ListAssemblerException,e:
                     raise ParseError(lineNumber,scan,PointerAssignStmt,'l_assembler error:'+e.msg+' remainder:'+str(e.rest))
-            elif ('do' in scan) and (':' in scan):
+            elif (x.lower()=='do' for x in scan) and (':' in scan):
                 try:
                     parsed = DoStmt.parse(scan,lineNumber)
                     parsed.rawline = ''.join(ws_scan).strip()

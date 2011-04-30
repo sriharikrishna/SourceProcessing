@@ -125,9 +125,9 @@ class UnitPostProcessor(object):
     # replaced
     def __transformActiveTypesExpression(self,theExpression,inAssignment=False):
         'mutate __value__ and __deriv__ calls'
-        # deepcopy allows for comparison of return value and input value in calling function
+        # explicit reassignment allows for comparison of return value and input value in calling function
         if self.__recursionDepth is 0:
-            replacementExpression = copy.deepcopy(theExpression)
+            replacementExpression=fe.copyExp(theExpression)
         else:
             replacementExpression = theExpression
 
@@ -214,7 +214,7 @@ class UnitPostProcessor(object):
         reconstructs it as an AssignStmt if StmtFnStmt.name is "__value__" or "__deriv__" '''
         DebugManager.debug('unitPostProcessor.__processStmtFnStmt called on: "'+str(StmtFnStmt)+"'")
         if StmtFnStmt.name in ['__value__','__deriv__']:
-            return fs.AssignStmt(self.__transformActiveTypesExpression(fe.App(StmtFnStmt.name,copy.deepcopy(StmtFnStmt.args)),True), # new LHS
+            return fs.AssignStmt(self.__transformActiveTypesExpression(fe.App(StmtFnStmt.name,StmtFnStmt.args),True), # new LHS
                                  self.__transformActiveTypesExpression(StmtFnStmt.body,True), # new RHS
                                  lineNumber=StmtFnStmt.lineNumber,
                                  label=StmtFnStmt.label,
@@ -276,11 +276,12 @@ class UnitPostProcessor(object):
         '''Retrieves the unit to be inlined'''
         function = None
         inline = False
-        match=re.search('C[ ]+[$]openad[$][ ]+inline',aComment.rawline,re.IGNORECASE)
-        if match:
-            p = re.compile(r'\(')
-            # get name of inlined function
-            inlineFunction = p.split(aComment.rawline[match.end():])[0].lstrip()
+        rawline = ''.join(aComment.rawline.split(' '))
+        search_str='c$openad$inline'
+        if search_str in rawline.lower():
+            fn_index=len(search_str)
+            fn_end=rawline[fn_index:].index('(')
+            inlineFunction = rawline[fn_index:fn_index+fn_end]
             aComment =\
                 fs.Comments("C!! requested inline of '"+inlineFunction+\
                                 "' has no defn\n")
@@ -298,11 +299,10 @@ class UnitPostProcessor(object):
     # replacement command. Otherwise 0
     def __getReplacementNum(self,aComment):
         '''Determines the pragma number for replacement'''
-        begin_match = \
-            re.search('C[ ]+[$]openad[$][ ]+begin[ ]+replacement[ ]+',
-                      aComment.rawline,re.IGNORECASE)
-        if begin_match:
-            num_match=re.search('[0-9]+',aComment.rawline[begin_match.end(0):])
+        rawline=''.join(aComment.rawline.split(' ')).lower()
+        search_str='c$openad$beginreplacement'
+        if search_str in rawline:
+            num_match=re.match('[0-9]+',rawline[len(search_str):])
             if num_match:
                 replacementNum = num_match.group(0)
                 return int(replacementNum)
@@ -314,10 +314,8 @@ class UnitPostProcessor(object):
     # False otherwise
     def __endReplacement(self,aComment):
         '''Finds the end of a replacement'''
-        end_match = \
-            re.search('C[ ]+[$]openad[$][ ]+end[ ]+replacement',
-                      aComment.rawline,re.IGNORECASE)
-        if end_match:
+        rawline=''.join(aComment.rawline.split(' ')).lower()
+        if 'c$openad$endreplacement' in rawline:
             return True
         return False
 
@@ -422,7 +420,7 @@ class UnitPostProcessor(object):
                 Stmt.lead = stmt_lead
                 ExecsAppend(Stmt)
             else:
-                raise PostProcessError('unitPostProcess.py.__createNewExecs: don\'t know how to handle exec statement "'+Stmt+'"')
+                raise PostProcessError('unitPostProcess.py.__createNewExecs: don\'t know how to handle exec statement "'+str(Stmt)+'"',Stmt.lineNumber)
         return Execs
 
 
@@ -711,7 +709,10 @@ class UnitPostProcessor(object):
             # insert oad_active module
             newDecl = fs.UseAllStmt(moduleName='OAD_active',renameList=None,lead='\t')
             newUnit.decls.append(newDecl)
-            newStmt = fs.CommonStmt(fortStmt.name,copy.deepcopy(fortStmt.declList),lead='\t')
+            newDeclList=[]
+            for aDecl in fortStmt.declList:
+                newDeclList.append(aDecl)
+            newStmt = fs.CommonStmt(fortStmt.name,newDeclList,lead='\t')
             newUnit.decls.append(newStmt)
             # insert type declarations for variables which occur in the common statement declList
             for decl in typeDecls:
@@ -826,6 +827,41 @@ class UnitPostProcessor(object):
             if isinstance(decl,fs.TypeDecl):
                 typeDecls.add(decl)
 
+    def __isActive(self,Exp,parentStmt):
+        varName=fs.getVarName(Exp,parentStmt.lineNumber)
+        (stmtClass,expType)=expressionType(varName,
+                                           self.__myUnit.symtab,parentStmt.lineNumber)
+        if (len(expType)>0 and expType[0]==self._abstract_type):
+            return True
+        return False
+
+    # recursively transforms an expression if it contains an active module variable
+    def __transformActiveModuleVariables(self,Exp,parentStmt):
+        DebugManager.debug('unitPostProcessor.__transformActiveModuleVariables called on "'+str(Exp)+'"')
+        if isinstance(Exp,list) :
+            Exp = [self.__transformActiveModuleVariables(s,parentStmt) for s in Exp]
+        elif isinstance(Exp,fe.App) and intrinsic.is_intrinsic(Exp.head) and not intrinsic.is_inquiry(Exp.head):
+            Exp.head=intrinsic.getGenericName(Exp.head)
+            Exp.args=[self.__transformActiveModuleVariables(arg,parentStmt) for arg in Exp.args]
+        elif isinstance(Exp,str) or isinstance(Exp,fe.Sel) or isinstance(Exp,fe.App):
+            try:
+                if self.__isActive(Exp,parentStmt):
+                    Exp = fe.Sel(Exp,"v")
+                    parentStmt.modified = True
+                if hasattr(Exp,'args'):
+                    Exp.args=[self.__transformActiveModuleVariables(arg,parentStmt) for arg in Exp.args]
+                    parentStmt.modified=True
+            except:
+                pass
+        elif hasattr(Exp, "_sons"):
+            for aSon in Exp.get_sons() :
+                theSon = getattr(Exp,aSon)
+                newSon = self.__transformActiveModuleVariables(theSon,parentStmt)
+                Exp.set_son(aSon,newSon)
+        DebugManager.debug('unitPostProcessor.__transformActiveModuleVariables returning '+str(Exp))
+        return Exp
+
+
     # Processes all statements in the unit
     def processUnit(self):
         ''' post-process a unit '''
@@ -843,6 +879,22 @@ class UnitPostProcessor(object):
             if subUnit is not None:
                 subUnit.parent = self.__myUnit
                 self.__myUnit.ulist.append(subUnit)
+
+        if isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
+            for anExec in self.__myUnit.execs:
+                DebugManager.debug('unitPostProcessor.processUnit: '\
+                                       +'processing exec statement "'+str(anExec)+'"',
+                                   lineNumber=anExec.lineNumber)
+                if isinstance(anExec,fs.AllocateStmt) or \
+                        isinstance(anExec,fs.DeallocateStmt) : continue
+                elif hasattr(anExec, "_sons"):
+                    for aSon in anExec.get_sons() :
+                        theSon = getattr(anExec,aSon)
+                        if isinstance(theSon,fs.AllocateStmt) or isinstance(theSon,fs.DeallocateStmt) :
+                            continue
+                        newSon = self.__transformActiveModuleVariables(theSon,anExec)
+                        anExec.set_son(aSon,newSon)
+                DebugManager.debug('unitPostProcessor.processUnit: resulting exec statement: "'+str(anExec)+'"')
 
         if self._mode == 'reverse':
             inline = False

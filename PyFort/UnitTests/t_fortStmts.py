@@ -3,7 +3,7 @@
 from Setup     import *
 from unittest  import *
 
-from fortExp import LoopControl
+from fortExp import LoopControl,Sel
 from fortStmts import *
 from fortStmts import _F90Len,_F90ExplLen,_Star,_NoInit,_Kind,_Prec,_ExplKind,_AssignInit,_PointerInit,_ImplicitDoConstruct,_DimensionArraySpec
 from useparse  import *
@@ -855,7 +855,7 @@ class TestFunctionStmt(TestCase):
     def test6(self):
         '''recursive function statement with type real (with modifier) and result specifier'''
         s = 'recursive real(kind = 16) function foo(x) result(y)'
-        r = FunctionStmt((RealStmt,[_ExplKind('16')]),'foo',['x'],'y',True)
+        r = FunctionStmt((RealStmt,[_ExplKind('16')]),'foo',['x'],'y',['recursive'])
         self.assertEquals(repr(pps(s)),repr(r))
         self.assertEquals(s,str(r))
 
@@ -1015,7 +1015,7 @@ class TestSubroutineStmt(TestCase):
     def test2(self):
         'recursive subroutine stmt'
         theString  = 'recursive subroutine foo(x,y,z)'
-        theRepr = SubroutineStmt('foo',['x', 'y', 'z'],True)
+        theRepr = SubroutineStmt('foo',['x', 'y', 'z'],['recursive'])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
@@ -1063,6 +1063,15 @@ class TestIntegerStmt(TestCase):
                               [_NoInit('NA')])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
+
+    def test2(self):
+        theString = 'integer,dimension(6) :: NA = [ 19,20,21,22,23,24 ]'
+        theOutString = 'integer,dimension(6) :: NA = (/19,20,21,22,23,24/)'
+        theRepr = IntegerStmt([],[App('dimension',['6'])],
+                              [_AssignInit('NA',ArrayConstructor(['19','20','21','22','23','24']))])
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(theOutString,str(theRepr))
+        self.assertEquals(theOutString,pps(theString).get_rawline())
 
 class TestAllocateStmt(TestCase):
     '''allocate istatements'''
@@ -1176,7 +1185,7 @@ class TestIOtmt(TestCase):
         self.assertEquals(theString,str(theRepr))
 
     def test9(self):
-        '''write statement with problematic forward slash in string constant (from SCALE: scalelib/html_M.f90)'''
+        '''write statement with problematic backslash in string constant (from SCALE: scalelib/html_M.f90)'''
         theString = "write(unit,'(a)') ' <APPLET \'"
         theRepr = WriteStmt(['unit',"'(a)'"],["' <APPLET '"])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
@@ -1347,6 +1356,22 @@ class TestDataStmt(TestCase):
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
+
+    def test12(self):
+        '''data statement with multiple non-comma-separated objectList-valueList pairs--KNOWN TO FAIL. see https://trac.mcs.anl.gov/projects/openAD/ticket/245'''
+        theString = 'DATA NAME /"JOHN DOE"/ METERS /10*0/'
+        theRepr = DataStmt([(['NAME'],['"JOHN DOE"']),(['METERS'],[Ops('*','10','0')])],'DATA')
+        reprStr = 'DATA NAME /"JOHN DOE"/METERS /10*0/'
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(reprStr,str(pps(theString)))
+
+    def test13(self):
+        '''data statement with selector in data-object-list'''
+        theString = 'data you % age, you % name / 35, "Fred Brown" /'
+        theRepr = DataStmt([([Sel('you','age'),Sel('you','name')],[35,'"Fred Brown"'])],'data')
+        reprStr = 'data you%age,you%name /35,"Fred Brown"/'
+        self.assertEquals(repr(pps(theString)),repr(theRepr))
+        self.assertEquals(reprStr,str(theRepr))
 
 class TestProcedureStmt(TestCase):
     '''procedure statements'''
@@ -1558,7 +1583,6 @@ class TestCloseStmt(TestCase):
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
-
 
 
 suite = asuite(C2,C3,C4,C5,C6,C8,C9,

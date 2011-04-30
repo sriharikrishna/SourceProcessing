@@ -1,29 +1,31 @@
 from Setup import *
 from unittest import *
-from symtab import Symtab
+from symtab import Symtab, SymtabEntry
 
 from PyFort.fortStmts import RealStmt,IntegerStmt
 
 Symtab.setTypeDefaults((RealStmt,[]),(IntegerStmt,[]))
 
 class C1(TestCase):
+    topSE=SymtabEntry(SymtabEntry.GenericEntryKind())
+    fooSE=SymtabEntry(SymtabEntry.GenericEntryKind())
     def setUp(self):
         t = Symtab()
-        t.enter_name('TOP','got top')
+        t.enter_name('TOP',C1.topSE)
 
         ts = Symtab(t)
-        ts.enter_name('fOo','local foo')
+        ts.enter_name('fOo',C1.fooSE)
         self.ts = ts
 
     def test1(self):
         'local lookup'
         ts = self.ts
-        ae(ts.lookup_name('foo'),'local foo')
+        ae(ts.lookup_name('foo'),C1.fooSE)
 
     def test2(self):
         'remote lookup'
         ts = self.ts
-        ae(ts.lookup_name('top'),'got top')
+        ae(ts.lookup_name('top'),C1.topSE)
 
     def test3(self):
         'no entry'

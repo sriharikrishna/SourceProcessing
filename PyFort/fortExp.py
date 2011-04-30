@@ -2,7 +2,7 @@
 Expression parser for fortran expressions:
   use rec decent
 '''
-import re
+import re,copy
 
 from _Setup import *
 
@@ -69,6 +69,18 @@ _whitespace = False
 def setWhitespace(useWhitespace):
     _whitespace = useWhitespace    
 
+def copyExp(exp):
+    '''handle base cases for custom deepcopy'''
+    if isinstance(exp,list) or isinstance(exp,tuple):
+        newList=[]
+        for item in exp:
+            newList.append(copyExp(item))
+        return newList
+    elif isinstance(exp,str) or isinstance(exp,bool) or exp is None:
+        return exp
+    else:
+        return copy.deepcopy(exp)
+
 class _Exp(_Mutable_T):
     'base class for Expression trees'
     _sons = []
@@ -77,6 +89,15 @@ class _Exp(_Mutable_T):
     def set_son(self,theSon,newSon):
         setattr(self,theSon,newSon)
         self.modified = True
+    def __deepcopy__(self,memo={}):
+        '''cheaper deepcopy implementation for copying expressions'''
+        newSons=[]
+        for son in self.get_sons():
+            theSon = getattr(self,son)
+            newSon = theSon
+            newSon=copyExp(theSon)
+            newSons.append(newSon)
+        return self.__class__(*newSons)
     pass
 
 class App(_Exp):
@@ -127,10 +148,12 @@ class NamedParam(object):
         setattr(self,theSon,newSon)
         self.modified = True
 
+    def __deepcopy__(self,memo={}):
+        return NamedParam(self.myId,self.myRHS)
 class Sel(_Exp):
     'selection expressions like foo(i,j)%k'
 
-    _sons = ['head']
+    _sons = ['head','proj']
     
     def __init__(self,head,proj):
         self.head = head
@@ -270,7 +293,7 @@ class ParenExp(Unary):
 
 class Ops(_Exp):
     'some sequence of binops'
-    _sons = ['a1','a2']
+    _sons = ['op','a1','a2']
 
     def __init__(self,op,a1,a2):
         self.op = op
@@ -301,10 +324,12 @@ def is_int(t):
     return _int_re.match(t)
 
 def is_const(t):
+    ''' is \param t a literal constant'''
     t1 = t.lower()
     return t1[0] in _quote_set or t1 in _logicon_set or _num_re.match(t1)
 
 def isConstantExpression(anExpression):
+    ''' is \param anExpression an expression of literal constants'''
     if isinstance(anExpression,str):
         return is_const(anExpression)
     elif isinstance(anExpression,Unary):

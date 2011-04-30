@@ -10,8 +10,9 @@ from _Setup import *
 from PyUtil.caselessDict import caselessDict as cDict
 from PyUtil.debugManager import DebugManager
 
-from PyFort.fortExp import App
-from PyFort.fortStmts import _PointerInit,_Kind
+from PyFort.fortExp import App, Unary,Ops,is_const,_id_re
+from PyFort.fortStmts import _PointerInit, _Kind, PrivateStmt, PublicStmt
+from PyFort.intrinsic import is_intrinsic
 
 class GenericInfo(object):
     def __init__(self):
@@ -63,10 +64,15 @@ class Symtab(object):
             raise SymtabError('Symtab.getRealTypeDefault: no type set!')
         return Symtab._default_real
 
+    ourAccessPrefix='default'
+    ourSpecificAccessKWs=[PublicStmt.kw, PrivateStmt.kw]
     def __init__(self,parent=None):
-        self.ids    = cDict()
+        self.ids    = cDict() # string for the key and SymtabEntry for the value
+        self.renames = cDict() # renameSource for the key and new name for the value
         self.parent = parent
-        self.labelRefs = {} # list of statements refering to a given label 
+        self.labelRefs = {} # list of statements referring to a given label
+        # the following settings refer to the kw of the PublicStmt and PrivateStmt 
+        self.defaultAccess=None # None | 'default'{'private'|'public'}
         self.default_implicit()
 
     def default_implicit(self):
@@ -105,7 +111,10 @@ class Symtab(object):
         return entry
 
     def enter_name(self,name,val):
+        ''' val should be a SymtabEntry '''
         self.ids[name] = val
+        if (not val.access):
+            val.access=self.defaultAccess 
 
     def lookupDimensions(self,name):
         DebugManager.debug('Symtab.lookupDimensions: called on '+str(name))
@@ -113,7 +122,7 @@ class Symtab(object):
         if entry: return entry.lookupDimensions()
         return None
 
-    def _contextReplace(self,anExpression):
+    def __renamedToSource(self,anExpression):
         '''
         replace an instances in anExpression of things that may be local to this context (such as renames)
         with things that are applicable in a general context
@@ -123,63 +132,94 @@ class Symtab(object):
                 return self.ids[anExpression].renameSource
         elif isinstance(anExpression,App):
             for anArg in anExpression.args:
-                anArg = self._contextReplace(anArg)
+                anArg = self.__renamedToSource(anArg)
         else:
-            raise SymtabError('Symtab._contextReplace: Error -- expression'+str(anExpression)+'is not a string and not an App!')
+            raise SymtabError(sys._getframe().f_code.co_name+': expression'+str(anExpression)+'is not a string and not an App!')
         return anExpression
 
-    def replicateEntry(self,aKey,localOrigin):
+    def __sourceToRenamed(self,anExpression):
+        '''
+        replace an instances in anExpression of things that may be local to this context (such as renames)
+        with things that are applicable in a general context
+        '''
+        if isinstance(anExpression,App):
+            for anArg in anExpression.args:
+                anArg = self.__sourceToRenamed(anArg)
+        elif isinstance(anExpression,str):
+            if anExpression in self.renames:
+                name=self.renames[anExpression]
+                return name
+        else:
+            raise SymtabError(sys._getframe().f_code.co_name+': expression'+str(anExpression)+'is not a string and not an App!')
+        return anExpression
+
+    def __typeHandler(self,targetEntry,targetEntrySymtab):
+        if (targetEntry.type):
+            # look for attribute mod names in this symbol table.  If they are in there and have a rename, use the rename in the new entry
+            (typename,modifiers) = targetEntry.type
+            for aModifier in modifiers:
+                if isinstance(aModifier,_Kind):
+                    aModifier.mod = targetEntrySymtab.__sourceToRenamed(self.__renamedToSource(aModifier.mod))
+        
+        
+    def replicateEntry(self,aKey,theOrigin,newName,otherSymtab):
         '''
         create and return a new symbol table entry that is for use in another context
-        In particular, anything that is the result of a local rename must be reverted to the original name for use in other contexts
+        we do not set the access attribute from theOrigin here because the access is
+        determined by the new context
+        the entry is added under otherName to newSymtab
         '''
         theLocalEntry = self.ids[aKey]
         theNewEntry = SymtabEntry(theLocalEntry.entryKind)
         # set the type
-        theNewEntry.type = theLocalEntry.type
-        if (theNewEntry.type):
-            DebugManager.debug('symtab.replicateEntry('+theLocalEntry.debug(aKey)+')')
-            # look for attribute mod names in this symbol table.  If they are in there and have a rename, use the rename in the new entry
-            (typename,modifiers) = theNewEntry.type
-            for aModifier in modifiers:
-                if isinstance(aModifier,_Kind):
-                    aModifier.mod = self._contextReplace(aModifier.mod)
+        theNewEntry.type = SymtabEntry.copyType(theLocalEntry.type)
+        self.__typeHandler(theNewEntry,otherSymtab)
         # set the dimensions
         theNewEntry.dimensions = theLocalEntry.dimensions
         # set the length
         theNewEntry.length = theLocalEntry.length
+        # set the constInit
+        theNewEntry.constInit = theLocalEntry.constInit
         # set the origin
-        theNewEntry.updateOrigin(localOrigin)
+        theNewEntry.updateOrigin(theOrigin)
         # keep a ref to the same generic Info, arg list
         theNewEntry.genericInfo=theLocalEntry.genericInfo
         theNewEntry.funcFormalArgs=theLocalEntry.funcFormalArgs
+        otherSymtab.enter_name(newName,theNewEntry)
+        DebugManager.debug(sys._getframe().f_code.co_name+': original < '+theLocalEntry.debug(aKey)+' > replicated as < '+theNewEntry.debug(newName)+' >')
         return theNewEntry
 
+    def augmentParentEntry(self,origEntry,parentEntry,parentEntryName):
+        if (self.parent.ids[parentEntryName]!=parentEntry):
+            raise SymtabError(sys._getframe().f_code.co_name+": entry "+parentEntry.debug(parentEntryName)+" not in parent symbol table "+self.parend.debug())    
+        parentEntry._augmentParentEntryFrom(origEntry)
+        self.__typeHandler(parentEntry,self.parent)
+        
     def update_w_module_all(self,aModuleUnit,renameList):
         'update self with all ids from module "unit" symtab, making sure to enter local names whenever there are renames. module name = "name"'
         # go through everything in the module and add it to the local symbol table, being sure to check for it in the rename list
         for aKey in aModuleUnit.symtab.ids.keys():
-            if aModuleUnit.symtab.ids[aKey].isPrivate : continue
+            if aModuleUnit.symtab.ids[aKey].isPrivate() : continue
             noRename = True
             if renameList:
                 for aRenameItem in renameList:
                     if aRenameItem.rhs == aKey:
-                        # add the local name to the symbol table
-                        self.ids[aRenameItem.lhs] = aModuleUnit.symtab.replicateEntry(aKey,'module:'+aModuleUnit.name())
-                        self.ids[aRenameItem.lhs].renameSource = aKey
+                        self.renames[aKey]=aRenameItem.lhs
+                        # add the local name to the symbol table and track the original name
+                        aModuleUnit.symtab.replicateEntry(aKey,'module:'+aModuleUnit.name(),aRenameItem.lhs,self).renameSource = aKey
                         noRename = False
             if noRename:
-                self.ids[aKey] = aModuleUnit.symtab.replicateEntry(aKey,'module:'+aModuleUnit.name())
+                aKey,aModuleUnit.symtab.replicateEntry(aKey,'module:'+aModuleUnit.name(),aKey,self)
 
     def update_w_module_only(self,aModuleUnit,onlyList):
         'update self with the subset of ids from module "unit" symtab specified in onlyList. module name = "name"'
         for anOnlyItem in onlyList:
             # rename items: add only the lhs of the pointer init
             if isinstance(anOnlyItem,_PointerInit):
-                self.ids[anOnlyItem.lhs] = aModuleUnit.symtab.replicateEntry(anOnlyItem.rhs,'module:'+aModuleUnit.name())
-                self.ids[anOnlyItem.lhs].renameSource = anOnlyItem.rhs
+                self.renames[anOnlyItem.rhs]=anOnlyItem.lhs
+                aModuleUnit.symtab.replicateEntry(anOnlyItem.rhs,'module:'+aModuleUnit.name(),anOnlyItem.lhs,self).renameSource=anOnlyItem.rhs
             else:
-                self.ids[anOnlyItem] = aModuleUnit.symtab.replicateEntry(anOnlyItem,'module:'+aModuleUnit.name())
+                aModuleUnit.symtab.replicateEntry(anOnlyItem,'module:'+aModuleUnit.name(),anOnlyItem,self)
 
     def enterLabelRef(self,label,labelRef):
         if self.labelRefs.has_key(label) :
@@ -187,9 +227,61 @@ class Symtab(object):
                 self.labelRefs[label].append(labelRef)
         else:
             self.labelRefs[label]=[labelRef]
+            
+    def setDefaultAccess(self,anAccessKW):
+        if ( not anAccessKW or not (anAccessKW in Symtab.ourSpecificAccessKWs )):
+            raise SymtabError(sys._getframe().f_code.co_name+": invalid  argument")    
+        if (self.defaultAccess):
+            raise SymtabError(sys._getframe().f_code.co_name+": already set")
+        self.defaultAccess=Symtab.ourAccessPrefix+anAccessKW
+        for     entry in self.ids.values(): 
+            entry.setDefaultAccess(anAccessKW)
 
+    def isConstInit(self,anExpression):
+        if isinstance(anExpression,str) and is_const(anExpression):
+            return True
+        elif isinstance(anExpression,str) and _id_re.match(anExpression):
+            stE=self.lookup_name(anExpression)
+            if (stE and stE.constInit):
+                return True
+        elif isinstance(anExpression,Unary):
+            return self.isConstInit(anExpression.exp)
+        elif isinstance(anExpression,Ops):
+            return self.isConstInit(anExpression.a1) and self.isConstInit(anExpression.a2)
+        elif isinstance(anExpression,App):
+            if is_intrinsic(anExpression.head):
+                return all(map(lambda l:self.isConstInit(l),anExpression.args))
+        return False
+
+    def getConstInit(self,anExpression):
+        if isinstance(anExpression,str) and is_const(anExpression):
+            return anExpression
+        elif isinstance(anExpression,str) and _id_re.match(anExpression):
+            stE=self.lookup_name(anExpression)
+            if (stE and stE.constInit):
+                return stE.constInit
+        elif isinstance(anExpression,Unary):
+            if (self.isConstInit(anExpression.exp)):
+                cpExpression=anExpression
+                cpExpression.exp=self.getConstInit(anExpression.exp)
+                return cpExpression
+        elif isinstance(anExpression,Ops):
+            if ( self.isConstInit(anExpression.a1) and self.isConstInit(anExpression.a2)):
+                cpExpression=anExpression
+                cpExpression.a1=self.getConstInit(anExpression.a1)
+                cpExpression.a2=self.getConstInit(anExpression.a2)
+                return cpExpression
+        elif isinstance(anExpression,App):
+            if is_intrinsic(anExpression.head):
+                if ( all(map(lambda l:self.isConstInit(l),anExpression.args))):
+                    cpExpression=anExpression
+                    cpExpression.args=map(lambda l:self.getConstInit(l),anExpression.args)
+                    return cpExpression
+        raise SymtabError(sys._getframe().f_code.co_name+": cannot get it for "+str(anExpression))
+
+                
     def debug(self):
-        outString = 'symbol table '+str(self)+':\n'
+        outString = 'symbol table '+str(self)+' (defaultAccess:'+((self.defaultAccess and self.defaultAccess) or 'None')+'):\n'
         for aKey in self.ids.keys():
             outString += '\t'+self.ids[aKey].debug(aKey)+'\n'
         outString+="\timplicit:"+str(self.implicit)+'\n'
@@ -198,109 +290,7 @@ class Symtab(object):
         return outString
 
 class SymtabEntry(object):
-    def __init__(self,entryKind,type=None,dimensions=None,length=None,origin=None,renameSource=None,isPrivate=False):
-        self.entryKind = entryKind # some instanve of self.GenericEntryKind
-        self.type = type # pair  (type class,type modifier) 
-        self.dimensions = dimensions # None or list of expressions
-        self.length = length
-        self.origin = origin # None | [<parent origin>'|'](| 'local' | 'external' | 'temp' | 'common:'[<common block name])
-        self.renameSource = renameSource
-        self.isPrivate = isPrivate
-        # takes a GenericInfo instance when used for generic functions/subroutines (interfaces)
-        self.genericInfo = None 
-        # for functions takes a FormalArgs instance when used for the specific (non-generic) parameter list 
-        self.funcFormalArgs = None 
-        self.memberOfDrvdType = None
 
-    @staticmethod
-    def ourTypePrint(type):
-        rstr=type[0].kw_str
-        rstr+=len(type[1]) and str(type[1][0]) or ''
-        return rstr
-    
-    def typePrint(self):
-        return SymtabEntry.ourTypePrint(self.type)
-        
-    def enterEntryKind(self,newEntryKind):
-        # the replacement entry kind must be an 'instance' of the existing one.
-        # for example, we can replace a procedureKind with a functionKind,
-        # but we cannot replace a variableKind with a functionKind
-        if not isinstance(newEntryKind(),self.entryKind):
-            raise SymtabError('name clash between symbols with kind '+str(self.entryKind)+' and kind '+str(newEntryKind)+' ',entry=self)
-        self.entryKind = newEntryKind
-
-    def enterType(self,newType):
-        DebugManager.debug('\t\tSymtabEntry.enterType: entering type '+str(newType)+' for '+str(self))
-        if not newType:
-            raise SymtabError('SymtabEntry.enterType: newType is None!',entry=self)
-        if self.type : # assume a name clash
-            raise SymtabError('SymtabEntry.enterType: Name clash -- the declaration for this symbol conflicts with an earlier declaration using the same name"',entry=self)
-           # The following code makes some (incomplete) effort to determine the equality of the current type and the new type.
-           # It is commented out because (1) it's incomplete and (2): it's not clear that fortran allows us to re-declare any type information for a particular symbol.
-           #(currentTypeClass,currentTypeModifier) = self.type
-           #(newTypeClass,newTypeModifier) = newType
-           #if (currentTypeClass != newTypeClass):
-           #    raise SymtabError('SymtabEntry.enterType: Error -- current type class "'+str(currentTypeClass)+
-           #                                                    '" and new type class "'+str(newTypeClass)+'" conflict!',entry=self)
-           #if (currentTypeModifier[0].mod != newTypeModifier[0].mod):
-           #    raise SymtabError('SymtabEntry.enterType: Error -- current type modifier "'+str(currentTypeModifier[0].mod)+
-           #                                                    '" and new type modifier "'+str(newTypeModifier[0].mod)+'" conflict!',entry=self)
-        # procedures: entering a type means we know it's a function
-        if self.entryKind == self.ProcedureEntryKind:
-            DebugManager.debug('\t\t\t(SymtabEntry.enterType: entering type information tells us that this procedure is a function)')
-            self.entryKind = self.FunctionEntryKind
-        self.type = newType
-
-    def enterDimensions(self,newDimensions):
-        DebugManager.debug('\t\tSymtab.enterDimensions: called on '+str(self)+' and setting dimensions to '+str(newDimensions))
-        if self.dimensions and (self.dimensions != newDimensions):
-            raise SymtabError('SymtabEntry.enterDimensions: Error -- current dimensions "'+str(self.dimensions)+'" and new dimensions "'+str(newDimensions)+'" conflict!',entry=self)
-       # The following code makes some (incomplete) effort to determine the equality of the current dimensions and the new dimensions.
-       # See the similar comment in enterType above for more details.
-       #if self.dimensions:
-       #    for currentDimItem,newDimItem in zip(self.dimensions,newDimensions):
-       #        if (currentDimItem != newDimItem):
-       #            raise SymtabError('SymtabEntry.enterDimensions: Error -- current dimensions "'+str(self.dimensions)+
-       #                                                                  '" and new dimensions "'+str(newDimensions)+'" conflict!',entry=self)
-        self.dimensions = newDimensions
-
-    def enterLength(self,newLength):
-        if self.length and (self.length != newLength):
-            raise SymtabError('SymtabEntry.enterLength: Error -- current length "'+str(self.length)+'" and new length "'+str(newLength)+'" conflict!',entry=self)
-        self.length = newLength
-
-    def lookupDimensions(self):
-        DebugManager.debug('SymtabEntry.lookupDimensions: returning '+str(self.dimensions))
-        return self.dimensions
-
-    def updateOrigin(self,anOriginStr):
-        if self.origin:
-            self.origin = self.origin+'|'+anOriginStr
-        else:
-            self.origin = anOriginStr
-
-    def addResolveName(self,resolvesTo):
-        if (self.genericInfo is None):
-            self.genericInfo=GenericInfo()
-        if not resolvesTo.lower in self.genericInfo.resolvableTo :
-            self.genericInfo.resolvableTo[resolvesTo.lower()]=None
-
-    def enterDrvdTypeName(self,aDrvdTypeName):
-        self.memberOfDrvdType=aDrvdTypeName
-
-    def debug(self,name='<symbol name unknown>'):
-        return '[SymtabEntry('+str(self)+') "'+name+'" -> entryKind='+str(self.entryKind)+\
-                                         ', type='+str(self.type)+\
-                                         ', dimensions='+str(self.dimensions)+\
-                                         ', length='+str(self.length)+\
-                                         ', origin='+str(self.origin)+\
-                                         ', renameSource='+str(self.renameSource)+\
-                                         ', isPrivate='+str(self.isPrivate)+\
-                                         ', genericInfo='+((self.genericInfo and str(self.genericInfo.debug())) or 'None')+\
-                                         ', funcFormalArgs='+((self.funcFormalArgs and str(self.funcFormalArgs.debug())) or 'None')+\
-                                         ', memberOfDrvdType='+((self.memberOfDrvdType and self.memberOfDrvdType) or 'None')+\
-                                         ']'
-    
     class GenericEntryKind(object):
         keyword = 'unknown'
 
@@ -333,6 +323,150 @@ class SymtabEntry(object):
 
     class DerivedTypeEntryKind(GenericEntryKind):
         keyword = 'type'
+
+    def __init__(self,entryKind,type=None,dimensions=None,length=None,origin=None,renameSource=None,access=None):
+        self.entryKind = entryKind # some instanve of self.GenericEntryKind
+        self.type = type # pair  (type class,type modifier) 
+        self.dimensions = dimensions # None or list of expressions
+        self.length = length # specific for character statements, see stmt2unit
+        self.constInit=None #  expression if initialized with a constant expression 
+        self.origin = origin # None | [<parent origin>'|'](| 'local' | 'external' | 'temp' | 'common:'[<common block name])
+        self.renameSource = renameSource
+        self.access = access# None | 'private' | 'public' | 'privatedefault' | 'publicdefault']
+        # takes a GenericInfo instance when used for generic functions/subroutines (interfaces)
+        self.genericInfo = None 
+        # for functions takes a FormalArgs instance when used for the specific (non-generic) parameter list 
+        self.funcFormalArgs = None 
+        self.memberOfDrvdType = None
+
+    @staticmethod
+    def ourTypePrint(type):
+        rstr=type[0].kw_str
+        rstr+=len(type[1]) and str(type[1][0]) or ''
+        return rstr
+
+    @staticmethod
+    def copyType(type):
+        if not type:
+            return None
+        mods=[]
+        for m in type[1]:
+            mods.append(copy.deepcopy(m))
+        return (type[0],mods)
+    
+    def typePrint(self):
+        return SymtabEntry.ourTypePrint(self.type)
+        
+    def enterEntryKind(self,newEntryKind):
+        # the replacement entry kind must be an 'instance' of the existing one.
+        # for example, we can replace a procedureKind with a functionKind,
+        # but we cannot replace a variableKind with a functionKind
+        if not isinstance(newEntryKind(),self.entryKind):
+            raise SymtabError(sys._getframe().f_code.co_name+': name clash between symbols with kind '+str(self.entryKind)+' and kind '+str(newEntryKind)+' ',entry=self)
+        self.entryKind = newEntryKind
+
+    def enterType(self,newType):
+        DebugManager.debug('\t\tSymtabEntry.enterType: entering type '+str(newType)+' for '+str(self))
+        if not newType:
+            raise SymtabError('SymtabEntry.enterType: newType is None!',entry=self)
+        if self.type : # assume a name clash
+            raise SymtabError('SymtabEntry.enterType: Name clash -- the declaration for this symbol conflicts with an earlier declaration using the same name"',entry=self)
+        if self.entryKind == self.ProcedureEntryKind:
+            DebugManager.debug('\t\t\t(SymtabEntry.enterType: entering type information tells us that this procedure is a function)')
+            self.entryKind = self.FunctionEntryKind
+        self.type = newType
+
+    def copyAndEnterType(self,newType):
+        self.enterType(SymtabEntry.copyType(newType))
+
+    def enterDimensions(self,newDimensions):
+        DebugManager.debug('\t\tSymtab.enterDimensions: called on '+str(self)+' and setting dimensions to '+str(newDimensions))
+        if self.dimensions and (self.dimensions != newDimensions):
+            raise SymtabError('SymtabEntry.enterDimensions: Error -- current dimensions "'+str(self.dimensions)+'" and new dimensions "'+str(newDimensions)+'" conflict!',entry=self)
+        self.dimensions = newDimensions
+
+    def enterLength(self,newLength):
+        if self.length and (self.length != newLength):
+            raise SymtabError('SymtabEntry.enterLength: Error -- current length "'+str(self.length)+'" and new length "'+str(newLength)+'" conflict!',entry=self)
+        self.length = newLength
+
+    def enterConstInit(self,constInit):
+        if self.constInit and (self.constInit != constInit):
+            raise SymtabError('SymtabEntry.enterConstInit: Error -- already set',entry=self)
+        self.constInit = constInit
+
+    def lookupDimensions(self):
+        DebugManager.debug('SymtabEntry.lookupDimensions: returning '+str(self.dimensions))
+        return self.dimensions
+
+    def updateOrigin(self,anOriginStr):
+        if self.origin:
+            self.origin = self.origin+'|'+anOriginStr
+        else:
+            self.origin = anOriginStr
+
+    def addResolveName(self,resolvesTo):
+        if (self.genericInfo is None):
+            self.genericInfo=GenericInfo()
+        if not resolvesTo.lower in self.genericInfo.resolvableTo :
+            self.genericInfo.resolvableTo[resolvesTo.lower()]=None
+
+    def enterDrvdTypeName(self,aDrvdTypeName):
+        self.memberOfDrvdType=aDrvdTypeName
+        
+    def isPrivate(self):
+        return (self.access and self.access in [PrivateStmt.kw,Symtab.ourAccessPrefix+PrivateStmt.kw])
+    
+    def _augmentParentEntryFrom(self,other):
+        if (not self.type and other.type):
+            self.copyAndEnterType(other.type)
+        if (not self.dimensions):
+            self.dimensions=other.dimensions
+        if (self.entryKind==SymtabEntry.GenericEntryKind):
+            self.enterEntryKind(other.entryKind)
+        if (not self.length):
+            self.length=other.length
+        if (not self.constInit):
+            self.constInit=other.constInit
+        if (not self.genericInfo):
+            self.genericInfo=other.genericInfo
+        if (not self.funcFormalArgs):
+            self.funcFormalArgs=other.funcFormalArgs    
+
+    def setDefaultAccess(self,anAccessKW):
+        if (self.access):
+            if (self.access in Symtab.ourSpecificAccessKWs):
+                pass  # default does not override specific
+            elif (anAccessKW!=self.access):
+                raise SymtabError(sys._getframe().f_code.co_name+": already set")
+        else:
+            if (not (anAccessKW  in Symtab.ourSpecificAccessKWs)):
+                raise SymtabError(sys._getframe().f_code.co_name+": invalid argument")
+            self.access=Symtab.ourAccessPrefix+anAccessKW
+            
+    def setSpecificAccess(self,anAccessKW):
+        if (self.access):
+            if (self.access in Symtab.ourSpecificAccessKWs):
+                raise SymtabError(sys._getframe().f_code.co_name+": already set")
+        if (not (anAccessKW  in Symtab.ourSpecificAccessKWs)):
+                raise SymtabError(sys._getframe().f_code.co_name+": invalid argument")
+        self.access=anAccessKW
+            
+
+    def debug(self,name='<symbol name unknown>'):
+        return '[SymtabEntry('+str(self)+') "'+name+'" -> entryKind='+str(self.entryKind)+\
+                                         ', type='+str(self.type)+\
+                                         ', dimensions='+str(self.dimensions)+\
+                                         ', length='+str(self.length)+\
+                                         ', constInit='+((self.constInit and str(self.constInit)) or 'None')+\
+                                         ', origin='+str(self.origin)+\
+                                         ', renameSource='+str(self.renameSource)+\
+                                         ', access='+((self.access and self.access) or 'None')+\
+                                         ', genericInfo='+((self.genericInfo and str(self.genericInfo.debug())) or 'None')+\
+                                         ', funcFormalArgs='+((self.funcFormalArgs and str(self.funcFormalArgs.debug())) or 'None')+\
+                                         ', memberOfDrvdType='+((self.memberOfDrvdType and self.memberOfDrvdType) or 'None')+\
+                                         ']'
+    
 
 '''
 if __name__ == '__main__':
