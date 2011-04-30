@@ -19,12 +19,13 @@ class C1(TestCase):
 
 class qstrings(TestCase):
     def test1(self):
-        'single quoted strings'
+        'closed single quoted strings'
 
         re1 = re.compile('(' + q_re +')',re.X)
         s1  = "x4_ttxrebe = y5 + xy('foo bar bas gleem')"
         s2  = "xx(2:3) = 'this is a string with '' an embedded quote'"
-        s3  = r"yzzy = 'this is a string with \n '' \'' with stuff'"
+        s3  = r"yzzy = 'this is a string with \n '' \\ with stuff'"
+        s4  = r"yzzy = 'this is a string with \n '' \\ without a closing quote "
 
         ae  = self.assertEquals
 
@@ -35,15 +36,18 @@ class qstrings(TestCase):
         ae(mm.group(1),"'this is a string with '' an embedded quote'")
 
         mm  = re1.search(s3)
-        ae(mm.group(1),r"'this is a string with \n '' \'' with stuff'")
+        ae(mm.group(1),r"'this is a string with \n '' \\ with stuff'")
+
+        mm  = re1.match(s4)
+        self.assert_(not mm)
 
     def test2(self):
-        'double quoted strings'
+        'closed double quoted strings'
 
         re1 = re.compile('(' + qq_re +')',re.X)
         s1  = 'x4_ttxrebe = y5 + xy("foo bar bas gleem")'
-        s2  = 'xx(2:3) = "this is a string with "" an embedded quote"'
-        s3  = r'yzzy = "this is a string with \n "" \"" with stuff"'
+        s2  = 'xx(2:3) = "this is a string with "" an embedded pair of quotes"'
+        s3  = r'yzzy = "this is a string with \n "" \\ with stuff"'
 
         ae  = self.assertEquals
 
@@ -51,28 +55,52 @@ class qstrings(TestCase):
         ae(mm.group(1),'"foo bar bas gleem"')
 
         mm  = re1.search(s2)
-        ae(mm.group(1),'"this is a string with "" an embedded quote"')
+        ae(mm.group(1),'"this is a string with "" an embedded pair of quotes"')
 
         mm  = re1.search(s3)
-        ae(mm.group(1),r'"this is a string with \n "" \"" with stuff"')
+        ae(mm.group(1),r'"this is a string with \n "" \\ with stuff"')
 
 class ro_qstrings(TestCase):
     def test1(self):
-        'check for strings that are not closed at end of line'
-        re1 = re.compile(ro_q_re,re.X)
+        'check for single quote strings that are not closed at end of line'
+        re1 = re.compile('('+ro_q_patn("'")+')',re.X)
+        re2 = re.compile('('+preluded_ro_q_patn("'")+')',re.X)
         s1  = "x4_ttxrebe = y5 + xy('foo bar bas gleem"
-        s2  = "xx(2:3) = 'this is a string with '' an embedded quote'"
-        s3  = r"yzzy = 'this is a string with \n '' \' with stuff"
-        aa  = self.assert_
+        s2  = "xx(2:3) = 'this is a closed string with '' an embedded pair of quotes'"
+        s3  = r"yzzy = 'this is a string \n '' \ with stuff"
+        s4  = r"yzzy = 'this is a string \n '' double bs\\'"
+        ae  = self.assertEquals
 
-        mm  = re1.match(s1)
-        aa(mm)
+        mm  = re1.search(s1)
+        ae(mm.group(1),r"'foo bar bas gleem")
 
-        mm  = re1.match(s2)
-        aa(not mm)
+        mm  = re2.match(s2)
+        self.assert_(not mm)
 
-        mm  = re1.match(s3)
-        aa(mm)
+        mm  = re1.search(s3)
+        ae(mm.group(1),r"'this is a string \n '' \ with stuff")
+
+        mm  = re2.match(s4)
+        self.assert_(not mm)
+
+class lo_qstrings(TestCase):
+    def test1(self):
+        'check for strings that are open at beginning of line'
+        re1 = re.compile('('+lo_q_patn("'")+')',re.X)
+        re2 = re.compile('('+postluded_lo_q_patn("'")+')',re.X)
+        s1  = "foo bar bas gleem')+x4_ttxrebe "
+        s2  = "xx(2:3) = 'this is a closed string with '' an embedded quote'"
+        s3  = r"this is a string \n '' \ with stuff' def"
+        ae  = self.assertEquals
+
+        mm  = re1.search(s1)
+        ae(mm.group(1),r"foo bar bas gleem'")
+
+        mm  = re2.match(s2)
+        self.assert_(not mm)
+
+        mm  = re1.search(s3)
+        ae(mm.group(1),r"this is a string \n '' \ with stuff'")
 
 class qstrings2(TestCase):
     re1 = re.compile(q_re)
@@ -168,7 +196,7 @@ class C4(TestCase):
         a_(not r)
         
 s = asuite(C1)
-suite = asuite(C1,qstrings,ro_qstrings,qstrings2,scanit,C4)
+suite = asuite(C1,qstrings,ro_qstrings,lo_qstrings,qstrings2,scanit,C4)
 
 if __name__ == "__main__":
     sys.exit(runit(suite))

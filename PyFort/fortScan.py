@@ -11,31 +11,66 @@ else:
 
 from tokens import *
 
-def __str_intern(s):
-    template = r"""
-         (?:            # body of quote is a collection of chars
-            [^%s]   |   #    non-quote OR
-            %s%s    |   #    repeated quote         OR
-            \\.         #    backslashed anything
-         )*             # 0 or more
-"""
-    return template % (s,s,s)
+def __str_intern_patn(d):
+    ''' inside of a string w/o \param d as delimiter;
+        pairs of delimiters inside of the string are allowed '''
+    patn = r"""(?:%s%s|[^%s])*"""
+    return patn % (d,d,d)  # replaces the three %s in patn with d
 
-def __closed_q(s):
-    return '(?x)' + s + __str_intern(s) + s
+def closed_q_patn(d):
+    ''' closed quotation, i.e. a __str_intern_patn and enclosing delimiters d '''
+    return '(?x)' + d + __str_intern_patn(d) + d  
 
-def __ro_q(s):
+q_re     = closed_q_patn("'")  
+qq_re    = closed_q_patn('"')
+
+def ro_q_patn(d):
+    ''' right-open quotation with \param d as delimiter, 
+        note that this will also match the 
+        closing delimiter of closed quotation '''
+    # delimiter + string without delimiters + eos/eol
+    return '(?x)' + d + __str_intern_patn(d) + '$' 
+
+def preluded_ro_q_patn(d):
+    ''' right-open quotation with \param d as delimiter preceded by something;
+        this will not match the closing delimiter of a closed quotation '''
     prelude = r'''
-    (?x)
-    ^(?: [^%s] | (?: %s) )*'''
+    (?x)          # verbose mode                        
+    ^(?:          # start of line followed by  characters that are  
+        [^%s] |     # not the delimiter (see below first string arg) OR 
+        (?: %s)     # closed_q_patn (see below second string arg)
+     )*           # 0 or more
+     '''
+    return '(?x)(' + prelude % (d,closed_q_patn(d)) + ')(?P<d>' + d + ')(?P<si>' +  __str_intern_patn(d) + ')$' 
+    #return '(?x)' + prelude % (d,closed_q_patn(d)) + d +  __str_intern_patn(d) + '$' 
 
-    return prelude % (s,__closed_q(s)) + s + __str_intern(s) + '$'
+def lo_q_patn(d):
+    ''' left-open quotation with \param d as delimiter, 
+        note that this will also match the 
+        opening delimiter of closed quotation'''
+    # start of line + string without delimiters + delimiter
+    return '(?x)^' + __str_intern_patn(d) + d
+   
 
-q_re     = __closed_q("'")
-qq_re    = __closed_q('"')
-
-ro_q_re  = __ro_q("'")
-ro_qq_re = __ro_q('"')
+def postluded_lo_q_patn(d,postludeTail=None):
+    ''' left-open quotation with \param d as delimiter and something that follows
+        this will not match the opening delimiter of a closed quotation'''
+    postlude = r'''
+    (?:           # characters that are  
+        [^%s] |     # not the delimiter (see below first string arg) OR 
+        (?: %s)     # closed_q_patn (see below second string arg)
+     )*           # 0 or more
+     '''
+    # start of line + string without delimiters + delimiter
+    rPatn='(?x)^' + __str_intern_patn(d) + d + postlude % (d,closed_q_patn(d))
+    if postludeTail:
+        # if there is a tail we want to group the first part and the tail separately
+        # assuming that the tail is given as its own group, i.e. something '(...)'
+        # this is the reason why the first part is wrapped in another () pair,
+        # otherwise we would not get a group that can be referenced
+        rPatn='('+rPatn+')'+postludeTail
+    rPatn+='$'    # EOS/EOL
+    return rPatn
 
 pointerAssignSymbol_re = r'=>'
 
