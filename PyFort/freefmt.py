@@ -4,6 +4,7 @@ from PyUtil.flatten import flatten
 from PyUtil.chomp import chomp
 from kill_bang import *
 from PyUtil.assembler import *
+from fortScan import postluded_lo_q_patn, preluded_ro_q_patn
 
 _cont_re = r'& (([\s]*[!].*) | \s*) $'
 _cont_re = re.compile(_cont_re,re.X)
@@ -23,6 +24,28 @@ def is_comm(line):
     '''check to see if line is a comment line'''
     return _comm_re.match(line)
 
+_delimROpenREs = {
+    "'":re.compile(preluded_ro_q_patn("'"),re.X),
+    '"':re.compile(preluded_ro_q_patn('"'),re.X)}
+_delimLOpenREs = {
+    "'":re.compile(postluded_lo_q_patn("'"),re.X),
+    '"':re.compile(postluded_lo_q_patn('"'),re.X)}
+
+def hasOpenQuotation(line,delimiter):
+    '''check to see if line has an open quatation:
+       if delimiter is not None then we expect line to be a continuation 
+          of an open quotation and look for a right-open quotation 
+       if delimiter is None then we look for left - open quotation'''
+    if (delimiter and  _delimLOpenREs[delimiter].match(line)):
+        return (True,delimiter)
+    else:
+        for d,theRe in _delimROpenREs.items():
+            if (theRe.match(line)):
+                import pdb
+                pdb.set_trace()
+                return (True,d)
+    return (False,None)
+        
 _comment_p = is_comm
 
 token_cont_re = r'\s* &'
@@ -51,13 +74,33 @@ def _fjoin(asm):
     '''
 
     rawline = ''.join(flatten(asm))
-
     internal_comments = []
     (conts,prim) = asm
     current_line = []
     initial_line = True
+    delimOQ = None
+    currDelimOQ = None
+    hasOQ = False
     for (cl,comments) in conts:
-        (l,eol_comm) = kill_bang_comment(cl)
+        eol_comm=None
+        (hasOQ,currDelimOQ)=hasOpenQuotation(cl,delimOQ)
+        if (hasOQ) :
+            if (delimOQ):
+                if (currDelimOQ == delimOQ):
+                    # this is the end of the open quotation
+                    (cl,eol_comm) = kill_bang_comment_lo_q(cl,delimOQ)
+                    delimOQ = None
+                else :
+                    # it is conceivable that one has embedded the other quoation
+                    # mark but it ends up on a separate line but then
+                    # no comments are permitted
+                    (cl,eol_comm) = kill_bang_comment(cl)
+            else:
+                # this is the start of the open quoatation
+                delimOQ = currDelimOQ
+                (cl,eol_comm) = kill_bang_comment(cl)
+        else: 
+            (cl,eol_comm) = kill_bang_comment(cl)
         if eol_comm:
             internal_comments.append(eol_comm)
         internal_comments.extend(comments)
@@ -67,9 +110,20 @@ def _fjoin(asm):
         else:
             cl = kill_cont(kill_token_cont(cl))
         current_line.append(cl)
+    # dealing with prim
     if not initial_line:
         prim = kill_token_cont(prim)
-    (prim,eol_comm) = kill_bang_comment(chomp(prim))
+    prim=chomp(prim)
+    (hasOQ,currDelimOQ)=hasOpenQuotation(prim,delimOQ)
+    if (hasOQ and delimOQ and currDelimOQ == delimOQ):
+        # this is the end of the open quotation
+        (prim,eol_comm) = kill_bang_comment_lo_q(prim,delimOQ)
+        delimOQ = None
+        hasOQ=False
+    else:
+        (prim,eol_comm) = kill_bang_comment(prim)
+    if (delimOQ or hasOQ):
+        raise Exception("open quotation bug: hasOQ="+str(hasOQ)+" delimOQ="+str(delimOQ)+" currDelimOQ="+str(currDelimOQ)+" for "+str(asm))
     if eol_comm:
         internal_comments.append(eol_comm)
     current_line.append(prim)
