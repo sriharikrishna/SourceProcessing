@@ -113,11 +113,18 @@ def _fjoin(asm):
         prim = kill_token_cont(prim)
     prim=chomp(prim)
     (hasOQ,currDelimOQ)=hasOpenQuotation(prim,delimOQ)
-    if (hasOQ and delimOQ and currDelimOQ == delimOQ):
-        # this is the end of the open quotation
-        (prim,eol_comm) = kill_bang_comment_lo_q(prim,delimOQ)
-        delimOQ = None
-        hasOQ=False
+    if (hasOQ):
+        if (delimOQ and currDelimOQ == delimOQ):
+            # this is the end of the open quotation
+            (prim,eol_comm) = kill_bang_comment_lo_q(prim,delimOQ)
+            delimOQ = None
+            hasOQ=False
+        else :
+            # this is parsed as a new open quoatation but there is no
+            # continuation so it probably is seen in the comment part.
+            if (prim.rfind(currDelimOQ)>prim.rfind('!')):
+                (prim,eol_comm) = kill_bang_comment(prim)
+                hasOQ=False
     else:
         (prim,eol_comm) = kill_bang_comment(prim)
     if (delimOQ or hasOQ):
