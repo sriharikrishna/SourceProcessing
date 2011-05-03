@@ -91,7 +91,7 @@ def _fjoin(asm):
                 else :
                     # it is conceivable that one has embedded the other quoation
                     # mark but it ends up on a separate line but then
-                    # no comments are permitted
+                    # Note: no comments are permitted
                     (cl,eol_comm) = kill_bang_comment(cl)
             else:
                 # this is the start of the open quoatation
