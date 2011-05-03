@@ -63,6 +63,7 @@ __intrinsics = (
     'minval',
     'mod',
     'nint',
+    'null',
     'open',
     'present',
     'read',

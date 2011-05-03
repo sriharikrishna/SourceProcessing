@@ -250,7 +250,10 @@ class Symtab(object):
             return self.isConstInit(anExpression.a1) and self.isConstInit(anExpression.a2)
         elif isinstance(anExpression,App):
             if is_intrinsic(anExpression.head):
-                return all(map(lambda l:self.isConstInit(l),anExpression.args))
+                if anExpression.args:
+                    return all(map(lambda l:self.isConstInit(l),anExpression.args))
+                else: # e.g. for NULL()
+                    return True
         return False
 
     def getConstInit(self,anExpression):
@@ -277,7 +280,7 @@ class Symtab(object):
                     cpExpression=anExpression
                     cpExpression.args=map(lambda l:self.getConstInit(l),anExpression.args)
                     return cpExpression
-        raise SymtabError(sys._getframe().f_code.co_name+": cannot get it for "+str(anExpression))
+        raise SymtabError(sys._getframe().f_code.co_name+": cannot get it for "+str(anExpression)+" parsed as "+repr(anExpression))
 
                 
     def debug(self):
