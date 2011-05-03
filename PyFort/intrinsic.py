@@ -110,6 +110,9 @@ def isUsedNonStandard(op):
     global __useNonStandard
     return (op.lower() in __useNonStandard)
 
+def is_intrinsic(op):
+    return (op.lower() in __intrinsics) or (op.lower() in __useNonStandard)
+
 __inquiry = (
     'any',
     'associated',
@@ -119,9 +122,6 @@ __inquiry = (
     'shape',
     'size',
     )
-
-def is_intrinsic(op):
-    return (op.lower() in __intrinsics) or (op.lower() in __useNonStandard)
 
 def is_inquiry(op):
     return op.lower() in __inquiry
