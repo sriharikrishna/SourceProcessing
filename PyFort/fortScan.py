@@ -41,7 +41,7 @@ def preluded_ro_q_patn(d):
         (?: %s)     # closed_q_patn (see below second string arg)
      )*           # 0 or more
      '''
-    return '(?x)(' + prelude % (d,closed_q_patn(d)) + ')(?P<d>' + d + ')(?P<si>' +  __str_intern_patn(d) + ')$' 
+    return '(?x)(' + prelude % (d,closed_q_patn(d)) + ')(' + d + ')(' +  __str_intern_patn(d) + ')$' 
     #return '(?x)' + prelude % (d,closed_q_patn(d)) + d +  __str_intern_patn(d) + '$' 
 
 def lo_q_patn(d):
