@@ -1722,7 +1722,7 @@ class UseAllStmt(UseStmt):
         return self.stmt_name+' '+str(self.moduleName)+renameListStr
 
 class UseOnlyStmt(UseStmt):
-    _sons  = ['onlyList']
+    _sons  = ['moduleName','onlyList']
 
     def __init__(self,moduleName,onlyList,stmt_name=UseStmt.kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         self.moduleName = moduleName
