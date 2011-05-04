@@ -569,6 +569,8 @@ def __selSymtabName(aSel,localSymtab,lineNumber):
    ''' for aSel the name to be used for a symbol table lookup is "<type_name>:<member name>" '''
    # lookup type of head
    dType=expressionType(aSel.head,localSymtab,lineNumber)
+   if (not dType[1]):
+      raise InferenceError(sys._getframe().f_code.co_name+': Did not correctly resolve type of "'+aSel.head+'"',lineNumber)
    return dType[1][0]+":"+aSel.proj
 
 def isArrayReference(theApp,localSymtab,lineNumber):
