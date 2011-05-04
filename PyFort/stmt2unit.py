@@ -271,7 +271,7 @@ def _use_module(aUseStmt,cur):
 	global reportedMissingModules
         if not (aUseStmt.moduleName.lower() in reportedMissingModules) :
             reportedMissingModules.add(aUseStmt.moduleName.lower())
-            DebugManager.warning('definition for module '+aUseStmt.moduleName+' not seen in the input.',aUseStmt.lineNumber)
+            DebugManager.warning('definition for module '+aUseStmt.moduleName+' not seen in the input.',aUseStmt.lineNumber,DebugManager.WarnType.noDefinition)
     return aUseStmt
 
 def _setAccess(anAccessStmt,cur):
