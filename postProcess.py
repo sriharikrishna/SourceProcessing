@@ -93,7 +93,7 @@ def main():
         if (config.timing):
             startTime=datetime.datetime.utcnow()
 
-        PostProcessorOptErrors(config,args)
+        PostProcessorOptErrors(opt,config,args)
         setPostProcessFlags(config,args)
         # set options for splitting compile units
         if config.width:

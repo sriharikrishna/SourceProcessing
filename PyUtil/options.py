@@ -256,7 +256,7 @@ def SourceProcessingOptErrors(config,args):
 def PrePostOptErrors(config,args):
     SourceProcessingOptErrors(config,args)
 
-def CanonOptErrors(config,args):
+def CanonOptErrors(opt,config,args):
     PrePostOptErrors(config,args)
     # check input/output options
     if len(args) == 0:
@@ -267,7 +267,7 @@ def CanonOptErrors(config,args):
     if (config.noWarnings and config.warn):
         opt.error("Option --noWarnings conflicts with option --warn="+config.warn[0])
 
-def PostProcessorOptErrors(config,args):
+def PostProcessorOptErrors(opt,config,args):
     PrePostOptErrors(config,args)
     # check input/output options
     if len(args) != 1:

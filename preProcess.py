@@ -64,7 +64,7 @@ def main():
     if (config.timing):
         startTime=datetime.datetime.utcnow()
 
-    CanonOptErrors(config,args)
+    CanonOptErrors(opt,config,args)
     inputFileList = args
     setCanonFlags(config)
 
