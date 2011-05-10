@@ -14,7 +14,8 @@ def getTemplateUnit(templateFile):
                 _ourTemplateUnitMap[templateFile]=aUnit
                 rUnit=aUnit
             else:
-                raise UserError('template file '+templateFile+' contains more than one compile unit')
+                if (aUnit.uinfo):
+                    raise UserError('template file '+templateFile+' should contain one compile unit but has at least '+_ourTemplateUnitMap[templateFile].uinfo.name+" and "+aUnit.uinfo.name)
             sanityCount+=1
         return _ourTemplateUnitMap[templateFile]
             
