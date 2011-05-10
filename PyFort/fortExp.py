@@ -170,6 +170,7 @@ class Sel(_Exp):
 
 class _AtomH(object):
     'helper class, captures the args of app or selection'
+    _sons = ['arglist']
 
     def __init__(self,arglist):
         self.arglist = arglist

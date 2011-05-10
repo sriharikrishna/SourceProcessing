@@ -1468,7 +1468,7 @@ class TestOpenStmt(TestCase):
         '''open statement with explicit unit/err parameter'''
         theString = "open(err=1,unit=linpxs)"
         compString= "open(unit=linpxs,err=1)" # always unparsed with ordered parameters
-        theRepr = OpenStmt({'err':NamedParam('err',1),'unit':NamedParam('unit','linpxs')})
+        theRepr = OpenStmt({'err':NamedParam('err','1'),'unit':NamedParam('unit','linpxs')})
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(compString,str(pps(theString)))
@@ -1477,7 +1477,7 @@ class TestOpenStmt(TestCase):
         '''open statement with positional and named parameters mixed, mixed case for parameters'''
         theString = "open(linpxs, ioStat=2,err=1)"
         compString= "open(linpxs,err=1,iostat=2)" # always unparsed with ordered parameters
-        theRepr = OpenStmt({'unit':'linpxs','err':NamedParam('err',1),'iostat':NamedParam('iostat',2)})
+        theRepr = OpenStmt({'unit':'linpxs','err':NamedParam('err','1'),'iostat':NamedParam('iostat','2')})
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(compString,str(pps(theString)))
@@ -1486,7 +1486,7 @@ class TestOpenStmt(TestCase):
         '''open statement with positional and named parameters mixed, mixed case for parameters given as expressions'''
         theString = "open(myType%linpxs, ioStat=2,err=1)"
         compString= "open(myType%linpxs,err=1,iostat=2)" # always unparsed with ordered parameters
-        theRepr = OpenStmt({'unit':Sel('myType','linpxs'),'err':NamedParam('err',1),'iostat':NamedParam('iostat',2)})
+        theRepr = OpenStmt({'unit':Sel('myType','linpxs'),'err':NamedParam('err','1'),'iostat':NamedParam('iostat','2')})
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(compString,str(pps(theString)))
@@ -1515,7 +1515,7 @@ class TestRewindStmt(TestCase):
         '''rewind statement with explicit unit/err parameter'''
         theString = "rewind(err=1,unit=linpxs)"
         compString= "rewind(unit=linpxs,err=1)" # always unparsed with ordered parameters
-        theRepr = RewindStmt({'err':NamedParam('err',1),'unit':NamedParam('unit','linpxs')})
+        theRepr = RewindStmt({'err':NamedParam('err','1'),'unit':NamedParam('unit','linpxs')})
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(compString,str(pps(theString)))
@@ -1524,7 +1524,7 @@ class TestRewindStmt(TestCase):
         '''rewind statement with positional and named parameters mixed, mixed case for parameters'''
         theString = "rewind(linpxs, ioStat=2,err=1)"
         compString= "rewind(linpxs,err=1,iostat=2)" # always unparsed with ordered parameters
-        theRepr = RewindStmt({'unit':'linpxs','err':NamedParam('err',1),'iostat':NamedParam('iostat',2)})
+        theRepr = RewindStmt({'unit':'linpxs','err':NamedParam('err','1'),'iostat':NamedParam('iostat','2')})
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(compString,str(pps(theString)))
@@ -1562,7 +1562,7 @@ class TestCloseStmt(TestCase):
         '''close statement with explicit unit/err parameter'''
         theString = "close(err=1,unit=linpxs)"
         compString= "close(unit=linpxs,err=1)" # always unparsed with ordered parameters
-        theRepr = CloseStmt({'err':NamedParam('err',1),'unit':NamedParam('unit','linpxs')})
+        theRepr = CloseStmt({'err':NamedParam('err','1'),'unit':NamedParam('unit','linpxs')})
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(compString,str(pps(theString)))
@@ -1571,7 +1571,7 @@ class TestCloseStmt(TestCase):
         '''close statement with positional and named parameters mixed, mixed case for parameters'''
         theString = "close(linpxs, err=1, ioStat=2)"
         compString= "close(linpxs,iostat=2,err=1)" # always unparsed with ordered parameters
-        theRepr = CloseStmt({'unit':'linpxs','err':NamedParam('err',1),'iostat':NamedParam('iostat',2)})
+        theRepr = CloseStmt({'unit':'linpxs','err':NamedParam('err','1'),'iostat':NamedParam('iostat','2')})
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(compString,str(pps(theString)))
@@ -1579,11 +1579,10 @@ class TestCloseStmt(TestCase):
     def test4(self):
         '''close statement with positional and named parameters mixed, mixed case for parameters given as expressions'''
         theString = "close(myType%linpxs,iostat=2,err=1)"
-        theRepr = CloseStmt({'unit':Sel('myType','linpxs'),'err':NamedParam('err',1),'iostat':NamedParam('iostat',2)})
+        theRepr = CloseStmt({'unit':Sel('myType','linpxs'),'err':NamedParam('err','1'),'iostat':NamedParam('iostat','2')})
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
-
 
 suite = asuite(C2,C3,C4,C5,C6,C8,C9,
                TestAssignStmt,

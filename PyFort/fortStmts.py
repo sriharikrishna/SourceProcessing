@@ -96,7 +96,7 @@ class _DimensionAttribute(object):
 
 class _DimensionArraySpec(_Mutable_T):
     'dimension array name and array specifier for dimension statements'
-    _sons=['dimId','dimSpec']
+    _sons=['arrayName','arraySpec']
 
     form = seq(id,
                _DimensionSpecifier.form)
@@ -212,6 +212,7 @@ class _NoInit(_Init):
         return _NoInit(self.lhs)
 class _PointerInit(_Init):
     'pointer initialization'
+    _sons = ['lhs','rhs']
 
     def __init__(self,lhs,rhs):
         self.lhs = lhs
@@ -226,6 +227,8 @@ class _PointerInit(_Init):
         return _PointerInit(self.lhs,self.rhs)
 class _AssignInit(_Init):
     'normal assignment-style initialization'
+    _sons = ['lhs','rhs']
+
     def __init__(self,lhs,rhs):
         self.lhs = lhs
         self.rhs = rhs
@@ -570,7 +573,6 @@ class DrvdTypeDecl(TypeDecl):
     Derived type declarations are treated as declarations of type "type,"
      with a modifier that is the name of the type.
     '''
-    _sons = ['mod','attrs','decls']
     kw     = 'type'
     kw_str = kw
 
@@ -812,7 +814,7 @@ class BlockdataStmt(PUstart):
 class CommonStmt(Decl):
     kw = 'common'
     kw_str = kw
-    _sons = ['declList']
+    _sons = ['name','declList']
 
     @classmethod
     def parse(cls,ws_scan,lineNumber):
@@ -832,8 +834,8 @@ class CommonStmt(Decl):
         return theStmt
 
     def __init__(self,name,declList=[],lineNumber=0,label=False,lead='',internal=[],rest=[]):
-        self.declList = declList
         self.name = name
+        self.declList = declList
         Decl.__init__(self,lineNumber,label,lead,internal,rest)
 
     def __repr__(self):
@@ -845,6 +847,7 @@ class CommonStmt(Decl):
 
 class _ImplicitDoConstruct(object):
     '''implicit do construct for DATA statements'''
+    _sons = ['object','loopControl']
     # data-implied-do object is one of
     #  array-element
     #  scalar-structure-component
@@ -981,7 +984,6 @@ class VarAttrib(Decl):
 class PrivateStmt(VarAttrib):
     kw     = 'private'
     kw_str = kw
-    _sons = ['vlist']
     
     def __init__(self,vlist,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         VarAttrib.__init__(self,vlist,lineNumber,label,lead,internal,rest)
@@ -989,7 +991,6 @@ class PrivateStmt(VarAttrib):
 class PublicStmt(VarAttrib):
     kw     = 'public'
     kw_str = kw
-    _sons = ['vlist']
 
     def __init__(self,vlist,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         VarAttrib.__init__(self,vlist,lineNumber,label,lead,internal,rest)
@@ -1231,7 +1232,6 @@ class AllocatableStmt(Decl):
 class CharacterStmt(TypeDecl):
     kw = 'character'
     kw_str = kw
-    _sons  = ['mod','attrs','decls']
 
     # build up the spec: 
     _starmod  = seq(lit('('),lit('*'),lit(')'))
@@ -1493,7 +1493,7 @@ class SubroutineStmt(FuncOrSubStmt):
     kw = 'subroutine'
     kw_str = kw
     utype_name = kw
-    _sons = ['name','args']
+    _sons = ['name','args','qualifiers']
 
     @staticmethod
     def parse(ws_scan,lineNumber):
@@ -1534,6 +1534,7 @@ class ProgramStmt(PUstart):
     kw = 'program'
     kw_str = kw
     utype_name = kw
+    _sons = ['name']
 
     @staticmethod
     def parse(ws_scan,lineNumber):
@@ -1639,6 +1640,7 @@ class ModuleStmt(PUstart):
     kw = 'module'
     kw_str = kw
     utype_name = kw
+    _sons = ['name']
 
     @staticmethod
     def parse(ws_scan,lineNumber):
@@ -1743,6 +1745,7 @@ class EntryStmt(Exec):
     '''
     kw    = 'entry'
     kw_str = kw
+    _sons = ['name','args','result']
 
     @staticmethod
     def parse(ws_scan,lineNumber) :
@@ -1969,6 +1972,7 @@ class PointerAssignStmt(Exec):
 
 
 class IOStmt(Exec):
+    _sons = ['ioCtrlSpecList','itemList','kwString']
 
     def __init__(self,ioCtrlSpecList,itemList,kwString,lineNumber,label,lead,internal,rest):
         self.kwString = kwString # the actual string as given in the program
@@ -2045,7 +2049,6 @@ class SimpleReadStmt(SimpleSyntaxIOStmt):
 class ReadStmt(ComplexSyntaxIOStmt):
     kw = 'read'
     kw_str = kw
-    _sons = ['ioCtrlSpecList','itemList']
     
     @staticmethod
     def parse(ws_scan,lineNumber):
@@ -2060,7 +2063,6 @@ class ReadStmt(ComplexSyntaxIOStmt):
 class WriteStmt(ComplexSyntaxIOStmt):
     kw = 'write'
     kw_str = kw
-    _sons = ['ioCtrlSpecList','itemList']
 
     @staticmethod
     def parse(ws_scan,lineNumber):
@@ -2093,6 +2095,7 @@ class FormatStmt(Exec):
 class StopStmt(Exec):
     kw = 'stop'
     kw_str = kw
+    _sons = ['msg']
 
     @staticmethod
     def parse(ws_scan,lineNumber):
@@ -2115,6 +2118,7 @@ class StopStmt(Exec):
 class ReturnStmt(Leaf):
     kw = 'return'
     kw_str = kw
+    _sons = ['ordinal']
 
     @staticmethod
     def parse(ws_scan,lineNumber):
@@ -2164,7 +2168,7 @@ class IfStmt(Exec):
         return theStmt
     
 class ArithmIfStmt(IfStmt): #arithmetic if 
-    _sons = ['expr', 'labelTriple']
+    _sons = ['expr', 'labelTriple','ifFormatStr']
 
     def __init__(self,expr,labelTriple,ifFormatStr=IfStmt.kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         self.expr = expr
@@ -2179,7 +2183,7 @@ class ArithmIfStmt(IfStmt): #arithmetic if
         return '%s (%s) %s' % (self.kw_str,str(self.expr),','.join(self.labelTriple))
                    
 class IfThenStmt(IfStmt):
-    _sons = ['test']
+    _sons = ['test','ifFormatStr','thenFormatStr']
 
     def __init__(self,test,ifFormatStr=IfStmt.kw,thenFormatStr='then',lineNumber=0,label=False,lead='',internal=[],rest=[]):
         self.test = test
@@ -2194,7 +2198,7 @@ class IfThenStmt(IfStmt):
         return '%s (%s) %s' % (self.ifFormatStr,str(self.test),self.thenFormatStr)
 
 class IfNonThenStmt(IfStmt):
-    _sons = ['test','stmt']
+    _sons = ['test','stmt','ifFormatStr']
 
     def __init__(self,test,stmt,ifFormatStr=IfStmt.kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         self.test = test
@@ -2299,6 +2303,7 @@ class EndStmt(PUend):
         PUend.__init__(self,lineNumber,label,lead,internal,rest)
         
 class ComplexEndStmt(EndStmt):
+    _sons = ['name']
 
     @staticmethod
     def parse(ws_scan,lineNumber,kw,SubClass):
@@ -2382,7 +2387,7 @@ class DoStmt(Exec):
     '''
     kw = 'do'
     kw_str = kw
-    _sons = ['doName','doLabel','loopControl']
+    _sons = ['doName','doLabel','loopControl','doFormatStr']
 
     @staticmethod
     def parse(ws_scan,lineNumber):
@@ -2620,7 +2625,7 @@ class AllocateStmt(Exec):
     '''
     kw = 'allocate'
     kw_str = kw
-    _sons = ['argList','statVariable']
+    _sons = ['argList','statVariable','statFormatStr','allocateFormatStr']
 
     @staticmethod
     def parse(ws_scan,lineNumber):
@@ -2646,6 +2651,7 @@ class AllocateStmt(Exec):
     def __init__(self,argList,statVariable=None,statFormatStr='stat',allocateFormatStr=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         self.argList = argList
         self.statVariable = statVariable
+        self.statFormatStr = statFormatStr
         self.allocateFormatStr = allocateFormatStr
         Exec.__init__(self,lineNumber,label,lead,internal,rest)
 
@@ -2659,7 +2665,7 @@ class AllocateStmt(Exec):
 class DeallocateStmt(Exec):
     kw = 'deallocate'
     kw_str = kw
-    _sons = ['argList']
+    _sons = ['argList','deallocateFormatStr']
 
     @staticmethod
     def parse(ws_scan,lineNumber):
@@ -2682,7 +2688,8 @@ class DeallocateStmt(Exec):
 class NullifyStmt(Exec):
     kw = 'nullify'
     kw_str = kw
-    
+    _sons = ['ptrObjList']
+
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
@@ -2704,6 +2711,7 @@ class NullifyStmt(Exec):
 class BackspaceStmt(Exec):
     kw = 'backspace'
     kw_str = kw
+    _sons = ['unitspec','params']
 
     @staticmethod
     def parse(ws_scan,lineNumber):
@@ -2748,6 +2756,7 @@ class DeletedAssignStmt(Exec):
     kw = 'assign'
     kw_str = kw
     to = 'to'
+    _sons = ['assignedLabel','var','kwString','toString']
 
     @staticmethod
     def parse(ws_scan,lineNumber):
@@ -2770,6 +2779,7 @@ class DeletedAssignStmt(Exec):
         return '%s %s %s %s' % (self.kwString,self.assignedLabel,self.toString,self.var)
 
 class BuiltinExec(Exec):
+    _sons = ['paramsDict']
 
     @classmethod
     def parse(cls,ws_scan,lineNumber):
@@ -2814,6 +2824,14 @@ class BuiltinExec(Exec):
                 rstr+=str(self.paramsDict[p])
         rstr+=')'
         return rstr
+
+    def __repr__(self):
+        reprStr=self.__class__.__name__
+        params = []
+        for p in self.__class__.paramNames:
+            if (p in self.paramsDict.keys() and self.paramsDict[p]):
+                params.append(repr(self.paramsDict[p]))
+        return self.__class__.__name__+'(%s)' % ','.join(params)
 
 class RewindStmt(BuiltinExec):
     kw = 'rewind'
