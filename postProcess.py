@@ -193,7 +193,7 @@ def main():
             print 'SourceProcessing: timing: '+str(datetime.datetime.utcnow()-startTime)
 
     except (PostProcessError,UserError,AssemblerException,ListAssemblerException,ParseError,ScanError),e:
-        sys.stderr.write(str(e))
+        sys.stderr.write(str(e)+'\n')
         cleanup(config)
         return 1
     except RuntimeError,e:
