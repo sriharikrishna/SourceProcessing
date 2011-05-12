@@ -182,6 +182,8 @@ class _TypeContext:
          return (fortStmts.CharacterStmt, [])
       elif anIntrinsicApp.head.lower() in ['all','iand','ior','lge','lgt','lle','llt']:
          return (fortStmts.LogicalStmt, [])
+      elif anIntrinsicApp.head.lower() in ['transfer']:
+         return self._expressionType(anIntrinsicApp.args[1]) # the type of the second argument
       #nonstandard ones: we check is_intrinsic before this is called.
       elif anIntrinsicApp.head.lower() in getNonStandard():
          return (fortStmts.IntegerStmt, [])
