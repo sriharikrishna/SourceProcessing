@@ -346,7 +346,8 @@ class GenStmt(_Mappable,_Mutable_T):
             newSon = theSon
             newSon=copyExp(theSon)
             newSons.append(newSon)
-        newStmt=self.__class__(*newSons,lead=self.lead)
+        newStmt=self.__class__(*newSons)
+        newStmt.lead=self.lead
         newStmt.rawline=self.rawline
         return newStmt
 
