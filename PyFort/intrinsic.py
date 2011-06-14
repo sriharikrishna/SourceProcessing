@@ -40,6 +40,7 @@ __intrinsics = (
     'float',
     'iabs',
     'iand',
+    'ichar',
     'idint',
     'index',
     'int',

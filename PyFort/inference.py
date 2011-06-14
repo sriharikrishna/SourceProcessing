@@ -1,7 +1,4 @@
-'''functions related to type/shape/generic inference:
-
-   ...
-'''
+'''functions related to type/shape/generic inference'''
 
 import re
 import copy
@@ -172,7 +169,7 @@ class _TypeContext:
    def __intrinsicType(self,anIntrinsicApp):
       if anIntrinsicApp.head.lower() in ['aimag','alog','real']:
          return (fortStmts.RealStmt, [])
-      elif anIntrinsicApp.head.lower() in ['int','idint','lbound','ubound','scan','shape','size']:
+      elif anIntrinsicApp.head.lower() in ['ichar','idint','int','lbound','ubound','scan','shape','size']:
          return (fortStmts.IntegerStmt, [])
       elif anIntrinsicApp.head.lower() in ['dble','dfloat','dabs','dexp','dlog','dsqrt','dmod']:
          return (fortStmts.DoubleStmt, [])
@@ -385,7 +382,7 @@ def __arrayReferenceShape(arrRefApp,localSymtab,lineNumber):
 def __intrinsicShape(anIntrinsicApp,localSymtab,lineNumber):
    if anIntrinsicApp.head.lower() in ['matmul']:
       raise InferenceError(sys._getframe().f_code.co_name+': Not implemented for "'+anIntrinsicApp+'"',lineNumber)
-   if anIntrinsicApp.head.lower() in ['maxval','minval','lge','lgt','lle','llt','scan','size','time']:
+   if anIntrinsicApp.head.lower() in ['ichar','maxval','minval','lge','lgt','lle','llt','scan','size','time']:
       return None
    if anIntrinsicApp.head.lower() in ['reshape']:
       if (len(anIntrinsicApp.args)>2): 
