@@ -69,6 +69,7 @@ __intrinsics = (
     'read',
     'real',
     'repeat',
+    'reshape',
     'scan',
     'shape',
     'sign',

@@ -184,6 +184,8 @@ class _TypeContext:
          return (fortStmts.LogicalStmt, [])
       elif anIntrinsicApp.head.lower() in ['transfer']:
          return self._expressionType(anIntrinsicApp.args[1]) # the type of the second argument
+      elif anIntrinsicApp.head.lower() in ['reshape']:
+         return self._expressionType(anIntrinsicApp.args[0]) # the type of the first argument
       #nonstandard ones: we check is_intrinsic before this is called.
       elif anIntrinsicApp.head.lower() in getNonStandard():
          return (fortStmts.IntegerStmt, [])
@@ -381,10 +383,14 @@ def __arrayReferenceShape(arrRefApp,localSymtab,lineNumber):
    return None
 
 def __intrinsicShape(anIntrinsicApp,localSymtab,lineNumber):
-   if anIntrinsicApp.head.lower() in ['reshape','matmul']:
+   if anIntrinsicApp.head.lower() in ['matmul']:
       raise InferenceError(sys._getframe().f_code.co_name+': Not implemented for "'+anIntrinsicApp+'"',lineNumber)
    if anIntrinsicApp.head.lower() in ['maxval','minval','lge','lgt','lle','llt','scan','size','time']:
       return None
+   if anIntrinsicApp.head.lower() in ['reshape']:
+      if (len(anIntrinsicApp.args)>2): 
+         raise InferenceError(sys._getframe().f_code.co_name+': Not implemented for "'+anIntrinsicApp+'" with more than 2 arguments',lineNumber)
+      return self._expressionShape(anIntrinsicApp.args[1]) # the shape of the second argument
    else:
       return __shapemerge([expressionShape(anArg,localSymtab,lineNumber) for anArg in anIntrinsicApp.args],
                        (None,None))
