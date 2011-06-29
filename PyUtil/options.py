@@ -103,6 +103,11 @@ def addPrePostOptions(opt):
                    help='split output into files corresponding to input files (defaults to False, conflicts with --output)',
                    action='store_true',
                    default=False)
+    opt.add_option('--overloading',
+                   dest='overloading',
+                   help='handle the type conversion in a manner suitable for overloading, e.g. with Rapsodia generated libraries; not usable for source transformation with OpenAD; defaults to false',
+                   action='store_true',
+                   default=False)
 
 def addCanonOptions(opt):
     addPrePostOptions(opt)
@@ -356,6 +361,8 @@ def setCanonFlags(config):
         Ffile.setIncludeSearchPath(config.includePaths)
     if config.nonStandard:
         useNonStandard(config.nonStandard)
+    if (config.overloading): 
+        UnitCanonicalizer.setOverloadingMode()
 
 def setTransformFileFlags(config):
     setSourceProcessingFlags(config)
@@ -392,3 +399,6 @@ def setPostProcessFlags(config,args):
     UnitPostProcessor.setReplacementType(config.concreteType)
     # set abstract type 
     UnitPostProcessor.setAbstractType(config.abstractType)
+    if (config.overloading):
+        UnitPostProcessor.setOverloadingMode()
+    
