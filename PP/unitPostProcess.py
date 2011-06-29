@@ -4,7 +4,7 @@ from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
 from PyUtil.argreplacement import replaceArgs, replaceSon
 
-from PyFort.inference import InferenceError,expressionType,isArrayReference
+from PyFort.inference import InferenceError,expressionType,expressionShape,isArrayReference
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
 import PyFort.intrinsic as intrinsic
@@ -30,12 +30,23 @@ class PostProcessError(Exception):
 class UnitPostProcessor(object):
     'class to facilitate post-processing on a per-unit basis'
 
+    __ourValDerivTokes={'val':'__value__','deriv':'__deriv__'}
+
     _transform_deriv = False
 
     @staticmethod
     def setDerivType(transformDerivType):
         UnitPostProcessor._transform_deriv = transformDerivType
 
+    ##
+    # set this to true if you want type conversion for overloading
+    #
+    _overloadingMode = False
+
+    @staticmethod
+    def setOverloadingMode():
+        UnitPostProcessor._overloadingMode = True
+        
     # set the default here
     _inlineFile = 'ad_inline.f'
     _inlineFileUnits = []
@@ -99,6 +110,19 @@ class UnitPostProcessor(object):
                 return True
         return False
     
+    ##
+    # a class to hold some context information affecting the logic for dealing with 
+    # reference to variables of active type
+    class __TransformActiveTypesContext:
+        def __init__(self,inAssignment=False,passiveLHS=False,anIOStmt=None):
+            self.inAssignment=inAssignment # True if we are in an assignment
+            self.passiveLHS=passiveLHS # True if inAssignment and the LHS is passive
+            self.anIOStmt=anIOStmt # set to the io statement if we are in one
+            
+        def __str__(self):
+            return "__TransformActiveTypesContext("+str(self.inAssignment)+','+str(self.passiveLHS)+','+str(self.anIOStmt)+")"
+    
+    ##    
     # Rewrites the active type in derived type declarations
     # returns the declaration
     # PARAMS:
@@ -109,7 +133,7 @@ class UnitPostProcessor(object):
         ''' convert abstract to concrete active type 
         only applied to type declaration statements '''
         DebugManager.debug('unitPostProcessor.__rewriteActiveType called on: "'+str(DrvdTypeDecl)+"'")
-        newDecls=[self.__transformActiveTypesExpression(decl) for decl in DrvdTypeDecl.get_decls()]
+        newDecls=[self.__transformActiveTypesExpression(decl,UnitPostProcessor.__TransformActiveTypesContext()) for decl in DrvdTypeDecl.get_decls()]
         DrvdTypeDecl.set_decls(newDecls)
         if ((DrvdTypeDecl.get_mod()[0].lower() == self._abstract_type)
             or
@@ -118,37 +142,51 @@ class UnitPostProcessor(object):
         return DrvdTypeDecl
 
     # Transforms active types for an expression recursively
-    # (replaces instances of __value__ and __deriv__)
+    # (replaces instances of things in __ourValDerivTokens
     # PARAMS:
     # theExpression -- an fe.Exp object in which to transform active types
-    # RETURNS: a transformed expression with all __value__ and __deriv__ calls
+    # RETURNS: a transformed expression
     # replaced
-    def __transformActiveTypesExpression(self,theExpression,inAssignment=False):
-        'mutate __value__ and __deriv__ calls'
+    def __transformActiveTypesExpression(self,theExpression,transformContext):
+        'mutate things matching __ourValDerivTokens'
         # explicit reassignment allows for comparison of return value and input value in calling function
         if self.__recursionDepth is 0:
             replacementExpression=fe.copyExp(theExpression)
         else:
             replacementExpression = theExpression
 
-        DebugManager.debug(self.__recursionDepth*'|\t'+'unitPostProcessor.__transformActiveTypesExpression(theExpression='+str(theExpression)+',inAssignment='+str(inAssignment)+')')
+        DebugManager.debug(self.__recursionDepth*'|\t'+'unitPostProcessor.__transformActiveTypesExpression(theExpression='+str(theExpression)+',transformContext='+str(transformContext)+')')
         self.__recursionDepth += 1
         if (isinstance(replacementExpression, fe.App) and not isinstance(replacementExpression.head,fe.Sel)):
             if intrinsic.is_inquiry(replacementExpression.head):
                 self.__inquiryExpression = True
                 self.__inquiryRecursionLevel = self.__recursionDepth
             replacementExpression.args = \
-                map(lambda l: self.__transformActiveTypesExpression(l,inAssignment),replacementExpression.args)
-            if replacementExpression.head == '__value__':
+                map(lambda l: self.__transformActiveTypesExpression(l,transformContext),replacementExpression.args)
+            if replacementExpression.head == UnitPostProcessor.__ourValDerivTokes["val"]:
                 if self.__inquiryExpression and \
                         self.__inquiryRecursionLevel == self.__recursionDepth - 1:
                     replacementExpression = replacementExpression.args[0]
                 else:
-                    nv = replacementExpression.args[0]
-                    replacementExpression = fe.Sel(nv,"v")
+                    if (self._overloadingMode and not transformContext.passiveLHS and not transformContext.anIOStmt):
+                        replacementExpression = replacementExpression.args[0]
+                    else:                           
+                        if (transformContext.anIOStmt and transformContext.anIOStmt.__class__ in [fs.ReadStmt,fs.SimpleReadStmt]):
+                            if (expressionShape(replacementExpression.args[0],
+                                                self.__myUnit.symtab, 
+                                                transformContext.anIOStmt.lineNumber) is not None):
+                                DebugManager.warning("possibly incorrect active READ on non-scalar reference "+str(replacementExpression.args[0]),
+                                                     transformContext.anIOStmt.lineNumber,
+                                                     DebugManager.WarnType.activeIO)
+                                # we don't do the replacement because that would imply an 
+                                # implicit temporary and the read values would not populate
+                                # the actual variable
+                                replacementExpression = replacementExpression.args[0]
+                        nv = replacementExpression.args[0]
+                        replacementExpression = fe.Sel(nv,"v")
                 self.__expChanged=True
-            elif replacementExpression.head == '__deriv__':
-                if self._transform_deriv or inAssignment:
+            elif replacementExpression.head == UnitPostProcessor.__ourValDerivTokes['deriv']:
+                if self._transform_deriv or transformContext.inAssignment:
                     nv = replacementExpression.args[0]
                     replacementExpression = fe.Sel(nv,"d")
                 else:
@@ -157,12 +195,12 @@ class UnitPostProcessor(object):
         else:
             if hasattr(replacementExpression, "_sons"):
                 for aSon in replacementExpression.get_sons():
-                    newSon = self.__transformActiveTypesExpression(getattr(replacementExpression,aSon),inAssignment)
+                    newSon = self.__transformActiveTypesExpression(getattr(replacementExpression,aSon),transformContext)
                     replacementExpression.set_son(aSon,newSon)
             elif isinstance(replacementExpression,fs._NoInit):
-                replacementExpression = fs._NoInit(self.__transformActiveTypesExpression(replacementExpression.lhs,inAssignment))
+                replacementExpression = fs._NoInit(self.__transformActiveTypesExpression(replacementExpression.lhs,transformContext))
             elif isinstance(replacementExpression,list):
-                replacementExpression=[self.__transformActiveTypesExpression(item,inAssignment) for item in replacementExpression]
+                replacementExpression=[self.__transformActiveTypesExpression(item,transformContext) for item in replacementExpression]
 
         self.__recursionDepth -= 1
         if self.__recursionDepth == self.__inquiryRecursionLevel:
@@ -176,11 +214,11 @@ class UnitPostProcessor(object):
 
     # PARAMS:
     # aSubCallStmt -- an instance of fs.CallStmt to be processed
-    # RETURNS: a new fs.CallStmt with __value__ and __deriv__ calls replaced
+    # RETURNS: a new fs.CallStmt replacing things in __ourValDerivTokens
     def __processSubCallStmt(self,aSubCallStmt):
         '''transforms active types in a subroutine Call statement'''
         DebugManager.debug('unitPostProcessor.__processSubCallStmt called on: "'+str(aSubCallStmt)+"'")
-        replacementArgs=[self.__transformActiveTypesExpression(arg) for arg in aSubCallStmt.get_args()]
+        replacementArgs=[self.__transformActiveTypesExpression(arg,UnitPostProcessor.__TransformActiveTypesContext()) for arg in aSubCallStmt.get_args()]
         replacementStatement = \
             fs.CallStmt(aSubCallStmt.get_head(),
                         replacementArgs,
@@ -193,43 +231,41 @@ class UnitPostProcessor(object):
     # PARAMS:
     # anIOStmt -- the instance of fs.IOStmt to be processed
     def __processIOStmt(self,anIOStmt):
-        '''transforms __value__/__deriv__ in active type variables in any IOStmt instance'''
+        '''replacing things in __ourValDerivTokens'''
         DebugManager.debug('unitPostProcessor.__processIOStmt called on: "'\
                                +str(anIOStmt)+" "+str(anIOStmt.__class__)+"'")
-        newItemList=[self.__transformActiveTypesExpression(item) for item in anIOStmt.get_itemList()]
-        anIOStmt.set_itemList(newItemList)
+        newItemList=[self.__transformActiveTypesExpression(item,UnitPostProcessor.__TransformActiveTypesContext(anIOStmt=anIOStmt)) for item in anIOStmt.get_itemList()]
+        anIOStmt.set_itemList(newItemList)      
         return anIOStmt
 
     # PARAMS:
     # StmtFnStmt -- an instance of fs.StmtFnStmt to be processed. If the
-    # processed statement has __value__ or __deriv__ as the statement name, it
+    # processed statement has tokens from __ourValDerivTokens as the statement name, it
     # must be reconstructed as an fs.AssignStmt. The parser processes these
-    # statements as declarations, but after __value__ and __deriv__ calls are
+    # statements as declarations, but after special token calls are
     # transformed (active types replaced), the statements are in the form of
     # Assign statements, and become executable statements
-    # RETURNS: a processed AssignStmt with all __value__ and __deriv__ calls 
-    # replaced
+    # RETURNS: a processed AssignStmt replacing things matching __ourValDerivTokens
     def __processStmtFnStmt(self, StmtFnStmt):
         '''Performs active type transformations on a StmtFnStmt;
-        reconstructs it as an AssignStmt if StmtFnStmt.name is "__value__" or "__deriv__" '''
+        reconstructs it as an AssignStmt if StmtFnStmt.name is in __ourValDerivTokens '''
         DebugManager.debug('unitPostProcessor.__processStmtFnStmt called on: "'+str(StmtFnStmt)+"'")
-        if StmtFnStmt.name in ['__value__','__deriv__']:
-            return fs.AssignStmt(self.__transformActiveTypesExpression(fe.App(StmtFnStmt.name,StmtFnStmt.args),True), # new LHS
-                                 self.__transformActiveTypesExpression(StmtFnStmt.body,True), # new RHS
+        if StmtFnStmt.name in UnitPostProcessor.__ourValDerivTokes.values():
+            return fs.AssignStmt(self.__transformActiveTypesExpression(fe.App(StmtFnStmt.name,StmtFnStmt.args),UnitPostProcessor.__TransformActiveTypesContext(inAssignment=True)), # new LHS
+                                 self.__transformActiveTypesExpression(StmtFnStmt.body,UnitPostProcessor.__TransformActiveTypesContext(inAssignment=True)), # new RHS
                                  lineNumber=StmtFnStmt.lineNumber,
                                  label=StmtFnStmt.label,
                                  lead=StmtFnStmt.lead)
-        return fs.StmtFnStmt(name=self.__transformActiveTypesExpression(StmtFnStmt.name),
-                             args=map(self.__transformActiveTypesExpression,StmtFnStmt.args),
-                             body=self.__transformActiveTypesExpression(StmtFnStmt.body),
+        return fs.StmtFnStmt(name=self.__transformActiveTypesExpression(StmtFnStmt.name,UnitPostProcessor.__TransformActiveTypesContext()),
+                             args=map(lambda l: self.__transformActiveTypesExpression(l,UnitPostProcessor.__TransformActiveTypesContext()),StmtFnStmt.args),
+                             body=self.__transformActiveTypesExpression(StmtFnStmt.body,UnitPostProcessor.__TransformActiveTypesContext()),
                              lineNumber=StmtFnStmt.lineNumber,
                              label=StmtFnStmt.label,
                              lead=StmtFnStmt.lead)
 
     # PARAMS:
     # aStmt -- a generic fs.Exec statement to be processed
-    # RETURNS: a transformed statement with all __value__ and __deriv__ calls
-    # replaced
+    # RETURNS: a transformed statement
     def __transformActiveTypes(self,aStmt):
         '''Transforms active types on general executable statements'''
         DebugManager.debug('unitPostProcessor.__transformActiveTypes called on: "'+str(aStmt)+"'")
@@ -239,7 +275,14 @@ class UnitPostProcessor(object):
         
         for aSon in aStmt.get_sons():
             theSon = getattr(aStmt,aSon)
-            newSon = self.__transformActiveTypesExpression(theSon,isinstance(aStmt,fs.AssignStmt))
+            inAssign=isinstance(aStmt,fs.AssignStmt)
+            passiveLHS=False
+            if (UnitPostProcessor._overloadingMode and inAssign) : 
+                if (isinstance(aStmt.lhs,fs.App) and aStmt.lhs.head in UnitPostProcessor.__ourValDerivTokes.values()):
+                    pass
+                else: 
+                    passiveLHS=(not self.__isActive(aStmt.lhs,aStmt))
+            newSon = self.__transformActiveTypesExpression(theSon,UnitPostProcessor.__TransformActiveTypesContext(inAssign,passiveLHS))
             if newSon is not theSon:
                 aStmt.set_son(aSon,newSon)
         return aStmt
@@ -357,7 +400,7 @@ class UnitPostProcessor(object):
         ExecsAppend=Execs.append
         for anArg in execStmtArgs:
             if isinstance(anArg,fe.App):
-                anArg = self.__transformActiveTypesExpression(anArg)
+                anArg = self.__transformActiveTypesExpression(anArg,UnitPostProcessor.__TransformActiveTypesContext())
             replacementArgs.append(anArg)
         inlineArgs = self.__inlineUnit.uinfo.args
         map(lambda l:map(lambda e:Stmts.append(copy.deepcopy(e)),l),
@@ -830,7 +873,8 @@ class UnitPostProcessor(object):
     def __isActive(self,Exp,parentStmt):
         varName=fs.getVarName(Exp,parentStmt.lineNumber)
         (stmtClass,expType)=expressionType(varName,
-                                           self.__myUnit.symtab,parentStmt.lineNumber)
+                                           self.__myUnit.symtab,
+                                           parentStmt.lineNumber)
         if (len(expType)>0 and expType[0]==self._abstract_type):
             return True
         return False
