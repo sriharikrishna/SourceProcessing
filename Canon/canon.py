@@ -74,6 +74,12 @@ class UnitCanonicalizer(object):
     def setSubroutinizeIntegerFunctions(flag):
         UnitCanonicalizer._subroutinizeIntegerFunctions = flag
 
+    _overloadingMode = False
+
+    @staticmethod
+    def setOverloadingMode():
+        UnitCanonicalizer._overloadingMode = True
+        
     def __init__(self,aUnit,srModuleUsed=False):
         self.__myUnit = aUnit
         self.__myNewDecls = []
@@ -105,6 +111,8 @@ class UnitCanonicalizer(object):
             DebugManager.warning("cannot determine return type and canonicalize function call to "+theApp.head,parentStmt.lineNumber)
             return False
         if is_intrinsic(theApp.head):
+            if UnitCanonicalizer._overloadingMode:
+                return False
             DebugManager.debug('UnitCanonicalizer.shouldSubroutinizeFunction: It\'s an intrinsic of type '+str(funcType))
             return subroutinizedIntrinsics.shouldSubroutinize(theApp) and (UnitCanonicalizer._subroutinizeIntegerFunctions or not funcType == fs.IntegerStmt)
         else:
@@ -764,7 +772,7 @@ class UnitCanonicalizer(object):
                     pass # doesn't matter 
             except StopIteration, e: # no exec statements, no reason to add it here. 
                 pass # still we may have to add it because of subunits
-            if (addIt):
+            if (addIt and not UnitCanonicalizer._overloadingMode):
                 self.__myUnit.decls.insert(0, #always insert as the first decl to avoid ordering problems
                                            fs.UseAllStmt(moduleName=subroutinizedIntrinsics.getModuleName(),
                                                          renameList=None,
