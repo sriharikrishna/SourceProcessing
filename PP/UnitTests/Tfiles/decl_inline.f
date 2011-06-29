@@ -17,6 +17,7 @@ C     **** Global Variables & Derived Type Definitions ****
 C
       REAL(w2f__8) OpenAD_Symbol_0
       REAL(w2f__8) OpenAD_Symbol_1
+      type(active) :: x(2),y(2)
 
 C
 C     **** Top Level Pragmas ****

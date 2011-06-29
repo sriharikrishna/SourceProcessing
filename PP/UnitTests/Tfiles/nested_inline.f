@@ -22,6 +22,7 @@ C
       INTEGER(w2f__i4) N
       SAVE N
       TYPE (oadactive) Z(1 : INT(SIZE(__value__(X))))
+      double precision :: openad_symbol_4, openad_symbol_5
 C
 C     **** Initializers ****
 C

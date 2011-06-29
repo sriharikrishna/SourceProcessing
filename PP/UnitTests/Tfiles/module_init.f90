@@ -10,6 +10,7 @@ END MODULE globals
 
 SUBROUTINE bar(BARX, BARY)
   use w2f__types
+  use globals
   IMPLICIT NONE
   
   REAL(w2f__8) BARX

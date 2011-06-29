@@ -24,6 +24,7 @@ C
       INTEGER(w2f__i4) N
       SAVE N
       type(active) :: Z(1:INT(SIZE(X)))
+      double precision :: openad_symbol_4, openad_symbol_5
 C
 C     **** Initializers ****
 C
