@@ -411,5 +411,5 @@ def setPostProcessFlags(config,args):
     if (config.overloading):
         UnitPostProcessor.setOverloadingMode()
     if (config.extraReference):
-        UnitPostProcessor.setExtraReference()
+        UnitPostProcessor.setExtraReference(config.extraReference)
     

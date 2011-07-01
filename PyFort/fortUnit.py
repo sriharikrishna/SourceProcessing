@@ -15,7 +15,6 @@ from fortParse import parse_stmts,parse_cmnt
 import module_handler
 
 import stmt2unit
-import itertools
 
 def instance_pred(*class_list):
     '''define a predicate that checks if argument is an instance of 1 of the
@@ -144,31 +143,6 @@ class Unit(object):
     def name(self):
         return self.uinfo.name
 
-    def addActiveModule(self,Decls):
-        '''  
-        adds a UseAllStmt of the active module to Decls if necessary;
-        it should put it in the top level unit if there are subunits to avoid littering the subunits with the USE statements
-        '''
-        if (self.uinfo is None):
-            return
-        if (self.parent) : # done in parent
-            return
-        lead=self.uinfo.lead or ''
-        ncDeclsIter=itertools.ifilter(lambda l: not isinstance(l, fs.Comments),self.decls)
-        try : 
-            lead=ncDeclsIter.next().lead
-        except StopIteration, e:
-            ncExecIter=itertools.ifilter(lambda l: not isinstance(l, fs.Comments),self.execs)
-            try:
-                lead=ncExecIter.next().lead
-            except StopIteration, e: 
-                if (self.ulist):
-                    pass #  add it for the subunits that may need it
-                else:
-                    return   # no non-comment decls,  execs or subunits - don't bother
-        Decls.append(fs.UseAllStmt(moduleName='OAD_active',lead=lead,renameList=None))
-
-
     def printit(self,out=sys.stdout):
         if self.cmnt:
             print >> out,self.cmnt.flow(),
@@ -288,7 +262,6 @@ def fortUnitIterator(fileName,inputFormat=None):
 
 if __name__ == '__main__':
     from _Setup.testit import *
-    from itertools import *
 
     fn0 = 'units1.f90'
     i0  = fortUnitIterator(fname_t(fn0),True)

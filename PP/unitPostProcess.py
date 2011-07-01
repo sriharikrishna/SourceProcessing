@@ -3,6 +3,7 @@ from _Setup import *
 from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
 from PyUtil.argreplacement import replaceArgs, replaceSon
+from PyUtil.errors import ScanError, ParseError
 
 from PyFort.inference import InferenceError,expressionType,expressionShape,isArrayReference
 import PyFort.fortExp as fe
@@ -10,8 +11,10 @@ import PyFort.fortStmts as fs
 import PyFort.intrinsic as intrinsic
 from PyFort.fortUnit import fortUnitIterator, Unit
 from PP.templateExpansion import *
+from PP.activeModuleHelper import addReferenceIfNeeded, getActiveModuleUse
 import PyFort.flow as flow
 from PyFort.fortFile import Ffile
+from PyFort.fortParse import parse_stmts
 import re
 import copy
 
@@ -66,18 +69,28 @@ class UnitPostProcessor(object):
     _abstract_type = 'oadactive'
 
     ##
-    # the name of the module containing the active type definition
-    #
-    _concreteTypeModuleName='OAD_active'
-
-    ##
-    # any extra reference to be injected after the standard w2f_types USE statement
+    # any extra reference to be injected typically in place of the OAD_active module
+    # this is just the string as given as the command line argument
     #
     _extraReference = None 
 
     @staticmethod
     def setExtraReference(extraReference):
-        UnitPostProcessor._extraReference = extraReference
+        stmt=None
+        try:
+            stmt=parse_stmts(extraReference,0)
+        except ParseError, ScanError, e:
+            raise UserError("cannot parse argument >"+extraReference+"< given to --extraReference, error is: "+e.msg)
+        UnitPostProcessor._extraReference = stmt
+
+    ##
+    # create a new Decl instance  each time or else we may keep resetting the lead
+    # on the one instance we have
+    #
+    def getExtraReference(self):
+        if (not self._extraReference):
+            raise PostProcessError("getExtraReference called but don't have one",0)
+        return copy.copy(self._extraReference) # shallow copy should be good enough here
 
     @staticmethod
     def setAbstractType(abstractType):
@@ -644,11 +657,16 @@ class UnitPostProcessor(object):
             elif pendingUse.inInterface and any(map(lambda l: isinstance(aDecl,l),[fs.EndSubroutineStmt,fs.EndFunctionStmt])):
                 Decls.append(aDecl)
                 if  any(map(lambda l: isinstance(self.__myUnit.uinfo,l),[fs.SubroutineStmt,fs.FunctionStmt,fs.ProgramStmt,fs.ModuleStmt ])):
-                    Decls.insert(Decls.index(pendingUse.beginStmt)+1,
-                                 fs.UseAllStmt(moduleName=UnitPostProcessor._concreteTypeModuleName,lead=pendingUse.lead,renameList=None))
+                    if (not UnitPostProcessor._overloadingMode):
+                        newDecl=getActiveModuleUse()
+                        newDecl.lead=pendingUse.lead
+                        Decls.insert(Decls.index(pendingUse.beginStmt)+1,
+                                     newDecl)
                     if (UnitPostProcessor._extraReference):
+                        newDecl=self.getExtraReference()
+                        newDecl.lead=pendingUse.lead
                         Decls.insert(Decls.index(pendingUse.beginStmt)+2,
-                                     fs.UseAllStmt(moduleName=UnitPostProcessor._extraReference,lead=pendingUse.lead,renameList=None))
+                                     newDecl)
                 pendingUse.beginStmt=None
                 pendingUse.lead=None
             elif isinstance(aDecl,fs.StmtFnStmt):
@@ -703,7 +721,10 @@ class UnitPostProcessor(object):
         '''processes all declaration and execution statements in forward mode'''
         execNum = 0;
         Execs = []; Decls = []
-        Unit.addActiveModule(self.__myUnit,Decls)
+        if (not UnitPostProcessor._overloadingMode):
+            addReferenceIfNeeded(self.__myUnit,Decls,getActiveModuleUse())
+        if (UnitPostProcessor._extraReference):
+            addReferenceIfNeeded(self.__myUnit,Decls,self.getExtraReference())
         pendingUse=self.UseActiveInInterface()
         for aDecl in self.__myUnit.decls:
             (Decls,Execs) =\
@@ -725,7 +746,10 @@ class UnitPostProcessor(object):
         replacementNum = 0 
         currentExecs = []; currentDecls = []
         Execs = []; Decls = []
-        Unit.addActiveModule(self.__myUnit,currentDecls)
+        if (not UnitPostProcessor._overloadingMode):
+            addReferenceIfNeeded(self.__myUnit,currentDecls,getActiveModuleUse())
+        if (UnitPostProcessor._extraReference):
+            addReferenceIfNeeded(self.__myUnit,currentDecls,self.getExtraReference())
         pendingUse=self.UseActiveInInterface()
         for aDecl in self.__myUnit.decls:
             (Decls,currentDecls,Execs,currentExecs,replacementNum) = \
@@ -767,10 +791,13 @@ class UnitPostProcessor(object):
             newUnit = Unit()
             newUnit.uinfo = fs.SubroutineStmt('common_'+fortStmt.name+'_init',[])
             # insert active type module
-            newDecl = fs.UseAllStmt(moduleName=UnitPostProcessor._concreteTypeModuleName,renameList=None,lead='\t')
-            newUnit.decls.append(newDecl)
+            if (not UnitPostProcessor._overloadingMode):
+                newDecl=getActiveModuleUse()
+                newDecl.lead='\t'
+                newUnit.decls.append(newDecl)
             if (UnitPostProcessor._extraReference):
-                newDecl = fs.UseAllStmt(moduleName=UnitPostProcessor._extraReference,renameList=None,lead='\t')
+                newDecl=self.getExtraReference()
+                newDecl.lead='\t'
                 newUnit.decls.append(newDecl)
             newDeclList=[]
             for aDecl in fortStmt.declList:
@@ -841,12 +868,14 @@ class UnitPostProcessor(object):
         subUnit = Unit()
         subUnit.uinfo = fs.SubroutineStmt('mod_'+self.__myUnit.uinfo.name+'_init',[])
         # insert active type module
-        newDecl = fs.UseAllStmt(moduleName=UnitPostProcessor._concreteTypeModuleName,renameList=None,lead='\t')
-        subUnit.decls.append(newDecl)
-        if (UnitPostProcessor._extraReference):
-            newDecl = fs.UseAllStmt(moduleName=UnitPostProcessor._extraReference,renameList=None,lead='\t')
+        if (not UnitPostProcessor._overloadingMode):
+            newDecl=getActiveModuleUse()
+            newDecl.lead='\t'
             subUnit.decls.append(newDecl)
-
+        if (UnitPostProcessor._extraReference):
+            newDecl=self.getExtraReference()
+            newDecl.lead='\t'
+            subUnit.decls.append(newDecl)
         subUnitExecsAppend=subUnit.execs.append
         for decl in activeTypeDecls:
             for arg in decl.get_decls():

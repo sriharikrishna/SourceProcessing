@@ -1,6 +1,7 @@
 from PyUtil.debugManager import DebugManager
 
 from PP.unitPostProcess import PostProcessError
+from PP.activeModuleHelper import addReferenceIfNeeded, getActiveModuleUse
 from PyFort.fortUnit import fortUnitIterator, Unit
 from PyFort.inference import expressionType
 from PyFort.intrinsic import is_intrinsic,is_inquiry,getGenericName
@@ -198,7 +199,7 @@ class TransformActiveVariables(object):
             TransformActiveVariables(subUnit).transformUnit()
 
         # add active module
-        Unit.addActiveModule(self.__myUnit,self.__newDecls)
+        addReferenceIfNeeded(self.__myUnit,self.__newDecls,getActiveModuleUse())
 
         # activate variables which are equivalenced to active variables
         self.__getCommonBlockActiveVars()
