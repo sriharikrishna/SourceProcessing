@@ -1333,9 +1333,8 @@ class IncludeLine(Decl):
     @staticmethod
     def parse(ws_scan,lineNumber) :
         scan = filter(lambda x: x != ' ',ws_scan)
-        form = seq(lit(IncludeStmt.kw)) # 0 = stmt_name
+        form = seq(lit(IncludeLine.kw)) # 0 = stmt_name
         (id,rest) = form(scan)
-        raise ParseError(lineNumber,scan,'Parsed Fortran include line which should have been replaced by the contents')
         return IncludeLine(lineNumber=lineNumber,rest=rest)
 
     def __init__(self,stmt_name=kw_str,lineNumber=0,label=False,lead='',internal=[],rest=[]):
