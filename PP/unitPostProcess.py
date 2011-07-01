@@ -79,7 +79,7 @@ class UnitPostProcessor(object):
         stmt=None
         try:
             stmt=parse_stmts(extraReference,0)
-        except ParseError, ScanError, e:
+        except (ParseError, ScanError), e:
             raise UserError("cannot parse argument >"+extraReference+"< given to --extraReference, error is: "+e.msg)
         UnitPostProcessor._extraReference = stmt
 
