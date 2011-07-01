@@ -65,6 +65,20 @@ class UnitPostProcessor(object):
     # set something here for the unit tests
     _abstract_type = 'oadactive'
 
+    ##
+    # the name of the module containing the active type definition
+    #
+    _concreteTypeModuleName='OAD_active'
+
+    ##
+    # any extra reference to be injected after the standard w2f_types USE statement
+    #
+    _extraReference = None 
+
+    @staticmethod
+    def setExtraReference(extraReference):
+        UnitPostProcessor._extraReference = extraReference
+
     @staticmethod
     def setAbstractType(abstractType):
         UnitPostProcessor._abstract_type = abstractType.lower()
@@ -631,7 +645,10 @@ class UnitPostProcessor(object):
                 Decls.append(aDecl)
                 if  any(map(lambda l: isinstance(self.__myUnit.uinfo,l),[fs.SubroutineStmt,fs.FunctionStmt,fs.ProgramStmt,fs.ModuleStmt ])):
                     Decls.insert(Decls.index(pendingUse.beginStmt)+1,
-                                 fs.UseAllStmt(moduleName='OAD_active',lead=pendingUse.lead,renameList=None))
+                                 fs.UseAllStmt(moduleName=UnitPostProcessor._concreteTypeModuleName,lead=pendingUse.lead,renameList=None))
+                    if (UnitPostProcessor._extraReference):
+                        Decls.insert(Decls.index(pendingUse.beginStmt)+2,
+                                     fs.UseAllStmt(moduleName=UnitPostProcessor._extraReference,lead=pendingUse.lead,renameList=None))
                 pendingUse.beginStmt=None
                 pendingUse.lead=None
             elif isinstance(aDecl,fs.StmtFnStmt):
@@ -749,9 +766,12 @@ class UnitPostProcessor(object):
             # create a new unit for the initializations
             newUnit = Unit()
             newUnit.uinfo = fs.SubroutineStmt('common_'+fortStmt.name+'_init',[])
-            # insert oad_active module
-            newDecl = fs.UseAllStmt(moduleName='OAD_active',renameList=None,lead='\t')
+            # insert active type module
+            newDecl = fs.UseAllStmt(moduleName=UnitPostProcessor._concreteTypeModuleName,renameList=None,lead='\t')
             newUnit.decls.append(newDecl)
+            if (UnitPostProcessor._extraReference):
+                newDecl = fs.UseAllStmt(moduleName=UnitPostProcessor._extraReference,renameList=None,lead='\t')
+                newUnit.decls.append(newDecl)
             newDeclList=[]
             for aDecl in fortStmt.declList:
                 newDeclList.append(aDecl)
@@ -820,9 +840,12 @@ class UnitPostProcessor(object):
 
         subUnit = Unit()
         subUnit.uinfo = fs.SubroutineStmt('mod_'+self.__myUnit.uinfo.name+'_init',[])
-        # insert oad_active module
-        newDecl = fs.UseAllStmt(moduleName='OAD_active',renameList=None,lead='\t')
+        # insert active type module
+        newDecl = fs.UseAllStmt(moduleName=UnitPostProcessor._concreteTypeModuleName,renameList=None,lead='\t')
         subUnit.decls.append(newDecl)
+        if (UnitPostProcessor._extraReference):
+            newDecl = fs.UseAllStmt(moduleName=UnitPostProcessor._extraReference,renameList=None,lead='\t')
+            subUnit.decls.append(newDecl)
 
         subUnitExecsAppend=subUnit.execs.append
         for decl in activeTypeDecls:

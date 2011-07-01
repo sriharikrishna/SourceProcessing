@@ -103,11 +103,6 @@ def addPrePostOptions(opt):
                    help='split output into files corresponding to input files (defaults to False, conflicts with --output)',
                    action='store_true',
                    default=False)
-    opt.add_option('--overloading',
-                   dest='overloading',
-                   help='handle the type conversion in a manner suitable for overloading, e.g. with Rapsodia generated libraries; not usable for source transformation with OpenAD; defaults to false',
-                   action='store_true',
-                   default=False)
 
 def addCanonOptions(opt):
     addPrePostOptions(opt)
@@ -170,6 +165,11 @@ def addCanonOptions(opt):
                    help='issue progress message to stderr per opened input file (default is False)',
                    action='store_true',
                    default=False)
+    opt.add_option('--overloading',
+                   dest='overloading',
+                   help='prepare to handle the type conversion in a manner suitable for overloading, e.g. with Rapsodia generated libraries; this skips the canonicalization that turns non-inlinable intrinsics into subroutines; not usable for source transformation with OpenAD; defaults to false',
+                   action='store_true',
+                   default=False)
 
 
 def addPostProcessorOptions(opt):
@@ -206,6 +206,15 @@ def addPostProcessorOptions(opt):
                    dest='concreteType',
                    help='replace abstract active string (see also --abstractType ) with concrete active type CONCRETETYPE; defaults to \'active\'',
                    default='active')
+    opt.add_option('--overloading',
+                   dest='overloading',
+                   help='handle the type conversion in a manner suitable for overloading, e.g. with Rapsodia generated libraries, by not making explicit and value references in active variables with the exception of I/O statements and assignments with a passive righ-hand side; this suppresses the injection of "use oad_active", see also the --extraReference option; not usable for source transformation with OpenAD; defaults to false',
+                   action='store_true',
+                   default=False)
+    opt.add_option('--extraReference',
+                   dest='extraReference',
+                   help='if specified inject this string as an additional line after the standard "use w2f__types" statement',
+                   default=None)
     opt.add_option('--noInline',
                    dest='noInline',
                    help='no inlining; overrides the defaults of the reverse mode settings; (defaults to False)',
@@ -401,4 +410,6 @@ def setPostProcessFlags(config,args):
     UnitPostProcessor.setAbstractType(config.abstractType)
     if (config.overloading):
         UnitPostProcessor.setOverloadingMode()
+    if (config.extraReference):
+        UnitPostProcessor.setExtraReference()
     
