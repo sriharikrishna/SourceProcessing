@@ -3,7 +3,7 @@ from _Setup import *
 from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
 from PyUtil.argreplacement import replaceArgs, replaceSon
-from PyUtil.errors import ScanError, ParseError
+from PyUtil.errors import ScanError, ParseError, UserError
 
 from PyFort.inference import InferenceError,expressionType,expressionShape,isArrayReference
 import PyFort.fortExp as fe
@@ -79,8 +79,10 @@ class UnitPostProcessor(object):
         stmt=None
         try:
             stmt=parse_stmts(extraReference,0)
-        except (ParseError, ScanError), e:
-            raise UserError("cannot parse argument >"+extraReference+"< given to --extraReference, error is: "+e.msg)
+        except ScanError, e:
+            raise UserError("cannot scan argument >"+extraReference+"< given to --extraReference, scanned so far: "+str(e.scanned)+" rest is: "+e.rest)
+        except ParseError, e:
+            raise UserError("cannot parse argument >"+extraReference+"< given to --extraReference, scanned as: "+str(e.scannedLine)+" target was: "+str(e.target)+" details are: "+str(e.details))
         UnitPostProcessor._extraReference = stmt
 
     ##
