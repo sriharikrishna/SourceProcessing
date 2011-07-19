@@ -156,8 +156,8 @@ class _TypeContext:
          implicitLocalType=containingSymtab.implicit[anId[0]]
          if implicitLocalType: # we handle the error condition below
             symtabEntry.enterType(containingSymtab.implicit[anId[0]])
+            DebugManager.warning(sys._getframe().f_code.co_name+' implicit typing: '+symtabEntry.typePrint()+' '+anId,self.lineNumber,DebugManager.WarnType.implicit)
          returnType = implicitLocalType
-         DebugManager.warning(sys._getframe().f_code.co_name+' implicit typing: '+symtabEntry.typePrint()+' '+anId,self.lineNumber,DebugManager.WarnType.implicit)
       else: # no symtab entry -> try local implicit typing
          returnType = self.localSymtab.implicit[anId[0]]
          if (returnType):
@@ -177,7 +177,7 @@ class _TypeContext:
          return (fortStmts.ComplexStmt, [])
       elif anIntrinsicApp.head.lower() == 'repeat':
          return (fortStmts.CharacterStmt, [])
-      elif anIntrinsicApp.head.lower() in ['all','iand','ior','lge','lgt','lle','llt']:
+      elif anIntrinsicApp.head.lower() in ['all','iand','ior','lge','lgt','lle','llt','present']:
          return (fortStmts.LogicalStmt, [])
       elif anIntrinsicApp.head.lower() in ['transfer']:
          return self._expressionType(anIntrinsicApp.args[1]) # the type of the second argument
