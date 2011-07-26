@@ -333,7 +333,13 @@ def __identifierShape(anId,localSymtab,lineNumber):
    returnShape=None
    (symtabEntry,containingSymtab) = localSymtab.lookup_name_level(anId)
    if symtabEntry:
-      returnShape = symtabEntry.dimensions
+      if symtabEntry.dimensions : 
+         returnShape=[]
+         for (r,dim) in enumerate(symtabEntry.dimensions):
+            if (isinstance(dim, Zslice)):
+               returnShape.append(App("size",[anId,str(r+1)]))
+            else : 
+               returnShape.append(dim)
       dbgStr='with symtab entry '+symtabEntry.debug(anId)+' -> returning shape '
       if returnShape:
          dbgStr+=str(returnShape)
@@ -376,7 +382,7 @@ def __arrayReferenceShape(arrRefApp,localSymtab,lineNumber):
    while symDimIndex<len(symtabEntry.dimensions):
       dimensions.append(symtabEntry.dimensions[symDimIndex])
    if (dimensions!=[]): 
-      return tuple(dimensions)
+      return dimensions
    return None
 
 def __intrinsicShape(anIntrinsicApp,localSymtab,lineNumber):
