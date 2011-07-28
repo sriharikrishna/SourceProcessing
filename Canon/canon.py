@@ -99,6 +99,8 @@ class UnitCanonicalizer(object):
         DebugManager.debug('UnitCanonicalizer.shouldSubroutinizeFunction called on "'+str(theApp)+'"')
         if not isinstance(theApp,fe.App):
             raise CanonError('UnitCanonicalizer.shouldSubroutinizeFunction called on non-App object '+str(theApp),parentStmt.lineNumber)
+        if isinstance(theApp.head,fe.Sel):
+            return False
         theSymtabEntry = self.__myUnit.symtab.lookup_name(theApp.head)
         if theSymtabEntry: 
             if theSymtabEntry.entryKind==SymtabEntry.StatementFunctionEntryKind:
@@ -244,17 +246,18 @@ class UnitCanonicalizer(object):
                 for arg in theExpression.args:
                     replacementArgs.append(self.__canonicalizeExpression(arg,parentStmt))
                 replacementHead = theExpression.head
-                aSymtabEntry=self.__myUnit.symtab.lookup_name(theExpression.head)
-                # see if it is  a statement function and expand it
-                if (aSymtabEntry and aSymtabEntry.entryKind==SymtabEntry.StatementFunctionEntryKind):
-                    parentStmt.beenModified = True
-                    replacementExpression=self.__expandStmtFunExp(fe.App(replacementHead,replacementArgs))
-                # check whether we need to convert the function to the generic name (e.g. alog => log)
-                else: 
-                    if (is_intrinsic(theExpression.head) and theExpression.head.lower() != getGenericName(theExpression.head)) :
-                      parentStmt.beenModified = True
-                      replacementHead = getGenericName(theExpression.head)
-                    replacementExpression = fe.App(replacementHead,replacementArgs)
+                if not isinstance(theExpression.head,fe.Sel):
+                    aSymtabEntry=self.__myUnit.symtab.lookup_name(theExpression.head)
+                    # see if it is  a statement function and expand it
+                    if (aSymtabEntry and aSymtabEntry.entryKind==SymtabEntry.StatementFunctionEntryKind):
+                        parentStmt.beenModified = True
+                        replacementExpression=self.__expandStmtFunExp(fe.App(replacementHead,replacementArgs))
+                    # check whether we need to convert the function to the generic name (e.g. alog => log)
+                    else:
+                        if (is_intrinsic(theExpression.head) and theExpression.head.lower() != getGenericName(theExpression.head)) :
+                            parentStmt.beenModified = True
+                            replacementHead = getGenericName(theExpression.head)
+                        replacementExpression = fe.App(replacementHead,replacementArgs)
         # Unary operation -> recursively canonicalize the sole subexpression
         elif isinstance(theExpression,fe.Unary):
             DebugManager.debug(', which is a unary op. with exp: "'+str(theExpression.exp)+'"')
