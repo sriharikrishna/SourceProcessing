@@ -232,8 +232,10 @@ class UnitCanonicalizer(object):
             DebugManager.debug(', which is a string (should be a constant or a variable => no canonicalization necessary)')
         # application expressions
         elif isinstance(theExpression,fe.App):
+            if isinstance(theExpression.head,fe.App):
+                replacementExpression.head = self.__canonicalizeExpression(theExpression.head,parentStmt)
             # array reference -. do nothing
-            if isArrayReference(theExpression,self.__myUnit.symtab,parentStmt.lineNumber):
+            elif isArrayReference(theExpression,self.__myUnit.symtab,parentStmt.lineNumber):
                 DebugManager.debug(', which is an array reference (no canonicalization necessary)')
             # function calls to subroutinize -> subroutinize and recursively canonicalize args
             elif self.shouldSubroutinizeFunction(theExpression,parentStmt):
