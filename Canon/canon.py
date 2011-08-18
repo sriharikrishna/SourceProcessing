@@ -108,7 +108,7 @@ class UnitCanonicalizer(object):
         try:
             (funcType,modifier) = appType(theApp,self.__myUnit.symtab,parentStmt.lineNumber)
         except InferenceError,errorObj:
-            DebugManager.warning("cannot determine return type and canonicalize function call to "+theApp.head,parentStmt.lineNumber)
+            DebugManager.warning("cannot determine return type and canonicalize function call; "+errorObj.msg,parentStmt.lineNumber)
             return False
         if is_intrinsic(theApp.head):
             if UnitCanonicalizer._overloadingMode:
