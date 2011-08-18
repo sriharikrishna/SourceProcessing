@@ -9,7 +9,7 @@ from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
 from PyUtil.argreplacement import replaceArgs
 
 from PyFort.intrinsic import is_intrinsic,getGenericName, isUsedNonStandard
-from PyFort.inference import InferenceError,expressionType,appType,isArrayReference,canonicalTypeClass,expressionShape
+from PyFort.inference import InferenceError,expressionType,appType,isArrayReference,canonicalTypeClass,expressionShape,isSpecExpression
 import PyFort.flow as flow
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
@@ -120,6 +120,26 @@ class UnitCanonicalizer(object):
         else:
             return True
 
+    def __fixSpecExpression(self,theExp,lineNumber):
+        ''' we can safely drop some slice expressions if the inquiry fynction does not refer to it '''
+        if (isinstance(theExp,fe.App) and theExp.head.lower() in ["size","lbound","ubound"]
+            and 
+            len(theExp.args)==2) :
+            dim=None
+            if (isinstance(theExp.args[1],fe.NamedParam) and theExp.args[1].myId.lower()=="dim" and fe._int_re.match(theExp.args[1].myRHS)):
+                dim=int(theExp.args[1].myRHS)
+            elif(fe._int_re.match(theExp.args[1])):
+                dim=int(theExp.args[1])
+            if dim:
+                argDims=[]
+                for pos,argDim in enumerate(theExp.args[0].args):
+                    if pos+1!=dim:
+                        argDims.append(fe.Zslice())
+                    else:
+                        argDims.append(argDim)
+                # now replace it
+                theExp.args[0].args=argDims
+
     def __newTemp(self,anExpression,parentStmt):
         '''The new temporary variable assumes the value of anExpression'''
         theNewTemp = _tmp_prefix + str(self.__tempCounter)
@@ -134,8 +154,20 @@ class UnitCanonicalizer(object):
                 print >>sys.stderr,'WARNING: Temp variable forced to 8-byte float (real -> double)'
         DebugManager.debug('replaced with '+str(theNewTemp)+' of type '+str(varTypeClass)+'('+str(varModifierList)+')')
         typeAttrList=[]
+        needsAlloc=False
         if varShape:
-            typeAttrList.append(fe.App('dimension',[i for i in varShape]))
+            declDimArgs=[]
+            for dim in varShape:
+                if (not isSpecExpression(dim,self.__myUnit.symtab,parentStmt.lineNumber)):
+                    self.__fixSpecExpression(dim,parentStmt.lineNumber)
+                if (not isSpecExpression(dim,self.__myUnit.symtab,parentStmt.lineNumber)):
+                    needsAlloc=True
+                    declDimArgs.append(fe.Zslice())
+                else:
+                    declDimArgs.append(dim)
+            typeAttrList.append(fe.App('dimension',declDimArgs))
+        if needsAlloc:
+            typeAttrList.append("allocatable")
         theNewDecl = varTypeClass(varModifierList,typeAttrList,[theNewTemp])
         self.__myNewDecls.append(theNewDecl)
         self.__myUnit.symtab.enter_name(theNewTemp,
@@ -838,4 +870,5 @@ class UnitCanonicalizer(object):
         DebugManager.debug(('+'*54)+' End canonicalize unit <'+str(self.__myUnit.uinfo)+'> '+(54*'+')+'\n\n')
 
         return self.__myUnit
+
 

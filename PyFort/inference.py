@@ -9,8 +9,8 @@ from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import SymtabEntry
 
 import fortStmts
-from fortExp import App,NamedParam,Sel,Unary,Ops,is_const,is_id,_id_re,_flonum_re,_int_re,_logicon_set,_quote_set,Slice,Zslice,Lslice,Rslice,ArrayConstructor
-from intrinsic import is_intrinsic, getNonStandard
+from fortExp import App,NamedParam,Sel,Unary,Ops,isConstantExpression,is_const,is_id,_id_re,_flonum_re,_int_re,_logicon_set,_quote_set,Slice,Zslice,Lslice,Rslice,ArrayConstructor
+from intrinsic import is_intrinsic, is_inquiry, getNonStandard
 
 class InferenceError(Exception):
    '''exception for ...'''
@@ -393,6 +393,10 @@ def __identifierShape(anId,localSymtab,lineNumber):
          for (r,dim) in enumerate(symtabEntry.dimensions):
             if (isinstance(dim, Zslice)):
                returnShape.append(App("size",[anId,str(r+1)]))
+            elif (isinstance(dim, Rslice)):
+               returnShape.append(Op(":",App("lbound",[anId,str(r+1)]),dim.arg))
+            elif (isinstance(dim, Lslice)):
+               returnShape.append(Op(":",dim.arg,App("ubound",[anId,str(r+1)])))
             else : 
                returnShape.append(dim)
       dbgStr='with symtab entry '+symtabEntry.debug(anId)+' -> returning shape '
@@ -680,3 +684,34 @@ def isArrayReference(theApp,localSymtab,lineNumber):
       return False
    return True
 
+def isSpecExpression(theExp,localSymtab,lineNumber):
+   ''' true of theExp could be used as a specification expression in a declaration, conservative (incomplete) logic'''
+   retVal=False
+   if isConstantExpression(theExp):
+      retVal=True
+   elif (isinstance(theExp,Zslice)):
+       retVal=True
+   elif (isinstance(theExp,NamedParam)):
+      retVal=isSpecExpression(theExp.myRHS,localSymtab,lineNumber)
+   elif (isinstance(theExp,App)):
+      if (is_inquiry(theExp.head)):
+          # first argument is special:
+          if (isinstance(theExp.args[0],str) and is_id(theExp.args[0])):
+             retVal=True
+          else:
+             retVal=isSpecExpression(theExp.args[0],localSymtab,lineNumber)
+          if (retVal and len(theExp.args)>1): 
+             retVal=all(map(lambda l: isSpecExpression(l,localSymtab,lineNumber),theExp.args))
+      elif (isArrayReference(theExp,localSymtab,lineNumber)
+            and
+            all(map(lambda l: isSpecExpression(l,localSymtab,lineNumber),theExp.args))):
+         retVal=True
+   elif (isinstance(theExp,str) and is_id(theExp)):
+      symtabEntry=localSymtab.lookup_name(theExp)
+      if (symtabEntry and (symtabEntry.constInit or symtabEntry.origin!="local")):
+         retVal=True
+   elif (isinstance(theExp,Unary)):
+      retVal=isSpecExpression(theExp.exp,localSymtab,lineNumber)
+   elif (isinstance(theExp,Ops)):
+      retVal=(isSpecExpression(theExp.a1,localSymtab,lineNumber) and isSpecExpression(theExp.a2,localSymtab,lineNumber))
+   return retVal
