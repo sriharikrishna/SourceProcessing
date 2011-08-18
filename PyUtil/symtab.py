@@ -338,7 +338,7 @@ class SymtabEntry(object):
         self.dimensions = dimensions # None or list of expressions
         self.length = length # specific for character statements, see stmt2unit
         self.constInit=None #  expression if initialized with a constant expression 
-        self.origin = origin # None | [<parent origin>'|'](| 'local' | 'external' | 'temp' | 'common:'[<common block name])
+        self.origin = origin # None | [<parent origin>'|'](| 'local' | 'dummy' | 'external' | 'temp' | 'common:'[<common block name])
         self.renameSource = renameSource
         self.access = access# None | 'private' | 'public' | 'privatedefault' | 'publicdefault']
         # takes a GenericInfo instance when used for generic functions/subroutines (interfaces)
