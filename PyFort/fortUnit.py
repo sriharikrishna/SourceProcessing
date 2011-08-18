@@ -138,6 +138,7 @@ class Unit(object):
         self._in_drvdType = None # this would be set to the name of the derived type being processed
         self._drvdTypeDefaultAccess = None # this would be set for access while the derived type is being processed
         self._in_functionDecl = None # this will be set to the FunctionDeclStmt if a function is being processed
+        self._in_subroutineDecl = None # this will be set to the SubroutineDeclStmt if a subroutine is being processed
         DebugManager.debug('new unit created: '+str(self)+', new symtab being created = '+str(self.symtab))
 
     def name(self):
