@@ -16,7 +16,12 @@ from PyFort.intrinsic import is_intrinsic
 
 class GenericInfo(object):
     def __init__(self):
+        # for resolvableTo a dictionary item is
+        # <specificName>:<signature>
+        # where <signature> is a dictionary of
+        # <formalParameterName>:((<type class>,<typeModifierList>),dimensions)
         self.resolvableTo = {}
+        # this is the generic interface name 
         self.genericName=None
 
     def debug(self):
