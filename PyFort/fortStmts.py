@@ -119,7 +119,7 @@ class _KindTypeMod(_TypeMod):
             return self.__class__(self.mod)
         else:
             return self.__class__(copy.deepcopy(self.mod))
-        
+
 class _Prec(_KindTypeMod):
     pat = '*%s'
 
@@ -133,7 +133,6 @@ class _Kind(_KindTypeMod):
     def _separate_implicit_list(self):
         l = self.mod
         return ([],self.mod)
-
 
 class _ExplKind(_KindTypeMod):
     pat = '(kind = %s)'
