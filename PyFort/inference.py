@@ -189,25 +189,75 @@ class _TypeContext:
       else:
          return self._typemerge([self._expressionType(anArg) for anArg in anIntrinsicApp.args],
                                 (None,None))
+      
+   def __guessBytesFromKind(self,aKindExpressionMod) :
+      if (isinstance(aKindExpressionMod,App) and aKindExpressionMod.head=="kind" and is_const(aKindExpressionMod.args[0])):
+         if (_flonum_re.match(aKindExpressionMod.args[0])) :
+            if ('d' in aKindExpressionMod.args[0].lower()):
+               return 8
+            else:
+               return 4
+      if (_int_re.match(aKindExpressionMod)):
+         return int(aKindExpressionMod)
+      if (is_id(aKindExpressionMod)): # for example some module variable declared as parameter and initialized with a kind expression
+         symtabEntry=self.localSymtab.lookup_name(aKindExpressionMod)
+         if (symtabEntry.constInit):
+            return self.__guessBytesFromKind(symtabEntry.constInit)
+      raise InferenceError(sys._getframe().f_code.co_name+': cannot guess bytes for KIND expression "'+str(aKindExpressionMod)+'"',self.lineNumber)
+
+   def __guessBytes(self,aType):
+      if (aType[0]==fortStmts.DoubleStmt) :
+         return 8;
+      if (aType[0]==fortStmts.RealStmt and not aType[1]) :
+         return 4;
+      if (len(aType[1])==1):
+         theMod=aType[1][0]
+         if (isinstance(theMod,fortStmts._Prec)):
+            return int(theMod.mod)
+         if (isinstance(theMod,fortStmts._Kind)):
+            return self.__guessBytesFromKind(theMod.mod)
+      raise InferenceError(sys._getframe().f_code.co_name+': cannot guess bytes for  "'+str(aType)+'"',self.lineNumber)
+
+   def __matchTypeMod(self,aTypeMod,otherIndexList,otherTypeModList):
+      for otherIndex in otherIndexList:
+         otherTypeMod=otherTypeModList[otherIndex]
+         if (isinstance(aTypeMod, type(otherTypeMod))):
+            if (str(aTypeMod)==str(otherTypeMod)):
+               otherIndexList.pop(otherIndex)
+               return True;
+         elif (isInstance(aTypeMod,_KindTypeMod)
+               and
+               isInstance(otherTypeMod,_KindTypeMod)) :
+            if (self.__guessBytes(aTypeMod) == self.__guessBytes(otherTypeMod)):
+               return True;
+                   
+
+   def __matchTypeModList(self,modListPair):
+      indexListPair=map(lambda l:range(len(a)),modListPair)
+      while (indexListPair!=[[],[]]):
+         if indexListPair[0] :
+            if (self.__matchTupeMod(modListPair[0][indexListPair[0][0]],indexListPair[1],modListPair[1])):
+               indexListPair[0].pop(0)
+            else :
+               return False
+         if indexListPair[1] :
+            if (self.__matchTupeMod(modListPair[1][indexListPair[1][0]],indexListPair[0],modListPair[0])):
+               indexListPair[1].pop(0)
+            else :
+               return False
+      return True
+
+   def matchTypes(self,aTypePair):
+      aTypeClassPair=map(lambda l: l[0],aTypePair)
+      if (all(map(lambda l: l in [fortStmts.DoubleStmt,fortStmts.RealStmt],aTypeClassPair))) :
+         if (self.__guessBytes(aTypePair[0])==self.__guessBytes(aTypePair[1])):
+            return True
+      return False
 
    def __genericFunctionType(self,aFunctionApp):
-      # find the symbol:
-      symtabEntry=self.localSymtab.lookup_name(aFunctionApp.head)
-      # find a match for the signature:
-      for sName in symtabEntry.genericInfo.resolvableTo.keys():
-         signature=symtabEntry.genericInfo.resolvableTo[sName]
-         # we don't cover optional arguments here - yet
-         if len(signature)!=len(aFunctionApp.args):
-            continue
-         matched=True
-         for formal,actual in zip(signature.keys(),aFunctionApp.args):
-            if signature[formal]!=self._expressionType(actual) :
-               matched=False
-               break
-         if (not matched):
-            continue
-         return self.localSymtab.lookup_name(sName).type
-      raise InferenceError(sys._getframe().f_code.co_name+': Could not resolve generic "'+aFunctionApp.head+'"',self.lineNumber)
+      specInfo=_genericResolve(aFunctionApp,self.localSymtab,self.lineNumber)
+      if specInfo:
+         return specInfo[1].type
 
    def _appType(self,anApp):
       DebugManager.debug(sys._getframe().f_code.co_name+' called on '+str(anApp)+'...',newLine=False)
@@ -456,7 +506,7 @@ def __functionShape(aFunctionApp,localSymtab,lineNumber):
       if (returnShape is None) :
          # this may be a generic
          DebugManager.debug(sys._getframe().f_code.co_name+' called on '+str(aFunctionApp)+'...',newLine=False)
-         specInfo=__genericResolve(aFunctionApp,localSymtab,lineNumber)
+         specInfo=_genericResolve(aFunctionApp,localSymtab,lineNumber)
          if specInfo:
             symtabEntry=specInfo[1]
             returnShape=specInfo[1].dimensions
@@ -517,7 +567,7 @@ def expressionShape(anExpression,localSymtab,lineNumber):
    else:
       raise InferenceError(sys._getframe().f_code.co_name+': No shape could be determined for expression "'+str(anExpression)+'"',lineNumber)
 
-def __genericResolve(aFunctionApp,localSymtab,lineNumber):
+def _genericResolve(aFunctionApp,localSymtab,lineNumber):
    ''' returns tuple (<specificName>,<symtabEntry>) for generic aFunctionApp '''
    # find the symbol:
    sName=aFunctionApp.head
@@ -530,6 +580,8 @@ def __genericResolve(aFunctionApp,localSymtab,lineNumber):
        len(symtabEntry.genericInfo.resolvableTo)==0) : # not overloaded
       return (sName,symtabEntry)
    # find a match for the signature:
+   matchedName=""
+   matchCount=0
    for sName in symtabEntry.genericInfo.resolvableTo.keys():
       signature=symtabEntry.genericInfo.resolvableTo[sName]
       # we don't cover optional arguments here - yet
@@ -540,21 +592,20 @@ def __genericResolve(aFunctionApp,localSymtab,lineNumber):
                             aFunctionApp.head+'('+','.join([str(arg) for arg in aFunctionApp.args]))
          continue
       matched=True
+      aTypeContext=_TypeContext(lineNumber,localSymtab)
       for formal,actual in zip(signature.keys(),aFunctionApp.args):
-         if signature[formal]!=expressionType(actual,localSymtab,lineNumber) :
+         if (not (aTypeContext.matchTypes((signature[formal][0],expressionType(actual,localSymtab,lineNumber))))) :
             DebugManager.debug(sys._getframe().f_code.co_name+' argument type mismatch for specific "'+
                                str(sName)+'" at formal "'+
-                               str(formal)+'"('+str(signature[formal])+')'
+                               str(formal)+'"('+str(signature[formal][0])+')'
                                ' for call to generic "'+
                                aFunctionApp.head+'" at actual "'+
                                str(actual)+'"('+ str(expressionType(actual,localSymtab,lineNumber))+')')
             matched=False
             break
          formalRank=0
-         for typeAttr in signature[formal][1] :
-            if isinstance(typeAttr,App) and typeAttr.head.lower()=='dimension' :
-               formalRank=len(tuple(typeAttr.args))
-               break
+         if (signature[formal][1]): 
+            formalRank=len(signature[formal][1])
          actualRank=0
          actualShape=expressionShape(actual,localSymtab,lineNumber)
          if (actualShape):
@@ -568,10 +619,23 @@ def __genericResolve(aFunctionApp,localSymtab,lineNumber):
                                str(actual)+'"('+ str(actualRank)+')')
             matched=False
             break
-      if (not matched):
-         continue
-      return (sName,localSymtab.lookup_name(sName))
-   raise InferenceError(sys._getframe().f_code.co_name+': Could not resolve generic "'+aFunctionApp.head+'"',lineNumber)
+      if (matched):
+         matchCount+=1
+         matchedName=sName
+   if (matchCount==1): 
+      return (matchedName,localSymtab.lookup_name(matchedName))
+   # collect error info:
+   reason=""
+   if (matchCount==0):
+      reason="Could not match"
+   else:
+      reason="Ambiguous matches for" 
+   actualSignature="("+".".join(map(lambda l: str(expressionType(l,localSymtab,lineNumber)), aFunctionApp.args))+")"
+   specifics=[]
+   for sName in symtabEntry.genericInfo.resolvableTo.keys():
+      signature=symtabEntry.genericInfo.resolvableTo[sName]
+      specifics.append(sName+"("+",".join(map(str,signature.keys()))+")"+"("+".".join(map(lambda l: str(signature[l]), signature.keys()))+")")
+   raise InferenceError(sys._getframe().f_code.co_name+': '+reason+' call to generic '+aFunctionApp.head+actualSignature+' to specific implemantation\n '+'\n'.join(specifics),lineNumber)
 
 def __isRangeExpression(theExpression):
    return (isinstance(theExpression,Ops) and theExpression.op==':')

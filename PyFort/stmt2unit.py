@@ -138,7 +138,8 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                 if (argsTypeDict is None):
                     raise SymtabError('no arguments set for specific '+curr.val.name()+' under generic '+ unitSymbolEntry.genericInfo.genericName+' entry: '+localSymtab.lookup_name(unitSymbolEntry.genericInfo.genericName).debug(unitSymbolEntry.genericInfo.genericName))
                 if name.lower() in argsTypeDict:
-                    argsTypeDict[name.lower()]=localSymtab.lookup_name_local(name).type
+                    se=localSymtab.lookup_name_local(name)
+                    argsTypeDict[name.lower()]=(se.type,se.dimensions)
                     DebugManager.debug('recorded type in '+str(id(argsTypeDict))+str(argsTypeDict))
         except SymtabError,e: # add lineNumber and symbol name to any SymtabError we encounter
             e.lineNumber = e.lineNumber or aTypeDeclStmt.lineNumber
