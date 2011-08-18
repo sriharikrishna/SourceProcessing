@@ -137,7 +137,7 @@ class _Kind(_KindTypeMod):
 class _ExplKind(_KindTypeMod):
     pat = '(kind = %s)'
 
-prec = seq(lit('*'),int)
+prec = seq(lit('*'),pred(is_int))
 prec = treat(prec,lambda a:_Prec(a[1]))
 
 # kind = seq(lit('('),cslist(Exp),lit(')')) #### KILL THIS??
@@ -1237,7 +1237,7 @@ class CharacterStmt(TypeDecl):
     _starmod  = seq(lit('('),lit('*'),lit(')'))
     _starmod  = treat(_starmod,lambda l: _Star())
     
-    _lenmod   = disj(int,_starmod)
+    _lenmod   = disj(pred(is_int),_starmod)
     _f77mod   = seq(lit('*'),_lenmod)
     _f77mod   = treat(_f77mod,lambda l: _F77Len(l[1]))
     
@@ -2100,7 +2100,7 @@ class StopStmt(Exec):
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
         formStopStmt = seq(lit(StopStmt.kw),
-                           zo1(disj(const,int)))
+                           zo1(disj(const,pred(is_int))))
         ((stmt_name,msg),rst) = formStopStmt(scan)
         if len(msg) > 0:
             return StopStmt(msg[0],lineNumber)
@@ -2123,7 +2123,7 @@ class ReturnStmt(Leaf):
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
         formReturnStmt = seq(lit(ReturnStmt.kw),
-                             zo1(int))
+                             zo1(pred(is_int)))
         ((stmt_name,ordinal),rst) = formReturnStmt(scan)
         if len(ordinal) > 0:
             return ReturnStmt(ordinal[0],lineNumber)
@@ -2149,7 +2149,7 @@ class IfStmt(Exec):
         prefix = seq(lit(IfStmt.kw),lit('('),Exp,lit(')'))
         theStmt=None
         try: #arithmetic if
-            arithIfPatn=seq(prefix,int,lit(','),int,lit(','),int)
+            arithIfPatn=seq(prefix,pred(is_int),lit(','),pred(is_int),lit(','),pred(is_int))
             (((ifLit,dc1,expr,dc2),l1,c1,l2,c2,l3),rest)=arithIfPatn(scan)
             theStmt=ArithmIfStmt(expr,(l1,l2,l3),ifLit,lineNumber,rest=rest)
         except: 
@@ -2396,7 +2396,7 @@ class DoStmt(Exec):
         formDoName = treat(formDoName, lambda x: x[0])
         formDoStmt = seq(zo1(formDoName),        # 0 = doName
                          lit(DoStmt.kw),         # 1 = theDoKeyword
-                         zo1(int),               # 2 = doLabel
+                         zo1(pred(is_int)),      # 2 = doLabel
                          zo1(LoopControl.form))  # 3 = loopControl
         formDoStmt = treat(formDoStmt, lambda x: DoStmt(x[0] and x[0][0] or None,
                                                         x[2] and x[2][0] or None,
@@ -2563,16 +2563,16 @@ class GotoStmt(Exec):
         scan = filter(lambda x: x != ' ',ws_scan)
         theStmt=None
         try : 
-            simplePatn=seq(lit(GotoStmt.kw),int)
+            simplePatn=seq(lit(GotoStmt.kw),pred(is_int))
             ((thekw,theLabel),rest)=simplePatn(scan)
             theStmt=SimpleGotoStmt(theLabel,lineNumber,rest=rest)
         except :
             try: 
-                computedPatn=seq(lit(GotoStmt.kw),lit('('),cslist(int),lit(')'),zo1(lit(',')),Exp)
+                computedPatn=seq(lit(GotoStmt.kw),lit('('),cslist(pred(is_int)),lit(')'),zo1(lit(',')),Exp)
                 ((kwS,pl,labelList,pr,optComma,theExpr),rest)=computedPatn(scan)
                 theStmt=ComputedGotoStmt(labelList,theExpr,lineNumber,rest=rest)
             except :
-                assignedPatn=seq(lit(GotoStmt.kw),id,zo1(seq(zo1(lit(',')),lit('('),cslist(int),lit(')'))))
+                assignedPatn=seq(lit(GotoStmt.kw),id,zo1(seq(zo1(lit(',')),lit('('),cslist(pred(is_int)),lit(')'))))
                 assignedExtract=treat(assignedPatn,lambda l:(l[1],
                                                              len(l[2]) # have the optional label list 
                                                              and 
@@ -2760,7 +2760,7 @@ class DeletedAssignStmt(Exec):
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
-        patn = seq(lit(DeletedAssignStmt.kw),int,lit('to'),id)
+        patn = seq(lit(DeletedAssignStmt.kw),pred(is_int),lit('to'),id)
         ((kwString,assignedLabel,toString,var),rst)=patn(scan)
         return DeletedAssignStmt(assignedLabel,var,kwString,toString,lineNumber,rest=rst)
 
@@ -2787,7 +2787,7 @@ class BuiltinExec(Exec):
         theParsedStmt=None
         try:
             # without parenthesis
-            formStmt = seq(lit(cls.kw),disj(id,int))
+            formStmt = seq(lit(cls.kw),disj(id,pred(is_int)))
             ((builtinKeyword,unitSpec),rest) = formStmt(scan)
             theParams[cls.paramNames[0]]=unitSpec
             theParsedStmt=cls(theParams,lineNumber)
