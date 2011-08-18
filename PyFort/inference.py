@@ -210,6 +210,8 @@ class _TypeContext:
          return 8;
       if (aType[0]==fortStmts.RealStmt and not aType[1]) :
          return 4;
+      if (aType[0]==fortStmts.IntegerStmt and not aType[1]) :
+         return 4;
       if (len(aType[1])==1):
          theMod=aType[1][0]
          if (isinstance(theMod,fortStmts._Prec)):
@@ -250,6 +252,9 @@ class _TypeContext:
    def matchTypes(self,aTypePair):
       aTypeClassPair=map(lambda l: l[0],aTypePair)
       if (all(map(lambda l: l in [fortStmts.DoubleStmt,fortStmts.RealStmt],aTypeClassPair))) :
+         if (self.__guessBytes(aTypePair[0])==self.__guessBytes(aTypePair[1])):
+            return True
+      if (all(map(lambda l: l==fortStmts.IntegerStmt,aTypeClassPair))) :
          if (self.__guessBytes(aTypePair[0])==self.__guessBytes(aTypePair[1])):
             return True
       return False
