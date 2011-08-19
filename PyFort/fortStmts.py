@@ -958,11 +958,10 @@ class VarAttrib(Decl):
     @classmethod
     def parse(cls,ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
-        p0 = seq(lit(cls.kw),zo1(seq(lit('::'),cslist(id))))
+        p0 = seq(lit(cls.kw),zo1(lit('::')),cslist(id))
 
-        ((dc,vlist),r) = p0(scan)
+        ((dc,sep,vlist),r) = p0(scan)
         if vlist:
-            vlist = vlist[0][1]
             return cls(vlist,lineNumber,rest=r)
         else:
             return cls(r,lineNumber,rest=r)
