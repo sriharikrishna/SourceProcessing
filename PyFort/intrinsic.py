@@ -121,9 +121,11 @@ __inquiry = (
     'associated',
     'allocated',
     'kind',
+    'lbound',
     'present',
     'shape',
     'size',
+    'ubound'
     )
 
 def is_inquiry(op):
