@@ -169,8 +169,13 @@ class _TypeContext:
       return returnType
 
    def __intrinsicType(self,anIntrinsicApp):
-      if anIntrinsicApp.head.lower() in ['aimag','alog','real']:
+      if anIntrinsicApp.head.lower() in ['aimag','alog']:
          return (fortStmts.RealStmt, [])
+      elif anIntrinsicApp.head.lower() == 'real':
+         typeMod=[]
+         if (len(anIntrinsicApp.args)==2): # the second argument would be the kind parameter
+             typeMod.append(fortStmts._Kind(anIntrinsicApp.args[1]))
+         return (fortStmts.RealStmt, typeMod)
       elif anIntrinsicApp.head.lower() in ['ichar','idint','int','lbound','ubound','scan','shape','size']:
          return (fortStmts.IntegerStmt, [])
       elif anIntrinsicApp.head.lower() in ['dble','dfloat','dabs','dexp','dlog','dsqrt','dmod']:
