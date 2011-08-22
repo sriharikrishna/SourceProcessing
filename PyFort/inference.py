@@ -90,6 +90,8 @@ class _TypeContext:
                 k2=symtabEntry.constInit
          if (k1==k2):
             return m1
+      if (str(m1) == str(m2)):
+         return m1 
       raise InferenceError(sys._getframe().f_code.co_name+': Do not know how to compare modification specifiers '+str(m1)+' and '+str(m2))
 
    def __typeCompare(self,t1,t2,addLength):
