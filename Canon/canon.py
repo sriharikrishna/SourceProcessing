@@ -168,6 +168,7 @@ class UnitCanonicalizer(object):
             typeAttrList.append(fe.App('dimension',declDimArgs))
         if needsAlloc:
             typeAttrList.append("allocatable")
+            DebugManager.warning("temporary  "+theNewTemp+" declared as allocatable but allocation logic is as of yet not implented",parentStmt.lineNumber)
         theNewDecl = varTypeClass(varModifierList,typeAttrList,[theNewTemp])
         self.__myNewDecls.append(theNewDecl)
         self.__myUnit.symtab.enter_name(theNewTemp,
