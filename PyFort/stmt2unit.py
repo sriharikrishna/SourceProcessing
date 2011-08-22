@@ -374,6 +374,9 @@ def _unit_exit(self,cur):
             parentSymtabEntry.funcFormalArgs=FormalArgs()
         for pos,arg in enumerate(cur.val._in_functionDecl.args):
             argSymtabEntry=cur.val.symtab.lookup_name(arg)
+            if (not argSymtabEntry):
+                argSymtabEntry=SymtabEntry(SymtabEntry.VariableEntryKind)
+                cur.val.symtab.enter_name(arg,argSymtabEntry)
             argSymtabEntry.origin="dummy"
             theSymtabEntry.funcFormalArgs.args[arg]=(pos,argSymtabEntry)
             if (parentSymtabEntry):
