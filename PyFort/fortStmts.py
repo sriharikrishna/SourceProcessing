@@ -409,7 +409,7 @@ class NonComment(GenStmt):
             
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__,
-                           ','.join([repr(aSon) for aSon in self._sons]))
+                           ','.join([repr(self.__dict__[aSon]) for aSon in self._sons]))
 
     def __str__(self):
         return self.__class__.kw_str

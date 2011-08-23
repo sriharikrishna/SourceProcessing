@@ -709,7 +709,6 @@ class UnitCanonicalizer(object):
                 subroutineBlock.append(aDecl)
         else:
             subroutineBlock.append(aDecl)
-        return subroutineBlock
 
     def __createFuncSubPairs(self):
         oldFuncnewSubPairs = []
@@ -735,7 +734,7 @@ class UnitCanonicalizer(object):
                 interfaceBlock.append(aDecl)
                 if isinstance(aDecl,fs.EndInterfaceStmt):
                     newInterfaceBlock = function2subroutine.\
-                                        convertInterfaceBlock(interfaceBlock,oldFuncnewSubPairs)
+                                        convertInterfaceBlock(interfaceBlock,oldFuncnewSubPairs,self._keepFunctionDecl)
                     self.__myNewDecls.extend(newInterfaceBlock)
                     interfaceBlockFlag = False
                     interfaceBlock = []
@@ -746,8 +745,11 @@ class UnitCanonicalizer(object):
             else:
                 (newDecl,modified) = function2subroutine.\
                                      convertFunctionDecl(aDecl,oldFuncnewSubPairs)
-                self.__myNewDecls.append(aDecl)
-                if modified:
+                if (not modified):
+                    self.__myNewDecls.append(aDecl)
+                else:
+                    if (self._keepFunctionDecl):
+                        self.__myNewDecls.append(aDecl)
                     self.__myNewDecls.append(newDecl)
 
     def __createNewSubroutine(self,aUnit,subroutineDecls):
@@ -786,6 +788,41 @@ class UnitCanonicalizer(object):
             except SymtabError,e: # add a lineNumber to SymtabErrors that don't have one
                 e.lineNumber = e.lineNumber or anExecStmt.lineNumber
                 raise e        
+    def __canonicalizeUseStmts(self,aDecl):
+        if (isinstance(aDecl,fs.UseStmt)):
+            if isinstance(aDecl, fs.UseAllStmt):
+                newRenameList=[]
+                if aDecl.renameList:
+                    for renameItem in aDecl.renameList:
+                        scopedName=aDecl.moduleName+":"+renameItem.rhs
+                        if function2subroutine.wasSubroutinized(scopedName): 
+                            newRenameList.append(fs._PointerInit(function2subroutine.name_init+renameItem.lhs,
+                                                                 function2subroutine.name_init+renameItem.rhs))
+                            if (self._keepFunctionDecl):
+                                newRenameList.append(renameItem)
+                            aDecl.modified=True
+                        else: 
+                            newRenameList.append(renameItem)
+                if (aDecl.modified):
+                    aDecl.renameList=newRenameList
+            elif isinstance(aDecl, fs.UseOnlyStmt):
+                newOnlyList=[]
+                for onlyItem in aDecl.onlyList:
+                    if (isinstance(onlyItem,fs._PointerInit) and function2subroutine.wasSubroutinized(aDecl.moduleName+":"+onlyItem.rhs) ):
+                        newOnlyList.append(fs._PointerInit(function2subroutine.name_init+onlyItem.lhs,
+                                                           function2subroutine.name_init+onlyItem.rhs))
+                        if (self._keepFunctionDecl):
+                            newOnlyList.append(onlyItem)
+                        aDecl.modified=True
+                    elif(function2subroutine.wasSubroutinized(aDecl.moduleName+":"+onlyItem)):
+                        newOnlyList.append(function2subroutine.name_init+onlyItem)
+                        if (self._keepFunctionDecl):
+                            newOnlyList.append(onlyItem)
+                        aDecl.modified=True
+                    else: 
+                        newOnlyList.append(onlyItem)
+                if (aDecl.modified): 
+                    aDecl.onlyList=newOnlyList
 
     def canonicalizeUnit(self):
         '''Recursively canonicalize \p aUnit'''
@@ -835,18 +872,18 @@ class UnitCanonicalizer(object):
         
         subroutineBlock = []    
         for aDecl in self.__myUnit.decls:
-            subroutineBlock = self.__canonicalizeFunctionDecls(aDecl,subroutineBlock)
+            self.__canonicalizeUseStmts(aDecl)
+            self.__canonicalizeFunctionDecls(aDecl,subroutineBlock)
 
-       ## replace the declaration statements for the unit
+        ## replace the declaration statements for the unit
         if not isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
             self.__myUnit.decls = self.__myNewDecls
             subroutineDecls = []
         else:
             subroutineDecls = self.__myNewDecls
-        self.__myNewDecls = []
 
+        self.__myNewDecls = [] # empty it out, the following line may add new declarations
         self.__canonicalizeExecStmts(self.__myUnit.execs)
-
         # set the leading whitespace for the new declarations and add them to the unit
         for aDecl in self.__myNewDecls:
             aDecl.lead = self.__myUnit.uinfo.lead+'  '
