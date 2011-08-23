@@ -23,6 +23,14 @@ class FunToSubError(Exception):
 
 name_init = 'oad_s_'
 
+###
+# we track all converted names with scope qualifier
+#
+ourConvertedScopedNameList = []
+
+def wasSubroutinized(scopedName):
+    return (scopedName.lower() in ourConvertedScopedNameList)
+
 def createTypeDecl(type_kw,mod,attrs,outParam,aLead):
     DebugManager.debug(10*'-'+'>'+'called function2subroutine.createTypeDecl ' \
                      + 'with type keyword "'+type_kw+'",' \
@@ -169,7 +177,14 @@ def convertFunction(functionUnit,newExecs,newDecls):
     newSubUnit.cmnt = functionUnit.cmnt
     newSubUnit.contains = functionUnit.contains
     newSubUnit.ulist = functionUnit.ulist
-
+    global ourConvertedScopedNameList
+    scopedName=''
+    funUnitParent=functionUnit.parent
+    while (funUnitParent) : 
+        scopedName=funUnitParent.uinfo.name+':'+scopedName
+        funUnitParent=funUnitParent.parent
+    scopedName+=functionUnit.uinfo.name
+    ourConvertedScopedNameList.append(scopedName.lower())
     newList = []
     for subUnit in newSubUnit.ulist:
         # no need to process function statements, since they have already been
