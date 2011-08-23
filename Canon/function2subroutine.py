@@ -81,13 +81,13 @@ def convertFunctionDecl(aDecl,oldFuncnewSubPairs):
                         modified = True
     return (newDecl,modified)
 
-def convertInterfaceBlock(oldInterfaceBlock,oldFuncnewSubPairs):
+def convertInterfaceBlock(oldInterfaceBlock,oldFuncnewSubPairs,keepFunctionDef):
     newInterfaceBlock = []
     createdNewBlock = False
     for aDecl in oldInterfaceBlock:
         if isinstance(aDecl,fs.ProcedureStmt):
-            for aDecl in oldInterfaceBlock:
-                (newDecl,modified) = convertFunctionDecl(aDecl,oldFuncnewSubPairs)
+            for aModProcDecl in oldInterfaceBlock:
+                (newDecl,modified) = convertFunctionDecl(aModProcDecl,oldFuncnewSubPairs)
                 if modified:
                     createdNewBlock = True
                 newInterfaceBlock.append(newDecl)
@@ -97,9 +97,10 @@ def convertInterfaceBlock(oldInterfaceBlock,oldFuncnewSubPairs):
                 # rename interface
                 old_name = newInterfaceBlock[0].get_name()
                 newInterfaceBlock[0].set_name(name_init+old_name)
-                newInterfaceBlock.extend(oldInterfaceBlock)
+                if (keepFunctionDef):
+                    newInterfaceBlock.extend(oldInterfaceBlock)
             return newInterfaceBlock
-    for aDecl in oldInterfaceBlock:
+    for aDecl in oldInterfaceBlock: # not a block with module procedures
         (newDecl,modified) = convertFunctionDecl(aDecl,oldFuncnewSubPairs)
         newInterfaceBlock.append(aDecl)
         if modified:
