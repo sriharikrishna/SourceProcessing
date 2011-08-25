@@ -158,10 +158,12 @@ def main():
                         outputDirectory = config.pathPrefix+head+config.pathSuffix
                         if outputDirectory == '': outputDirectory = './'
                         if not os.path.exists(outputDirectory): os.makedirs(outputDirectory)
-                        newOutputFile = os.path.join(outputDirectory,fileName+config.filenameSuffix+fileExtension)
-                        if setFormat:
+                        if (not setFormat):
+                            fileExtension=Ffile.get_extension(config.outputFormat)
+                        else:
                             config.outputFormat = Ffile.get_format(fileExtension)
                             setOutputFormat(config.outputFormat)
+                        newOutputFile = os.path.join(outputDirectory,fileName+config.filenameSuffix+fileExtension)
                         ourOutFileNameList.append(newOutputFile)
                         ourOutFileHandle = open(newOutputFile,'w')
                 elif not ourOutFileHandle:

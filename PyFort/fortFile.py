@@ -45,6 +45,12 @@ class Ffile(object):
             return 'free'
         return 'fixed'
 
+    @staticmethod
+    def get_extension(format):
+        if (format=='free'):
+            return '.f90'
+        return '.f'
+
     __includeSearchPath=[]
     
     @staticmethod
