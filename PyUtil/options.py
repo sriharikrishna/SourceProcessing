@@ -100,7 +100,7 @@ def addPrePostOptions(opt):
                    default=False)
     opt.add_option('--separateOutput',
                    dest='separateOutput',
-                   help='split output into files corresponding to input files (defaults to False, conflicts with --output)',
+                   help='split output into files corresponding to input files (defaults to False; conflicts with --output; if --outputFormat is specified the extension will be adjusted to .f for fixed format and .f90 for free formar)',
                    action='store_true',
                    default=False)
 
