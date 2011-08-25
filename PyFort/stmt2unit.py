@@ -138,7 +138,8 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                 if (argsTypeDict is None):
                     raise SymtabError('no arguments set for specific '+curr.val.name()+' under generic '+ unitSymbolEntry.genericInfo.genericName+' entry: '+localSymtab.lookup_name(unitSymbolEntry.genericInfo.genericName).debug(unitSymbolEntry.genericInfo.genericName))
                 if name.lower() in argsTypeDict:
-                    argsTypeDict[name.lower()]=localSymtab.lookup_name_local(name).type
+                    se=localSymtab.lookup_name_local(name)
+                    argsTypeDict[name.lower()]=(se.type,se.dimensions)
                     DebugManager.debug('recorded type in '+str(id(argsTypeDict))+str(argsTypeDict))
         except SymtabError,e: # add lineNumber and symbol name to any SymtabError we encounter
             e.lineNumber = e.lineNumber or aTypeDeclStmt.lineNumber
@@ -348,6 +349,8 @@ def _unit_entry(self,cur):
     DebugManager.debug('[Line '+str(self.lineNumber)+']: stmt2unit._unit_entry() for '+str(self)+': with symtab '+str(currentSymtab)+' with parent symtab '+str(currentSymtab.parent))
     if (isinstance(self,fs.FunctionStmt)): 
         cur.val._in_functionDecl=self
+    if (isinstance(self,fs.SubroutineStmt)): 
+        cur.val._in_subroutineDecl=self
     return self
 
 def _unit_exit(self,cur):
@@ -370,10 +373,23 @@ def _unit_exit(self,cur):
         if parentSymtabEntry:
             parentSymtabEntry.funcFormalArgs=FormalArgs()
         for pos,arg in enumerate(cur.val._in_functionDecl.args):
-            theSymtabEntry.funcFormalArgs.args[arg]=(pos,cur.val.symtab.lookup_name(arg))
+            argSymtabEntry=cur.val.symtab.lookup_name(arg)
+            if (not argSymtabEntry):
+                argSymtabEntry=SymtabEntry(SymtabEntry.VariableEntryKind)
+                cur.val.symtab.enter_name(arg,argSymtabEntry)
+            argSymtabEntry.origin="dummy"
+            theSymtabEntry.funcFormalArgs.args[arg]=(pos,argSymtabEntry)
             if (parentSymtabEntry):
                 parentSymtabEntry.funcFormalArgs.args[arg]=(pos,copy.deepcopy(cur.val.symtab.lookup_name(arg)))
-        cur.val._in_functionDecl=None         
+        cur.val._in_functionDecl=None
+    if cur.val._in_subroutineDecl:
+        for arg in cur.val._in_subroutineDecl.args:
+            argEntry=cur.val.symtab.lookup_name(arg)
+            if (not argEntry):
+                argEntry=SymtabEntry(SymtabEntry.VariableEntryKind)
+                cur.val.symtab.enter_name(arg,argEntry)
+            cur.val.symtab.lookup_name(arg).origin="dummy"
+        cur.val._in_subroutineDecl=None
     return self
 
 def _implicit(self,cur):

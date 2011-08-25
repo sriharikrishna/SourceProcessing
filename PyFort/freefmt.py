@@ -60,7 +60,65 @@ def kill_token_cont(l):
     if token_match:
         return l[token_match.end():]
     return ' '+l.lstrip()
-        
+
+sq = "'"
+dq = '"'
+eolc = '!'
+quote_re = re.compile(r'(%s)'%sq+'|'+r'(%s)'%dq+'|'+r'(%s)'%eolc,re.X)
+sq_re = re.compile(r'(%s)'%sq,re.X)
+dq_re = re.compile(r'(%s)'%dq,re.X)
+sqCount=0
+dqCount=0
+def _process_conts(cl):
+    global sqCount
+    global dqCount
+    index=0
+    eol_comm=None
+    while index<len(cl):
+        # if no open quotes
+        if (sqCount==0 and dqCount==0):
+            match = re.search(quote_re,cl[index:])
+            if match:
+                cur_index=match.start()+index
+                if (cl[cur_index]==sq):
+                    sqCount+=1
+                elif (cl[cur_index]==dq):
+                    dqCount+=1
+                elif (cl[cur_index]==eolc):
+                    # eol comment
+                    (new_cl,eol_comm) = kill_bang_comment(cl[index:])
+                    cl=cl[:index]+new_cl
+                index=cur_index+1
+            else:
+                (new_cl,eol_comm) = kill_bang_comment(cl[index:])                    
+                cl=cl[:index]+new_cl
+                break;
+        # if open single quote
+        if (sqCount==1):
+            match = re.search(sq_re,cl[index:])
+            if match:
+                # quote closed; update index to continue searching line
+                index = match.start()+index+1
+                sqCount-=1
+            else:
+                # quote left open; continue to next line
+                (new_cl,eol_comm) = kill_bang_comment_lo_q(cl[index:],sq)
+                cl=cl[:index]+new_cl
+                break;
+        # if open double quote
+        elif (dqCount==1):
+            match = re.search(dq_re,cl[index:])
+            if match:
+                # quote closed; update index to continue searching line
+                index = match.start()+index+1
+                dqCount-=1
+            else:
+                # quote left open; continue to next line
+                (new_cl,eol_comm) = kill_bang_comment_lo_q(cl[index:],dq)
+                cl=cl[:index]+new_cl
+                break;
+    return (cl,eol_comm)
+
 def _fjoin(asm):
     '''assemble a logical line from the assembled
     lines come in from the assembler as
@@ -76,29 +134,10 @@ def _fjoin(asm):
     (conts,prim) = asm
     current_line = []
     initial_line = True
-    delimOQ = None
-    currDelimOQ = None
-    hasOQ = False
     for (cl,comments) in conts:
+        index=0
         eol_comm=None
-        (hasOQ,currDelimOQ)=hasOpenQuotation(cl,delimOQ)
-        if (hasOQ) :
-            if (delimOQ):
-                if (currDelimOQ == delimOQ):
-                    # this is the end of the open quotation
-                    (cl,eol_comm) = kill_bang_comment_lo_q(cl,delimOQ)
-                    delimOQ = None
-                else :
-                    # it is conceivable that one has embedded the other quoation
-                    # mark but it ends up on a separate line but then
-                    # Note: no comments are permitted
-                    (cl,eol_comm) = kill_bang_comment(cl)
-            else:
-                # this is the start of the open quoatation
-                delimOQ = currDelimOQ
-                (cl,eol_comm) = kill_bang_comment(cl)
-        else: 
-            (cl,eol_comm) = kill_bang_comment(cl)
+        (cl,eol_comm)=_process_conts(cl)
         if eol_comm:
             internal_comments.append(eol_comm)
         internal_comments.extend(comments)
@@ -112,23 +151,9 @@ def _fjoin(asm):
     if not initial_line:
         prim = kill_token_cont(prim)
     prim=chomp(prim)
-    (hasOQ,currDelimOQ)=hasOpenQuotation(prim,delimOQ)
-    if (hasOQ):
-        if (delimOQ and currDelimOQ == delimOQ):
-            # this is the end of the open quotation
-            (prim,eol_comm) = kill_bang_comment_lo_q(prim,delimOQ)
-            delimOQ = None
-            hasOQ=False
-        else :
-            # this is parsed as a new open quoatation but there is no
-            # continuation so it probably is seen in the comment part.
-            if (prim.rfind(currDelimOQ)>prim.rfind('!')):
-                (prim,eol_comm) = kill_bang_comment(prim)
-                hasOQ=False
-    else:
-        (prim,eol_comm) = kill_bang_comment(prim)
-    if (delimOQ or hasOQ):
-        raise Exception("open quotation bug: hasOQ="+str(hasOQ)+" delimOQ="+str(delimOQ)+" currDelimOQ="+str(currDelimOQ)+" for "+str(asm))
+    (prim,eol_comm)=_process_conts(prim)
+    if (dqCount!=0 or sqCount!=0):
+        raise Exception('open quotation bug for '+str(asm))
     if eol_comm:
         internal_comments.append(eol_comm)
     current_line.append(prim)

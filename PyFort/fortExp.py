@@ -333,6 +333,8 @@ def isConstantExpression(anExpression):
     ''' is \param anExpression an expression of literal constants'''
     if isinstance(anExpression,str):
         return is_const(anExpression)
+    elif isinstance(anExpression,int):
+        return True
     elif isinstance(anExpression,Unary):
         return isConstantExpression(anExpression.exp)
     elif isinstance(anExpression,Ops):
@@ -438,7 +440,6 @@ def _mkexp(e):
         a = Ops(op,a,_mkexp(a2))
     return a
 
-int     = pred(is_int)
 id      = pred(is_id)
 const   = pred(is_const)
 const   = treat(const,_lc_const)

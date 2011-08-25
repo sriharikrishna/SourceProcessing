@@ -23,6 +23,14 @@ class FunToSubError(Exception):
 
 name_init = 'oad_s_'
 
+###
+# we track all converted names with scope qualifier
+#
+ourConvertedScopedNameList = []
+
+def wasSubroutinized(scopedName):
+    return (scopedName.lower() in ourConvertedScopedNameList)
+
 def createTypeDecl(type_kw,mod,attrs,outParam,aLead):
     DebugManager.debug(10*'-'+'>'+'called function2subroutine.createTypeDecl ' \
                      + 'with type keyword "'+type_kw+'",' \
@@ -73,13 +81,13 @@ def convertFunctionDecl(aDecl,oldFuncnewSubPairs):
                         modified = True
     return (newDecl,modified)
 
-def convertInterfaceBlock(oldInterfaceBlock,oldFuncnewSubPairs):
+def convertInterfaceBlock(oldInterfaceBlock,oldFuncnewSubPairs,keepFunctionDef):
     newInterfaceBlock = []
     createdNewBlock = False
     for aDecl in oldInterfaceBlock:
         if isinstance(aDecl,fs.ProcedureStmt):
-            for aDecl in oldInterfaceBlock:
-                (newDecl,modified) = convertFunctionDecl(aDecl,oldFuncnewSubPairs)
+            for aModProcDecl in oldInterfaceBlock:
+                (newDecl,modified) = convertFunctionDecl(aModProcDecl,oldFuncnewSubPairs)
                 if modified:
                     createdNewBlock = True
                 newInterfaceBlock.append(newDecl)
@@ -89,9 +97,10 @@ def convertInterfaceBlock(oldInterfaceBlock,oldFuncnewSubPairs):
                 # rename interface
                 old_name = newInterfaceBlock[0].get_name()
                 newInterfaceBlock[0].set_name(name_init+old_name)
-                newInterfaceBlock.extend(oldInterfaceBlock)
+                if (keepFunctionDef):
+                    newInterfaceBlock.extend(oldInterfaceBlock)
             return newInterfaceBlock
-    for aDecl in oldInterfaceBlock:
+    for aDecl in oldInterfaceBlock: # not a block with module procedures
         (newDecl,modified) = convertFunctionDecl(aDecl,oldFuncnewSubPairs)
         newInterfaceBlock.append(aDecl)
         if modified:
@@ -169,7 +178,14 @@ def convertFunction(functionUnit,newExecs,newDecls):
     newSubUnit.cmnt = functionUnit.cmnt
     newSubUnit.contains = functionUnit.contains
     newSubUnit.ulist = functionUnit.ulist
-
+    global ourConvertedScopedNameList
+    scopedName=''
+    funUnitParent=functionUnit.parent
+    while (funUnitParent) : 
+        scopedName=funUnitParent.uinfo.name+':'+scopedName
+        funUnitParent=funUnitParent.parent
+    scopedName+=functionUnit.uinfo.name
+    ourConvertedScopedNameList.append(scopedName.lower())
     newList = []
     for subUnit in newSubUnit.ulist:
         # no need to process function statements, since they have already been

@@ -9,7 +9,7 @@ from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
 from PyUtil.argreplacement import replaceArgs
 
 from PyFort.intrinsic import is_intrinsic,getGenericName, isUsedNonStandard
-from PyFort.inference import InferenceError,expressionType,appType,isArrayReference,canonicalTypeClass,expressionShape
+from PyFort.inference import InferenceError,expressionType,appType,isArrayReference,canonicalTypeClass,expressionShape,isSpecExpression
 import PyFort.flow as flow
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
@@ -99,6 +99,8 @@ class UnitCanonicalizer(object):
         DebugManager.debug('UnitCanonicalizer.shouldSubroutinizeFunction called on "'+str(theApp)+'"')
         if not isinstance(theApp,fe.App):
             raise CanonError('UnitCanonicalizer.shouldSubroutinizeFunction called on non-App object '+str(theApp),parentStmt.lineNumber)
+        if isinstance(theApp.head,fe.Sel):
+            return False
         theSymtabEntry = self.__myUnit.symtab.lookup_name(theApp.head)
         if theSymtabEntry: 
             if theSymtabEntry.entryKind==SymtabEntry.StatementFunctionEntryKind:
@@ -108,7 +110,7 @@ class UnitCanonicalizer(object):
         try:
             (funcType,modifier) = appType(theApp,self.__myUnit.symtab,parentStmt.lineNumber)
         except InferenceError,errorObj:
-            DebugManager.warning("cannot determine return type and canonicalize function call to "+theApp.head,parentStmt.lineNumber)
+            DebugManager.warning("cannot determine return type and canonicalize function call; "+errorObj.msg,parentStmt.lineNumber)
             return False
         if is_intrinsic(theApp.head):
             if UnitCanonicalizer._overloadingMode:
@@ -117,6 +119,26 @@ class UnitCanonicalizer(object):
             return subroutinizedIntrinsics.shouldSubroutinize(theApp) and (UnitCanonicalizer._subroutinizeIntegerFunctions or not funcType == fs.IntegerStmt)
         else:
             return True
+
+    def __fixSpecExpression(self,theExp,lineNumber):
+        ''' we can safely drop some slice expressions if the inquiry fynction does not refer to it '''
+        if (isinstance(theExp,fe.App) and theExp.head.lower() in ["size","lbound","ubound"]
+            and 
+            len(theExp.args)==2) :
+            dim=None
+            if (isinstance(theExp.args[1],fe.NamedParam) and theExp.args[1].myId.lower()=="dim" and fe._int_re.match(theExp.args[1].myRHS)):
+                dim=int(theExp.args[1].myRHS)
+            elif(fe._int_re.match(theExp.args[1])):
+                dim=int(theExp.args[1])
+            if dim:
+                argDims=[]
+                for pos,argDim in enumerate(theExp.args[0].args):
+                    if pos+1!=dim:
+                        argDims.append(fe.Zslice())
+                    else:
+                        argDims.append(argDim)
+                # now replace it
+                theExp.args[0].args=argDims
 
     def __newTemp(self,anExpression,parentStmt):
         '''The new temporary variable assumes the value of anExpression'''
@@ -132,8 +154,21 @@ class UnitCanonicalizer(object):
                 print >>sys.stderr,'WARNING: Temp variable forced to 8-byte float (real -> double)'
         DebugManager.debug('replaced with '+str(theNewTemp)+' of type '+str(varTypeClass)+'('+str(varModifierList)+')')
         typeAttrList=[]
+        needsAlloc=False
         if varShape:
-            typeAttrList.append(fe.App('dimension',[i for i in varShape]))
+            declDimArgs=[]
+            for dim in varShape:
+                if (not isSpecExpression(dim,self.__myUnit.symtab,parentStmt.lineNumber)):
+                    self.__fixSpecExpression(dim,parentStmt.lineNumber)
+                if (not isSpecExpression(dim,self.__myUnit.symtab,parentStmt.lineNumber)):
+                    needsAlloc=True
+                    declDimArgs.append(fe.Zslice())
+                else:
+                    declDimArgs.append(dim)
+            typeAttrList.append(fe.App('dimension',declDimArgs))
+        if needsAlloc:
+            typeAttrList.append("allocatable")
+            DebugManager.warning("temporary  "+theNewTemp+" declared as allocatable but allocation logic is as of yet not implented",parentStmt.lineNumber)
         theNewDecl = varTypeClass(varModifierList,typeAttrList,[theNewTemp])
         self.__myNewDecls.append(theNewDecl)
         self.__myUnit.symtab.enter_name(theNewTemp,
@@ -230,8 +265,10 @@ class UnitCanonicalizer(object):
             DebugManager.debug(', which is a string (should be a constant or a variable => no canonicalization necessary)')
         # application expressions
         elif isinstance(theExpression,fe.App):
+            if isinstance(theExpression.head,fe.App):
+                replacementExpression.head = self.__canonicalizeExpression(theExpression.head,parentStmt)
             # array reference -. do nothing
-            if isArrayReference(theExpression,self.__myUnit.symtab,parentStmt.lineNumber):
+            elif isArrayReference(theExpression,self.__myUnit.symtab,parentStmt.lineNumber):
                 DebugManager.debug(', which is an array reference (no canonicalization necessary)')
             # function calls to subroutinize -> subroutinize and recursively canonicalize args
             elif self.shouldSubroutinizeFunction(theExpression,parentStmt):
@@ -244,17 +281,18 @@ class UnitCanonicalizer(object):
                 for arg in theExpression.args:
                     replacementArgs.append(self.__canonicalizeExpression(arg,parentStmt))
                 replacementHead = theExpression.head
-                aSymtabEntry=self.__myUnit.symtab.lookup_name(theExpression.head)
-                # see if it is  a statement function and expand it
-                if (aSymtabEntry and aSymtabEntry.entryKind==SymtabEntry.StatementFunctionEntryKind):
-                    parentStmt.beenModified = True
-                    replacementExpression=self.__expandStmtFunExp(fe.App(replacementHead,replacementArgs))
-                # check whether we need to convert the function to the generic name (e.g. alog => log)
-                else: 
-                    if (is_intrinsic(theExpression.head) and theExpression.head.lower() != getGenericName(theExpression.head)) :
-                      parentStmt.beenModified = True
-                      replacementHead = getGenericName(theExpression.head)
-                    replacementExpression = fe.App(replacementHead,replacementArgs)
+                if not isinstance(theExpression.head,fe.Sel):
+                    aSymtabEntry=self.__myUnit.symtab.lookup_name(theExpression.head)
+                    # see if it is  a statement function and expand it
+                    if (aSymtabEntry and aSymtabEntry.entryKind==SymtabEntry.StatementFunctionEntryKind):
+                        parentStmt.beenModified = True
+                        replacementExpression=self.__expandStmtFunExp(fe.App(replacementHead,replacementArgs))
+                    # check whether we need to convert the function to the generic name (e.g. alog => log)
+                    else:
+                        if (is_intrinsic(theExpression.head) and theExpression.head.lower() != getGenericName(theExpression.head)) :
+                            parentStmt.beenModified = True
+                            replacementHead = getGenericName(theExpression.head)
+                        replacementExpression = fe.App(replacementHead,replacementArgs)
         # Unary operation -> recursively canonicalize the sole subexpression
         elif isinstance(theExpression,fe.Unary):
             DebugManager.debug(', which is a unary op. with exp: "'+str(theExpression.exp)+'"')
@@ -295,7 +333,7 @@ class UnitCanonicalizer(object):
                 try: 
                     (argType,argTypeMod) = expressionType(anArg,self.__myUnit.symtab,aSubCallStmt.lineNumber)
                 except InferenceError, e :
-                    DebugManager.warning("cannot canonicalize argument >"+str(anArg)+"< parsed as "+repr(anArg),aSubCallStmt.lineNumber)
+                    DebugManager.warning("cannot canonicalize argument >"+str(anArg)+"< parsed as "+repr(anArg)+" because: "+e.msg,aSubCallStmt.lineNumber)
                     replacementArgs.append(anArg)
                     continue
                 # constant character expressions
@@ -671,7 +709,6 @@ class UnitCanonicalizer(object):
                 subroutineBlock.append(aDecl)
         else:
             subroutineBlock.append(aDecl)
-        return subroutineBlock
 
     def __createFuncSubPairs(self):
         oldFuncnewSubPairs = []
@@ -697,7 +734,7 @@ class UnitCanonicalizer(object):
                 interfaceBlock.append(aDecl)
                 if isinstance(aDecl,fs.EndInterfaceStmt):
                     newInterfaceBlock = function2subroutine.\
-                                        convertInterfaceBlock(interfaceBlock,oldFuncnewSubPairs)
+                                        convertInterfaceBlock(interfaceBlock,oldFuncnewSubPairs,self._keepFunctionDecl)
                     self.__myNewDecls.extend(newInterfaceBlock)
                     interfaceBlockFlag = False
                     interfaceBlock = []
@@ -708,8 +745,11 @@ class UnitCanonicalizer(object):
             else:
                 (newDecl,modified) = function2subroutine.\
                                      convertFunctionDecl(aDecl,oldFuncnewSubPairs)
-                self.__myNewDecls.append(aDecl)
-                if modified:
+                if (not modified):
+                    self.__myNewDecls.append(aDecl)
+                else:
+                    if (self._keepFunctionDecl):
+                        self.__myNewDecls.append(aDecl)
                     self.__myNewDecls.append(newDecl)
 
     def __createNewSubroutine(self,aUnit,subroutineDecls):
@@ -748,6 +788,41 @@ class UnitCanonicalizer(object):
             except SymtabError,e: # add a lineNumber to SymtabErrors that don't have one
                 e.lineNumber = e.lineNumber or anExecStmt.lineNumber
                 raise e        
+    def __canonicalizeUseStmts(self,aDecl):
+        if (isinstance(aDecl,fs.UseStmt)):
+            if isinstance(aDecl, fs.UseAllStmt):
+                newRenameList=[]
+                if aDecl.renameList:
+                    for renameItem in aDecl.renameList:
+                        scopedName=aDecl.moduleName+":"+renameItem.rhs
+                        if function2subroutine.wasSubroutinized(scopedName): 
+                            newRenameList.append(fs._PointerInit(function2subroutine.name_init+renameItem.lhs,
+                                                                 function2subroutine.name_init+renameItem.rhs))
+                            if (self._keepFunctionDecl):
+                                newRenameList.append(renameItem)
+                            aDecl.modified=True
+                        else: 
+                            newRenameList.append(renameItem)
+                if (aDecl.modified):
+                    aDecl.renameList=newRenameList
+            elif isinstance(aDecl, fs.UseOnlyStmt):
+                newOnlyList=[]
+                for onlyItem in aDecl.onlyList:
+                    if (isinstance(onlyItem,fs._PointerInit) and function2subroutine.wasSubroutinized(aDecl.moduleName+":"+onlyItem.rhs) ):
+                        newOnlyList.append(fs._PointerInit(function2subroutine.name_init+onlyItem.lhs,
+                                                           function2subroutine.name_init+onlyItem.rhs))
+                        if (self._keepFunctionDecl):
+                            newOnlyList.append(onlyItem)
+                        aDecl.modified=True
+                    elif(function2subroutine.wasSubroutinized(aDecl.moduleName+":"+onlyItem)):
+                        newOnlyList.append(function2subroutine.name_init+onlyItem)
+                        if (self._keepFunctionDecl):
+                            newOnlyList.append(onlyItem)
+                        aDecl.modified=True
+                    else: 
+                        newOnlyList.append(onlyItem)
+                if (aDecl.modified): 
+                    aDecl.onlyList=newOnlyList
 
     def canonicalizeUnit(self):
         '''Recursively canonicalize \p aUnit'''
@@ -797,18 +872,18 @@ class UnitCanonicalizer(object):
         
         subroutineBlock = []    
         for aDecl in self.__myUnit.decls:
-            subroutineBlock = self.__canonicalizeFunctionDecls(aDecl,subroutineBlock)
+            self.__canonicalizeUseStmts(aDecl)
+            self.__canonicalizeFunctionDecls(aDecl,subroutineBlock)
 
-       ## replace the declaration statements for the unit
+        ## replace the declaration statements for the unit
         if not isinstance(self.__myUnit.uinfo,fs.FunctionStmt):
             self.__myUnit.decls = self.__myNewDecls
             subroutineDecls = []
         else:
             subroutineDecls = self.__myNewDecls
-        self.__myNewDecls = []
 
+        self.__myNewDecls = [] # empty it out, the following line may add new declarations
         self.__canonicalizeExecStmts(self.__myUnit.execs)
-
         # set the leading whitespace for the new declarations and add them to the unit
         for aDecl in self.__myNewDecls:
             aDecl.lead = self.__myUnit.uinfo.lead+'  '
@@ -833,4 +908,5 @@ class UnitCanonicalizer(object):
         DebugManager.debug(('+'*54)+' End canonicalize unit <'+str(self.__myUnit.uinfo)+'> '+(54*'+')+'\n\n')
 
         return self.__myUnit
+
 
