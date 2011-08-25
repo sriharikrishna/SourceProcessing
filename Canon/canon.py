@@ -808,13 +808,16 @@ class UnitCanonicalizer(object):
             elif isinstance(aDecl, fs.UseOnlyStmt):
                 newOnlyList=[]
                 for onlyItem in aDecl.onlyList:
-                    if (isinstance(onlyItem,fs._PointerInit) and function2subroutine.wasSubroutinized(aDecl.moduleName+":"+onlyItem.rhs) ):
-                        newOnlyList.append(fs._PointerInit(function2subroutine.name_init+onlyItem.lhs,
-                                                           function2subroutine.name_init+onlyItem.rhs))
-                        if (self._keepFunctionDecl):
+                    if isinstance(onlyItem,fs._PointerInit):
+                        if function2subroutine.wasSubroutinized(aDecl.moduleName+":"+onlyItem.rhs):
+                            newOnlyList.append(fs._PointerInit(function2subroutine.name_init+onlyItem.lhs,
+                                                               function2subroutine.name_init+onlyItem.rhs))
+                            if (self._keepFunctionDecl):
+                                newOnlyList.append(onlyItem)
+                            aDecl.modified=True
+                        else:
                             newOnlyList.append(onlyItem)
-                        aDecl.modified=True
-                    elif(function2subroutine.wasSubroutinized(aDecl.moduleName+":"+onlyItem)):
+                    elif function2subroutine.wasSubroutinized(aDecl.moduleName+":"+onlyItem):
                         newOnlyList.append(function2subroutine.name_init+onlyItem)
                         if (self._keepFunctionDecl):
                             newOnlyList.append(onlyItem)
