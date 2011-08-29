@@ -58,6 +58,10 @@ class FormalArgs(object):
         return outString
 
 class Symtab(object):
+
+    _ourModuleScopePrefix="module:"
+    _ourScopeSeparator="|"
+
     @staticmethod
     def setTypeDefaults(defaultReal=None,defaultInt=None):
         Symtab._default_real = defaultReal
@@ -211,10 +215,10 @@ class Symtab(object):
                     if aRenameItem.rhs == aKey:
                         self.renames[aKey]=aRenameItem.lhs
                         # add the local name to the symbol table and track the original name
-                        aModuleUnit.symtab.replicateEntry(aKey,'module:'+aModuleUnit.name(),aRenameItem.lhs,self).renameSource = aKey
+                        aModuleUnit.symtab.replicateEntry(aKey,Symtab._ourModuleScopePrefix+aModuleUnit.name(),aRenameItem.lhs,self).renameSource = aKey
                         noRename = False
             if noRename:
-                aKey,aModuleUnit.symtab.replicateEntry(aKey,'module:'+aModuleUnit.name(),aKey,self)
+                aKey,aModuleUnit.symtab.replicateEntry(aKey,Symtab._ourModuleScopePrefix+aModuleUnit.name(),aKey,self)
 
     def update_w_module_only(self,aModuleUnit,onlyList):
         'update self with the subset of ids from module "unit" symtab specified in onlyList. module name = "name"'
@@ -222,9 +226,9 @@ class Symtab(object):
             # rename items: add only the lhs of the pointer init
             if isinstance(anOnlyItem,_PointerInit):
                 self.renames[anOnlyItem.rhs]=anOnlyItem.lhs
-                aModuleUnit.symtab.replicateEntry(anOnlyItem.rhs,'module:'+aModuleUnit.name(),anOnlyItem.lhs,self).renameSource=anOnlyItem.rhs
+                aModuleUnit.symtab.replicateEntry(anOnlyItem.rhs,Symtab._ourModuleScopePrefix+aModuleUnit.name(),anOnlyItem.lhs,self).renameSource=anOnlyItem.rhs
             else:
-                aModuleUnit.symtab.replicateEntry(anOnlyItem,'module:'+aModuleUnit.name(),anOnlyItem,self)
+                aModuleUnit.symtab.replicateEntry(anOnlyItem,Symtab._ourModuleScopePrefix+aModuleUnit.name(),anOnlyItem,self)
 
     def enterLabelRef(self,label,labelRef):
         if self.labelRefs.has_key(label) :
@@ -364,6 +368,15 @@ class SymtabEntry(object):
     
     def typePrint(self):
         return SymtabEntry.ourTypePrint(self.type)
+
+    def getScopeString(self):
+        if (self.origin and self.origin.startswith(Symtab._ourModuleScopePrefix)):
+            sepLoc=self.origin.find(Symtab._ourScopeSeparator)
+            if (sepLoc==-1):
+                sepLoc=len(self.origin)
+            return self.origin[len(Symtab._ourModuleScopePrefix):sepLoc]+":"
+        else:
+            return ""
         
     def enterEntryKind(self,newEntryKind):
         # the replacement entry kind must be an 'instance' of the existing one.
@@ -409,7 +422,7 @@ class SymtabEntry(object):
 
     def updateOrigin(self,anOriginStr):
         if self.origin:
-            self.origin = self.origin+'|'+anOriginStr
+            self.origin = self.origin+Symtab._ourScopeSeparator+anOriginStr
         else:
             self.origin = anOriginStr
 
