@@ -134,7 +134,7 @@ class Unit(object):
 		self.nestLevel = 0
         self.symtab    = Symtab(_symtab_of(parent))
         self.fmod      = fmod
-        self._in_iface = False
+        self._in_iface = None # this would be set to an InterfaceInfo instance if we are in an interface
         self._in_drvdType = None # this would be set to the name of the derived type being processed
         self._drvdTypeDefaultAccess = None # this would be set for access while the derived type is being processed
         self._in_functionDecl = None # this will be set to the FunctionDeclStmt if a function is being processed

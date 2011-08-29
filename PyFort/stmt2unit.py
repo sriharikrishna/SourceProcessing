@@ -11,7 +11,11 @@ from PyUtil.debugManager import DebugManager
 import fortStmts     as fs
 import fortExp       as fe
 
-#TODO: handle derived type entries
+class InterfaceInfo:
+    def __init__(self,name,parent):
+        self.name=name # the interface name
+        self.parent=parent # interfaces can be nested
+        self._in_procedureFuncDecl=None # if we are in an function decl inside of the interface 
 
 def typesep(dd,default_dims):
     '''return name and dimensions for a given decl entry
@@ -304,6 +308,7 @@ def _unit_entry(self,cur):
        2. The unit symtab
        3. The parent of the unit (if there is one)
     '''
+    DebugManager.debug('[Line '+str(self.lineNumber)+']: stmt2unit._unit_entry() for '+str(self))
     if (cur.val.nestLevel==2) : 
         DebugManager.warning('Open64 front-end handling of doubly nested module procedures is fragile; check >'+self.name+'< for correct handling.',self.lineNumber,DebugManager.WarnType.nesting)
     currentSymtab = cur.val.symtab
@@ -356,6 +361,7 @@ def _unit_entry(self,cur):
 def _unit_exit(self,cur):
     '''exit a subroutine or function
     '''
+    DebugManager.debug('[Line '+str(self.lineNumber)+']: stmt2unit._unit_exit() for '+str(self))
     if cur.val._in_functionDecl:
         theSymtabEntry=cur.val.symtab.lookup_name(cur.val._in_functionDecl.name)
         parentSymtabEntry=None
@@ -375,7 +381,7 @@ def _unit_exit(self,cur):
         for pos,arg in enumerate(cur.val._in_functionDecl.args):
             argSymtabEntry=cur.val.symtab.lookup_name(arg)
             if (not argSymtabEntry):
-                argSymtabEntry=SymtabEntry(SymtabEntry.VariableEntryKind)
+                argSymtabEntry=SymtabEntry(SymtabEntry.GenericEntryKind)
                 cur.val.symtab.enter_name(arg,argSymtabEntry)
             argSymtabEntry.origin="dummy"
             theSymtabEntry.funcFormalArgs.args[arg]=(pos,argSymtabEntry)
@@ -386,7 +392,7 @@ def _unit_exit(self,cur):
         for arg in cur.val._in_subroutineDecl.args:
             argEntry=cur.val.symtab.lookup_name(arg)
             if (not argEntry):
-                argEntry=SymtabEntry(SymtabEntry.VariableEntryKind)
+                argEntry=SymtabEntry(SymtabEntry.GenericEntryKind)
                 cur.val.symtab.enter_name(arg,argEntry)
             cur.val.symtab.lookup_name(arg).origin="dummy"
         cur.val._in_subroutineDecl=None
@@ -471,21 +477,21 @@ def _beginProcedureUnit(aProcedureDeclStmt,cur):
     cur.val.symtab.enter_name(aProcedureDeclStmt.name,entry)
     cur.val.symtab = localSymtab
     if (isinstance(aProcedureDeclStmt,fs.FunctionStmt)): 
-        cur.val._in_functionDecl=aProcedureDeclStmt
+        cur.val._in_iface._in_procedureFuncDecl=aProcedureDeclStmt
     return aProcedureDeclStmt
 
 def _endProcedureUnit(anEndProcedureStmt,cur):
     '''
     called for function/subroutine end statements within an interface block
     '''
-    if cur.val._in_functionDecl:
-        theSymtabEntry=cur.val.symtab.lookup_name(cur.val._in_functionDecl.name)
-        if (theSymtabEntry.type is None and cur.val._in_functionDecl.result):
+    if cur.val._in_iface._in_procedureFuncDecl:
+        theSymtabEntry=cur.val.symtab.lookup_name(cur.val._in_iface._in_procedureFuncDecl.name)
+        if (theSymtabEntry.type is None and cur.val._in_iface._in_procedureFuncDecl.result):
             # try to get the tupe from the result symbol
-            theResultEntry=cur.val.symtab.lookup_name(cur.val._in_functionDecl.name)
+            theResultEntry=cur.val.symtab.lookup_name(cur.val._in_iface._in_procedureFuncDecl.name)
             if (theResultEntry):
                 theSymtabEntry.copyAndEnterType(theResultEntry.type)
-        cur.val._in_functionDecl=None         
+        cur.val._in_iface._in_procedureFuncDecl=None         
     if cur.val.symtab.parent :
         DebugManager.debug('[Line '+str(anEndProcedureStmt.lineNumber)+']: stmt2unit._endProcedureUnit:' \
                           +' called on "'+str(anEndProcedureStmt)+'"' \
@@ -504,15 +510,13 @@ def _endProcedureUnit(anEndProcedureStmt,cur):
 def _beginInterface(anInterfaceStmt,cur):
     if (anInterfaceStmt.name): 
         cur.val.symtab.enter_name(anInterfaceStmt.name,SymtabEntry(SymtabEntry.InterfaceEntryKind))
-    currentUnit = cur.val
-    currentUnit._in_iface = True
+    cur.val._in_iface = InterfaceInfo(anInterfaceStmt.name,cur.val._in_iface)
     DebugManager.debug('[Line '+str(anInterfaceStmt.lineNumber)+']: stmt2unit._beginInterface('+str(anInterfaceStmt)+')')
     if (anInterfaceStmt.name): 
         # collect all the procedurenames in a mock symtab...
         localSymtab = Symtab(cur.val.symtab)
         cur.val.symtab = localSymtab
     # local attribute added on to convey the name to _endInterface
-    cur.val.ifName=anInterfaceStmt.name
     return anInterfaceStmt
 
 def _processProcedureStmt(aProcedureStmt,curr):
@@ -540,8 +544,8 @@ def _processProcedureStmt(aProcedureStmt,curr):
 def _endInterface(anEndInterfaceStmt,cur):
     # get all the procedurenames from the mock symtab...
     mockSymtab=cur.val.symtab
-    ifName=cur.val.ifName
-    if (ifName) : 
+    if (cur.val._in_iface.name) : 
+        ifName=cur.val._in_iface.name
         cur.val.symtab = cur.val.symtab.parent
         theSymtabEntry = cur.val.symtab.lookup_name(ifName)
         for name in mockSymtab.ids.keys():
@@ -571,8 +575,7 @@ def _endInterface(anEndInterfaceStmt,cur):
                 e.lineNumber = e.lineNumber or aProcedureStmt.lineNumber
                 e.symbolName = e.symbolName or aProcedureName
                 raise e
-    currentUnit = cur.val
-    currentUnit._in_iface = False
+    cur.val._in_iface = cur.val._in_iface.parent
     DebugManager.debug('[Line '+str(anEndInterfaceStmt.lineNumber)+']: stmt2unit._endInterface('+str(anEndInterfaceStmt)+')')
     return anEndInterfaceStmt
 
