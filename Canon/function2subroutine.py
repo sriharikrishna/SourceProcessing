@@ -7,7 +7,7 @@ from optparse import OptionParser
 
 from PyFort.fortUnit import Unit,fortUnitIterator
 from PyUtil.debugManager import DebugManager
-from PyUtil.symtab import Symtab,SymtabError
+from PyUtil.symtab import Symtab,SymtabError, SymtabEntry
 import PyFort.fortStmts as fs
 import PyFort.fortExp as fe
 import copy
@@ -107,7 +107,7 @@ def convertInterfaceBlock(oldInterfaceBlock,oldFuncnewSubPairs,keepFunctionDef):
             newInterfaceBlock.append(newDecl)
     return newInterfaceBlock
 
-def convertFunctionOrEntryStmt(theStmt):
+def convertFunctionOrEntryStmt(theStmt,theUnit):
     DebugManager.debug(10*'-'+'>'+'called function2subroutine.convertFunctionOrEntryStmt on '+str(theStmt))
     if (not (isinstance(theStmt,fs.FunctionStmt) or isinstance(theStmt,fs.EntryStmt))):
         raise FunToSubError('convertFunctionOrEntryStmt called for '+str(theStmt))
@@ -115,13 +115,27 @@ def convertFunctionOrEntryStmt(theStmt):
         outParam = fs._NoInit(theStmt.name.lower())
     else:
         outParam = fs._NoInit(theStmt.result.lower())
-    args = fe.copyExp(theStmt.args) # if we don't do a deep copy here we update the function statement incorrectly
+    args=[]
+    for arg in theStmt.args:
+        symtabEntry=theUnit.symtab.lookup_name(arg)
+        if (symtabEntry and symtabEntry.entryKind==SymtabEntry.FunctionEntryKind and symtabEntry.origin=="dummy") :
+            args.append(fe.copyExp(name_init+arg.lower()))
+        else:
+            args.append(fe.copyExp(arg))
     args.append(outParam)
     name = name_init+theStmt.name.lower()
     if isinstance(theStmt,fs.FunctionStmt):
         convertedStmt = fs.SubroutineStmt(name,args,theStmt.qualifiers,lead=theStmt.lead)
     else:
         convertedStmt = fs.EntryStmt(name,args,lead=theStmt.lead)
+        global ourConvertedScopedNameList
+        scopedName=''
+        funUnitParent=theUnit.parent
+        while (funUnitParent) : 
+                    scopedName=funUnitParent.uinfo.name+':'+scopedName
+                    funUnitParent=funUnitParent.parent
+        scopedName+=theStmt.name
+        ourConvertedScopedNameList.append(scopedName.lower())
     return (outParam,convertedStmt)
 
 def createResultDecl(functionStmt,outParam):
@@ -174,7 +188,7 @@ def convertFunction(functionUnit,newExecs,newDecls):
                      + 'with newDecls='+str(newDecls)+',' \
                      +' with symtab "'+functionUnit.symtab.debug()+'"')
     newSubUnit = Unit(parent=functionUnit.parent,fmod=functionUnit.fmod)
-    (outParam,newSubUnit.uinfo) = convertFunctionOrEntryStmt(functionUnit.uinfo)
+    (outParam,newSubUnit.uinfo) = convertFunctionOrEntryStmt(functionUnit.uinfo,functionUnit)
     newSubUnit.cmnt = functionUnit.cmnt
     newSubUnit.contains = functionUnit.contains
     newSubUnit.ulist = functionUnit.ulist
@@ -216,7 +230,7 @@ def convertFunction(functionUnit,newExecs,newDecls):
     # iterate over execs for functionUnit
     for anExec in newExecs:
         if isinstance(anExec,fs.EntryStmt):
-            (anEntryOutParam,entryStmt) = convertFunctionOrEntryStmt(anExec)
+            (anEntryOutParam,entryStmt) = convertFunctionOrEntryStmt(anExec,functionUnit)
             newSubUnit.execs.append(entryStmt)
         else:
             newSubUnit.execs.append(anExec)

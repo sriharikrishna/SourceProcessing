@@ -359,10 +359,18 @@ class UnitCanonicalizer(object):
                         DebugManager.debug('is a constant expression to be hoisted:',newLine=False)
                         replacementArgs.append(self.__hoistExpression(anArg,aSubCallStmt,paramName))
                 # variables (with VariableEntry in symbol table) -> do nothing
-                elif isinstance(anArg,str) and self.__myUnit.symtab.lookup_name(anArg):
-                    symtabEntry = self.__myUnit.symtab.lookup_name(anArg)
-                    DebugManager.debug('is an identifier (variable,function,etc.)')
-                    replacementArgs.append(anArg)
+                elif isinstance(anArg,str):
+                    symtabEntry=self.__myUnit.symtab.lookup_name(anArg)
+                    if (symtabEntry
+                        and 
+                        symtabEntry.entryKind==SymtabEntry.FunctionEntryKind
+                        and
+                        function2subroutine.wasSubroutinized(symtabEntry.getScopeString()+anArg)) :
+                            replacementArgs.append(function2subroutine.name_init+anArg); 
+                            DebugManager.debug('is an identifier referring to a subroutinized function')
+                    else : 
+                        DebugManager.debug('is an identifier')
+                        replacementArgs.append(anArg)
                 # Array References -> do nothing
                 elif isinstance(anArg,fe.App) and isArrayReference(anArg,self.__myUnit.symtab,aSubCallStmt.lineNumber):
                     DebugManager.debug('is an array reference')
@@ -676,7 +684,7 @@ class UnitCanonicalizer(object):
         if isinstance(aDecl,fs.FunctionStmt):
             self.setFunctionBlockFlag(True)
             (self.__outParam,subroutineStmt) = function2subroutine.\
-                                               convertFunctionOrEntryStmt(aDecl)
+                                               convertFunctionOrEntryStmt(aDecl,self.__myUnit)
             subroutineBlock.append(subroutineStmt)
             self.__resultDecl = function2subroutine.\
                          createResultDecl(aDecl,self.__outParam)
@@ -787,8 +795,9 @@ class UnitCanonicalizer(object):
                 raise CanonError('Caught InferenceError: '+e.msg,anExecStmt.lineNumber)
             except SymtabError,e: # add a lineNumber to SymtabErrors that don't have one
                 e.lineNumber = e.lineNumber or anExecStmt.lineNumber
-                raise e        
-    def __canonicalizeUseStmts(self,aDecl):
+                raise e
+            
+    def __canonicalizeUseAndExternalStmts(self,aDecl):
         if (isinstance(aDecl,fs.UseStmt)):
             if isinstance(aDecl, fs.UseAllStmt):
                 newRenameList=[]
@@ -826,6 +835,17 @@ class UnitCanonicalizer(object):
                         newOnlyList.append(onlyItem)
                 if (aDecl.modified): 
                     aDecl.onlyList=newOnlyList
+        elif (isinstance(aDecl,fs.ExternalStmt)):
+            newProcedureNames=[]
+            for p in aDecl.procedureNames:
+                if (function2subroutine.wasSubroutinized(p)):
+                    newProcedureNames.append(function2subroutine.name_init+p)
+                    aDecl.modified=True
+                else:
+                    newProcedureNames.append(p)
+            if (aDecl.modified):
+                aDecl.procedureNames=newProcedureNames
+                    
 
     def canonicalizeUnit(self):
         '''Recursively canonicalize \p aUnit'''
@@ -875,7 +895,7 @@ class UnitCanonicalizer(object):
         
         subroutineBlock = []    
         for aDecl in self.__myUnit.decls:
-            self.__canonicalizeUseStmts(aDecl)
+            self.__canonicalizeUseAndExternalStmts(aDecl)
             self.__canonicalizeFunctionDecls(aDecl,subroutineBlock)
 
         ## replace the declaration statements for the unit
