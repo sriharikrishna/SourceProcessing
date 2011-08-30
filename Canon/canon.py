@@ -710,7 +710,7 @@ class UnitCanonicalizer(object):
             elif isinstance(aDecl,fs.TypeDecl):
                 (aDecl,resultDecl,resultDeclFlag) = function2subroutine.updateTypeDecl(\
                     aDecl,self.__outParam,self.__myNewDecls)
-                self.setCreateResultDeclFlag(resultDeclFlag)
+                self.setCreateResultDeclFlag(not resultDeclFlag)
                 if resultDeclFlag:
                     subroutineBlock.append(resultDecl)
             if aDecl is not None:
