@@ -365,7 +365,7 @@ class UnitCanonicalizer(object):
                         and 
                         symtabEntry.entryKind==SymtabEntry.FunctionEntryKind
                         and
-                        function2subroutine.wasSubroutinized(symtabEntry.getScopeString()+anArg)) :
+                        function2subroutine.wasSubroutinized(symtabEntry.getScopePrefix(self.__myUnit)+anArg)) :
                             replacementArgs.append(function2subroutine.name_init+anArg); 
                             DebugManager.debug('is an identifier referring to a subroutinized function')
                     else : 

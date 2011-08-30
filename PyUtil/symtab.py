@@ -60,6 +60,7 @@ class FormalArgs(object):
 class Symtab(object):
 
     _ourModuleScopePrefix="module:"
+    _ourCommonScopePrefix="common:"
     _ourScopeSeparator="|"
 
     @staticmethod
@@ -369,14 +370,21 @@ class SymtabEntry(object):
     def typePrint(self):
         return SymtabEntry.ourTypePrint(self.type)
 
-    def getScopeString(self):
-        if (self.origin and self.origin.startswith(Symtab._ourModuleScopePrefix)):
-            sepLoc=self.origin.find(Symtab._ourScopeSeparator)
-            if (sepLoc==-1):
-                sepLoc=len(self.origin)
-            return self.origin[len(Symtab._ourModuleScopePrefix):sepLoc]+":"
-        else:
-            return ""
+    def getScopePrefix(self,theUnit):
+        if (self.origin) : 
+            if (self.origin=="local"):
+                scopePrefix=''
+                funUnitParent=theUnit.parent
+                while (funUnitParent) : 
+                    scopePrefix=funUnitParent.uinfo.name+':'+scopePrefix
+                    funUnitParent=funUnitParent.parent
+                return scopePrefix
+            elif (self.origin.startswith(Symtab._ourModuleScopePrefix)):
+                sepLoc=self.origin.find(Symtab._ourScopeSeparator)
+                if (sepLoc==-1):
+                    sepLoc=len(self.origin)
+                return self.origin[len(Symtab._ourModuleScopePrefix):sepLoc]+":"
+        return ""
         
     def enterEntryKind(self,newEntryKind):
         # the replacement entry kind must be an 'instance' of the existing one.

@@ -65,8 +65,6 @@ def _endDrvdTypeDefn(aEndDrvdTypeDefnStmt,curr):
     curr.val._in_drvdType=None
     return aEndDrvdTypeDefnStmt
 
-_commonPrefix='common:'
-
 def _processTypedeclStmt(aTypeDeclStmt,curr):
     'type declaration -- record type in symbol table'
     localSymtab = curr.val.symtab
@@ -208,7 +206,7 @@ def _processCommonStmt(aCommonStmt,curr):
             theSymtabEntry = localSymtab.lookup_name(aDeclName)
             if not theSymtabEntry:
                 newSymtabEntry = SymtabEntry(SymtabEntry.VariableEntryKind,
-                                             origin=_commonPrefix+aCommonStmt.name)
+                                             origin=Symtab._ourCommonScopePrefix+aCommonStmt.name)
                 localSymtab.enter_name(aDeclName,newSymtabEntry)
                 if isinstance(aDecl,fe.App):
                     newSymtabEntry.enterDimensions(aDecl.args)
@@ -218,7 +216,7 @@ def _processCommonStmt(aCommonStmt,curr):
                 theSymtabEntry.enterEntryKind(SymtabEntry.VariableEntryKind)
                 if isinstance(aDecl,fe.App):
                     theSymtabEntry.enterDimensions(aDecl.args)
-                theSymtabEntry.updateOrigin(_commonPrefix+aCommonStmt.name)
+                theSymtabEntry.updateOrigin(Symtab._ourCommonScopePrefix+aCommonStmt.name)
         except SymtabError,e: # add lineNumber and symbol name to any SymtabError we encounter
             e.lineNumber = e.lineNumber or aCommonStmt.lineNumber
             e.symbolName = e.symbolName or aDeclName
@@ -349,7 +347,7 @@ def _unit_entry(self,cur):
         currentSymtab.enter_name(self.name,entry)
         DebugManager.debug('[Line '+str(self.lineNumber)+']: new unit symtab entry '+entry.debug(self.name))
         if currentSymtab.parent:
-            currentSymtab.replicateEntry(self.name,str(cur.val.uinfo)+self.name,self.name,currentSymtab.parent)
+            currentSymtab.replicateEntry(self.name,"local",self.name,currentSymtab.parent)
             DebugManager.debug('[Line '+str(self.lineNumber)+']: new PARENT unit symtab entry (see above)')
     DebugManager.debug('[Line '+str(self.lineNumber)+']: stmt2unit._unit_entry() for '+str(self)+': with symtab '+str(currentSymtab)+' with parent symtab '+str(currentSymtab.parent))
     if (isinstance(self,fs.FunctionStmt)): 
@@ -455,7 +453,7 @@ def _processEntry(self,cur):
         currentSymtab.enter_name(self.name,entry)
         DebugManager.debug('[Line '+str(self.lineNumber)+']: new unit symtab entry '+entry.debug(self.name))
         if currentSymtab.parent:
-            currentSymtab.replicateEntry(self.name,str(cur.val.uinfo)+self.name,self.name,currentSymtab.parent)
+            currentSymtab.replicateEntry(self.name,"local",self.name,currentSymtab.parent)
             DebugManager.debug('[Line '+str(self.lineNumber)+']: new PARENT unit symtab entry (see above)')
     DebugManager.debug('[Line '+str(self.lineNumber)+']: stmt2unit._processEntry() for '+str(self)+': with symtab '+str(currentSymtab)+' with parent symtab '+str(currentSymtab.parent))
     if (isinstance(self,fs.FunctionStmt)): 
