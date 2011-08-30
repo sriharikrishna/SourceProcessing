@@ -363,11 +363,14 @@ class UnitCanonicalizer(object):
                     symtabEntry=self.__myUnit.symtab.lookup_name(anArg)
                     if (symtabEntry
                         and 
-                        symtabEntry.entryKind==SymtabEntry.FunctionEntryKind
-                        and
-                        function2subroutine.wasSubroutinized(symtabEntry.getScopePrefix(self.__myUnit)+anArg)) :
+                        symtabEntry.entryKind==SymtabEntry.FunctionEntryKind):
+                        if (function2subroutine.wasSubroutinized(symtabEntry.getScopePrefix(self.__myUnit)+anArg)) :
                             replacementArgs.append(function2subroutine.name_init+anArg); 
                             DebugManager.debug('is an identifier referring to a subroutinized function')
+                        else :
+                            DebugManager.warning('argument '+anArg+' in call to '+aSubCallStmt.head+' is classified as a function but we have not seen the definition and will assume it is not going to be subroutinized' ,lineNumber=aSubCallStmt.lineNumber)
+                            
+                            replacementArgs.append(anArg)
                     else : 
                         DebugManager.debug('is an identifier')
                         replacementArgs.append(anArg)

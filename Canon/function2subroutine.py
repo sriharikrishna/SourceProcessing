@@ -31,6 +31,16 @@ ourConvertedScopedNameList = []
 def wasSubroutinized(scopedName):
     return (scopedName.lower() in ourConvertedScopedNameList)
 
+ourReferencedBeforeSeenScopedNameList=[]
+
+def trackAsReferencedBeforeSeen(scopedName):
+    global ourReferencedBeforeSeenScopedNameList
+    if (not (scopedName.lower() in ourReferencedBeforeSeenScopedNameList)):
+        ourReferencedBeforeSeenScopedNameList.append(scopedName)
+
+def wasReferencedBeforeSeen(scopedName):
+    return (scopedName.lower() in ourReferencedBeforeSeenScopedNameList)
+
 def createTypeDecl(type_kw,mod,attrs,outParam,aLead):
     DebugManager.debug(10*'-'+'>'+'called function2subroutine.createTypeDecl ' \
                      + 'with type keyword "'+type_kw+'",' \
@@ -93,7 +103,7 @@ def convertInterfaceBlock(oldInterfaceBlock,oldFuncnewSubPairs,keepFunctionDef):
                 newInterfaceBlock.append(newDecl)
             if createdNewBlock:
                 if not isinstance(newInterfaceBlock[0],fs.InterfaceStmt):
-                    raise FunToSubError("error transforming interface block in function2subroutine.convertInterfaceBlock")
+                    raise FunToSubError(sys._getframe().f_code.co_name+": error transforming interface block")
                 # rename interface
                 old_name = newInterfaceBlock[0].get_name()
                 newInterfaceBlock[0].set_name(name_init+old_name)
@@ -110,7 +120,7 @@ def convertInterfaceBlock(oldInterfaceBlock,oldFuncnewSubPairs,keepFunctionDef):
 def convertFunctionOrEntryStmt(theStmt,theUnit):
     DebugManager.debug(10*'-'+'>'+'called function2subroutine.convertFunctionOrEntryStmt on '+str(theStmt))
     if (not (isinstance(theStmt,fs.FunctionStmt) or isinstance(theStmt,fs.EntryStmt))):
-        raise FunToSubError('convertFunctionOrEntryStmt called for '+str(theStmt))
+        raise FunToSubError(sys._getframe().f_code.co_name+': convertFunctionOrEntryStmt called for '+str(theStmt))
     if theStmt.result is None:
         outParam = fs._NoInit(theStmt.name.lower())
     else:
@@ -136,6 +146,8 @@ def convertFunctionOrEntryStmt(theStmt,theUnit):
                     funUnitParent=funUnitParent.parent
         scopedName+=theStmt.name
         ourConvertedScopedNameList.append(scopedName.lower())
+        if (wasReferencedBeforeSeen(scopedName)):
+            raise FunToSubError(sys._getframe().f_code.co_name+': function '+theStmt.name+' was referenced before we saw this definition and the reference was not subroutinized; try to move up the definition before the reference')
     return (outParam,convertedStmt)
 
 def createResultDecl(functionStmt,outParam):
@@ -199,6 +211,8 @@ def convertFunction(functionUnit,newExecs,newDecls):
         scopedName=funUnitParent.uinfo.name+':'+scopedName
         funUnitParent=funUnitParent.parent
     scopedName+=functionUnit.uinfo.name
+    if (wasReferencedBeforeSeen(scopedName)):
+        raise FunToSubError(sys._getframe().f_code.co_name+': function '+theStmt.name+' was referenced before we saw this definition and the reference was not subroutinized; try to move up the definition before the reference')
     ourConvertedScopedNameList.append(scopedName.lower())
     newList = []
     for subUnit in newSubUnit.ulist:
