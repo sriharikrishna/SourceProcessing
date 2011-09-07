@@ -111,7 +111,7 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                 if localSymtab.parent and theSymtabEntry.entryKind in (SymtabEntry.FunctionEntryKind,SymtabEntry.SubroutineEntryKind):
                     parentSymtabEntry=localSymtab.parent.lookup_name_local(name)
                     if (not parentSymtabEntry):
-                        localSymtab.replicateEntry(name,'local',name,localSymtab.parent)
+                        localSymtab.replicateEntry(name,'local',name,localSymtab.parent,replicatingUp=True)
                         DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: new PARENT unit symtab entry (see above)')
                     else:
                         localSymtab.augmentParentEntry(theSymtabEntry,parentSymtabEntry,name)            
@@ -347,7 +347,7 @@ def _unit_entry(self,cur):
         currentSymtab.enter_name(self.name,entry)
         DebugManager.debug('[Line '+str(self.lineNumber)+']: new unit symtab entry '+entry.debug(self.name))
         if currentSymtab.parent:
-            currentSymtab.replicateEntry(self.name,"local",self.name,currentSymtab.parent)
+            currentSymtab.replicateEntry(self.name,"local",self.name,currentSymtab.parent,replicatingUp=True)
             DebugManager.debug('[Line '+str(self.lineNumber)+']: new PARENT unit symtab entry (see above)')
     DebugManager.debug('[Line '+str(self.lineNumber)+']: stmt2unit._unit_entry() for '+str(self)+': with symtab '+str(currentSymtab)+' with parent symtab '+str(currentSymtab.parent))
     if (isinstance(self,fs.FunctionStmt)): 
@@ -453,7 +453,7 @@ def _processEntry(self,cur):
         currentSymtab.enter_name(self.name,entry)
         DebugManager.debug('[Line '+str(self.lineNumber)+']: new unit symtab entry '+entry.debug(self.name))
         if currentSymtab.parent:
-            currentSymtab.replicateEntry(self.name,"local",self.name,currentSymtab.parent)
+            currentSymtab.replicateEntry(self.name,"local",self.name,currentSymtab.parent,replicatingUp=True)
             DebugManager.debug('[Line '+str(self.lineNumber)+']: new PARENT unit symtab entry (see above)')
     DebugManager.debug('[Line '+str(self.lineNumber)+']: stmt2unit._processEntry() for '+str(self)+': with symtab '+str(currentSymtab)+' with parent symtab '+str(currentSymtab.parent))
     if (isinstance(self,fs.FunctionStmt)): 

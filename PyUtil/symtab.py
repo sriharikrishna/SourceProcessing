@@ -132,6 +132,33 @@ class Symtab(object):
         if entry: return entry.lookupDimensions()
         return None
 
+    def __rename(self,anExpression,targetEntrySymtab,replicatingUp=False):
+        if isinstance(anExpression,str):
+            origExp=anExpression
+            parentEntry = targetEntrySymtab.lookup_name(anExpression)
+            if replicatingUp:
+                if parentEntry is None:
+                    #if there is no entry in the parent symtab, rename to source
+                    anExpression = self.__renamedToSource(anExpression)
+                #if there is a rename defined in the parent symtab for the mod, sourceToRenamed
+                if anExpression in targetEntrySymtab.renames:
+                    anExpression = targetEntrySymtab.__sourceToRenamed(anExpression)
+                #else if mod is not defined in parent, issue warning
+                elif targetEntrySymtab.lookup_name(anExpression) is None:
+                    DebugManager.warning("a SymtabEntry has been replicated up, and modifier '"+str(origExp)+"' has been renamed to its source '"+str(anExpression)+"', which is not defined in the parent context.")
+            elif parentEntry is None and anExpression in targetEntrySymtab.renames:
+                #if there is no entry in the symtab, but there is a rename defined in the target entry symtab, rename
+                anExpression = targetEntrySymtab.__sourceToRenamed(anExpression)
+        elif isinstance(anExpression,App):
+            newArgs=[]
+            for anArg in anExpression.args:
+                newArg=self.__rename(anArg,targetEntrySymtab,replicatingUp)
+                newArgs.append(newArg)
+            anExpression.args=newArgs
+        else:
+            raise SymtabError(sys._getframe().f_code.co_name+': expression'+str(anExpression)+'is not a string and not an App!')
+        return anExpression
+
     def __renamedToSource(self,anExpression):
         '''
         replace an instances in anExpression of things that may be local to this context (such as renames)
@@ -163,16 +190,15 @@ class Symtab(object):
             raise SymtabError(sys._getframe().f_code.co_name+': expression'+str(anExpression)+'is not a string and not an App!')
         return anExpression
 
-    def __typeHandler(self,targetEntry,targetEntrySymtab):
+    def __typeHandler(self,targetEntry,targetEntrySymtab,replicatingUp=False):
         if (targetEntry.type):
             # look for attribute mod names in this symbol table.  If they are in there and have a rename, use the rename in the new entry
             (typename,modifiers) = targetEntry.type
             for aModifier in modifiers:
                 if isinstance(aModifier,_Kind):
-                    aModifier.mod = targetEntrySymtab.__sourceToRenamed(self.__renamedToSource(aModifier.mod))
-        
-        
-    def replicateEntry(self,aKey,theOrigin,newName,otherSymtab):
+                    aModifier.mod = self.__rename(aModifier.mod,targetEntrySymtab,replicatingUp)
+
+    def replicateEntry(self,aKey,theOrigin,newName,otherSymtab,replicatingUp=False):
         '''
         create and return a new symbol table entry that is for use in another context
         we do not set the access attribute from theOrigin here because the access is
@@ -183,7 +209,7 @@ class Symtab(object):
         theNewEntry = SymtabEntry(theLocalEntry.entryKind)
         # set the type
         theNewEntry.type = SymtabEntry.copyType(theLocalEntry.type)
-        self.__typeHandler(theNewEntry,otherSymtab)
+        self.__typeHandler(theNewEntry,otherSymtab,replicatingUp)
         # set the dimensions
         theNewEntry.dimensions = theLocalEntry.dimensions
         # set the length
@@ -203,7 +229,7 @@ class Symtab(object):
         if (self.parent.ids[parentEntryName]!=parentEntry):
             raise SymtabError(sys._getframe().f_code.co_name+": entry "+parentEntry.debug(parentEntryName)+" not in parent symbol table "+self.parend.debug())    
         parentEntry._augmentParentEntryFrom(origEntry)
-        self.__typeHandler(parentEntry,self.parent)
+        self.__typeHandler(parentEntry,self.parent,replicatingUp=True)
         
     def update_w_module_all(self,aModuleUnit,renameList):
         'update self with all ids from module "unit" symtab, making sure to enter local names whenever there are renames. module name = "name"'
