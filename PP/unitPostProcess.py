@@ -125,7 +125,7 @@ class UnitPostProcessor(object):
         self.__inquiryExpression = False
         # the recursion level at which the inquiry expression occurred
         self.__inquiryRecursionLevel = 0
-        # the current unit being inserted from the inline file (reverse mode)
+        # the current unit being inserted from the inline file 
         self.__inlineUnit = None
         # the file which contains all declarations of active variables
         self.__active_file = None
@@ -555,7 +555,7 @@ class UnitPostProcessor(object):
             DebugManager.debug('[Line '+str(anExecStmt.lineNumber)+']:')
             newStmt = None
             if anExecStmt.is_comment():
-                if self._mode == 'reverse':
+                if self._mode == 'reverse' or self._inlineFile:
                     comments = anExecStmt.rawline.splitlines()
                     (execList,Execs,inline,replacementNum) = \
                         self.__processComments(comments,replacementNum,
@@ -577,7 +577,7 @@ class UnitPostProcessor(object):
             else:
                 newStmt = self.__transformActiveTypes(anExecStmt)
                 Execs.append(newStmt)
-            if self._mode == 'reverse':
+            if self._mode == 'reverse' or self._inlineFile:
                 return (execList,Execs,inline,replacementNum)
             else:
                 return Execs
@@ -731,8 +731,18 @@ class UnitPostProcessor(object):
         for aDecl in self.__myUnit.decls:
             (Decls,Execs) =\
                 self.__processDecl(aDecl,Decls,Execs,pendingUse)
+        currentExecs = []; inline=False; dummyNum=0;
         for anExec in self.__myUnit.execs:
-            Execs = self.__processExec(anExec,Execs)
+            if (self._inlineFile):
+                (Execs,currentExecs,inline,dummyNum) = self.__processExec(anExec,
+                                                                          currentExecs,
+                                                                          Execs,
+                                                                          inline,
+                                                                          dummyNum)
+            else:   
+                Execs = self.__processExec(anExec,Execs)
+        if len(currentExecs) != 0:
+            Execs=currentExecs
         return (Decls,Execs)
 
 
