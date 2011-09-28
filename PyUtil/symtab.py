@@ -138,14 +138,17 @@ class Symtab(object):
             parentEntry = targetEntrySymtab.lookup_name(anExpression)
             if replicatingUp:
                 if parentEntry is None:
-                    #if there is no entry in the parent symtab, rename to source
-                    anExpression = self.__renamedToSource(anExpression)
-                #if there is a rename defined in the parent symtab for the mod, sourceToRenamed
-                if anExpression in targetEntrySymtab.renames:
+                    #if there is no entry in the parent symtab, and there is a rename defined, rename to source
+                    if anExpression in self.renames.values():
+                        anExpression = self.__renamedToSource(anExpression)
+                        #if there is a rename defined in the parent symtab for the mod, sourceToRenamed
+                        if anExpression in targetEntrySymtab.renames:
+                            anExpression = targetEntrySymtab.__sourceToRenamed(anExpression)
+                        #else if mod is not defined in parent, issue warning
+                        elif targetEntrySymtab.lookup_name(anExpression) is None:
+                            DebugManager.warning("a SymtabEntry has been replicated up, and modifier '"+str(origExp)+"' has been renamed to its source '"+str(anExpression)+"', which is not defined in the parent context.")
+                elif anExpression in targetEntrySymtab.renames:
                     anExpression = targetEntrySymtab.__sourceToRenamed(anExpression)
-                #else if mod is not defined in parent, issue warning
-                elif targetEntrySymtab.lookup_name(anExpression) is None:
-                    DebugManager.warning("a SymtabEntry has been replicated up, and modifier '"+str(origExp)+"' has been renamed to its source '"+str(anExpression)+"', which is not defined in the parent context.")
             elif parentEntry is None and anExpression in targetEntrySymtab.renames:
                 #if there is no entry in the symtab, but there is a rename defined in the target entry symtab, rename
                 anExpression = targetEntrySymtab.__sourceToRenamed(anExpression)
