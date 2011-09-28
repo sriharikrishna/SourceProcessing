@@ -54,10 +54,12 @@ def compareFiles(assertFunc,originalFileName,RefFileName,format='fixed',mode='fo
         UnitPostProcessor.setMode(mode)
         setOutputFormat(format)
         initSet = set([]); initNames = []; typeDecls = set([])
+        if (inlineFile):
+            UnitPostProcessor.setInlineFile(fname_t(inlineFile))
+            UnitPostProcessor.processInlineFile()
+        else: 
+            UnitPostProcessor.setInlineFile(None)
         if (mode=='reverse'):
-            if (inlineFile):
-                UnitPostProcessor.setInlineFile(fname_t(inlineFile))
-                UnitPostProcessor.processInlineFile()
             if (templateFile):
                 TemplateExpansion.setTemplateFile(fname_t(templateFile))
             # get common block variables to initialize if processing in reverse mode
@@ -104,45 +106,45 @@ class C1(TestCase):
 
     def test0(self):
         'post-process empty file: empty.f'
-        compareFiles(self.assertEquals,'empty.f','empty.post.f')
+        compareFiles(self.assertEquals,'empty.f','empty.post.f',inlineFile=None)
 
     def test1(self):
         'post-process file with declarations which should not change: implicit.f'
         #implicit, save, real, integer, etc
-        compareFiles(self.assertEquals, 'implicit.f','implicit.post.f')
+        compareFiles(self.assertEquals, 'implicit.f','implicit.post.f',inlineFile=None)
 
     def test2(self):
         'post-process a file with included modules: modules.f'
         #active module should be added
-        compareFiles(self.assertEquals, 'modules.f','modules.post.f')
+        compareFiles(self.assertEquals, 'modules.f','modules.post.f',inlineFile=None)
 
     def test3(self):
         'test type replacements: active.f'
-        compareFiles(self.assertEquals,'active.f','active.post.f')
+        compareFiles(self.assertEquals,'active.f','active.post.f',inlineFile=None)
 
     def test4(self):
         'test inline replacement of __value__ and __deriv__ in declaration statements: decl_inline.f'
-        compareFiles(self.assertEquals,'decl_inline.f','decl_inline.post.f')
+        compareFiles(self.assertEquals,'decl_inline.f','decl_inline.post.f',inlineFile=None)
 
     def test5(self):
         'test inline replacement of __value__ and __deriv__ in execution statements: exec_inline.f'
-        compareFiles(self.assertEquals,'exec_inline.f','exec_inline.post.f')
+        compareFiles(self.assertEquals,'exec_inline.f','exec_inline.post.f',inlineFile=None)
 
     def test6(self):
         'test inline replacement of nested __value__ and __deriv__ in decl and execution statements: nested_inline.f'
-        compareFiles(self.assertEquals,'nested_inline.f','nested_inline.post.f')
+        compareFiles(self.assertEquals,'nested_inline.f','nested_inline.post.f',inlineFile=None)
 
     def test7(self):
         'test replacement of __value__ and __deriv__ in simple I/O statements: ioSimple.f'
-        compareFiles(self.assertEquals,'ioSimple.f','ioSimple.post.f')
+        compareFiles(self.assertEquals,'ioSimple.f','ioSimple.post.f',inlineFile=None)
 
     def test8(self):
         'test replacement of __value__ and __deriv__ in expressions in I/O statements : ioExpr.f'
-        compareFiles(self.assertEquals,'ioExpr.f','ioExpr.post.f')
+        compareFiles(self.assertEquals,'ioExpr.f','ioExpr.post.f',inlineFile=None)
 
     def test9(self):
         'test replacement of __value__ and __deriv__ in implicit do loops in I/O statements : ioImplDo.f'
-        compareFiles(self.assertEquals,'ioImplDo.f','ioImplDo.post.f')
+        compareFiles(self.assertEquals,'ioImplDo.f','ioImplDo.post.f',inlineFile=None)
 
     def test10(self):
         'test inlining: inlinepush2_simple.f'
