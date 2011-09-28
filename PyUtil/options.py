@@ -181,8 +181,8 @@ def addPostProcessorOptions(opt):
     opt.add_option('-i',
                    '--inline',
                    dest='inline',
-                   help='file with definitions for inlinable routines for reverse mode post processing (defaults to ad_inline.f); requires reverse mode ( -m r )',
-                   default=None) # cannot set default here because of required reverse mode
+                   help='file with definitions for inlinable routines (defaults to none for forward mode and ad_inline.f for reverse mode)',
+                   default=None) # cannot set default here because of defaults only for reverse mode
     opt.add_option('-p',
                    '--progress',
                    dest='progress',
@@ -291,8 +291,6 @@ def PostProcessorOptErrors(opt,config,args):
         (config.outputFile and config.separateOutput)):
         opt.error("cannot specify more than one of --width, --separateOutput, and -o")
     if (config.mode != 'r'):
-        if (config.inline):
-            opt.error("option -i requires reverse mode ( -m r )")
         if (config.template):
             opt.error("option -t requires reverse mode ( -m r )")
     if (config.inline):
@@ -402,6 +400,12 @@ def setPostProcessFlags(config,args):
         UnitPostProcessor.processInlineFile()
         templateFile = config.template or 'ad_template.f'
         TemplateExpansion.setTemplateFile(templateFile)
+    else: 
+        if (config.inline):
+            UnitPostProcessor.setInlineFile(config.inline)
+            UnitPostProcessor.processInlineFile()
+        else : 
+            UnitPostProcessor.setInlineFile(None)
     # set whitespace
     fe.setWhitespace(config.whitespace)
     # set replacement type 
