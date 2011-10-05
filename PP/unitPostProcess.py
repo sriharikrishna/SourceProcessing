@@ -42,6 +42,11 @@ class UnitPostProcessor(object):
         UnitPostProcessor._transform_deriv = transformDerivType
 
     ##
+    #  list of undefined inlinable subroutines
+    #   
+    __ourInlineWarned=[]
+     
+    ##
     # set this to true if you want type conversion for overloading
     #
     _overloadingMode = False
@@ -348,6 +353,7 @@ class UnitPostProcessor(object):
         '''Retrieves the unit to be inlined'''
         function = None
         inline = False
+        inlineFunction=None
         rawline = ''.join(aComment.rawline.split(' '))
         search_str='c$openad$inline'
         if search_str in rawline.lower():
@@ -363,6 +369,11 @@ class UnitPostProcessor(object):
                     aComment = None
                     inline = True
                     break
+        if (not inline and inlineFunction and not (inlineFunction.lower() in UnitPostProcessor.__ourInlineWarned)): 
+            DebugManager.warning("subroutine "+inlineFunction+" requested for inlining not found in "+UnitPostProcessor._inlineFile+"; reported once for first occurrence",
+                                 aComment.lineNumber,  
+                                 DebugManager.WarnType.undefined)
+            UnitPostProcessor.__ourInlineWarned.append(inlineFunction.lower())
         return (aComment,inline)
 
     # PARAMS:
