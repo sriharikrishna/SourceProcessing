@@ -369,7 +369,9 @@ class UnitPostProcessor(object):
                     aComment = None
                     inline = True
                     break
-        if (not inline and inlineFunction and not (inlineFunction.lower() in UnitPostProcessor.__ourInlineWarned)): 
+        if (UnitPostProcessor._inlineFile and 
+            not inline and inlineFunction and 
+            not (inlineFunction.lower() in UnitPostProcessor.__ourInlineWarned)): 
             DebugManager.warning("subroutine "+inlineFunction+" requested for inlining not found in "+UnitPostProcessor._inlineFile+"; reported once for first occurrence",
                                  aComment.lineNumber,  
                                  DebugManager.WarnType.undefined)
