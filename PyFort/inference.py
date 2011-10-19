@@ -456,6 +456,10 @@ def __intrinsicShape(anIntrinsicApp,localSymtab,lineNumber):
       raise InferenceError(sys._getframe().f_code.co_name+': Not implemented for "'+anIntrinsicApp+'"',lineNumber)
    if anIntrinsicApp.head.lower() in ['ichar','maxval','minval','lge','lgt','lle','llt','scan','size','time']:
       return None
+   if anIntrinsicApp.head.lower() in ['maxloc']:
+      if (len(anIntrinsicApp.args)>1): 
+         raise InferenceError(sys._getframe().f_code.co_name+': Not implemented for "'+anIntrinsicApp+'" with more than 1 argument',lineNumber)
+      return [Ops(':','1',str(len(expressionShape(anIntrinsicApp.args[0],localSymtab,lineNumber))))]
    if anIntrinsicApp.head.lower() in ['reshape']:
       if (len(anIntrinsicApp.args)>2): 
          raise InferenceError(sys._getframe().f_code.co_name+': Not implemented for "'+anIntrinsicApp+'" with more than 2 arguments',lineNumber)
