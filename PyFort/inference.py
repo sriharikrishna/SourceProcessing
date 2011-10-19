@@ -176,7 +176,7 @@ class _TypeContext:
          if (len(anIntrinsicApp.args)==2): # the second argument would be the kind parameter
              typeMod.append(fortStmts._Kind(anIntrinsicApp.args[1]))
          return (fortStmts.RealStmt, typeMod)
-      elif anIntrinsicApp.head.lower() in ['ichar','idint','int','lbound','ubound','scan','shape','size']:
+      elif anIntrinsicApp.head.lower() in ['ichar','idint','int','lbound','maxloc','scan','shape','size','ubound']:
          return (fortStmts.IntegerStmt, [])
       elif anIntrinsicApp.head.lower() in ['dble','dfloat','dabs','dexp','dlog','dsqrt','dmod']:
          return (fortStmts.DoubleStmt, [])

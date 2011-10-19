@@ -57,6 +57,7 @@ __intrinsics = (
     'log10',
     'max',
     'max0',
+    'maxloc',
     'maxval',
     'min',
     'min0',
