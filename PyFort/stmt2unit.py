@@ -5,7 +5,7 @@ import string
 import copy
 from _Setup import *
 
-from PyUtil.symtab import Symtab,SymtabEntry,SymtabError, GenericInfo, FormalArgs
+from PyUtil.symtab import Symtab,SymtabEntry,SymtabError, GenericInfo, FormalArgs, globalTypeTable
 from PyUtil.debugManager import DebugManager
 
 import fortStmts     as fs
@@ -109,6 +109,8 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                     else:
                         localSymtab.augmentParentEntry(theSymtabEntry,parentSymtabEntry,name)            
                         DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: updated PARENT unit symtab entry '+parentSymtabEntry.debug(name))
+                typetab_id = globalTypeTable.getType(aTypeDeclStmt,localSymtab)
+                theSymtabEntry.typetab_id=typetab_id
             else: # no symtab entry -> create one
                 if aTypeDeclStmt.parameter:
                     newSymtabEntry = SymtabEntry(SymtabEntry.VariableEntryKind,
@@ -132,6 +134,8 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                     newSymtabEntry.enterDrvdTypeName(inDrvdTypeDefn)
                 DebugManager.debug('decl "'+str(aDecl)+'" NOT already present in symbol table => adding '+str(newSymtabEntry.debug(name)))
                 localSymtab.enter_name(name,newSymtabEntry)
+                typetab_id = globalTypeTable.getType(aTypeDeclStmt,localSymtab)
+                newSymtabEntry.typetab_id=typetab_id
             unitSymbolEntry,sTable=localSymtab.lookup_name_level(curr.val.name())
             if (unitSymbolEntry and unitSymbolEntry.entryKind==SymtabEntry.FunctionEntryKind and  unitSymbolEntry.genericInfo and unitSymbolEntry.genericInfo.genericName):
                 genericSymbolEntry=localSymtab.lookup_name(unitSymbolEntry.genericInfo.genericName)

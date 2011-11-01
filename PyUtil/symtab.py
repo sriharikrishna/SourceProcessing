@@ -14,6 +14,10 @@ from PyFort.fortExp import App, Unary,Ops,is_const,_id_re
 from PyFort.fortStmts import _PointerInit, _Kind, PrivateStmt, PublicStmt
 from PyFort.intrinsic import is_intrinsic
 
+from PyUtil.typetab import Typetab
+global globalTypeTable
+globalTypeTable=Typetab()
+
 class GenericInfo(object):
     def __init__(self):
         # for resolvableTo a dictionary item is
@@ -380,6 +384,7 @@ class SymtabEntry(object):
         # for functions takes a FormalArgs instance when used for the specific (non-generic) parameter list 
         self.funcFormalArgs = None 
         self.memberOfDrvdType = None
+        self.typetab_id = None
 
     @staticmethod
     def ourTypePrint(type):
