@@ -198,32 +198,43 @@ class _TypeContext:
                                 (None,None))
       
    def __guessBytesFromKind(self,aKindExpressionMod) :
-      if (isinstance(aKindExpressionMod,App) and aKindExpressionMod.head=="kind" and is_const(aKindExpressionMod.args[0])):
-         if (_flonum_re.match(aKindExpressionMod.args[0])) :
-            if ('d' in aKindExpressionMod.args[0].lower()):
-               return 8
-            else:
+      kindList=['kind','selected_real_kind','selected_int_kind']
+      if (isinstance(aKindExpressionMod,App) and (aKindExpressionMod.head.lower() in kindList)):
+         theExpr=aKindExpressionMod.args[0]
+         if isinstance(theExpr,NamedParam):
+            theExpr=theExpr.myRHS
+         if is_const(theExpr):
+            if (_flonum_re.match(theExpr)) :
+               if ('d' in theExpr.lower()):
+                  return 8
+               else:
+                  return 4
+            elif (_int_re.match(theExpr)) :
                return 4
       if (_int_re.match(aKindExpressionMod)):
          return int(aKindExpressionMod)
       if (is_id(aKindExpressionMod)): # for example some module variable declared as parameter and initialized with a kind expression
          symtabEntry=self.localSymtab.lookup_name(aKindExpressionMod)
-         if (symtabEntry.constInit):
+         if symtabEntry and (symtabEntry.constInit):
             return self.__guessBytesFromKind(symtabEntry.constInit)
       raise InferenceError(sys._getframe().f_code.co_name+': cannot guess bytes for KIND expression "'+str(aKindExpressionMod)+'"',self.lineNumber)
 
-   def __guessBytes(self,aType):
+   def _guessBytes(self,aType):
       if (aType[0]==fortStmts.DoubleStmt) :
-         return 8;
+         return 8
       if (aType[0]==fortStmts.RealStmt and not aType[1]) :
-         return 4;
+         return 4
       if (aType[0]==fortStmts.IntegerStmt and not aType[1]) :
-         return 4;
+         return 4
+      if (aType[0]==fortStmts.ComplexStmt and not aType[1]):
+         return 8
+      if (aType[0]==fortStmts.DoubleCplexStmt and not aType[1]):
+         return 16
       if (len(aType[1])==1):
          theMod=aType[1][0]
          if (isinstance(theMod,fortStmts._Prec)):
             return int(theMod.mod)
-         if (isinstance(theMod,fortStmts._Kind)):
+         if (isinstance(theMod,fortStmts._KindTypeMod)):
             return self.__guessBytesFromKind(theMod.mod)
       raise InferenceError(sys._getframe().f_code.co_name+': cannot guess bytes for  "'+str(aType)+'"',self.lineNumber)
 
@@ -237,7 +248,7 @@ class _TypeContext:
          elif (isInstance(aTypeMod,_KindTypeMod)
                and
                isInstance(otherTypeMod,_KindTypeMod)) :
-            if (self.__guessBytes(aTypeMod) == self.__guessBytes(otherTypeMod)):
+            if (self._guessBytes(aTypeMod) == self._guessBytes(otherTypeMod)):
                return True;
                    
 
@@ -259,10 +270,10 @@ class _TypeContext:
    def matchTypes(self,aTypePair):
       aTypeClassPair=map(lambda l: l[0],aTypePair)
       if (all(map(lambda l: l in [fortStmts.DoubleStmt,fortStmts.RealStmt],aTypeClassPair))) :
-         if (self.__guessBytes(aTypePair[0])==self.__guessBytes(aTypePair[1])):
+         if (self._guessBytes(aTypePair[0])==self._guessBytes(aTypePair[1])):
             return True
       if (all(map(lambda l: l==fortStmts.IntegerStmt,aTypeClassPair))) :
-         if (self.__guessBytes(aTypePair[0])==self.__guessBytes(aTypePair[1])):
+         if (self._guessBytes(aTypePair[0])==self._guessBytes(aTypePair[1])):
             return True
       return False
 
@@ -344,6 +355,9 @@ class _TypeContext:
          return self._expressionType(anExpression.valueList[0])
       else:
          raise InferenceError(sys._getframe().f_code.co_name+': No type could be determined for expression "'+str(anExpression)+'" (represented as '+repr(anExpression)+' )',self.lineNumber)
+
+def guessBytes(typePair,localSymtab,lineNumber):
+   return _TypeContext(lineNumber,localSymtab)._guessBytes(typePair)
 
 def appType(anApp,localSymtab,lineNumber):
    return _TypeContext(lineNumber,localSymtab)._appType(anApp)

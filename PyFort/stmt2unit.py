@@ -110,14 +110,24 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                         localSymtab.augmentParentEntry(theSymtabEntry,parentSymtabEntry,name)            
                         DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: updated PARENT unit symtab entry '+parentSymtabEntry.debug(name))
             else: # no symtab entry -> create one
-                newSymtabEntry = SymtabEntry(SymtabEntry.GenericEntryKind,
-                                             type=newType,
-                                             dimensions=newDimensions,
-                                             length=newLength,
-                                             origin='local',
-                                             access=access)
+                if aTypeDeclStmt.parameter:
+                    newSymtabEntry = SymtabEntry(SymtabEntry.VariableEntryKind,
+                                                 type=newType,
+                                                 dimensions=newDimensions,
+                                                 length=newLength,
+                                                 origin='local',
+                                                 access=access)
+                else:
+                    newSymtabEntry = SymtabEntry(SymtabEntry.GenericEntryKind,
+                                                 type=newType,
+                                                 dimensions=newDimensions,
+                                                 length=newLength,
+                                                 origin='local',
+                                                 access=access)
                 if (isinstance(aDecl,fs._PointerInit) or isinstance(aDecl,fs._AssignInit) and localSymtab.isConstInit(aDecl.rhs)):
-                   newSymtabEntry.enterConstInit(localSymtab.getConstInit(aDecl.rhs))
+                    newSymtabEntry.enterConstInit(localSymtab.getConstInit(aDecl.rhs))
+                elif aTypeDeclStmt.parameter and isinstance(aDecl,fs._AssignInit):
+                    newSymtabEntry.enterConstInit(aDecl.rhs)
                 if inDrvdTypeDefn:
                     newSymtabEntry.enterDrvdTypeName(inDrvdTypeDefn)
                 DebugManager.debug('decl "'+str(aDecl)+'" NOT already present in symbol table => adding '+str(newSymtabEntry.debug(name)))
@@ -162,6 +172,23 @@ def _processDimensionStmt(aDimensionStmt,curr):
             e.symbolName = e.symbolName or aDimensionSpec.arrayName
             raise e
     return aDimensionStmt
+
+def _processParameterStmt(aParameterStmt,curr):
+    localSymtab = curr.val.symtab
+    DebugManager.debug('[Line '+str(aParameterStmt.lineNumber)+']: stmt2unit._processParameterStmt('+str(aParameterStmt)+') with symbol table '+str(localSymtab))
+    for aNamedParam in aParameterStmt.namedParamList:
+        try:
+            theSymtabEntry = localSymtab.lookup_name_local(aNamedParam[0])
+            if theSymtabEntry:
+                DebugManager.debug('\tvariable "'+aNamedParam[0]+'" already present in local symbol table as '+theSymtabEntry.debug(aNamedParam[0]))
+                theSymtabEntry.enterConstInit(aNamedParam[2])
+            else:
+                raise SymtabError("Parameter statement uses a variable not found in symtab",symbolName=aNamedParam[0],lineNumber=aParameterStmt.lineNumber)
+        except SymtabError,e: # add lineNumber and symbol name to any SymtabError we encounter
+            e.lineNumber = e.lineNumber or aParameterStmt.lineNumber
+            e.symbolName = e.symbolName or aNamedParam[0]
+            raise e
+    return aParameterStmt
 
 def _processExternalStmt(anExternalStmt,curr):
     localSymtab = curr.val.symtab
