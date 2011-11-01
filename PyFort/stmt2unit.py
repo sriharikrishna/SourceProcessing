@@ -29,12 +29,6 @@ def typesep(dd,default_dims):
     if isinstance(d,fe.Ops): return _helper(d.a1)
     return _helper(d)
 
-def default_dims(attrs_list):
-    for a in attrs_list:
-        if isinstance(a,fe.App) and a.head.lower() == 'dimension':
-            return a.args
-    return None
-
 def _beginDrvdTypeDefn(aDrvdTypeDefn,curr):
     'derived type definition -- record type in symbol table and set the name on the unit'
     localSymtab = curr.val.symtab
@@ -70,8 +64,7 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
     localSymtab = curr.val.symtab
     newType = (aTypeDeclStmt.__class__,aTypeDeclStmt.mod)
     newLength = None
-    dflt_d  = default_dims(aTypeDeclStmt.attrs)
-    DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: stmt2unit._processTypedeclStmt('+str(aTypeDeclStmt)+') with default dimensions '+str(dflt_d))
+    DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: stmt2unit._processTypedeclStmt('+str(aTypeDeclStmt)+') with default dimensions '+str(aTypeDeclStmt.dimension))
     access=None
     inDrvdTypeDefn=curr.val._in_drvdType
     for anAttribute in aTypeDeclStmt.attrs :
@@ -79,7 +72,7 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
             access= anAttribute.lower()
     for aDecl in aTypeDeclStmt.decls:
         DebugManager.debug('\tProcessing decl '+repr(aDecl)+' ... ',newLine=False)
-        (name,newDimensions) = typesep(aDecl,dflt_d)
+        (name,newDimensions) = typesep(aDecl,aTypeDeclStmt.dimension)
         if inDrvdTypeDefn:
             name=inDrvdTypeDefn+":"+name
         try:

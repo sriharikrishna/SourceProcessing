@@ -527,6 +527,18 @@ class TypeDecl(Decl):
         if TypeDecl.assignInitArrConst:
             self.modified = True
             TypeDecl.assignInitArrConst=False
+        self.parameter=False
+        self.dimension=None
+        self.pointer=False
+        if self.attrs is not None:
+            for anAttr in self.attrs:
+                if isinstance(anAttr,App):
+                    if anAttr.head.lower()=='dimension':
+                        self.dimension=anAttr.args
+                elif anAttr.lower()=='parameter':
+                    self.parameter=True
+                elif anAttr.lower()=='pointer':
+                    self.pointer=True
 
     def __repr__(self):
         return '%s(%s,%s,%s)' % (self.__class__.__name__,
