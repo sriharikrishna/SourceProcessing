@@ -652,6 +652,7 @@ fs.EndDrvdTypeDefn.decl2unitAction    = _endDrvdTypeDefn    # end definition
 # the following are all related to declaration statements,
 # the hooks update the symbol table
 fs.DimensionStmt.decl2unitAction      = _processDimensionStmt
+fs.ParameterStmt.decl2unitAction      = _processParameterStmt
 fs.ExternalStmt.decl2unitAction       = _processExternalStmt
 fs.TypeDecl.decl2unitAction           = _processTypedeclStmt
 fs.CommonStmt.decl2unitAction         = _processCommonStmt
