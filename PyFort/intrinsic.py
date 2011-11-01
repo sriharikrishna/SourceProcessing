@@ -101,6 +101,17 @@ __nonStandard = (
                  'time'   
                  )
 
+__builtInTypes = (
+    'integer_4',
+    'integer_8',
+    'real_4',
+    'real_8',
+    'complex_8',
+    'complex_16',
+    'logical',
+    'character',
+)
+
 def getNonStandard():
     return __nonStandard
 
@@ -113,6 +124,9 @@ def useNonStandard(aList):
 def isUsedNonStandard(op):
     global __useNonStandard
     return (op.lower() in __useNonStandard)
+
+def getBuiltInTypes():
+    return __builtInTypes
 
 def is_intrinsic(op):
     return (op.lower() in __intrinsics) or (op.lower() in __useNonStandard)
