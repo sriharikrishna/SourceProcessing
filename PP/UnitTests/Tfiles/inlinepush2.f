@@ -1,16 +1,15 @@
         SUBROUTINE OpenAD_MASKER(N, M, THCK, NMSB, MASK, COUNT)
-        use w2f__types
-        INTEGER(w2f__i4) N
-        INTEGER(w2f__i4) M
-        REAL(w2f__8) THCK(1 : N, 1 : M)
-        REAL(w2f__8) NMSB(1 : N, 1 : M)
-        INTEGER(w2f__i4) MASK(1 : N, 1 : M)
-        INTEGER(w2f__i4) COUNT
+        INTEGER N
+        INTEGER M
+        REAL THCK(1 : N, 1 : M)
+        REAL NMSB(1 : N, 1 : M)
+        INTEGER MASK(1 : N, 1 : M)
+        INTEGER COUNT
 C
 C       **** Local Variables and Functions ****
 C
-        INTEGER(w2f__i4) I
-        INTEGER(w2f__i4) J
+        INTEGER I
+        INTEGER J
 C
 C       **** Statements ****
 C

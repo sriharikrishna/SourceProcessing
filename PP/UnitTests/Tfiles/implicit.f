@@ -2,8 +2,8 @@
       IMPLICIT NONE
       SAVE
 
-      INTEGER(w2f__i4) N
+      INTEGER N
       SAVE N
 
-      REAL(w2f__8) OpenAD_Symbol_0
+      REAL OpenAD_Symbol_0
       END MODULE

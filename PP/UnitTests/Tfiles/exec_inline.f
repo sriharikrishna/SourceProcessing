@@ -1,15 +1,4 @@
-
-      MODULE all_globals_mod
-      use w2f__types
-      IMPLICIT NONE
-      SAVE
-C
-C     **** Statements ****
-C
-      END MODULE
-
       MODULE globals
-      use w2f__types
       IMPLICIT NONE
       SAVE
 C
@@ -22,14 +11,13 @@ C
       END MODULE
 
       SUBROUTINE head(X, Y)
-      use w2f__types
       use globals
       IMPLICIT NONE
 C
 C     **** Global Variables & Derived Type Definitions ****
 C
-      REAL(w2f__8) OpenAD_Symbol_0
-      REAL(w2f__8) OpenAD_Symbol_1
+      REAL OpenAD_Symbol_0
+      REAL OpenAD_Symbol_1
 C
 C     **** Parameters and Result ****
 C

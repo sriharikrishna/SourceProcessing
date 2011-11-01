@@ -1,17 +1,5 @@
-
-      MODULE all_globals_mod
-      use OAD_active
-      use w2f__types
-      IMPLICIT NONE
-      SAVE
-C
-C     **** Statements ****
-C
-      END MODULE
-
       SUBROUTINE head(X, Y)
       use OAD_active
-      use w2f__types
       IMPLICIT NONE
 C
 C     **** Parameters and Result ****
@@ -21,7 +9,7 @@ C
 C
 C     **** Local Variables and Functions ****
 C
-      INTEGER(w2f__i4) N
+      INTEGER N
       SAVE N
       type(active) :: Z(1:INT(SIZE(X)))
       double precision :: openad_symbol_4, openad_symbol_5

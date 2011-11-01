@@ -1,5 +1,4 @@
       MODULE globals
-      use w2f__types
       IMPLICIT NONE
       SAVE
 C
@@ -9,14 +8,13 @@ C
       END MODULE
 
       SUBROUTINE head(X, Y)
-      use w2f__types
       use globals
       IMPLICIT NONE
 C
 C     **** Global Variables & Derived Type Definitions ****
 C
-      REAL(w2f__8) OpenAD_Symbol_0
-      REAL(w2f__8) OpenAD_Symbol_1
+      REAL OpenAD_Symbol_0
+      REAL OpenAD_Symbol_1
       type(active) :: x(2),y(2)
 
 C

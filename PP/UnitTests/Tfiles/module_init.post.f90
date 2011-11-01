@@ -1,6 +1,5 @@
 MODULE globals
   use OAD_active
-  use w2f_types
   IMPLICIT NONE
   SAVE
   type(active) :: GX
@@ -16,11 +15,10 @@ END MODULE globals
 
 SUBROUTINE bar(BARX, BARY)
   use OAD_active
-  use w2f__types
   use globals
   IMPLICIT NONE
-  REAL(w2f__8) BARX
-  REAL(w2f__8) BARY
+  REAL BARX
+  REAL BARY
   GX%v = BARX*2
   GY%v = BARY*2
 end subroutine
