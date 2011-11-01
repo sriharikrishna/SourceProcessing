@@ -27,6 +27,10 @@ def addSourceProcessingOptions(opt):
                    dest='outputFormat',
                    help="<output_file> is in either 'fixed' or 'free' format",
                    default=None)
+    opt.add_option('','--infoUnitFile',
+                   dest='infoUnitFile',
+                   help="<infoUnitFile> contains modules which have type information needed for parsing, but should not be processed themselves",
+                   default=None)
     opt.add_option('','--inputLineLength',
                    dest='inputLineLength',
                    metavar='INT',
@@ -328,6 +332,12 @@ def setSourceProcessingFlags(config):
         setInputLineLength(config.inputLineLength)
     # set symtab type defaults
     Symtab.setTypeDefaults((fs.RealStmt,[]),(fs.IntegerStmt,[]))
+    # parse info units
+    if config.infoUnitFile:
+        from PyFort.fortUnit import fortUnitIterator
+        for aUnit in fortUnitIterator(config.infoUnitFile,config.inputFormat):
+            # need to parse this so the type information is available, but do not modify or print units
+            pass
     # set verbosity
     DebugManager.setVerbose(config.isVerbose)
     DebugManager.setQuiet(config.noWarnings)
