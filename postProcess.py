@@ -13,6 +13,7 @@ from PyUtil.errors import UserError, ScanError, ParseError
 from PyUtil.assembler import AssemblerException
 from PyUtil.l_assembler import AssemblerException as ListAssemblerException
 from PyUtil.symtab import Symtab,SymtabError
+from PyFort.inference import InferenceError
 from PyUtil.debugManager import DebugManager
 from PyUtil.options import addPostProcessorOptions,PostProcessorOptErrors,setPostProcessFlags
 
@@ -196,6 +197,12 @@ def main():
 
     except (PostProcessError,UserError,AssemblerException,ListAssemblerException,ParseError,ScanError),e:
         sys.stderr.write(str(e)+'\n')
+        cleanup(config)
+        return 1
+    except InferenceError,e:
+        sys.stderr.write(str(e)+'\n')
+        if ("w2f__" in str(e)): 
+            sys.stderr.write("\ttype inference may require parsing Open64 specific constants defined in w2f__types.f90\n\tthis can be enabled by passing --infoUnitFile=<path_to>/w2f__types.f90 \n")
         cleanup(config)
         return 1
     except RuntimeError,e:
