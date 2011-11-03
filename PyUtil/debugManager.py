@@ -11,6 +11,8 @@ class DebugManager(object):
 
     _quiet = False
 
+    _check = False
+
     @staticmethod
     def setVerbose(isVerbose):
         DebugManager._verbose = isVerbose
@@ -18,6 +20,14 @@ class DebugManager(object):
     @staticmethod
     def setQuiet(aBool):
         DebugManager._quiet = aBool
+
+    @staticmethod
+    def setCheck(aBool):
+        DebugManager._check = aBool
+
+    @staticmethod
+    def check():
+        return DebugManager._check
 
     _progress = False
     @staticmethod
