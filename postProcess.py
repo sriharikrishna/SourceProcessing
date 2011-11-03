@@ -9,7 +9,7 @@ import datetime
 import traceback
 from optparse import OptionParser
 
-from PyUtil.errors import UserError, ScanError, ParseError
+from PyUtil.errors import UserError, ScanError, ParseError, LogicError
 from PyUtil.assembler import AssemblerException
 from PyUtil.l_assembler import AssemblerException as ListAssemblerException
 from PyUtil.symtab import Symtab,SymtabError
@@ -195,7 +195,7 @@ def main():
         if (config.timing):
             print 'SourceProcessing: timing: '+str(datetime.datetime.utcnow()-startTime)
 
-    except (PostProcessError,UserError,AssemblerException,ListAssemblerException,ParseError,ScanError),e:
+    except (PostProcessError,UserError,AssemblerException,ListAssemblerException,ParseError,LogicError,ScanError),e:
         sys.stderr.write(str(e)+'\n')
         cleanup(config)
         return 1

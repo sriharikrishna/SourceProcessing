@@ -9,7 +9,7 @@ import tempfile
 import shutil
 from optparse import OptionParser
 
-from PyUtil.errors import UserError, ScanError, ParseError
+from PyUtil.errors import UserError, ScanError, ParseError, LogicError
 from PyUtil.assembler import AssemblerException
 from PyUtil.l_assembler import AssemblerException as ListAssemblerException
 from PyUtil.debugManager import DebugManager
@@ -119,7 +119,7 @@ def main():
                 shutil.move(newOutputFile,config.outputFile)
         if (config.timing):
             print 'SourceProcessing: timing: '+str(datetime.datetime.utcnow()-startTime)
-    except (CanonError,SymtabError,UserError,ScanError,ParseError,InferenceError,AssemblerException,ListAssemblerException,FunToSubError),e:
+    except (CanonError,SymtabError,UserError,ScanError,ParseError,LogicError,InferenceError,AssemblerException,ListAssemblerException,FunToSubError),e:
         sys.stderr.write(str(e)+'\n')
         cleanup(config)
         return 1
