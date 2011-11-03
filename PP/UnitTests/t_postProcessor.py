@@ -19,6 +19,7 @@ Unit tests for post-processor
 '''
 
 DebugManager.setQuiet(True)
+DebugManager.setCheck(True)
 
 Symtab.setTypeDefaults((RealStmt,[]),(IntegerStmt,[]))
 
