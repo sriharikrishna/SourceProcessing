@@ -71,6 +71,6 @@ class LogicError(Exception):
         self.reason=reason
 
     def __str__(self):
-        errString='\nERROR: LogicError: '+str(reason)
+        errString='\nERROR: LogicError: '+str(self.reason)
         if self.lineNumber: errString+='line '+str(self.lineNumber)
         return (errString)
