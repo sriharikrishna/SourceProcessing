@@ -57,3 +57,20 @@ class ParseError(Exception):
         if self.details: errString+=str(self.details)
         if self.target: errString+="tried to parse as"+str(self.target)
         return (errString)
+
+class LogicError(Exception):
+    '''
+	exception for general logic errors
+    '''
+    def __init__(self,reason,lineNumber=None):
+        '''
+        the parser failed to parse scannedLine as a target
+        where target is some string to indicated verbally what it is
+        '''
+        self.lineNumber = lineNumber
+        self.reason=reason
+
+    def __str__(self):
+        errString='\nERROR: LogicError: '+str(reason)
+        if self.lineNumber: errString+='line '+str(self.lineNumber)
+        return (errString)
