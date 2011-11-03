@@ -2010,13 +2010,13 @@ class SimpleSyntaxIOStmt(IOStmt):
         ioStmtPatn = seq(lit(cls.kw),disj(lit('*'),Exp),zo1(seq(lit(','),cslist(Exp))))
         ioStmtExtractList = treat(ioStmtPatn,lambda l: (l[0],l[1],len(l[2]) and l[2][0][1] or []))
         ((kwString,format,itemList),rest) = ioStmtExtractList(scan)
-        return cls(format,itemList,kwString,lineNumber,rest=rest)
+        return cls([format],itemList,kwString,lineNumber,rest=rest)
 
-    def __init__(self,format,itemList,kwString,lineNumber=0,label=False,lead='',internal=[],rest=[]):
-        IOStmt.__init__(self,[format],itemList,kwString,lineNumber,label,lead,internal,rest)
+    def __init__(self,ioCtrlSpecList,itemList,kwString,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        IOStmt.__init__(self,ioCtrlSpecList,itemList,kwString,lineNumber,label,lead,internal,rest)
 
     def __repr__(self):
-        return '%s(%s,%s)' % (self.__class__.__name__,repr(self.ioCtrlSpecList[0]),repr(self.itemList))
+        return '%s(%s,%s)' % (self.__class__.__name__,repr(self.ioCtrlSpecList),repr(self.itemList))
 
     def __str__(self):
         rstr=self.kwString+' '+str(self.ioCtrlSpecList[0])
@@ -2025,14 +2025,11 @@ class SimpleSyntaxIOStmt(IOStmt):
         return '%s' % (rstr)
 
 class PrintStmt(SimpleSyntaxIOStmt):
-    ''' 
-    syntax variant that has only one format item and not a full ioCtrlSpecList; 
-    '''
     kw = 'print'
     kw_str = kw
 
-    def __init__(self,format,itemList,kwString=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
-        SimpleSyntaxIOStmt.__init__(self,format,itemList,kwString,lineNumber,internal,rest)
+    def __init__(self,ioCtrlSpecList,itemList,kwString=kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        SimpleSyntaxIOStmt.__init__(self,ioCtrlSpecList,itemList,kwString,lineNumber,internal,rest)
 
 class ComplexSyntaxIOStmt(IOStmt):
 
