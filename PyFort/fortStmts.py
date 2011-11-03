@@ -2010,6 +2010,9 @@ class SimpleSyntaxIOStmt(IOStmt):
     def __init__(self,format,itemList,kwString,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         IOStmt.__init__(self,[format],itemList,kwString,lineNumber,label,lead,internal,rest)
 
+    def __repr__(self):
+        return '%s(%s,%s)' % (self.__class__.__name__,repr(self.ioCtrlSpecList[0]),repr(self.itemList))
+
     def __str__(self):
         rstr=self.kwString+' '+str(self.ioCtrlSpecList[0])
         if self.itemList:
@@ -2017,6 +2020,9 @@ class SimpleSyntaxIOStmt(IOStmt):
         return '%s' % (rstr)
 
 class PrintStmt(SimpleSyntaxIOStmt):
+    ''' 
+    syntax variant that has only one format item and not a full ioCtrlSpecList; 
+    '''
     kw = 'print'
     kw_str = kw
 
