@@ -55,6 +55,12 @@ def addSourceProcessingOptions(opt):
                    help='turns on verbose debugging output',
                    action='store_true',
                    default=False)
+    opt.add_option('',
+                   '--check',
+                   dest='check',
+                   help='turns on sanity checking which can slow down execution',
+                   action='store_true',
+                   default=False)
     opt.add_option('--noWarnings',
                    dest='noWarnings',
                    help='suppress warning messages (defaults to False)',
@@ -341,6 +347,7 @@ def setSourceProcessingFlags(config):
     # set verbosity
     DebugManager.setVerbose(config.isVerbose)
     DebugManager.setQuiet(config.noWarnings)
+    DebugManager.setCheck(config.check)
 
 def setPrePostFlags(config):
     setSourceProcessingFlags(config)
