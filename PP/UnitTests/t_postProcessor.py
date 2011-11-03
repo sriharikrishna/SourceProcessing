@@ -170,6 +170,10 @@ class C1(TestCase):
         'add value selector to active module variables occurring in function unit'
         compareFiles(self.assertEquals,'funDefActiveModVar.f90','funDefActiveModVar.post.f90',format='free',mode='reverse')
 
+    def test15(self):
+        'test inlining: inlinePrint.f'
+        compareFiles(self.assertEquals,'inlinePrint.f','inlinePrint.post.f',inlineFile='inlinePrint.inline.f')
+
 suite = asuite(C1)
 
 if __name__ == "__main__":
