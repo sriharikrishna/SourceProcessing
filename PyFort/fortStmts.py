@@ -348,6 +348,11 @@ class GenStmt(_Mappable,_Mutable_T):
         newStmt=self.__class__(*newSons)
         newStmt.lead=self.lead
         newStmt.rawline=self.rawline
+        if (DebugManager.check()):
+            if (repr(self)!=repr(newStmt)):
+                raise LogicError(sys._getframe().f_code.co_name+" does not replicate identically; original: "+repr(self)+" vs copied: "+repr(newStmt))
+            if (str(self)!=str(newStmt)):
+                raise LogicError(sys._getframe().f_code.co_name+" does not unparse identically; original: "+str(self)+" vs copied: "+str(newStmt))
         return newStmt
 
 class Skip(GenStmt):
