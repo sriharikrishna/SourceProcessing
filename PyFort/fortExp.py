@@ -71,11 +71,10 @@ def setWhitespace(useWhitespace):
 
 def copyExp(exp):
     '''handle base cases for custom deepcopy'''
-    if isinstance(exp,list) or isinstance(exp,tuple):
-        newList=[]
-        for item in exp:
-            newList.append(copyExp(item))
-        return newList
+    if isinstance(exp,list):
+        return map(copyExp,exp)
+    if isinstance(exp,tuple):
+        return tuple(map(copyExp,exp))
     elif isinstance(exp,str) or isinstance(exp,bool) or exp is None:
         return exp
     else:
