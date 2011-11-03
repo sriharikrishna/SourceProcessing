@@ -580,6 +580,8 @@ class UnitPostProcessor(object):
                     Execs.append(anExecStmt)
             elif isinstance(anExecStmt,fs.CallStmt):
                 if inline is True:
+                    if (anExecStmt.head.lower()!=self.__inlineUnit.uinfo.name.lower()):
+                        raise PostProcessError('inline unit name >'+self.__inlineUnit.uinfo.name+'< determined from an inline directive does not match called unit name >'+anExecStmt.head.lower()+'<',anExecStmt.lineNumber)
                     newExecs = self.__createNewExecs(anExecStmt.args,anExecStmt.lead)
                     inline = False
                     if newExecs is not None:
