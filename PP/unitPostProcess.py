@@ -62,7 +62,10 @@ class UnitPostProcessor(object):
     @staticmethod
     def setInlineFile(inlineFile):
         UnitPostProcessor._inlineFile = inlineFile
-
+        # reset for the unit tests:
+        UnitPostProcessor._inlineFileUnits = []
+        UnitPostProcessor.__ourInlineWarned=[]
+        
     # set something here for the unit tests
     _replacement_type = 'active' 
 
