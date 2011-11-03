@@ -11,7 +11,7 @@ from PyIR.mapper       import _Mappable
 from PyIR.mutable_tree import _Mutable_T
 
 from PyUtil.chomp        import chomp
-from PyUtil.errors  import ParseError
+from PyUtil.errors  import ParseError, LogicError
 from PyUtil.l_assembler import AssemblerException as ListAssemblerException
 from PyUtil.debugManager import DebugManager
 
@@ -351,8 +351,8 @@ class GenStmt(_Mappable,_Mutable_T):
         if (DebugManager.check()):
             if (repr(self)!=repr(newStmt)):
                 raise LogicError(sys._getframe().f_code.co_name+" does not replicate identically; original: "+repr(self)+" vs copied: "+repr(newStmt))
-            if (str(self)!=str(newStmt)):
-                raise LogicError(sys._getframe().f_code.co_name+" does not unparse identically; original: "+str(self)+" vs copied: "+str(newStmt))
+            if (str(self).lower()!=str(newStmt).lower()):
+                raise LogicError(sys._getframe().f_code.co_name+" does not unparse (caser insensitive) identically; original: "+str(self)+" vs copied: "+str(newStmt))
         return newStmt
 
 class Skip(GenStmt):
