@@ -1166,14 +1166,14 @@ class TestIOtmt(TestCase):
     def test6(self):
         '''read statement with simpler syntax'''
         theString = 'read *,x,y,i'
-        theRepr = SimpleReadStmt('*',['x','y','i'])
+        theRepr = SimpleReadStmt(['*'],['x','y','i'])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
     def test7(self):
         '''print statement'''
         theString = 'print *,x+1,y,i'
-        theRepr = PrintStmt('*',[Ops('+','x','1'),'y','i'])
+        theRepr = PrintStmt(['*'],[Ops('+','x','1'),'y','i'])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
@@ -1195,7 +1195,7 @@ class TestIOtmt(TestCase):
     def test10(self):
         '''print statement with format only'''
         theString = "print 1542"
-        theRepr = PrintStmt('1542',[])
+        theRepr = PrintStmt(['1542'],[])
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(str(pps(theString)),str(theRepr))
         self.assertEquals(theString,str(pps(theString)))
