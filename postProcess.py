@@ -202,7 +202,7 @@ def main():
     except InferenceError,e:
         sys.stderr.write(str(e)+'\n')
         if ("w2f__" in str(e)): 
-            sys.stderr.write("\ttype inference may require parsing Open64 specific constants defined in w2f__types.f90\n\tthis can be enabled by passing --infoUnitFile=<path_to>/w2f__types.f90 \n")
+            sys.stderr.write("\ttype inference may require parsing Open64 specific constants defined in w2f__types.f90\n\tthis can be enabled by passing --infoUnitFile=<path_to>/w2f__types.f90 \nNOTE: the  flag --infoUnitFile is part of a more detailed type/shape inference implementation distributed on Nov/3/2011; adding the flag will resolve the error condition; there is no default setting here because the location of w2f__types.f90 depends on the user setup.\n")
         cleanup(config)
         return 1
     except RuntimeError,e:
