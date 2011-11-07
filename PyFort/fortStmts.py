@@ -339,14 +339,9 @@ class GenStmt(_Mappable,_Mutable_T):
 
     def __deepcopy__(self,memo={}):
         '''cheaper deepcopy implementation for copying statements'''
-        newSons=[]
-        for son in self.get_sons():
-            theSon = getattr(self,son)
-            newSon = theSon
-            newSon=copyExp(theSon)
-            newSons.append(newSon)
-        newStmt=self.__class__(*newSons)
-        newStmt.lead=self.lead
+        newSons=map(lambda l: copyExp(getattr(self,l)),self.get_sons())
+        newStmt=self.__class__(*newSons,lead=self.lead)
+        #newStmt.lead=self.lead
         newStmt.rawline=self.rawline
         if (DebugManager.check()):
             if (repr(self)!=repr(newStmt)):
@@ -1105,9 +1100,7 @@ class EquivalenceStmt(Decl):
         Decl.__init__(self,lineNumber,label,lead,internal,rest)
 
     def __str__(self):
-        declStrList = []
-        for nlist in self.nlists:
-            declStrList.append('('+','.join(str(item) for item in nlist[1])+')')
+        declStrList = map(lambda nlist: '('+','.join(str(item) for item in nlist[1])+')',self.nlists)
         return '%s %s' % (self.kw,','.join(declStrList))
         
 namedParamPatn = seq(id,lit('='),Exp)
@@ -2761,9 +2754,7 @@ class BackspaceStmt(Exec):
             unitspec = self.unitspec
         if self.params == []:
             return '%s (%s)' % (self.kw,unitspec)            
-        paramlist = []
-        for param in self.params:
-            paramlist.append(''.join(str(elt) for elt in param))
+        paramList = map(lambda param: ''.join(str(elt) for elt in param),self.params)
         return '%s (%s)' % (self.kw,unitspec+','+','.join(paramlist))
 
 class DeletedAssignStmt(Exec):

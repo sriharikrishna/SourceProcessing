@@ -90,12 +90,7 @@ class _Exp(_Mutable_T):
         self.modified = True
     def __deepcopy__(self,memo={}):
         '''cheaper deepcopy implementation for copying expressions'''
-        newSons=[]
-        for son in self.get_sons():
-            theSon = getattr(self,son)
-            newSon = theSon
-            newSon=copyExp(theSon)
-            newSons.append(newSon)
+        newSons=map(lambda aSon: copyExp(getattr(self,aSon)),self.get_sons())
         return self.__class__(*newSons)
     pass
 
