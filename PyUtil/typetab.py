@@ -207,6 +207,9 @@ class TypetabEntry(object):
         def __init__(self,type_name):
             self.type_name=type_name  # name of built-in type (e.g. integer) (use type class here?) only if not a pointer
 
+        def debug(self):
+            return 'BuiltInPointerEntryKind; name of built-in type: '+str(self.type_name)
+
     class BuiltInPointerEntryKind(GenericEntryKind):
         keyword = 'BIpointer'
         _sons = ['typetab_id']
@@ -214,12 +217,19 @@ class TypetabEntry(object):
         def __init__(self,typetab_id):
             self.typetab_id=typetab_id        # type id of built-in type pointed to
 
+        def debug(self):
+            return 'BuiltInPointerEntryKind; typeid of built-in type pointed to: '+str(self.typetab_id)
+
     class NamedTypeEntryKind(GenericEntryKind):
         keyword = 'namedtype'
         _sons = ['localSymtab']
 
         def __init__(self,localSymtab):
             self.localSymtab=localSymtab      # scope named type is defined in
+
+        def debug(self):
+            return 'NamedTypeEntryKind; localSymtab where the type is defined: '+self.localSymtab.debug()
+            
 
     class NamedTypePointerEntryKind(GenericEntryKind):
         keyword = 'NTpointer'
@@ -229,6 +239,10 @@ class TypetabEntry(object):
             self.symbolName=symbolName
             self.localSymtab=localSymtab # scope the symbolName is defined in
 
+        def debug(self):
+            return 'NamedTypePointerEntryKind; symbolName:'+str(self.symbolName)+\
+                   ', localSymtab where symbolName is defined: '+self.localSymtab.debug()
+
     class ArrayEntryKind(GenericEntryKind):
         keyword = 'array'
         _sons = ['arrayid','typetab_id']
@@ -237,6 +251,10 @@ class TypetabEntry(object):
             self.arrayid=arrayid      # array id for array table where dimension information is stored
             self.typetab_id=typetab_id        # typeid of BI or NT array type
 
+        def debug(self):
+            return 'ArrayEntryKind; Array id for array table where dimension information is stored: '+str(self.arrayid)+\
+                                    ', Type id of built-in or named array type: '+str(self.typetab_id)
+
     class ArrayPointerEntryKind(GenericEntryKind):
         keyword = 'ARpointer'
         _sons = ['typetab_id']
@@ -244,7 +262,16 @@ class TypetabEntry(object):
         def __init__(self,typetab_id):
             self.typetab_id=typetab_id        # type id of array type of target
 
+        def debug(self):
+            return 'ArrayPointerEntryKind; Type id of array type of target: '+str(self.typetab_id)
+
     def __init__(self,entryKind,typetab_id):
         self.entryKind = entryKind # some instance of self.GenericEntryKind
         self.typetab_id=typetab_id # typeid in type table for this TypeTabEntry
+
+    
+    def debug(self,name='<symbol name unknown>'):
+        return '[TypetabEntry('+str(self)+') "'+name+'" -> entryKind='+self.entryKind.debug()+\
+                                         ', typetab_id='+str(self.typetab_id)+\
+                                         ']'
 
