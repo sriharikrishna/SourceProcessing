@@ -517,17 +517,20 @@ class SymtabEntry(object):
             
 
     def debug(self,name='<symbol name unknown>'):
-        return '[SymtabEntry('+str(self)+') "'+name+'" -> entryKind='+str(self.entryKind)+\
-                                         ', type='+str(self.type)+\
-                                         ', dimensions='+str(self.dimensions)+\
-                                         ', length='+str(self.length)+\
-                                         ', constInit='+((self.constInit and str(self.constInit)) or 'None')+\
-                                         ', origin='+str(self.origin)+\
-                                         ', renameSource='+str(self.renameSource)+\
-                                         ', access='+((self.access and self.access) or 'None')+\
-                                         ', genericInfo='+((self.genericInfo and str(self.genericInfo.debug())) or 'None')+\
-                                         ', funcFormalArgs='+((self.funcFormalArgs and str(self.funcFormalArgs.debug())) or 'None')+\
-                                         ', memberOfDrvdType='+((self.memberOfDrvdType and self.memberOfDrvdType) or 'None')+\
+        def attrDump(theEntry,name):
+            return ((theEntry.__dict__[name] and ', '+name+'='+str(theEntry.__dict__[name])) or '')
+              
+        return '[SymtabEntry('+str(id(self))+') "'+name+'" -> entryKind='+str(self.entryKind.keyword)+\
+                                         attrDump(self,'type')+ \
+                                         attrDump(self,'dimensions')+ \
+                                         attrDump(self,'length')+ \
+                                         attrDump(self,'constInit')+ \
+                                         attrDump(self,'origin')+ \
+                                         attrDump(self,'renameSource')+ \
+                                         attrDump(self,'access')+ \
+                                         ((self.genericInfo and (', genericInfo='+str(self.genericInfo.debug()))) or '')+\
+                                         ((self.funcFormalArgs and (', funcFormalArgs='+str(self.funcFormalArgs.debug()))) or '')+\
+                                         attrDump(self,'memberOfDrvdType')+ \
                                          ']'
     
 
