@@ -1,8 +1,8 @@
 '''
 Module to control the flow_line method
 '''
-from fixedfmt     import fixedfmt
-from freefmt      import freefmt
+from PyFort.fixedfmt     import fixedfmt
+from PyFort.freefmt      import freefmt
 from PyUtil.chomp import chomp
 
 _fixedFormatStart=' ' * 6

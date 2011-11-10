@@ -8,9 +8,9 @@ from _Setup import *
 from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import SymtabEntry
 
-import fortStmts
-from fortExp import App,NamedParam,Sel,Unary,Ops,isConstantExpression,is_const,is_id,_id_re,_flonum_re,_int_re,_logicon_set,_quote_set,Slice,Zslice,Lslice,Rslice,ArrayConstructor
-from intrinsic import is_intrinsic, is_inquiry, getNonStandard
+import PyFort.fortStmts as fortStmts
+from PyFort.fortExp import App,NamedParam,Sel,Unary,Ops,isConstantExpression,is_const,is_id,_id_re,_flonum_re,_int_re,_logicon_set,_quote_set,Slice,Zslice,Lslice,Rslice,ArrayConstructor
+from PyFort.intrinsic import is_intrinsic, is_inquiry, getNonStandard
 
 class InferenceError(Exception):
    '''exception for ...'''

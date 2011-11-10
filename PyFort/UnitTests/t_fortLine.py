@@ -1,9 +1,9 @@
 from Setup import *
 
 from unittest  import *
-from fortLine  import *
+from PyFort.fortLine  import *
 from cStringIO import StringIO
-from flow      import flow_line
+from PyFort.flow      import flow_line
 from PyUtil.flatten   import flatten
 from PyUtil.chomp     import chomp
 

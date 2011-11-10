@@ -2,7 +2,7 @@ import sys,os.path
 from string import maketrans
 
 mypath  = sys.path[0]
-libpath = os.path.normpath(os.path.join(sys.path[0],'..'))
+libpath = os.path.normpath(os.path.join(sys.path[0],'../..'))
 
 if libpath not in sys.path:
     sys.path.insert(0,libpath)

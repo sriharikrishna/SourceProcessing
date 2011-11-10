@@ -9,7 +9,7 @@ if sys.version_info[1] == 4:
 else:
     from re import Scanner
 
-from tokens import *
+from PyFort.tokens import *
 
 def __str_intern_patn(d):
     ''' inside of a string w/o \param d as delimiter;

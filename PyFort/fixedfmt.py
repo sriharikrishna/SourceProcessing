@@ -2,7 +2,7 @@ from _Setup import *
 
 from PyUtil.flatten import flatten
 from PyUtil.chomp import chomp
-from kill_bang import *
+from PyFort.kill_bang import *
 from PyUtil.assembler import *
 
 def cont_p(l):

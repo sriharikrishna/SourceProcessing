@@ -3,10 +3,10 @@ Test the free format stuff by actually reading files
 '''
 from Setup     import *
 from unittest  import *
-from fortFile  import Ffile
-from fortLine  import *
-from fortStmts import *
-from fortStmts import _F90ExplLen,_Star,_NoInit,_Kind,_ExplKind
+from PyFort.fortFile  import Ffile
+from PyFort.fortLine  import *
+from PyFort.fortStmts import *
+from PyFort.fortStmts import _F90ExplLen,_Star,_NoInit,_Kind,_ExplKind
 from useparse  import *
 
 

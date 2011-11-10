@@ -5,7 +5,7 @@ import PyFort.fortStmts as fs
 from PyFort.fortUnit import fortUnitIterator
 import re,string
 from PyFort.fortScan import scan1
-from templateUnitMap import getTemplateUnit
+from PP.templateUnitMap import getTemplateUnit
 
 # Handles template expansion
 class TemplateExpansion(object):

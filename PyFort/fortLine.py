@@ -4,8 +4,8 @@ from _Setup import *
 from PyUtil.flatten import flatten
 from PyUtil.assembler import *
 from PyUtil.chomp import chomp
-from fixedfmt import fixedfmt
-import flow
+from PyFort.fixedfmt import fixedfmt
+import PyFort.flow
 import re
 
 fmt = 'fix'

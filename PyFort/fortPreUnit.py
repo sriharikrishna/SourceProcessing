@@ -25,9 +25,9 @@ TODO:
 '''
 
 from _Setup import *
-import fortStmts as fs
-from fortFile import Ffile
-from fortParse import parse_stmts,parse_cmnt
+import PyFort.fortStmts as fs
+from PyFort.fortFile import Ffile
+from PyFort.fortParse import parse_stmts,parse_cmnt
 from PyUtil.assembler import *
 from PyUtil.buf_iter import buf_iter
 

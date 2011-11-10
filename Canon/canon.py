@@ -14,8 +14,8 @@ import PyFort.flow as flow
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
 import PyFort.fortUnit as fortUnit
-import function2subroutine
-import subroutinizedIntrinsics
+import Canon.function2subroutine as function2subroutine
+import Canon.subroutinizedIntrinsics as subroutinizedIntrinsics
 
 import copy
 import itertools

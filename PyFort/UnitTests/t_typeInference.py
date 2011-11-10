@@ -1,13 +1,12 @@
 from Setup    import *
-from _Setup   import *
 from unittest import *
 from useparse import *
 
 from PyUtil.symtab import Symtab
 
-from inference import expressionType,_TypeContext,_kw2type,_lenfn 
-from fortStmts import LogicalStmt,CharacterStmt,IntegerStmt,RealStmt,DoubleStmt,ComplexStmt,DoubleCplexStmt
-from fortStmts import _Prec,_Kind,_F77Len
+from PyFort.inference import expressionType,_TypeContext,_kw2type,_lenfn 
+from PyFort.fortStmts import LogicalStmt,CharacterStmt,IntegerStmt,RealStmt,DoubleStmt,ComplexStmt,DoubleCplexStmt
+from PyFort.fortStmts import _Prec,_Kind,_F77Len
 
 Symtab.setTypeDefaults((RealStmt,[]),(IntegerStmt,[]))
 theSymtab = Symtab()

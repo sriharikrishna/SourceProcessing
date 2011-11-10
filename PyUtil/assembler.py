@@ -12,8 +12,8 @@ is the 'remainder' after the assembly
 
 from _Setup import *
 
-from flatten   import flatten
-from buf_iter  import buf_iter
+from PyUtil.flatten   import flatten
+from PyUtil.buf_iter  import buf_iter
 
 class pat(object):
     def __init__(self,fn):

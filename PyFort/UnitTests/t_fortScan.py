@@ -1,7 +1,7 @@
 from Setup import *
 
 from unittest import *
-from fortScan import *
+from PyFort.fortScan import *
 
 class C1(TestCase):
     def test1(self):

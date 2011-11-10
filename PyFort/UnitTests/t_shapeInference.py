@@ -1,5 +1,4 @@
 from Setup    import *
-from _Setup   import *
 from unittest import *
 from useparse import *
 
@@ -8,10 +7,10 @@ from useparse import *
 
 from PyUtil.symtab import Symtab, SymtabEntry
 
-from inference import expressionShape
-from fortStmts import IntegerStmt,RealStmt,DimensionStmt
-from fortStmts import _Prec,_Kind,_F77Len
-from fortExp   import Ops
+from PyFort.inference import expressionShape
+from PyFort.fortStmts import IntegerStmt,RealStmt,DimensionStmt
+from PyFort.fortStmts import _Prec,_Kind,_F77Len
+from PyFort.fortExp   import Ops
 
 class ShapeOpsExpressions(TestCase):
     'test shape inference for simple combinations of binary ops for constants and variables'

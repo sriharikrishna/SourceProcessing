@@ -1,7 +1,7 @@
 from Setup import *
 
 from unittest import *
-from fortPreUnit import fortPreUnitIterator
+from PyFort.fortPreUnit import fortPreUnitIterator
 
 class T1(TestCase):
     def test1(self):

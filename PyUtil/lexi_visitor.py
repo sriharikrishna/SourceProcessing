@@ -3,7 +3,7 @@ common routines for installing visitor/walker methods
 in classes
 '''
 
-from fval import Fval
+from PyUtil.fval import Fval
 
 class LexiVisitor(object):
     '''

@@ -8,8 +8,8 @@ from _Setup import *
 from PyUtil.symtab import Symtab,SymtabEntry,SymtabError, GenericInfo, FormalArgs, globalTypeTable
 from PyUtil.debugManager import DebugManager
 
-import fortStmts     as fs
-import fortExp       as fe
+import PyFort.fortStmts     as fs
+import PyFort.fortExp       as fe
 
 class InterfaceInfo:
     def __init__(self,name,parent):

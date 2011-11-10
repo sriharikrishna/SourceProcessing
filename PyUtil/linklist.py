@@ -8,7 +8,7 @@ nodes having efficient delete, splice methods:
 
 Nil singleton is created by creating 1 instance of local __Nil class
 '''
-from struct import Struct
+from PyUtil.struct import Struct
 
 class __Nil(object):
     'effectively, the nil object'

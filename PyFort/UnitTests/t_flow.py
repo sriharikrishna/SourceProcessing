@@ -4,8 +4,8 @@ fixed format flow_line rather extensively tested in other test suites
 '''
 from Setup     import *
 from unittest  import *
-from flow      import setInputFormat, setOutputFormat
-import flow
+from PyFort.flow      import setInputFormat, setOutputFormat
+import PyFort.flow as flow
 
 class T1(TestCase):
     def setUp(self):

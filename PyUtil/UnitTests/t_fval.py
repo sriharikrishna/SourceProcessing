@@ -1,7 +1,7 @@
 from Setup import *
 from unittest import *
 
-from fval import Fval
+from PyUtil.fval import Fval
 
 class X(object):pass
 

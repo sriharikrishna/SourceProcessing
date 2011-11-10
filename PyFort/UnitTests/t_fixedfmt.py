@@ -3,8 +3,8 @@ from copy      import copy as ocp
 from copy      import deepcopy as docp
 
 from Setup     import *
-from fixedfmt  import *
-from fixedfmt  import _comment_p
+from PyFort.fixedfmt  import *
+from PyFort.fixedfmt  import _comment_p
 from cStringIO import StringIO
 
 class preds(TestCase):

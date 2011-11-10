@@ -2,7 +2,6 @@
 
 import tempfile
 from Setup import *
-from _Setup import *
 from unittest import *
 from PyUtil.errors import UserError
 from PyUtil.symtab import Symtab
@@ -10,7 +9,7 @@ from PyFort.fortUnit import fortUnitIterator
 from PyFort.fortStmts import RealStmt,IntegerStmt,SubroutineStmt,ModuleStmt
 from PyFort.flow import setOutputFormat
 from PyUtil.debugManager import DebugManager
-from unitPostProcess import UnitPostProcessor,PostProcessError
+from PP.unitPostProcess import UnitPostProcessor,PostProcessError
 from PP.templateExpansion import TemplateExpansion
 
 '''

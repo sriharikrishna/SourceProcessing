@@ -1,10 +1,10 @@
 from Setup import *
 
-from assembler import *
+from PyUtil.assembler import *
 from unittest import *
-from flatten import flatten
-from chomp import chomp
-from buf_iter import buf_iter
+from PyUtil.flatten import flatten
+from PyUtil.chomp import chomp
+from PyUtil.buf_iter import buf_iter
 
 def mkpred(id):
     '''make a predicate assembler for a given id'''

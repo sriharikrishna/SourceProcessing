@@ -1,12 +1,11 @@
 from Setup    import *
-from _Setup   import *
 from unittest import *
 from useparse import *
 
-from fortScan import scan1
-from fortExp  import *
-from fortExp  import _optbl
-from fortExp  import _unary_ops
+from PyFort.fortScan import scan1
+from PyFort.fortExp  import *
+from PyFort.fortExp  import _optbl
+from PyFort.fortExp  import _unary_ops
 
 class C1(TestCase):
     def test01(self):

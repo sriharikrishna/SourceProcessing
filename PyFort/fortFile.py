@@ -7,14 +7,14 @@ Provide mappers, rewriters, string conversion facilities
 '''
 from _Setup import *
 from cStringIO import StringIO
-from fortLine  import fortLine,cline,fline
+from PyFort.fortLine  import fortLine,cline,fline
 from PyUtil.assembler import vgen,treat,disj
 from PyUtil.buf_iter  import buf_iter
 from PyUtil.errors import UserError
-from freefmt       import freefmt
-from fixedfmt      import fixedfmt
-from process_fort_stmt import process_fort_stmt,process_fort_cmnt
-import flow
+from PyFort.freefmt       import freefmt
+from PyFort.fixedfmt      import fixedfmt
+from PyFort.process_fort_stmt import process_fort_stmt,process_fort_cmnt
+import PyFort.flow as flow
 import os
 import re
 import tempfile

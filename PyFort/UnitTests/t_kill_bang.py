@@ -1,5 +1,5 @@
 from Setup import *
-from kill_bang import *
+from PyFort.kill_bang import *
 from unittest import *
 
 class C1(TestCase):

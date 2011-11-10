@@ -1,6 +1,6 @@
 from Setup import *
 from unittest import *
-from caselessDict import *
+from PyUtil.caselessDict import *
 
 class C1(TestCase):
     def test1(self):

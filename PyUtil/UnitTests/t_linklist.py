@@ -6,7 +6,7 @@ from Setup import *
 from unittest import *
 from itertools import *
 
-from linklist import LList,LLMutatorVal,LLMutatorTriv
+from PyUtil.linklist import LList,LLMutatorVal,LLMutatorTriv
 
 class C1(TestCase):
     def test1(self):

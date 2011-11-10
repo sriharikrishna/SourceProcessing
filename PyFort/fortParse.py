@@ -4,8 +4,8 @@ from _Setup import *
 
 from PyUtil.l_assembler import *
 
-import fortStmts    as fs
-from fortScan import scan1
+import PyFort.fortStmts    as fs
+from PyFort.fortScan import scan1
 from PyUtil.errors import ScanError
 
 # returns a list of parsed statements

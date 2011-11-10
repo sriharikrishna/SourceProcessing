@@ -1,9 +1,8 @@
 from Setup              import *
-from _Setup             import *
 from unittest           import *
 from PyUtil.l_assembler import *
 
-from op_prec import OpPrec
+from PyFort.op_prec import OpPrec
 
 def mkexp(e):
     (a,oplst) = e
@@ -12,7 +11,7 @@ def mkexp(e):
     return a
 
 def scan(s):
-    import fortScan as fs
+    import PyFort.fortScan as fs
     return filter(lambda x: x != ' ',fs.scan1.scan(s)[0])
 
 

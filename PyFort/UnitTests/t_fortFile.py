@@ -1,12 +1,11 @@
 from Setup     import *
 
 from unittest  import *
-from fortFile  import *
+from PyFort.fortFile  import *
 from itertools import *
-from _Setup    import *
 from PyUtil.chomp     import chomp
 
-import fortLine as fl
+import PyFort.fortLine as fl
 
 # internal comments should be preserved it the "internal" array, but NOT in the rawline
 def compareFiles(assertFunc,originalFileName,RefFileName,format):

@@ -1,5 +1,5 @@
 from _Setup import *
-import flow
+import PyFort.flow as flow
 import PyFort.fortStmts as fs
 from PyUtil.flatten import flatten
 from PyUtil.chomp import chomp

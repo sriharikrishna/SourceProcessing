@@ -3,9 +3,9 @@
 from Setup     import *
 from unittest  import *
 
-from fortExp import LoopControl,Sel
-from fortStmts import *
-from fortStmts import _F90Len,_F90ExplLen,_Star,_NoInit,_Kind,_Prec,_ExplKind,_AssignInit,_PointerInit,_ImplicitDoConstruct,_DimensionArraySpec
+from PyFort.fortExp import LoopControl,Sel
+from PyFort.fortStmts import *
+from PyFort.fortStmts import _F90Len,_F90ExplLen,_Star,_NoInit,_Kind,_Prec,_ExplKind,_AssignInit,_PointerInit,_ImplicitDoConstruct,_DimensionArraySpec
 from useparse  import *
 
 class C2(TestCase):

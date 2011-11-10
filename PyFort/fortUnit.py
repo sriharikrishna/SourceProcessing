@@ -9,12 +9,12 @@ from PyUtil.flatten import flatten
 from PyUtil.symtab import Symtab
 from PyUtil.errors import ParseError
 
-import fortStmts as fs
-from fortFile import Ffile
-from fortParse import parse_stmts,parse_cmnt
-import module_handler
+import PyFort.fortStmts as fs
+from PyFort.fortFile import Ffile
+from PyFort.fortParse import parse_stmts,parse_cmnt
+import PyFort.module_handler as module_handler
 
-import stmt2unit
+import PyFort.stmt2unit
 
 def instance_pred(*class_list):
     '''define a predicate that checks if argument is an instance of 1 of the

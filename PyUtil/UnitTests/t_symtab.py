@@ -1,6 +1,6 @@
 from Setup import *
 from unittest import *
-from symtab import Symtab, SymtabEntry
+from PyUtil.symtab import Symtab, SymtabEntry
 
 from PyFort.fortStmts import RealStmt,IntegerStmt
 

@@ -1,7 +1,7 @@
 from Setup import *
 from unittest import *
-from symtab import Symtab, SymtabEntry
-from typetab import Typetab, TypetabEntry
+from PyUtil.symtab import Symtab, SymtabEntry
+from PyUtil.typetab import Typetab, TypetabEntry
 
 import PyFort.fortStmts as fs
 import PyFort.fortExp as fe

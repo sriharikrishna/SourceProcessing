@@ -15,9 +15,9 @@ from PyUtil.errors  import ParseError, LogicError
 from PyUtil.l_assembler import AssemblerException as ListAssemblerException
 from PyUtil.debugManager import DebugManager
 
-from fortExp      import *
-from fixedfmt     import fixedfmt
-import flow
+from PyFort.fortExp      import *
+from PyFort.fixedfmt     import fixedfmt
+import PyFort.flow as flow
 import itertools
 import copy
 

@@ -1,6 +1,6 @@
 from Setup     import *
 from unittest  import *
-from buf_iter  import *
+from PyUtil.buf_iter  import *
 from itertools import *
 
 class C1(TestCase):

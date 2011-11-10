@@ -2,9 +2,9 @@ import sys
 
 from PyUtil.errors import ScanError,ParseError
 
-from fortScan import scan1
-from fortExp import Exp
-from fortStmts import parse
+from PyFort.fortScan import scan1
+from PyFort.fortExp import Exp
+from PyFort.fortStmts import parse
 
 def scan(s):
     (v,rst) = scan1.scan(s)

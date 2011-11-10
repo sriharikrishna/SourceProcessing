@@ -1,12 +1,11 @@
 from Setup import *
-from _Setup import *
 from unittest import *
 
 from PyUtil.symtab import Symtab
-from inference import expressionType
+from PyFort.inference import expressionType
 
-from stmt2unit import *
-from stmt2unit import _implicit
+from PyFort.stmt2unit import *
+from PyFort.stmt2unit import _implicit
 
 from useparse import *
 

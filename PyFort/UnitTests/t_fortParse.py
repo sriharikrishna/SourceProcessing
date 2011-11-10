@@ -1,10 +1,10 @@
 from Setup import *
 
 from unittest      import *
-from fortFile import Ffile
-from fortParse import parse_stmts,parse_cmnt
+from PyFort.fortFile import Ffile
+from PyFort.fortParse import parse_stmts,parse_cmnt
 from itertools     import *
-import fortStmts as fs
+import PyFort.fortStmts as fs
 
 class C1(TestCase):
     def test1(self):

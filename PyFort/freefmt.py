@@ -2,9 +2,9 @@ from _Setup import *
 
 from PyUtil.flatten import flatten
 from PyUtil.chomp import chomp
-from kill_bang import *
+from PyFort.kill_bang import *
 from PyUtil.assembler import *
-from fortScan import postluded_lo_q_patn, preluded_ro_q_patn
+from PyFort.fortScan import postluded_lo_q_patn, preluded_ro_q_patn
 
 _cont_re = r'& (([\s]*[!].*) | \s*) $'
 _cont_re = re.compile(_cont_re,re.X)

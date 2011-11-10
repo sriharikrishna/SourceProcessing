@@ -1,7 +1,7 @@
 '''
 Routine to kill bang(= !) comments from the end of the line
 '''
-from fortScan import q_re,qq_re, postluded_lo_q_patn
+from PyFort.fortScan import q_re,qq_re, postluded_lo_q_patn
 import re
 
 __eol_bang_re = r'''^((?: [^'"!] | (?: %s ) | (?: %s) )*) (! .*)$'''

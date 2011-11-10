@@ -3,7 +3,7 @@ utility for managing debugging verbosity on a global level
 '''
 
 from _Setup import *
-import enum
+import PyUtil.enum as enum
 
 class DebugManager(object):
 

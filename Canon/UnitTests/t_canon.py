@@ -2,14 +2,13 @@
 
 import tempfile
 from Setup import *
-from _Setup import *
 from unittest import *
 from PyUtil.errors import UserError
 from PyUtil.symtab import Symtab
 from PyFort.fortUnit import fortUnitIterator
 from PyFort.fortStmts import RealStmt,IntegerStmt
 from PyFort.flow import setOutputFormat
-from canon import UnitCanonicalizer,CanonError
+from Canon.canon import UnitCanonicalizer,CanonError
 from PyUtil.debugManager import DebugManager
 from PyFort.flow import setOutputFormat
 
