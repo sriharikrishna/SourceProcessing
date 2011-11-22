@@ -40,6 +40,9 @@ class _TypeMod(_Mutable_T):
     def __str__(self):
         return self.pat % str(self.mod)
 
+    def get_sons(self):
+        return self._sons
+
 class _Star(_Mutable_T):
     'Utility modifier type for character data'
     _sons = []
@@ -60,6 +63,9 @@ class _FLenMod(_Mutable_T):
     def __str__(self):
         return self.pat_ % str(self.len)
     
+    def get_sons(self):
+        return self._sons
+
 class _F90ExplLen(_FLenMod):
     'utility modifier for explicit len in F90 char data'
     pat_ = '(len=%s)'
@@ -112,6 +118,9 @@ class _DimensionArraySpec(_Mutable_T):
 
     def __str__(self):
         return '%s(%s)' % (self.arrayName,','.join(str(l) for l in self.arraySpec))
+
+    def get_sons(self):
+        return self._sons
 
 class _KindTypeMod(_TypeMod):
     def __deepcopy__(self,memo={}):
@@ -222,6 +231,9 @@ class _PointerInit(_Init):
     def __str__(self):
         return '%s => %s' % (str(self.lhs),
                              str(self.rhs))
+    def get_sons(self):
+        return self._sons
+
     def __deepcopy__(self,memo={}):
         return _PointerInit(self.lhs,self.rhs)
 class _AssignInit(_Init):
@@ -239,6 +251,9 @@ class _AssignInit(_Init):
     def __str__(self):
         return '%s = %s' % (str(self.lhs),
                              str(self.rhs))
+
+    def get_sons(self):
+        return self._sons
 
     def __deepcopy__(self,memo={}):
         return _AssignInit(self.lhs,self.rhs)
