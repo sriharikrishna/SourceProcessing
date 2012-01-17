@@ -1,3 +1,5 @@
+import PyFort.fortStmts as fs
+
 '''
 Module to list the intrinsic functions, and
 a predicate to test for a function being an intrinsic
@@ -100,16 +102,15 @@ __nonStandard = (
                  'sleep',
                  'time'   
                  )
-
 __builtInTypes = (
-    'integer_4',
-    'integer_8',
-    'real_4',
-    'real_8',
-    'complex_8',
-    'complex_16',
-    'logical',
-    'character',
+    (fs.CharacterStmt,4),
+    (fs.LogicalStmt,4),
+    (fs.IntegerStmt,4),
+    (fs.IntegerStmt,8),
+    (fs.RealStmt,4),
+    (fs.DoubleStmt,8),
+    (fs.ComplexStmt,8),
+    (fs.DoubleCplexStmt,16)
 )
 
 def getNonStandard():
