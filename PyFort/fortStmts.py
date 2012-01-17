@@ -43,12 +43,6 @@ class _TypeMod(_Mutable_T):
     def get_sons(self):
         return self._sons
 
-    def set_son(self,theSon,newSon):
-        oldSon = getattr(self,theSon)
-        if newSon is not oldSon:
-            setattr(self,theSon,newSon)
-            self.modified = True
-
 class _Star(_Mutable_T):
     'Utility modifier type for character data'
     _sons = []
@@ -71,12 +65,6 @@ class _FLenMod(_Mutable_T):
     
     def get_sons(self):
         return self._sons
-
-    def set_son(self,theSon,newSon):
-        oldSon = getattr(self,theSon)
-        if newSon is not oldSon:
-            setattr(self,theSon,newSon)
-            self.modified = True
 
 class _F90ExplLen(_FLenMod):
     'utility modifier for explicit len in F90 char data'
@@ -246,12 +234,6 @@ class _PointerInit(_Init):
     def get_sons(self):
         return self._sons
 
-    def set_son(self,theSon,newSon):
-        oldSon = getattr(self,theSon)
-        if newSon is not oldSon:
-            setattr(self,theSon,newSon)
-            self.modified = True
-
     def __deepcopy__(self,memo={}):
         return _PointerInit(self.lhs,self.rhs)
 class _AssignInit(_Init):
@@ -272,12 +254,6 @@ class _AssignInit(_Init):
 
     def get_sons(self):
         return self._sons
-
-    def set_son(self,theSon,newSon):
-        oldSon = getattr(self,theSon)
-        if newSon is not oldSon:
-            setattr(self,theSon,newSon)
-            self.modified = True
 
     def __deepcopy__(self,memo={}):
         return _AssignInit(self.lhs,self.rhs)
@@ -569,6 +545,7 @@ class TypeDecl(Decl):
         self.parameter=False
         self.dimension=None
         self.pointer=False
+        self.allocatable=False
         if self.attrs is not None:
             for anAttr in self.attrs:
                 if isinstance(anAttr,App):
@@ -578,6 +555,8 @@ class TypeDecl(Decl):
                     self.parameter=True
                 elif anAttr.lower()=='pointer':
                     self.pointer=True
+                elif anAttr.lower()=='allocatable':
+                    self.allocatable=True
 
     def __repr__(self):
         return '%s(%s,%s,%s)' % (self.__class__.__name__,
@@ -596,6 +575,14 @@ class TypeDecl(Decl):
                                  modstr,
                                  attr_str,
                                  ','.join([str(d) for d in self.decls]))
+
+    def add_dimension(self,dimensions):
+        self.dimension=dimensions
+        self.attrs.append(fe.App('dimension',dimensions))
+
+    def addPointerAttr(self):
+        self.pointer=True
+        self.attrs.append('pointer')
 
     def get_mod(self):
         return self.mod
