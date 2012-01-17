@@ -8,7 +8,7 @@ from _Setup import *
 from PyUtil.symtab import Symtab,SymtabEntry,SymtabError, GenericInfo, FormalArgs, globalTypeTable
 from PyUtil.debugManager import DebugManager
 
-import PyFort.fortStmts     as fs
+import fortStmts     as fs
 import PyFort.fortExp       as fe
 
 class InterfaceInfo:
@@ -89,7 +89,7 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
             theSymtabEntry = localSymtab.lookup_name_local(name)
             if theSymtabEntry: # already in symtab -> enter new information (taking exception to any conflicts)
                 DebugManager.debug('decl "'+str(aDecl)+'" already present in local symbol table as '+str(theSymtabEntry.debug(name)))
-                theSymtabEntry.enterType(newType)
+                #theSymtabEntry.enterType(newType)
                 if (theSymtabEntry.dimensions and (newDimensions is None)):
                     pass
                 else:
@@ -148,7 +148,7 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                     raise SymtabError('no arguments set for specific '+curr.val.name()+' under generic '+ unitSymbolEntry.genericInfo.genericName+' entry: '+localSymtab.lookup_name(unitSymbolEntry.genericInfo.genericName).debug(unitSymbolEntry.genericInfo.genericName))
                 if name.lower() in argsTypeDict:
                     se=localSymtab.lookup_name_local(name)
-                    argsTypeDict[name.lower()]=(se.type,se.dimensions)
+                    argsTypeDict[name.lower()]=(se.typetab_id,se.dimensions)
                     DebugManager.debug('recorded type in '+str(id(argsTypeDict))+str(argsTypeDict))
         except SymtabError,e: # add lineNumber and symbol name to any SymtabError we encounter
             e.lineNumber = e.lineNumber or aTypeDeclStmt.lineNumber
@@ -208,7 +208,7 @@ def _processExternalStmt(anExternalStmt,curr):
             else:
                 DebugManager.debug('\tprocedure already has SymtabEntry'+theSymtabEntry.debug(aProcedureName))
                 # if the entry has a type, we know it's a function
-                newEntryKind = theSymtabEntry.type and SymtabEntry.FunctionEntryKind \
+                newEntryKind = theSymtabEntry.typetab_id and SymtabEntry.FunctionEntryKind \
                                                     or SymtabEntry.ProcedureEntryKind
                 theSymtabEntry.enterEntryKind(newEntryKind)
         except SymtabError,e: # add lineNumber and symbol name to any SymtabError we encounter
@@ -229,12 +229,16 @@ def _processCommonStmt(aCommonStmt,curr):
                 aDeclName=aDecl
             theSymtabEntry = localSymtab.lookup_name(aDeclName)
             if not theSymtabEntry:
-                newSymtabEntry = SymtabEntry(SymtabEntry.VariableEntryKind,
-                                             origin=Symtab._ourCommonScopePrefix+aCommonStmt.name)
-                localSymtab.enter_name(aDeclName,newSymtabEntry)
-                if isinstance(aDecl,fe.App):
-                    newSymtabEntry.enterDimensions(aDecl.args)
-                DebugManager.debug('\tcommon variable NOT already present in symbol table -- adding '+newSymtabEntry.debug(aDeclName))
+                # symtab entry will be added by declaration
+                pass
+                #theTypeId = globalTypeTable.getType(aDecl,localSymtab)
+                # newSymtabEntry = SymtabEntry(SymtabEntry.VariableEntryKind,
+                #                              origin=Symtab._ourCommonScopePrefix+aCommonStmt.name)
+                # print "NEW ENTRY:",newSymtabEntry.debug()
+                # localSymtab.enter_name(aDeclName,newSymtabEntry)
+                # if isinstance(aDecl,fe.App):
+                #     newSymtabEntry.enterDimensions(aDecl.args)
+                # DebugManager.debug('\tcommon variable NOT already present in symbol table -- adding '+newSymtabEntry.debug(aDeclName))
             else:
                 DebugManager.debug('\tcommon variable already has SymtabEntry'+theSymtabEntry.debug(aDeclName))
                 theSymtabEntry.enterEntryKind(SymtabEntry.VariableEntryKind)
@@ -342,7 +346,7 @@ def _unit_entry(self,cur):
             # this is the definition of a previously declared module procedure
             entry = self.makeSymtabEntry(currentSymtab)
             mpSymtabEntry.entryKind=entry.entryKind
-            mpSymtabEntry.type=entry.type
+            mpSymtabEntry.typetab_id=entry.typetab_id
             entry.genericInfo=mpSymtabEntry.genericInfo
             currentSymtab.enter_name(self.name,entry)
             # if it is a function  - collect argument information
@@ -389,13 +393,16 @@ def _unit_exit(self,cur):
         parentSymtabEntry=None
         if cur.val.symtab.parent:
             parentSymtabEntry=cur.val.symtab.parent.lookup_name(cur.val._in_functionDecl.name)
-        if (theSymtabEntry.type is None and cur.val._in_functionDecl.result):
+        if (theSymtabEntry.typetab_id is None and cur.val._in_functionDecl.result):
             # try to get the type from the result symbol
             theResultEntry=cur.val.symtab.lookup_name(cur.val._in_functionDecl.result)
             if (theResultEntry):
-                theSymtabEntry.copyAndEnterType(theResultEntry.type)
+                theSymtabEntry.copyAndEnterType(theResultEntry.typetab_id)
                 if parentSymtabEntry:  # update the copy in the parent
-                    parentSymtabEntry.copyAndEnterType(theResultEntry.type)
+                    parentSymtabEntry.copyAndEnterType(theResultEntry.typetab_id)
+        else:
+            if parentSymtabEntry: # update the copy in the parent
+                parentSymtabEntry.copyAndEnterType(theSymtabEntry.typetab_id)
         # set the arguments list:
         theSymtabEntry.funcFormalArgs=FormalArgs()
         if parentSymtabEntry:
@@ -456,7 +463,7 @@ def _processEntry(self,cur):
             raise SymtabError('parent symbol is not a module procedure')
         entry = SymtabEntry(currentSymtab.lookup_name(cur.val.uinfo.name).entryKind)
         mpSymTabEntry.entryKind=entry.entryKind
-        mpSymTabEntry.type=entry.type
+        mpSymTabEntry.typetab_id=entry.typetab_id
         entry.genericInfo=mpSymTabEntry.genericInfo
         currentSymtab.enter_name(self.name,entry)
         # if it is a function  - collect argument information
@@ -508,11 +515,11 @@ def _endProcedureUnit(anEndProcedureStmt,cur):
     '''
     if cur.val._in_iface._in_procedureFuncDecl:
         theSymtabEntry=cur.val.symtab.lookup_name(cur.val._in_iface._in_procedureFuncDecl.name)
-        if (theSymtabEntry.type is None and cur.val._in_iface._in_procedureFuncDecl.result):
+        if (theSymtabEntry.typetab_id is None and cur.val._in_iface._in_procedureFuncDecl.result):
             # try to get the tupe from the result symbol
             theResultEntry=cur.val.symtab.lookup_name(cur.val._in_iface._in_procedureFuncDecl.name)
             if (theResultEntry):
-                theSymtabEntry.copyAndEnterType(theResultEntry.type)
+                theSymtabEntry.copyAndEnterType(theResultEntry.typetab_id)
         cur.val._in_iface._in_procedureFuncDecl=None         
     if cur.val.symtab.parent :
         DebugManager.debug('[Line '+str(anEndProcedureStmt.lineNumber)+']: stmt2unit._endProcedureUnit:' \
@@ -554,7 +561,7 @@ def _processProcedureStmt(aProcedureStmt,curr):
             else:
                 DebugManager.debug('\t_processProcedureStmt: module procedure already has SymtabEntry'+theSymtabEntry.debug(aProcedureName))
                 # if the entry has a type, we know it's a function
-                newEntryKind = theSymtabEntry.type and SymtabEntry.FunctionEntryKind \
+                newEntryKind = theSymtabEntry.typetab_id and SymtabEntry.FunctionEntryKind \
                                                     or SymtabEntry.ProcedureEntryKind
                 theSymtabEntry.enterEntryKind(newEntryKind)
         except SymtabError,e: # add lineNumber and symbol name to any SymtabError we encounter
@@ -584,7 +591,7 @@ def _endInterface(anEndInterfaceStmt,cur):
                 else:
                     DebugManager.debug('\tmodule procedure already has SymtabEntry'+theSymtabEntry.debug(name))
                     # if the entry has a type, we know it's a function
-                    newEntryKind = theSymtabEntry.type and SymtabEntry.FunctionEntryKind \
+                    newEntryKind = theSymtabEntry.typetab_id and SymtabEntry.FunctionEntryKind \
                                                         or SymtabEntry.ProcedureEntryKind
                     theSymtabEntry.enterEntryKind(newEntryKind)
                     if (theSymtabEntry.genericInfo):
@@ -627,7 +634,11 @@ def _processSons(aStmt,curr):
 
 # hooks used ONLY IN THIS MODULE:
 def _makeFunctionSymtabEntry(aFunctionStmt,localSymtab):
-    return SymtabEntry(SymtabEntry.FunctionEntryKind,aFunctionStmt.ty)
+    if aFunctionStmt.ty is not None:
+        typeId=globalTypeTable.getType(aFunctionStmt.ty[0](aFunctionStmt.ty[1],[],[]),localSymtab)
+    else: 
+        typeId=None
+    return SymtabEntry(SymtabEntry.FunctionEntryKind,typetab_id=typeId)
 fs.FunctionStmt.makeSymtabEntry   = _makeFunctionSymtabEntry
 def _makeSubroutineSymtabEntry(self,localSymtab):
     return SymtabEntry(SymtabEntry.SubroutineEntryKind)

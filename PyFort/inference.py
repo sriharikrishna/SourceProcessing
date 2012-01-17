@@ -6,11 +6,11 @@ import copy
 from _Setup import *
 
 from PyUtil.debugManager import DebugManager
-from PyUtil.symtab import SymtabEntry
-
-import PyFort.fortStmts as fortStmts
-from PyFort.fortExp import App,NamedParam,Sel,Unary,Ops,isConstantExpression,is_const,is_id,_id_re,_flonum_re,_int_re,_logicon_set,_quote_set,Slice,Zslice,Lslice,Rslice,ArrayConstructor
-from PyFort.intrinsic import is_intrinsic, is_inquiry, getNonStandard
+from PyUtil.symtab import SymtabEntry,globalTypeTable
+from PyUtil.typetab import TypetabEntry
+import fortStmts
+from fortExp import App,NamedParam,Sel,Unary,Ops,isConstantExpression,is_const,is_id,_id_re,_flonum_re,_int_re,_logicon_set,_quote_set,Slice,Zslice,Lslice,Rslice,ArrayConstructor
+from intrinsic import is_intrinsic, is_inquiry, getNonStandard
 
 class InferenceError(Exception):
    '''exception for ...'''
@@ -112,15 +112,42 @@ class _TypeContext:
 
       return t2
 
+   def __typeCompare(self,t1,t2,addLength):
+      DebugManager.debug(sys._getframe().f_code.co_name+' called on t1 = "'+t1.debug()+'\tt2 = "'+t2.debug()+'"')
+      mergeit = dict(character=0,
+                     logical=1,
+                     integer_4=2,
+                     real_4=3,
+                     real_8=4,
+                     complex_8=5,
+                     complex_16=6,
+                     )
+      if globalTypeTable.equivalence(t1,t2):
+         return t1
+      if isinstance(t1.entryKind,TypetabEntry.ArrayEntryKind):
+         # get type name of built in type
+         t1_type=globalTypeTable.lookupTypeId(t1.entryKind.typetab_id).entryKind.type_name
+      else: t1_type=t1.entryKind.type_name
+      if isinstance(t2.entryKind,TypetabEntry.ArrayEntryKind):
+         # get type name of built in type
+         t2_type=globalTypeTable.lookupTypeId(t2.entryKind.typetab_id).entryKind.type_name
+      else: t2_type=t2.entryKind.type_name
+      if mergeit[t1_type] > mergeit[t2_type]: return t1
+      return t2
+
+   # each item of list should be a typetab_id
    def _typemerge(self,lst,default,addLength=False):
       DebugManager.debug(sys._getframe().f_code.co_name+' called on '+str(lst)+'...',newLine=False)
       if not lst: return default
       if len(lst) == 1: return lst[0]
-      t1 = self.__typeCompare(lst[0],lst[1],addLength)
+      entry=globalTypeTable.lookupTypeId(lst[0])
+      entry1=globalTypeTable.lookupTypeId(lst[1])
+      mergedEntry = self.__typeCompare(entry,entry1,addLength)
       for l in lst[2:]:
-         t1 = self.__typeCompare(t1,l,addLength)
-      DebugManager.debug(' result is '+str(t1))
-      return t1
+         entry=globalTypeTable.lookupTypeId(l)
+         mergedEntry = self.__typeCompare(mergedEntry,entry,addLength)
+      DebugManager.debug(' result is '+str(mergedEntry))
+      return mergedEntry.typetab_id
 
    def _constantType(self,e):
       kind_re = re.compile(r'_(\w+)')
@@ -131,23 +158,43 @@ class _TypeContext:
                                              or _kw2type('real')
          kind   = v.group(2) and [fortStmts._Kind(v.group(3))] \
                               or []
-         return (ty,kind)
+         if ty==fortStmts.DoubleStmt:
+            typeName='real'
+         elif ty==fortStmts.DoubleCplexStmt:
+            typeName='complex'
+         else: typeName=ty.kw
+         if len(kind)>0:
+            [kindexp] = kind
+            numBytes = self.__guessBytesFromKind(kindexp.mod)
+         else: 
+            numBytes = self._guessBytes((ty,kind))
+         typeName=typeName+'_'+str(numBytes)
+         return globalTypeTable.intrinsicTypeToIdMap[typeName]
       if _int_re.match(e):
          ty   = _kw2type('integer')
          kind = kind_re.search(e)
          kind = kind and [fortStmts._Kind(kind.group(1))] \
                       or []
-         return (ty,kind)
+         if (len(kind)>0):
+            [kindexp]=kind
+            numBytes = self.__guessBytesFromKind(kindexp.mod)
+            typeName = ty.kw+'_'+str(numBytes)
+         elif ty.kw=='real' or ty.kw=='integer':
+            # TODO
+            typeName=ty.kw+'_4'
+         else:
+            typeName=ty.kw
+         return globalTypeTable.intrinsicTypeToIdMap[typeName]
       if e.lower() in _logicon_set:
-         return (_kw2type('logical'),[])
+         return globalTypeTable.intrinsicTypeToIdMap['logical']
       if e[0] in _quote_set:
          return (_kw2type('character'),_lenfn(len(e)-2))
 
    def __identifierType(self,anId):
       (symtabEntry,containingSymtab) = self.localSymtab.lookup_name_level(anId)
       # a type is known -> return it
-      if symtabEntry and symtabEntry.type:
-         returnType = symtabEntry.type
+      if symtabEntry and symtabEntry.typetab_id:
+         returnType = symtabEntry.typetab_id
          DebugManager.debug('with symtab entry '+symtabEntry.debug(anId)+' -> returning type '+str(returnType))
       # an entry exists with no type -> try to type implicitly
       elif symtabEntry and symtabEntry.entryKind==SymtabEntry.InterfaceEntryKind:
@@ -159,10 +206,26 @@ class _TypeContext:
          if implicitLocalType: # we handle the error condition below
             symtabEntry.enterType(containingSymtab.implicit[anId[0]])
             DebugManager.warning(sys._getframe().f_code.co_name+' implicit typing: '+symtabEntry.typePrint()+' '+anId,self.lineNumber,DebugManager.WarnType.implicit)
-         returnType = implicitLocalType
+            returnType = globalTypeTable.getType(implicitLocalType[0](implicitLocalType[1],[],[]),self.localSymtab)
+         else:
+            #TODO
+            return None
       else: # no symtab entry -> try local implicit typing
-         returnType = self.localSymtab.implicit[anId[0]]
-         if (returnType):
+         implicitType = self.localSymtab.implicit[anId[0]]
+         (theType,theMods)=implicitType
+         typeName = theType.kw
+         if len(theMods)>0:
+            [kindexp]=theMods
+            numBytes=self.__guessBytesFromKind(kindexp.mod)
+            if numBytes:
+               typeName=typeName+'_'+numBytes
+         elif typeName=='real' or typeName=='integer':
+            # TODO
+            typeName=typeName+'_4'
+         elif typeName=='doubleprecision':
+            typeName='real_8'
+         return globalTypeTable.intrinsicTypeToIdMap[typeName]
+      if (returnType):
             DebugManager.warning(sys._getframe().f_code.co_name+' implicit typing: '+SymtabEntry.ourTypePrint(returnType)+' '+anId,self.lineNumber,DebugManager.WarnType.implicit)
       if not returnType:
          raise InferenceError(sys._getframe().f_code.co_name+': No type could be determined for identifier "'+anId+'"',self.lineNumber)
@@ -170,35 +233,43 @@ class _TypeContext:
 
    def __intrinsicType(self,anIntrinsicApp):
       if anIntrinsicApp.head.lower() in ['aimag','alog']:
-         return (fortStmts.RealStmt, [])
+         return globalTypeTable.intrinsicTypeToIdMap['real_4']
       elif anIntrinsicApp.head.lower() == 'real':
+         typeName='real'
          typeMod=[]
          if (len(anIntrinsicApp.args)==2): # the second argument would be the kind parameter
              typeMod.append(fortStmts._Kind(anIntrinsicApp.args[1]))
-         return (fortStmts.RealStmt, typeMod)
+             numBytes=self.__guessBytesFromKind(fortStmts._Kind(anIntrinsicApp.args[1]))
+             typeName=typeName+'_'+numBytes
+         else:
+            typeName=typeName+'_4'
+         return globalTypeTable.intrinsicTypeToIdMap[typeName]
       elif anIntrinsicApp.head.lower() in ['ichar','idint','int','lbound','maxloc','scan','shape','size','ubound']:
-         return (fortStmts.IntegerStmt, [])
+         return globalTypeTable.intrinsicTypeToIdMap['integer_4']
       elif anIntrinsicApp.head.lower() in ['dble','dfloat','dabs','dexp','dlog','dsqrt','dmod']:
-         return (fortStmts.DoubleStmt, [])
+         return globalTypeTable.intrinsicTypeToIdMap['real_8']
       elif anIntrinsicApp.head.lower() == 'cmplx':
-         return (fortStmts.ComplexStmt, [])
+         return globalTypeTable.intrinsicTypeToIdMap['complex_8']
       elif anIntrinsicApp.head.lower() == 'repeat':
-         return (fortStmts.CharacterStmt, [])
+         return globalTypeTable.intrinsicTypeToIdMap['character']
       elif anIntrinsicApp.head.lower() in ['all','iand','ior','lge','lgt','lle','llt','present']:
-         return (fortStmts.LogicalStmt, [])
+         return globalTypeTable.intrinsicTypeToIdMap['logical']
       elif anIntrinsicApp.head.lower() in ['transfer']:
          return self._expressionType(anIntrinsicApp.args[1]) # the type of the second argument
       elif anIntrinsicApp.head.lower() in ['reshape']:
          return self._expressionType(anIntrinsicApp.args[0]) # the type of the first argument
       #nonstandard ones: we check is_intrinsic before this is called.
       elif anIntrinsicApp.head.lower() in getNonStandard():
-         return (fortStmts.IntegerStmt, [])
+         return globalTypeTable.intrinsicTypeToIdMap['integer_4']
       else:
          return self._typemerge([self._expressionType(anArg) for anArg in anIntrinsicApp.args],
                                 (None,None))
       
    def __guessBytesFromKind(self,aKindExpressionMod) :
       kindList=['kind','selected_real_kind','selected_int_kind']
+      if isinstance(aKindExpressionMod,fortStmts._KindTypeMod):
+         theExpr=aKindExpressionMod
+         return self.__guessBytesFromKind(aKindExpressionMod.mod)
       if (isinstance(aKindExpressionMod,App) and (aKindExpressionMod.head.lower() in kindList)):
          theExpr=aKindExpressionMod.args[0]
          if isinstance(theExpr,NamedParam):
@@ -268,6 +339,10 @@ class _TypeContext:
       return True
 
    def matchTypes(self,aTypePair):
+      if aTypePair[0]==aTypePair[1]:
+         return True
+      else:
+         return False
       aTypeClassPair=map(lambda l: l[0],aTypePair)
       if (all(map(lambda l: l in [fortStmts.DoubleStmt,fortStmts.RealStmt],aTypeClassPair))) :
          if (self._guessBytes(aTypePair[0])==self._guessBytes(aTypePair[1])):
@@ -280,7 +355,7 @@ class _TypeContext:
    def __genericFunctionType(self,aFunctionApp):
       specInfo=_genericResolve(aFunctionApp,self.localSymtab,self.lineNumber)
       if specInfo:
-         return specInfo[1].type
+         return specInfo[1].typetab_id
 
    def _appType(self,anApp):
       DebugManager.debug(sys._getframe().f_code.co_name+' called on '+str(anApp)+'...',newLine=False)
@@ -307,7 +382,8 @@ class _TypeContext:
       # lookup type of head
       dType=self._expressionType(aSelectionExpression.head)
       # lookup the projection type
-      pType=self.__identifierType(dType[1][0]+":"+aSelectionExpression.proj)
+      pType=self.__identifierType(aSelectionExpression.proj)
+      #pType=self.__identifierType(dType[1][0]+":"+aSelectionExpression.proj)
       return pType
 
    def _expressionType(self,anExpression):
@@ -343,7 +419,7 @@ class _TypeContext:
          return self.__selectionType(anExpression)
       elif isinstance(anExpression,Slice) :
          DebugManager.debug(' it\'s a SLICE EXPRESSION')
-         return (fortStmts.IntegerStmt, [])
+         return globalTypeTable.intrinsicTypeToIdMap['integer_4']
       elif isinstance(anExpression,fortStmts._NoInit):
          DebugManager.debug(' it\'s a NO INIT EXPRESSION')
          return self._expressionType(anExpression.lhs)
@@ -678,9 +754,23 @@ def __selSymtabName(aSel,localSymtab,lineNumber):
    ''' for aSel the name to be used for a symbol table lookup is "<type_name>:<member name>" '''
    # lookup type of head
    dType=expressionType(aSel.head,localSymtab,lineNumber)
-   if (not dType[1]):
+   if (not dType):
       raise InferenceError(sys._getframe().f_code.co_name+': Did not correctly resolve type of "'+aSel.head+'"',lineNumber)
    return dType[1][0]+":"+aSel.proj
+
+def __ntSymtabEntry(namedType,localSymtab,lineNumber):
+   if isinstance(namedType,Sel) or isinstance(namedType,App):
+      return __ntSymtabEntry(namedType.head,localSymtab,lineNumber)
+   else:
+      headType=expressionType(namedType,localSymtab,lineNumber)
+      typeEntry=globalTypeTable.lookupTypeId(headType)
+      if isinstance(typeEntry.entryKind,TypetabEntry.ArrayEntryKind):
+         theTypeId=typeEntry.getBaseTypeId()
+         namedTypeEntry=globalTypeTable.lookupTypeId(theTypeId)
+         theSymtabEntry=namedTypeEntry.entryKind.localSymtab.lookup_name(namedType)
+      else:
+         theSymtabEntry=typeEntry.entryKind.localSymtab.lookup_name(namedType)
+      return theSymtabEntry
 
 def isArrayReference(theApp,localSymtab,lineNumber):
    if not isinstance(theApp,App):
@@ -688,10 +778,9 @@ def isArrayReference(theApp,localSymtab,lineNumber):
    DebugManager.debug(sys._getframe().f_code.co_name+' Application Expression "'+str(theApp))
    lookupName=""
    if isinstance(theApp.head,Sel): # example type%member(1)
-      lookupName=__selSymtabName(theApp.head,localSymtab,lineNumber)
+      theSymtabEntry=__ntSymtabEntry(theApp.head,localSymtab,lineNumber)
    else:
-      lookupName=theApp.head
-   theSymtabEntry=localSymtab.lookup_name(lookupName)
+      theSymtabEntry=localSymtab.lookup_name(theApp.head)
    DebugManager.debug(sys._getframe().f_code.co_name+' symtab entry is '+str(theSymtabEntry))
    if not theSymtabEntry:
       return False
