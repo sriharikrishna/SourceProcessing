@@ -14,9 +14,7 @@ from PyFort.fortExp import App, Unary,Ops,is_const,_id_re
 from PyFort.fortStmts import _PointerInit, _Kind, PrivateStmt, PublicStmt
 from PyFort.intrinsic import is_intrinsic
 
-from PyUtil.typetab import Typetab
-global globalTypeTable
-globalTypeTable=Typetab()
+from PyUtil.typetab import Typetab,globalTypeTable
 
 class GenericInfo(object):
     def __init__(self):
@@ -82,7 +80,7 @@ class Symtab(object):
     ourSpecificAccessKWs=[PublicStmt.kw, PrivateStmt.kw]
     def __init__(self,parent=None):
         self.ids    = cDict() # string for the key and SymtabEntry for the value
-        self.renames = cDict() # renameSource for the key and new name for the value
+        self.renames = cDict() # renameKey for the key and new name for the value
         self.parent = parent
         self.labelRefs = {} # list of statements referring to a given label
         # the following settings refer to the kw of the PublicStmt and PrivateStmt 
@@ -157,11 +155,7 @@ class Symtab(object):
                 #if there is no entry in the symtab, but there is a rename defined in the target entry symtab, rename
                 anExpression = targetEntrySymtab.__sourceToRenamed(anExpression)
         elif isinstance(anExpression,App):
-            newArgs=[]
-            for anArg in anExpression.args:
-                newArg=self.__rename(anArg,targetEntrySymtab,replicatingUp)
-                newArgs.append(newArg)
-            anExpression.args=newArgs
+            anExpression.args = map(lambda anArg: self.__rename(anArg,targetEntrySymtab,replicatingUp),anExpression.args)
         else:
             raise SymtabError(sys._getframe().f_code.co_name+': expression'+str(anExpression)+'is not a string and not an App!')
         return anExpression
@@ -172,8 +166,8 @@ class Symtab(object):
         with things that are applicable in a general context
         '''
         if isinstance(anExpression,str):
-            if (anExpression in self.ids) and (self.ids[anExpression].renameSource):
-                return self.ids[anExpression].renameSource
+            if (anExpression in self.ids) and (self.ids[anExpression].renameKey):
+                return self.ids[anExpression].renameKey
         elif isinstance(anExpression,App):
             for anArg in anExpression.args:
                 anArg = self.__renamedToSource(anArg)
@@ -197,14 +191,6 @@ class Symtab(object):
             raise SymtabError(sys._getframe().f_code.co_name+': expression'+str(anExpression)+'is not a string and not an App!')
         return anExpression
 
-    def __typeHandler(self,targetEntry,targetEntrySymtab,replicatingUp=False):
-        if (targetEntry.type):
-            # look for attribute mod names in this symbol table.  If they are in there and have a rename, use the rename in the new entry
-            (typename,modifiers) = targetEntry.type
-            for aModifier in modifiers:
-                if isinstance(aModifier,_Kind):
-                    aModifier.mod = self.__rename(aModifier.mod,targetEntrySymtab,replicatingUp)
-
     def replicateEntry(self,aKey,theOrigin,newName,otherSymtab,replicatingUp=False):
         '''
         create and return a new symbol table entry that is for use in another context
@@ -215,8 +201,7 @@ class Symtab(object):
         theLocalEntry = self.ids[aKey]
         theNewEntry = SymtabEntry(theLocalEntry.entryKind)
         # set the type
-        theNewEntry.type = SymtabEntry.copyType(theLocalEntry.type)
-        self.__typeHandler(theNewEntry,otherSymtab,replicatingUp)
+        theNewEntry.typetab_id = theLocalEntry.typetab_id
         # set the dimensions
         theNewEntry.dimensions = theLocalEntry.dimensions
         # set the length
@@ -236,7 +221,6 @@ class Symtab(object):
         if (self.parent.ids[parentEntryName]!=parentEntry):
             raise SymtabError(sys._getframe().f_code.co_name+": entry "+parentEntry.debug(parentEntryName)+" not in parent symbol table "+self.parend.debug())    
         parentEntry._augmentParentEntryFrom(origEntry)
-        self.__typeHandler(parentEntry,self.parent,replicatingUp=True)
         
     def update_w_module_all(self,aModuleUnit,renameList):
         'update self with all ids from module "unit" symtab, making sure to enter local names whenever there are renames. module name = "name"'
@@ -249,7 +233,9 @@ class Symtab(object):
                     if aRenameItem.rhs == aKey:
                         self.renames[aKey]=aRenameItem.lhs
                         # add the local name to the symbol table and track the original name
-                        aModuleUnit.symtab.replicateEntry(aKey,Symtab._ourModuleScopePrefix+aModuleUnit.name(),aRenameItem.lhs,self).renameSource = aKey
+                        renameEntry=aModuleUnit.symtab.replicateEntry(aKey,Symtab._ourModuleScopePrefix+aModuleUnit.name(),aRenameItem.lhs,self)
+                        renameEntry.renameKey=aKey
+                        renameEntry.referenceEntry=aModuleUnit.symtab.lookup_name(aKey)
                         noRename = False
             if noRename:
                 aKey,aModuleUnit.symtab.replicateEntry(aKey,Symtab._ourModuleScopePrefix+aModuleUnit.name(),aKey,self)
@@ -260,7 +246,9 @@ class Symtab(object):
             # rename items: add only the lhs of the pointer init
             if isinstance(anOnlyItem,_PointerInit):
                 self.renames[anOnlyItem.rhs]=anOnlyItem.lhs
-                aModuleUnit.symtab.replicateEntry(anOnlyItem.rhs,Symtab._ourModuleScopePrefix+aModuleUnit.name(),anOnlyItem.lhs,self).renameSource=anOnlyItem.rhs
+                renameEntry=aModuleUnit.symtab.replicateEntry(anOnlyItem.rhs,Symtab._ourModuleScopePrefix+aModuleUnit.name(),anOnlyItem.lhs,self)
+                renameEntry.renameKey=anOnlyItem.rhs
+                renameEntry.referenceEntry=aModuleUnit.symtab.lookup_name(anOnlyItem.rhs)
             else:
                 aModuleUnit.symtab.replicateEntry(anOnlyItem,Symtab._ourModuleScopePrefix+aModuleUnit.name(),anOnlyItem,self)
 
@@ -370,27 +358,27 @@ class SymtabEntry(object):
     class DerivedTypeEntryKind(GenericEntryKind):
         keyword = 'type'
 
-    def __init__(self,entryKind,type=None,dimensions=None,length=None,origin=None,renameSource=None,access=None):
+    def __init__(self,entryKind,type=None,dimensions=None,length=None,origin=None,renameKey=None,access=None,typetab_id=None):
         self.entryKind = entryKind # some instanve of self.GenericEntryKind
+        # use type table now
         self.type = type # pair  (type class,type modifier) 
         self.dimensions = dimensions # None or list of expressions
         self.length = length # specific for character statements, see stmt2unit
         self.constInit=None #  expression if initialized with a constant expression 
         self.origin = origin # None | [<parent origin>'|'](| 'local' | 'dummy' | 'external' | 'temp' | 'common:'[<common block name])
-        self.renameSource = renameSource
+        self.renameKey = renameKey # name of variable before rename; key into renames dict
+        self.referenceEntry=None # symtabEntry for symbol which this alias is renamed or copied from
         self.access = access# None | 'private' | 'public' | 'privatedefault' | 'publicdefault']
         # takes a GenericInfo instance when used for generic functions/subroutines (interfaces)
         self.genericInfo = None 
         # for functions takes a FormalArgs instance when used for the specific (non-generic) parameter list 
         self.funcFormalArgs = None 
         self.memberOfDrvdType = None
-        self.typetab_id = None
+        self.typetab_id = typetab_id
 
     @staticmethod
     def ourTypePrint(type):
-        rstr=type[0].kw_str
-        rstr+=len(type[1]) and str(type[1][0]) or ''
-        return rstr
+        return globalTypeTable.lookupTypeId(type).debug()
 
     @staticmethod
     def copyType(type):
@@ -402,7 +390,7 @@ class SymtabEntry(object):
         return (type[0],mods)
     
     def typePrint(self):
-        return SymtabEntry.ourTypePrint(self.type)
+        return globalTypeTable.lookupTypeId(self.typetab_id).debug()
 
     def getScopePrefix(self,theUnit):
         if (self.origin) : 
@@ -432,15 +420,16 @@ class SymtabEntry(object):
         DebugManager.debug('\t\tSymtabEntry.enterType: entering type '+str(newType)+' for '+str(self))
         if not newType:
             raise SymtabError('SymtabEntry.enterType: newType is None!',entry=self)
-        if self.type : # assume a name clash
+        if self.typetab_id : # assume a name clash
             raise SymtabError('SymtabEntry.enterType: Name clash -- the declaration for this symbol conflicts with an earlier declaration using the same name"',entry=self)
         if self.entryKind == self.ProcedureEntryKind:
             DebugManager.debug('\t\t\t(SymtabEntry.enterType: entering type information tells us that this procedure is a function)')
             self.entryKind = self.FunctionEntryKind
-        self.type = newType
+        newStmt=newType[0](newType[1],[],[])
+        self.typetab_id = globalTypeTable.getType(newStmt,self)
 
-    def copyAndEnterType(self,newType):
-        self.enterType(SymtabEntry.copyType(newType))
+    def copyAndEnterType(self,typetab_id):
+        self.typetab_id=typetab_id
 
     def enterDimensions(self,newDimensions):
         DebugManager.debug('\t\tSymtab.enterDimensions: called on '+str(self)+' and setting dimensions to '+str(newDimensions))
@@ -481,8 +470,8 @@ class SymtabEntry(object):
         return (self.access and self.access in [PrivateStmt.kw,Symtab.ourAccessPrefix+PrivateStmt.kw])
     
     def _augmentParentEntryFrom(self,other):
-        if (not self.type and other.type):
-            self.copyAndEnterType(other.type)
+        if (not self.typetab_id and other.typetab_id):
+            self.copyAndEnterType(other.typetab_id)
         if (not self.dimensions):
             self.dimensions=other.dimensions
         if (self.entryKind==SymtabEntry.GenericEntryKind):
@@ -521,12 +510,12 @@ class SymtabEntry(object):
             return ((theEntry.__dict__[name] and ', '+name+'='+str(theEntry.__dict__[name])) or '')
               
         return '[SymtabEntry('+str(id(self))+') "'+name+'" -> entryKind='+str(self.entryKind.keyword)+\
-                                         attrDump(self,'type')+ \
+                                         attrDump(self,'typetab_id')+ \
                                          attrDump(self,'dimensions')+ \
                                          attrDump(self,'length')+ \
                                          attrDump(self,'constInit')+ \
                                          attrDump(self,'origin')+ \
-                                         attrDump(self,'renameSource')+ \
+                                         attrDump(self,'renameKey')+ \
                                          attrDump(self,'access')+ \
                                          ((self.genericInfo and (', genericInfo='+str(self.genericInfo.debug()))) or '')+\
                                          ((self.funcFormalArgs and (', funcFormalArgs='+str(self.funcFormalArgs.debug()))) or '')+\
