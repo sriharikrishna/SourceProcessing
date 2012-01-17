@@ -2,9 +2,10 @@ from _Setup import *
 
 from PyUtil.caselessDict import caselessDict as cDict
 from PyUtil.arrayboundstab import ArrayBoundsTab
+from PyUtil.characterlentab import CharacterLenTab
 
 from PyFort.intrinsic import getBuiltInTypes
-from PyFort.fortStmts import DrvdTypeDecl, DrvdTypeDefn
+from PyFort.fortStmts import DrvdTypeDecl, DrvdTypeDefn, CharacterStmt,RealStmt
 
 class TypetabError(Exception):
     def __init__(self,msg,theType=None,entry=None,lineNumber=None):
@@ -21,11 +22,15 @@ class TypetabError(Exception):
         return (errString)
 
 class Typetab(object):
+    
     def __init__(self):
         self.ids = dict() # string for the key and TypetabEntry for the value
+        self.intrinsicIdToTypeMap=dict() # typetab id for the key and (fortStmt Type,Kind) pair for value
+        self.intrinsicTypeToIdMap=dict() # type name for key and typetab id for value
         self.type_counter=1
         self.__enterBuiltInTypes()
         self.arrayBoundsTab=ArrayBoundsTab()
+        self.charLenTab=CharacterLenTab()
 
     def lookupTypeId(self,typeid):
         '''check for typeid in the type table'''
@@ -50,11 +55,15 @@ class Typetab(object):
         return typeName
 
     def __getTypeKind(self,theType,localSymtab):
-        if theType.pointer:
+        if theType.allocatable:
+            return TypetabEntry.AllocatableEntryKind
+        elif theType.pointer:
             if theType.dimension:
                 return TypetabEntry.ArrayPointerEntryKind
             elif isinstance(theType,DrvdTypeDecl) or isinstance(theType,DrvdTypeDefn):
                 return TypetabEntry.NamedTypePointerEntryKind
+            elif isinstance(theType,CharacterStmt) and len(theType.get_mod())>0:
+                return TypetabEntry.CharacterPointerEntryKind
             else:
                 # assume BuiltInPointerEntryKind; type name will be checked later
                 return TypetabEntry.BuiltInPointerEntryKind
@@ -63,14 +72,25 @@ class Typetab(object):
                 return TypetabEntry.ArrayEntryKind
             elif isinstance(theType,DrvdTypeDecl) or isinstance(theType,DrvdTypeDefn):
                 return TypetabEntry.NamedTypeEntryKind
+            elif isinstance(theType,CharacterStmt) and len(theType.get_mod())>0:
+                return TypetabEntry.CharacterEntryKind
             else:
                 # assume BuiltInEntryKind; type name will be checked later
                 return TypetabEntry.BuiltInEntryKind
 
     def __enterBuiltInTypes(self):
-        for aType in getBuiltInTypes():
-            kind = TypetabEntry.BuiltInEntryKind(aType)
-            newEntry = TypetabEntry(kind,self.type_counter)
+        for aTypePair in getBuiltInTypes():
+            if aTypePair[0].kw=='doubleprecision':
+                entryKind=TypetabEntry.BuiltInEntryKind('real_8')
+            elif aTypePair[0].kw=='doublecomplex':
+                entryKind=TypetabEntry.BuiltInEntryKind('complex_16')
+            elif aTypePair[0].kw=='character' or aTypePair[0].kw=='logical':
+                entryKind=TypetabEntry.BuiltInEntryKind(aTypePair[0].kw)
+            else:
+                entryKind = TypetabEntry.BuiltInEntryKind(aTypePair[0].kw+'_'+str(aTypePair[1]))
+            newEntry = TypetabEntry(entryKind,self.type_counter)
+            self.intrinsicIdToTypeMap[self.type_counter]=aTypePair
+            self.intrinsicTypeToIdMap[entryKind.type_name]=self.type_counter
             self.ids[self.type_counter]=newEntry
             self.type_counter += 1
 
@@ -78,6 +98,7 @@ class Typetab(object):
     # enter the type in the type table and return the typetab_id
     def __enterNewType(self,theType,localSymtab):
         typeKind=self.__getTypeKind(theType,localSymtab)
+        newEntry=None
         if typeKind==TypetabEntry.NamedTypeEntryKind:
             kind=TypetabEntry.NamedTypeEntryKind(localSymtab)
             newEntry=TypetabEntry(kind,self.type_counter)
@@ -94,7 +115,7 @@ class Typetab(object):
             baseType = theType.__class__(theType.get_mod(),[],[])
             baseType.dimension = theType.dimension
             typeID = self.getType(baseType,localSymtab)
-            kind=typeKind(typetab_id=typeID) #TODO: is this legal python?
+            kind=typeKind(typeID)
             newEntry=TypetabEntry(kind,self.type_counter)
         elif typeKind==TypetabEntry.NamedTypePointerEntryKind:
             if isinstance(theType,DrvdTypeDecl):
@@ -103,9 +124,20 @@ class Typetab(object):
                 symbolName=theType.name
             kind=TypetabEntry.NamedTypePointerEntryKind(symbolName,localSymtab)
             newEntry=TypetabEntry(kind,self.type_counter)
+        elif typeKind==TypetabEntry.CharacterEntryKind:
+            charLenId = self.charLenTab.getCharLen(theType.get_mod()[0])
+            kind=TypetabEntry.CharacterEntryKind(charLenId)
+            newEntry=TypetabEntry(kind,self.type_counter)
+        elif typeKind==TypetabEntry.AllocatableEntryKind:
+            baseType = theType.__class__(theType.get_mod(),[],[])
+            typeID = self.getType(baseType,localSymtab)
+            kind=TypetabEntry.AllocatableEntryKind(typeID,theType.dimension)
+            newEntry=TypetabEntry(kind,self.type_counter)
         elif typeKind==TypetabEntry.BuiltInEntryKind:
-            # these should already be added
+            # these should already be added, unless it's a character with a length specifier
             raise TypetabError('attempting to incorrectly add a Built In type to the type table.',str(theType))
+        else:
+            raise TypetabError('unrecognized typeKind: ',str(theType))
         self.ids[self.type_counter]=newEntry
         self.type_counter += 1
         return newEntry.typetab_id
@@ -148,7 +180,7 @@ class Typetab(object):
                     elif isinstance(theType,DrvdTypeDefn):
                         kindEntryMatches = [e for e in kindEntryMatches if (e.entryKind.symbolName==theType.name)]
                 # check scope
-                match = [e for e in kindEntryMatches if (e.entryKind.localSymtab==localSymtab)]
+                match = [e for e in kindEntryMatches if ((e.entryKind.localSymtab==None) or (e.entryKind.localSymtab==localSymtab))]
                 if match:
                     return match[0].typetab_id
             elif typeKind==TypetabEntry.ArrayEntryKind:
@@ -164,6 +196,23 @@ class Typetab(object):
                             match = [e for e in typeMatches if (e.entryKind.arrayid==arrayid)]
                             if match:
                                 return match[0].typetab_id
+            elif typeKind==TypetabEntry.CharacterEntryKind:
+                charId = self.charLenTab.lookupCharLen(theType.get_mod()[0])
+                if charId:
+                    charMatch = [e for e in kindEntryMatches if (e.entryKind.charlen_id==charId)]
+                    if charMatch:
+                        return charMatch[0].typetab_id
+            elif typeKind==TypetabEntry.AllocatableEntryKind:
+                # check that type is defined in table
+                baseType = theType.__class__(theType.get_mod(),[],[])
+                typeID = self.lookupType(baseType,localSymtab)
+                if typeID:
+                    typeMatches = [e for e in kindEntryMatches if (e.entryKind.typetab_id==typeID)]
+                    if typeMatches:
+                        # check that rank matches
+                        match = [e for e in typeMatches if (e.entryKind.rank==len(theType.dimension))]
+                        if match:
+                            return match[0].typetab_id
             else:
                 raise TypetabError("type of argument not recognized",theType=theType)
         return None
@@ -172,7 +221,8 @@ class Typetab(object):
     def getType(self,theType,localSymtab):
         typeid = self.lookupType(theType,localSymtab)
         if not typeid:
-            return self.__enterNewType(theType,localSymtab)
+            newType=self.__enterNewType(theType,localSymtab)
+            return newType
         return typeid
 
     # type equivalence between two entries; Do not match array bounds exactly, only rank.
@@ -209,6 +259,13 @@ class TypetabEntry(object):
 
         def debug(self):
             return 'BuiltInPointerEntryKind; name of built-in type: '+str(self.type_name)
+
+    class CharacterEntryKind(BuiltInEntryKind):
+        _sons = ['type_name','charlen_id']
+
+        def __init__(self,charLenId):
+            self.charlen_id=charLenId
+            TypetabEntry.BuiltInEntryKind.__init__(self,'character')
 
     class BuiltInPointerEntryKind(GenericEntryKind):
         keyword = 'BIpointer'
@@ -251,6 +308,13 @@ class TypetabEntry(object):
             self.arrayid=arrayid      # array id for array table where dimension information is stored
             self.typetab_id=typetab_id        # typeid of BI or NT array type
 
+        def getArrayBounds(self):
+            arrayTabEntry=arrayBoundsTable.lookupArrayId(self.arrayid)
+            arrayBounds=[]
+            for dimEntry in arrayTabEntry.dimArray:
+                arrayBounds.append(fe.Ops(':',dimEntry.lower,dimEntry.upper))
+            return arrayBounds
+            
         def debug(self):
             return 'ArrayEntryKind; Array id for array table where dimension information is stored: '+str(self.arrayid)+\
                                     ', Type id of built-in or named array type: '+str(self.typetab_id)
@@ -265,13 +329,35 @@ class TypetabEntry(object):
         def debug(self):
             return 'ArrayPointerEntryKind; Type id of array type of target: '+str(self.typetab_id)
 
+    class AllocatableEntryKind(GenericEntryKind):
+        keyword = 'allocatable'
+
+        def __init__(self,typetab_id,rank):
+            self.typetab_id=typetab_id # type id of base type
+            self.rank=rank             # rank
+
+        def debug(self):
+            return 'AllocatableEntryKind'
+
     def __init__(self,entryKind,typetab_id):
         self.entryKind = entryKind # some instance of self.GenericEntryKind
         self.typetab_id=typetab_id # typeid in type table for this TypeTabEntry
 
     
+    def getBaseTypeId(self):
+        if isinstance(self.entryKind,TypetabEntry.ArrayEntryKind):
+            return self.entryKind.typetab_id
+        elif isinstance(self.entryKind,TypetabEntry.ArrayPointerEntryKind):
+            return globalTypeTable.lookupTypeId(self.entryKind.typetab_id).getBaseTypeId()
+        elif isinstance(self.entryKind,TypetabEntry.BuiltInPointerEntryKind):
+            return self.entryKind.typetab_id
+        else:
+            return self.typetab_id
+
     def debug(self,name='<symbol name unknown>'):
         return '[TypetabEntry('+str(self)+') "'+name+'" -> entryKind='+self.entryKind.debug()+\
                                          ', typetab_id='+str(self.typetab_id)+\
                                          ']'
 
+global globalTypeTable
+globalTypeTable=Typetab()
