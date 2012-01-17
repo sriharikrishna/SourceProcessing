@@ -23,43 +23,43 @@ class C1(TestCase):
         '''look up built in type integer'''
         integerStmt=fs.IntegerStmt([],[],['foo'])
         typeid = self.typetab.lookupType(integerStmt,self.symtab)
-        ae(typeid,1)
+        ae(typeid,3)
 
     def test2(self):
         '''lookup built in type real'''
         realStmt=fs.RealStmt([],[],['foo'])
         typeid = self.typetab.lookupType(realStmt,self.symtab)
-        ae(typeid,3)
+        ae(typeid,5)
 
     def test3(self):
         '''look up built in type double'''
         doubleStmt=fs.DoubleStmt([],[],['foo'])
         typeid = self.typetab.lookupType(doubleStmt,self.symtab)
-        ae(typeid,4)
+        ae(typeid,6)
 
     def test4(self):
         '''look up built in type complex'''
         complexStmt=fs.ComplexStmt([],[],['foo'])
         typeid = self.typetab.lookupType(complexStmt,self.symtab)
-        ae(typeid,5)
+        ae(typeid,7)
 
     def test5(self):
         '''look up built in type double complex'''
         doubleComplexStmt=fs.DoubleCplexStmt([],[],['foo'])
         typeid = self.typetab.lookupType(doubleComplexStmt,self.symtab)
-        ae(typeid,6)
+        ae(typeid,8)
 
     def test6(self):
         '''look up built in type logical'''
         logicalStmt=fs.LogicalStmt([],[],['foo'])
         typeid = self.typetab.lookupType(logicalStmt,self.symtab)
-        ae(typeid,7)
+        ae(typeid,2)
 
     def test7(self):
         '''look up built in type character'''
         characterStmt=fs.CharacterStmt([],[],['foo'])
         typeid = self.typetab.lookupType(characterStmt,self.symtab)
-        ae(typeid,8)
+        ae(typeid,1)
 
     def test8(self):
         '''test named type entry'''

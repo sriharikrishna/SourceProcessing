@@ -2,13 +2,14 @@ from Setup    import *
 from unittest import *
 from useparse import *
 
-from PyUtil.symtab import Symtab
+from PyUtil.symtab import Symtab,globalTypeTable
 
 from PyFort.inference import expressionType,_TypeContext,_kw2type,_lenfn 
+import PyFort.fortStmts as fortStmts
 from PyFort.fortStmts import LogicalStmt,CharacterStmt,IntegerStmt,RealStmt,DoubleStmt,ComplexStmt,DoubleCplexStmt
 from PyFort.fortStmts import _Prec,_Kind,_F77Len
 
-Symtab.setTypeDefaults((RealStmt,[]),(IntegerStmt,[]))
+Symtab.setTypeDefaults((fortStmts.RealStmt,[]),(fortStmts.IntegerStmt,[]))
 theSymtab = Symtab()
 
 
@@ -17,10 +18,10 @@ class TypeUtils(TestCase):
     '''
     def test1(self):
         '_kw2type'
-        self.assertEquals(_kw2type('real'),RealStmt)
-        self.assertEquals(_kw2type('doubleprecision'),DoubleStmt)
-        self.assertEquals(_kw2type('integer'),IntegerStmt)
-        self.assertEquals(_kw2type('logical'),LogicalStmt)
+        self.assertEquals(_kw2type('real'),fortStmts.RealStmt)
+        self.assertEquals(_kw2type('doubleprecision'),fortStmts.DoubleStmt)
+        self.assertEquals(_kw2type('integer'),fortStmts.IntegerStmt)
+        self.assertEquals(_kw2type('logical'),fortStmts.LogicalStmt)
 
     def test2(self):
         '_lenfn'
@@ -29,38 +30,37 @@ class TypeUtils(TestCase):
 class TypeConstants(TestCase):
     def test0(self):
         'constants - numerical values without modifiers'
-        self.assertEquals(_TypeContext(0,theSymtab)._constantType(ep('3.787')),
-                          (RealStmt,[]))
+        self.assertEquals(_TypeContext(0,theSymtab)._constantType(ep('3.787')),globalTypeTable.intrinsicTypeToIdMap['real_4'])
         self.assertEquals(_TypeContext(0,theSymtab)._constantType(ep('3.787D00')),
-                          (DoubleStmt,[]))
+                          globalTypeTable.intrinsicTypeToIdMap['real_8'])
         self.assertEquals(_TypeContext(0,theSymtab)._constantType(ep('3')),
-                          (IntegerStmt,[]))
+                          globalTypeTable.intrinsicTypeToIdMap['integer_4'])
 
     def test1(self):
         'constants - numerical values with modifiers'
 
         (type,typeModList) = _TypeContext(0,theSymtab)._constantType(ep('3.787_foo'))
         typeMod = typeModList[0]
-        self.assertEquals(type,RealStmt)
+        self.assertEquals(type,fortStmts.RealStmt)
         self.assert_(isinstance(typeMod,_Kind))
         self.assertEquals(typeMod.mod,'foo')
 
         (type,typeModList) = _TypeContext(0,theSymtab)._constantType(ep('0_w2f__i8'))
         typeMod = typeModList[0]
-        self.assertEquals(type,IntegerStmt)
+        self.assertEquals(type,fortStmts.IntegerStmt)
         self.assert_(isinstance(typeMod,_Kind))
         self.assertEquals(typeMod.mod,'w2f__i8')
 
     def test2(self):
         'constants - logical values'
         self.assertEquals(_TypeContext(0,theSymtab)._constantType(ep('.true.')),
-                          (LogicalStmt,[]))
+                          globalTypeTable.intrinsicTypeToIdMap['logical'])
 
     def test3(self):
         'constants - strings'
         (type,typeModList) = _TypeContext(0,theSymtab)._constantType(ep(r"'food'"))
         typeMod = typeModList[0]
-        self.assertEquals(type,CharacterStmt)
+        self.assertEquals(type,fortStmts.CharacterStmt)
         self.assert_(isinstance(typeMod,_F77Len))
         self.assertEquals(typeMod.len,'4')
 
@@ -72,42 +72,37 @@ class TypeOpsExpressions(TestCase):
         ae = self.assertEquals
 
         e1 = ep('x * y')
-        ae(expressionType(e1,theSymtab,lineNumber=0),
-           (RealStmt,[]))
+        ae(expressionType(e1,theSymtab,lineNumber=0),5)
 
         e1 = ep('5.11d0 * 4.77d0')
-        ae(expressionType(e1,theSymtab,lineNumber=0),
-           (DoubleStmt,[]))
+        ae(expressionType(e1,theSymtab,lineNumber=0),6)
 
         e1 = ep('i + 4')
-        ae(expressionType(e1,theSymtab,lineNumber=0),
-           (IntegerStmt,[]))
+        ae(expressionType(e1,theSymtab,lineNumber=0),3)
 
         e1 = ep('z + 5.11d0 * 4.77d0')
-        ae(expressionType(e1,theSymtab,lineNumber=0),
-           (DoubleStmt,[]))
+        ae(expressionType(e1,theSymtab,lineNumber=0),6)
 
         e1 = ep('x * 5.11d0 + i * 4.77')
-        ae(expressionType(e1,theSymtab,lineNumber=0),
-           (DoubleStmt,[]))
+        ae(expressionType(e1,theSymtab,lineNumber=0),6)
 
 def _gt(decl):
     'generate type reps f decl strings, using parser'
     stmt = pps(decl + ' x')
-    return (stmt.__class__,stmt.mod)
+    return stmt
 
 class TypeMerging(TestCase):
     'Merge types to find the supremum type'
     def test00(self):
         'Merge unmodified real with None'
-        t = (RealStmt,[])
+        t = (fortStmts.RealStmt,[])
         self.assertEquals(_TypeContext(0,theSymtab)._typemerge([],
                                                               t),
                           t)
 
     def test01(self):
         'Merge modified real with None'
-        t = (RealStmt,[_Prec('4')])
+        t = (fortStmts.RealStmt,[_Prec('4')])
         self.assertEquals(_TypeContext(0,theSymtab)._typemerge([],
                                                                 t),
                           t)
@@ -116,12 +111,12 @@ class TypeMerging(TestCase):
         'Merging of types in order to yield the correct supremum'
         ae = self.assertEquals
 
-        t1 = _gt('real')
-        t2 = _gt('real*4')
-        t3 = _gt('real*8')
-        t4 = _gt('double precision')
-        t5 = _gt('complex')
-        t6 = _gt('integer')
+        t1 = globalTypeTable.getType(_gt('real'),theSymtab)
+        t2 = globalTypeTable.getType(_gt('real*4'),theSymtab)
+        t3 = globalTypeTable.getType(_gt('real*8'),theSymtab)
+        t4 = globalTypeTable.getType(_gt('double precision'),theSymtab)
+        t5 = globalTypeTable.getType(_gt('complex'),theSymtab)
+        t6 = globalTypeTable.getType(_gt('integer'),theSymtab)
 
         ae(_TypeContext(0,theSymtab)._typemerge([],t1),t1)
         ae(_TypeContext(0,theSymtab)._typemerge([t2],t1),t2)

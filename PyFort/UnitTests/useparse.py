@@ -4,7 +4,7 @@ from PyUtil.errors import ScanError,ParseError
 
 from PyFort.fortScan import scan1
 from PyFort.fortExp import Exp
-from PyFort.fortStmts import parse
+import PyFort.fortStmts as fortStmts
 
 def scan(s):
     (v,rst) = scan1.scan(s)
@@ -20,7 +20,7 @@ def ep(s):
 
 def pps(s):
     try:
-        return parse(scan(s),lineNumber=0)
+        return fortStmts.parse(scan(s),lineNumber=0)
     except ScanError,e:
         print >>sys.stderr,'\nERROR: ScanError: scanner fails on the following line:'
         print >>sys.stderr,e.aFortLine
