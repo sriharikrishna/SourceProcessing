@@ -2,6 +2,7 @@ from _Setup import *
 
 from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
+from PyUtil.typetab import globalTypeTable
 from PyUtil.argreplacement import replaceArgs, replaceSon
 from PyUtil.errors import ScanError, ParseError, UserError
 
@@ -105,6 +106,7 @@ class UnitPostProcessor(object):
     @staticmethod
     def setAbstractType(abstractType):
         UnitPostProcessor._abstract_type = abstractType.lower()
+        globalTypeTable.getType(fs.DrvdTypeDecl([abstractType],[],[]),None)
 
     _mode = 'forward'
 
@@ -142,7 +144,7 @@ class UnitPostProcessor(object):
 
     def __isActiveInitSymtabType(self,oType):
         ''' check symtab entry type given as oType, see class symtab.SymtabEntry '''
-        if (oType[0]==fs.DrvdTypeDecl):
+        if isinstance(oType,fs.DrvdTypeDecl):
             if (oType[1][0].lower()==self._abstract_type+'_init'):
                 return True
         return False
@@ -259,10 +261,10 @@ class UnitPostProcessor(object):
         replacementStatement = \
             fs.CallStmt(aSubCallStmt.get_head(),
                         replacementArgs,
-                        aSubCallStmt.stmt_name,
                         lineNumber=aSubCallStmt.lineNumber,
                         label=aSubCallStmt.label,
-                        lead=aSubCallStmt.lead)
+                        lead=aSubCallStmt.lead,
+                        stmt_name=aSubCallStmt.stmt_name)
         return replacementStatement    
 
     # PARAMS:
@@ -332,14 +334,14 @@ class UnitPostProcessor(object):
             replObjectList=[]
             for varRef in o: 
                 varRefType=expressionType(varRef,self.__myUnit.symtab,aDecl.lineNumber)
-                if (varRefType and self.__isActiveInitSymtabType(varRefType)):
+                if (varRefType and self.__isActiveInitSymtabType(varRef)):
                     replObjectList.append(fe.Sel(varRef,"v"))
                     changed=True
                 else:
                     replObjectList.append(varRef)
             replObjectValuePairList.append((replObjectList,v))
         if (changed) :
-            rDecl=fs.DataStmt(replObjectValuePairList,aDecl.stmt_name,aDecl.lineNumber,aDecl.label,aDecl.lead,aDecl.internal,aDecl.rest)
+            rDecl=fs.DataStmt(replObjectValuePairList,aDecl.lineNumber,aDecl.label,aDecl.lead,aDecl.stmt_name,aDecl.internal,aDecl.rest)
         return rDecl
         
     # Determines the function to be inlined (if there is one)
@@ -942,7 +944,7 @@ class UnitPostProcessor(object):
                 for var in decl.declList:
                     # lookup in symtab
                     var_type = self.__myUnit.symtab.lookup_name(var).type
-                    if not isinstance(var_type[1][0],fs._Kind) and (var_type[1][0].lower() == self._abstract_type):
+                    if (var_type is not None) and not isinstance(var_type[1][0],fs._Kind) and (var_type[1][0].lower() == self._abstract_type):
                         initCommonStmt.declList.append(var)
                 # avoid initializing variables twice
                 # don't create subroutines for common blocks with no active variables
