@@ -150,10 +150,9 @@ class UnitCanonicalizer(object):
         theNewTemp = _tmp_prefix + str(self.__tempCounter)
         self.__tempCounter += 1
         expTypeId = expressionType(anExpression,self.__myUnit.symtab,parentStmt.lineNumber)
-        typeEntry=globalTypeTable.lookupTypeId(expTypeId)
-        (varTypeClass,typeKind)=globalTypeTable.intrinsicIdToTypeMap[typeEntry.getBaseTypeId()]
+        expTypeEntry=globalTypeTable.lookupTypeId(expTypeId)
+        (varTypeClass,typeKind)=globalTypeTable.intrinsicIdToTypeMap[expTypeEntry.getBaseTypeId()]
         varModifierList=[]
-        expTypeEntry = globalTypeTable.lookupTypeId(expTypeId)
         varShape=expressionShape(anExpression,self.__myUnit.symtab,parentStmt.lineNumber)
         if isinstance(expTypeEntry.entryKind,TypetabEntry.BuiltInEntryKind) and expTypeEntry.entryKind.type_name=='real_8':
             print >>sys.stderr,'WARNING: Temp variable forced to 8-byte float (real -> double)'
