@@ -309,12 +309,16 @@ class TypetabEntry(object):
             self.typetab_id=typetab_id        # typeid of BI or NT array type
 
         def getArrayBounds(self):
-            arrayTabEntry=arrayBoundsTable.lookupArrayId(self.arrayid)
+            arrayTabEntry=globalTypeTable.arrayBoundsTab.lookupArrayId(self.arrayid)
             arrayBounds=[]
             for dimEntry in arrayTabEntry.dimArray:
                 arrayBounds.append(fe.Ops(':',dimEntry.lower,dimEntry.upper))
             return arrayBounds
             
+        def getArrayRank(self):
+            arrayTabEntry=globalTypeTable.arrayBoundsTab.lookupArrayId(self.arrayid)
+            return arrayTabEntry.rank
+
         def debug(self):
             return 'ArrayEntryKind; Array id for array table where dimension information is stored: '+str(self.arrayid)+\
                                     ', Type id of built-in or named array type: '+str(self.typetab_id)
