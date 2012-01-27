@@ -39,7 +39,7 @@ class C1(TestCase):
         t = (s2.__class__,s2.mod)
     
         t1 = expressionType('zoo',v,0)
-        ae(t1,globalTypeTable.lookupType(s2,v))
+        ae(t1,globalTypeTable.lookupTypeId(globalTypeTable.lookupType(s2,v)))
 
 s1 = makeSuite(C1)
 suite = asuite(C1)

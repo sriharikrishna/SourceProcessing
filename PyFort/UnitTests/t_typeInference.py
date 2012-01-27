@@ -30,11 +30,12 @@ class TypeUtils(TestCase):
 class TypeConstants(TestCase):
     def test0(self):
         'constants - numerical values without modifiers'
-        self.assertEquals(_TypeContext(0,theSymtab)._constantType(ep('3.787')),globalTypeTable.intrinsicTypeToIdMap['real_4'])
+        self.assertEquals(_TypeContext(0,theSymtab)._constantType(ep('3.787')),
+                          globalTypeTable.lookupTypeId(globalTypeTable.intrinsicTypeToIdMap['real_4']))
         self.assertEquals(_TypeContext(0,theSymtab)._constantType(ep('3.787D00')),
-                          globalTypeTable.intrinsicTypeToIdMap['real_8'])
+                          globalTypeTable.lookupTypeId(globalTypeTable.intrinsicTypeToIdMap['real_8']))
         self.assertEquals(_TypeContext(0,theSymtab)._constantType(ep('3')),
-                          globalTypeTable.intrinsicTypeToIdMap['integer_4'])
+                          globalTypeTable.lookupTypeId(globalTypeTable.intrinsicTypeToIdMap['integer_4']))
 
     def test1(self):
         'constants - numerical values with modifiers'
@@ -54,7 +55,7 @@ class TypeConstants(TestCase):
     def test2(self):
         'constants - logical values'
         self.assertEquals(_TypeContext(0,theSymtab)._constantType(ep('.true.')),
-                          globalTypeTable.intrinsicTypeToIdMap['logical'])
+                          globalTypeTable.lookupTypeId(globalTypeTable.intrinsicTypeToIdMap['logical']))
 
     def test3(self):
         'constants - strings'
@@ -72,19 +73,19 @@ class TypeOpsExpressions(TestCase):
         ae = self.assertEquals
 
         e1 = ep('x * y')
-        ae(expressionType(e1,theSymtab,lineNumber=0),5)
+        ae(expressionType(e1,theSymtab,lineNumber=0).typetab_id,5)
 
         e1 = ep('5.11d0 * 4.77d0')
-        ae(expressionType(e1,theSymtab,lineNumber=0),6)
+        ae(expressionType(e1,theSymtab,lineNumber=0).typetab_id,6)
 
         e1 = ep('i + 4')
-        ae(expressionType(e1,theSymtab,lineNumber=0),3)
+        ae(expressionType(e1,theSymtab,lineNumber=0).typetab_id,3)
 
         e1 = ep('z + 5.11d0 * 4.77d0')
-        ae(expressionType(e1,theSymtab,lineNumber=0),6)
+        ae(expressionType(e1,theSymtab,lineNumber=0).typetab_id,6)
 
         e1 = ep('x * 5.11d0 + i * 4.77')
-        ae(expressionType(e1,theSymtab,lineNumber=0),6)
+        ae(expressionType(e1,theSymtab,lineNumber=0).typetab_id,6)
 
 def _gt(decl):
     'generate type reps f decl strings, using parser'
@@ -111,12 +112,12 @@ class TypeMerging(TestCase):
         'Merging of types in order to yield the correct supremum'
         ae = self.assertEquals
 
-        t1 = globalTypeTable.getType(_gt('real'),theSymtab)
-        t2 = globalTypeTable.getType(_gt('real*4'),theSymtab)
-        t3 = globalTypeTable.getType(_gt('real*8'),theSymtab)
-        t4 = globalTypeTable.getType(_gt('double precision'),theSymtab)
-        t5 = globalTypeTable.getType(_gt('complex'),theSymtab)
-        t6 = globalTypeTable.getType(_gt('integer'),theSymtab)
+        t1 = globalTypeTable.getTypeEntry(_gt('real'),theSymtab)
+        t2 = globalTypeTable.getTypeEntry(_gt('real*4'),theSymtab)
+        t3 = globalTypeTable.getTypeEntry(_gt('real*8'),theSymtab)
+        t4 = globalTypeTable.getTypeEntry(_gt('double precision'),theSymtab)
+        t5 = globalTypeTable.getTypeEntry(_gt('complex'),theSymtab)
+        t6 = globalTypeTable.getTypeEntry(_gt('integer'),theSymtab)
 
         ae(_TypeContext(0,theSymtab)._typemerge([],t1),t1)
         ae(_TypeContext(0,theSymtab)._typemerge([t2],t1),t2)
