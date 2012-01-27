@@ -112,14 +112,13 @@ class UnitCanonicalizer(object):
             if theSymtabEntry.entryKind==SymtabEntry.VariableEntryKind:
                 raise CanonError('UnitCanonicalizer.shouldSubroutinizeFunction called on array reference '+str(theApp)+" with "+theSymtabEntry.debug(theApp.head),parentStmt.lineNumber)
         try:
-            appTypeId = appType(theApp,self.__myUnit.symtab,parentStmt.lineNumber)
+            appTypeEntry = appType(theApp,self.__myUnit.symtab,parentStmt.lineNumber)
         except InferenceError,errorObj:
             DebugManager.warning("cannot determine return type and canonicalize function call; "+errorObj.msg,parentStmt.lineNumber)
             return False
         if is_intrinsic(theApp.head):
             if UnitCanonicalizer._overloadingMode:
                 return False
-            appTypeEntry = globalTypeTable.lookupTypeId(appTypeId)
             DebugManager.debug('UnitCanonicalizer.shouldSubroutinizeFunction: It\'s an intrinsic of type '+appTypeEntry.debug())
             return subroutinizedIntrinsics.shouldSubroutinize(theApp) and (UnitCanonicalizer._subroutinizeIntegerFunctions or not (isinstance(appTypeEntry.entryKind,TypetabEntry.BuiltInEntryKind) and (appTypeEntry.entryKind.type_name=='integer_4')))
         else:
@@ -149,8 +148,7 @@ class UnitCanonicalizer(object):
         '''The new temporary variable assumes the value of anExpression'''
         theNewTemp = _tmp_prefix + str(self.__tempCounter)
         self.__tempCounter += 1
-        expTypeId = expressionType(anExpression,self.__myUnit.symtab,parentStmt.lineNumber)
-        expTypeEntry=globalTypeTable.lookupTypeId(expTypeId)
+        expTypeEntry = expressionType(anExpression,self.__myUnit.symtab,parentStmt.lineNumber)
         (varTypeClass,typeKind)=globalTypeTable.intrinsicIdToTypeMap[expTypeEntry.getBaseTypeId()]
         varModifierList=[]
         varShape=expressionShape(anExpression,self.__myUnit.symtab,parentStmt.lineNumber)

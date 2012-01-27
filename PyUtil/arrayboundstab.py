@@ -63,11 +63,11 @@ class ArrayBoundsTab(object):
 
     # add new array bounds entry if the bounds of arrayType do not already have an entry in the table
     # return arrayid
-    def enterNewArrayBounds(self,arrayType):
+    def enterNewArrayBounds(self,dimensions):
         dimArray=[]
-        rank=len(arrayType.dimension)
+        rank=len(dimensions)
         constant_dims=True
-        for dim in arrayType.dimension:
+        for dim in dimensions:
             if isinstance(dim,fe.Ops):
                 dimEntry=ArrayBoundsTabEntry.DimensionEntry(dim.a1,dim.a2)
                 if constant_dims and (not isinstance(dim.a1,int) or not isinstance(dim.a2,int)):

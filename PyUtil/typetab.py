@@ -39,6 +39,9 @@ class Typetab(object):
         else:
             return None
 
+    def intrinsicTypeNameToEntry(self,type_name):
+        return self.lookupTypeId(self.intrinsicTypeToIdMap[type_name])
+
     def __getBuiltInName(self,theType,localSymtab):
         from PyFort.inference import guessBytes
         if (theType.kw=='doubleprecision'):
@@ -107,7 +110,7 @@ class Typetab(object):
             baseType = theType.__class__(theType.get_mod(),[],[])
             typeID = self.getType(baseType,localSymtab)
             # get arrayid
-            arrayid=self.arrayBoundsTab.enterNewArrayBounds(theType)
+            arrayid=self.arrayBoundsTab.enterNewArrayBounds(theType.dimension)
             kind=TypetabEntry.ArrayEntryKind(typetab_id=typeID,arrayid=arrayid)
             newEntry=TypetabEntry(kind,self.type_counter)
         elif typeKind==TypetabEntry.ArrayPointerEntryKind or typeKind==TypetabEntry.BuiltInPointerEntryKind:
@@ -224,6 +227,11 @@ class Typetab(object):
             newType=self.__enterNewType(theType,localSymtab)
             return newType
         return typeid
+
+    # get the type id; if it is not already in the table, add it
+    def getTypeEntry(self,theType,localSymtab):
+        typeid=self.getType(theType,localSymtab)
+        return globalTypeTable.lookupTypeId(typeid)
 
     # type equivalence between two entries; Do not match array bounds exactly, only rank.
     # used for comparing formal arguments to dummy arguments
@@ -357,6 +365,9 @@ class TypetabEntry(object):
             return self.entryKind.typetab_id
         else:
             return self.typetab_id
+
+    def getBaseTypeEntry(self):
+        return globalTypeTable.lookupTypeId(self.getBaseTypeId())
 
     def debug(self,name='<symbol name unknown>'):
         return '[TypetabEntry('+str(self)+') "'+name+'" -> entryKind='+self.entryKind.debug()+\
