@@ -204,7 +204,6 @@ class _TypeContext:
             DebugManager.warning(sys._getframe().f_code.co_name+' implicit typing: '+symtabEntry.typePrint()+' '+anId,self.lineNumber,DebugManager.WarnType.implicit)
             returnType = globalTypeTable.getTypeEntry(implicitLocalType[0](implicitLocalType[1],[],[]),self.localSymtab)
          else:
-            #TODO
             DebugManager.warning('unimplemented type inference; returning None for '+sys._getframe().f_code.co_name,self.lineNumber,DebugManager.WarnType.implicit)
             return None
       else: # no symtab entry -> try local implicit typing
@@ -222,7 +221,8 @@ class _TypeContext:
             typeName='real_8'
          returnType=globalTypeTable.intrinsicTypeNameToEntry(typeName)
       if (returnType):
-            DebugManager.warning(sys._getframe().f_code.co_name+' implicit typing: '+returnType.debug()+' '+anId,self.lineNumber,DebugManager.WarnType.implicit)
+         #DebugManager.warning(sys._getframe().f_code.co_name+' implicit typing: '+returnType.debug()+' '+anId,self.lineNumber,DebugManager.WarnType.implicit)
+         pass
       if not returnType:
          raise InferenceError(sys._getframe().f_code.co_name+': No type could be determined for identifier "'+anId+'"',self.lineNumber)
       return returnType
@@ -234,9 +234,15 @@ class _TypeContext:
          typeName='real'
          typeMod=[]
          if (len(anIntrinsicApp.args)==2): # the second argument would be the kind parameter
-             typeMod.append(fortStmts._Kind(anIntrinsicApp.args[1]))
-             numBytes=self.__guessBytesFromKind(fortStmts._Kind(anIntrinsicApp.args[1]))
-             typeName=typeName+'_'+numBytes
+            if isinstance(anIntrinsicApp.args[1],NamedParam):
+               kindExp=fortStmts._Kind(anIntrinsicApp.args[1].myRHS)
+               typeMod.append(kindExp)
+               numBytes=self.__guessBytesFromKind(kindExp)
+               typeName=typeName+'_'+str(numBytes)
+            else:
+               typeMod.append(fortStmts._Kind(anIntrinsicApp.args[1]))
+               numBytes=self.__guessBytesFromKind(fortStmts._Kind(anIntrinsicApp.args[1]))
+               typeName=typeName+'_'+str(numBytes)
          else:
             typeName=typeName+'_4'
          return globalTypeTable.intrinsicTypeNameToEntry(typeName)
@@ -277,6 +283,22 @@ class _TypeContext:
                else:
                   return 4
             elif (_int_re.match(theExpr)) :
+               if aKindExpressionMod.head.lower()=='selected_int_kind':
+                  if int(theExpr)<2:
+                     return 1
+                  elif int(theExpr)<5:
+                     return 2
+                  elif int(theExpr)<10:
+                     return 4
+                  else:
+                     return 8
+               elif aKindExpressionMod.head.lower()=='selected_real_kind':
+                  if int(theExpr)<7:
+                     return 4
+                  elif int(theExpr)<16:
+                     return 8
+                  else:
+                     return 16
                return 4
       if (_int_re.match(aKindExpressionMod)):
          return int(aKindExpressionMod)
@@ -358,7 +380,15 @@ class _TypeContext:
       if isinstance(anApp.head,App): # example: matrix(3)(2:14)
          return self._appType(anApp.head)
       if isinstance(anApp.head,Sel):  # example type%member(1)
-         return self._expressionType(anApp.head)
+         expType=self._expressionType(anApp.head)
+         if isinstance(expType.entryKind,TypetabEntry.ArrayEntryKind):
+            for anArg in anApp.args:
+               if isinstance(anArg,Ops):
+                  # TODO: nonscalar arg; type is some kind of array; create temp arraykind entry & return it;
+                  # TODO: for now, return expType
+                  return expType
+            # if the args are all scalar, then the type is a scalar which is the base type of expType
+            return expType.getBaseTypeEntry()
       returnType = None
       # intrinsics: do a type merge
       if is_intrinsic(anApp.head):
@@ -398,10 +428,21 @@ class _TypeContext:
       DebugManager.debug(sys._getframe().f_code.co_name+' determining type of selection expression '+str(aSelectionExpression)+' using symtab '+str(self.localSymtab))
       # lookup type of head
       dType=self._expressionType(aSelectionExpression.head)
-      # lookup the projection type
-      pType=self.__identifierType(aSelectionExpression.proj)
-      #pType=self.__identifierType(dType[1][0]+":"+aSelectionExpression.proj)
-      return pType
+      if isinstance(dType.entryKind,TypetabEntry.ArrayEntryKind):
+         baseType=globalTypeTable.lookupTypeId(dType.getBaseTypeId())
+         lookupName=baseType.entryKind.symbolName+":"+aSelectionExpression.proj
+         (projSymtabEntry,projSymtab)=baseType.entryKind.localSymtab.lookup_name_level(lookupName)
+      else:
+         lookupName=dType.entryKind.symbolName+":"+aSelectionExpression.proj
+         (projSymtabEntry,projSymtab)=dType.entryKind.localSymtab.lookup_name_level(lookupName)
+      if projSymtabEntry is not None:
+         # lookup the projection type
+         if isinstance(aSelectionExpression.proj,App):
+            return self.__appType(aSelectionExpression.proj)
+         pType=globalTypeTable.lookupTypeId(projSymtabEntry.typetab_id)
+         return pType
+      else:
+         raise InferenceError(sys._getframe().f_code.co_name+': Selection expression projection does not have a symtab entry "'+str(aSelectionExpression)+'"',self.lineNumber)
 
    def _expressionType(self,anExpression):
       DebugManager.debug(sys._getframe().f_code.co_name+' determining type of expression '+str(anExpression)+'...',newLine=False)
@@ -529,9 +570,13 @@ def __arrayReferenceShape(arrRefApp,localSymtab,lineNumber):
       # lookup type of head
       dType=expressionType(theSel.head,localSymtab,lineNumber)
       # lookup the projection
-      (symtabEntry,containingSymtab) = localSymtab.lookup_name_level(dType[1][0]+":"+theSel.proj)
+      (symtabEntry,containingSymtab)=dType.entryKind.localSymtab.lookup_name_level(dType.entryKind.symbolName+":"+theSel.proj)
+      typeEntry=globalTypeTable.lookupTypeId(symtabEntry.typetab_id)
    else: 
       (symtabEntry,containingSymtab) = localSymtab.lookup_name_level(arrRefApp.head)
+      typeEntry=globalTypeTable.lookupTypeId(symtabEntry.typetab_id)
+   if typeEntry and isinstance(typeEntry.entryKind,TypetabEntry.ArrayEntryKind):
+      arrayBounds=typeEntry.entryKind.getArrayBounds()
    dimensions=[]
    symDimIndex=0
    for index in arrRefApp.args:
@@ -653,11 +698,22 @@ def __functionShape(aFunctionApp,localSymtab,lineNumber):
 
 def __selectionShape(aSelectionExpression,localSymtab,lineNumber):
    DebugManager.debug(sys._getframe().f_code.co_name+' determining shape of selection expression '+str(aSelectionExpression)+' using symtab '+str(localSymtab))
+   # if not a scalar, that's the shape. Can stop & return it now.
+   # if a scalar, recur on projection shape, if projection is a selection
    # lookup type of head
    dType=expressionType(aSelectionExpression.head,localSymtab,lineNumber)
-   # lookup the projection shape
-   pShape=__identifierShape(dType[1][0]+":"+aSelectionExpression.proj,localSymtab,lineNumber)
-   return pShape
+   if isinstance(dType.entryKind,TypetabEntry.ArrayEntryKind):
+      # this is the shape, so we can return now.
+      return dType.entryKind.getArrayBounds()
+   elif isinstance(aSelectionExpression.proj,Sel):
+      return __selectionShape(aSelectionExpression.proj,dType.entryKind.localSymtab,lineNumber)
+   else:
+      projSymtabEntry=dType.entryKind.localSymtab.lookup_name_local(dType.entryKind.symbolName+":"+aSelectionExpression.proj)
+      projType=globalTypeTable.lookupTypeId(projSymtabEntry.typetab_id)
+      if isinstance(projType.entryKind,TypetabEntry.ArrayEntryKind):
+         return projType.getArrayBounds()
+      else:
+         return __identifierShape(aSelectionExpression.proj,dType.entryKind.localSymtab,lineNumber)
 
 def expressionShape(anExpression,localSymtab,lineNumber):
    DebugManager.debug(sys._getframe().f_code.co_name+' determining shape of expression '+str(anExpression)+'...',newLine=False)
@@ -722,7 +778,8 @@ def _genericResolve(aFunctionApp,localSymtab,lineNumber):
       aTypeContext=_TypeContext(lineNumber,localSymtab)
       for formal,actual in zip(signature.keys(),aFunctionApp.args):
          theExpressionType=expressionType(actual,localSymtab,lineNumber)
-         if (signature[formal][0]!=theExpressionType.typetab_id):
+         sigBaseType=globalTypeTable.lookupTypeId(signature[formal][0]).getBaseTypeId()
+         if (sigBaseType!=theExpressionType.getBaseTypeId()):
             DebugManager.debug(sys._getframe().f_code.co_name+' argument type mismatch for specific "'+
                                str(sName)+'" at formal "'+
                                str(formal)+'"('+str(signature[formal][0])+')'
@@ -734,6 +791,8 @@ def _genericResolve(aFunctionApp,localSymtab,lineNumber):
          formalRank=0
          if (signature[formal][1]): 
             formalRank=len(signature[formal][1])
+         elif isinstance(globalTypeTable.lookupTypeId(signature[formal][0]).entryKind,TypetabEntry.ArrayEntryKind):
+            formalRank=globalTypeTable.lookupTypeId(signature[formal][0]).entryKind.getArrayRank()
          actualRank=0
          actualShape=expressionShape(actual,localSymtab,lineNumber)
          if (actualShape):
@@ -777,15 +836,19 @@ def __selSymtabName(aSel,localSymtab,lineNumber):
    return dType[1][0]+":"+aSel.proj
 
 def __ntSymtabEntry(namedType,localSymtab,lineNumber):
-   if isinstance(namedType,Sel) or isinstance(namedType,App):
+   if isinstance(namedType,App):
       return __ntSymtabEntry(namedType.head,localSymtab,lineNumber)
+   elif isinstance(namedType,Sel):
+      nType=expressionType(namedType.head,localSymtab,lineNumber)
+      (ntSymtabEntry,ntSymtab)=nType.entryKind.localSymtab.lookup_name_level(nType.entryKind.symbolName+":"+namedType.proj)
+      ntTypeEntry=globalTypeTable.lookupTypeId(ntSymtabEntry.typetab_id)
+      if isinstance(ntTypeEntry.entryKind,TypetabEntry.NamedTypeEntryKind):
+         return __ntSymtabEntry(ntTypeEntry.entryKind.symbolName,nType.entryKind.localSymtab,lineNumber)
+      else:
+         return ntSymtabEntry
    else:
       typeEntry=expressionType(namedType,localSymtab,lineNumber)
-      if isinstance(typeEntry.entryKind,TypetabEntry.ArrayEntryKind):
-         namedTypeEntry=typeEntry.getBaseTypeEntry()
-         theSymtabEntry=namedTypeEntry.entryKind.localSymtab.lookup_name(namedType)
-      else:
-         theSymtabEntry=typeEntry.entryKind.localSymtab.lookup_name(namedType)
+      theSymtabEntry=typeEntry.entryKind.localSymtab.lookup_name(namedType)
       return theSymtabEntry
 
 def isArrayReference(theApp,localSymtab,lineNumber):
@@ -800,6 +863,7 @@ def isArrayReference(theApp,localSymtab,lineNumber):
    DebugManager.debug(sys._getframe().f_code.co_name+' symtab entry is '+str(theSymtabEntry))
    if not theSymtabEntry:
       return False
+   theTypeEntry=globalTypeTable.lookupTypeId(theSymtabEntry.typetab_id)
    # there has to be a symbol table entry for a variable
    DebugManager.debug(sys._getframe().f_code.co_name+' for '+theSymtabEntry.debug(lookupName))
    if isinstance(theSymtabEntry.entryKind(),SymtabEntry.ProcedureEntryKind):
