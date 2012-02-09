@@ -35,8 +35,8 @@ class ArrayBoundsTab(object):
 
     # if array dimensions are constants, look up array bounds in table
     # if not, return None
-    def lookupArrayBounds(self,arrayType):
-        rank=len(arrayType.dimension)
+    def lookupArrayBounds(self,arrayDims):
+        rank=len(arrayDims)
         rankEntryMatches = [e for e in self.ids.values() if (e.constant_dims and e.rank==rank)]
         if not rankEntryMatches:
             return None
@@ -44,7 +44,7 @@ class ArrayBoundsTab(object):
         dimArray=[]
         # attempt lookup if array dimensions are constants
         # if not, just return (takes too long)
-        for dim in arrayType.dimension:
+        for dim in arrayDims:
             if isinstance(dim,fe.Ops):
                 if not isinstance(dim.a1,int) or not isinstance(dim.a2,int):
                     return None
