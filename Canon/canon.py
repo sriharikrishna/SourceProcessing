@@ -119,8 +119,9 @@ class UnitCanonicalizer(object):
         if is_intrinsic(theApp.head):
             if UnitCanonicalizer._overloadingMode:
                 return False
+            baseType=appTypeEntry.getBaseTypeEntry()
             DebugManager.debug('UnitCanonicalizer.shouldSubroutinizeFunction: It\'s an intrinsic of type '+appTypeEntry.debug())
-            return subroutinizedIntrinsics.shouldSubroutinize(theApp) and (UnitCanonicalizer._subroutinizeIntegerFunctions or not (isinstance(appTypeEntry.entryKind,TypetabEntry.BuiltInEntryKind) and (appTypeEntry.entryKind.type_name=='integer_4')))
+            return subroutinizedIntrinsics.shouldSubroutinize(theApp) and (UnitCanonicalizer._subroutinizeIntegerFunctions or not (isinstance(baseType.entryKind,TypetabEntry.BuiltInEntryKind) and (baseType.entryKind.type_name=='integer_4')))
         else:
             return True
 
@@ -332,13 +333,14 @@ class UnitCanonicalizer(object):
                 argType=None
                 argTypeMod=None
                 try: 
-                    expTypeEntry = expressionType(anArg,self.__myUnit.symtab,aSubCallStmt.lineNumber)
+                    argType = expressionType(anArg,self.__myUnit.symtab,aSubCallStmt.lineNumber)
                 except InferenceError, e :
                     DebugManager.warning("cannot canonicalize argument >"+str(anArg)+"< parsed as "+repr(anArg)+" because: "+e.msg,aSubCallStmt.lineNumber)
                     replacementArgs.append(anArg)
                     continue
                 # constant character expressions
-                if isinstance(argType,TypetabEntry.CharacterEntryKind):
+                if argType is not None and (isinstance(argType.entryKind,TypetabEntry.CharacterEntryKind) or \
+                        (isinstance(argType.entryKind,TypetabEntry.BuiltInEntryKind) and argType.entryKind.type_name=='character')):
                     if not self._hoistStringsFlag:
                         DebugManager.debug('is a string expression (which we aren\'t hoisting)')
                         replacementArgs.append(anArg)
