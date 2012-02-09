@@ -383,10 +383,19 @@ class _TypeContext:
          expType=self._expressionType(anApp.head)
          if isinstance(expType.entryKind,TypetabEntry.ArrayEntryKind):
             for anArg in anApp.args:
-               if isinstance(anArg,Ops):
-                  # TODO: nonscalar arg; type is some kind of array; create temp arraykind entry & return it;
-                  # TODO: for now, return expType
-                  return expType
+               arraySlice=False
+               if isinstance(anArg,Ops) and anArg.op==':':
+                  # arg is a slice
+                  arraySlice=True
+                  break
+               if arraySlice:
+                  arrayid=globalTypeTable.arrayBoundsTab.enterNewArrayBounds(dimensionList)
+                  typeid=returnType.getBaseTypeId()
+                  tempType=TypetabEntry(TypetabEntry.ArrayEntryKind(arrayid,typeid),None)
+                  # we are returning an array type, but it is not the same shape as the array type of App.head
+                  # check to see if new array rank&dimensions are defined as a type.
+                  return tempType
+               return expType
             # if the args are all scalar, then the type is a scalar which is the base type of expType
             return expType.getBaseTypeEntry()
       returnType = None
