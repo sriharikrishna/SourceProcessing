@@ -2,7 +2,7 @@ from _Setup import *
 
 from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
-from PyUtil.typetab import globalTypeTable
+from PyUtil.typetab import globalTypeTable,TypetabEntry
 from PyUtil.argreplacement import replaceArgs, replaceSon
 from PyUtil.errors import ScanError, ParseError, UserError
 
@@ -142,13 +142,6 @@ class UnitPostProcessor(object):
         # temporary setting to figure out if we are within an interface
         self.inInterface=False
 
-    def __isActiveInitSymtabType(self,oType):
-        ''' check symtab entry type given as oType, see class symtab.SymtabEntry '''
-        if isinstance(oType,fs.DrvdTypeDecl):
-            if (oType[1][0].lower()==self._abstract_type+'_init'):
-                return True
-        return False
-    
     ##
     # a class to hold some context information affecting the logic for dealing with 
     # reference to variables of active type
@@ -334,7 +327,8 @@ class UnitPostProcessor(object):
             replObjectList=[]
             for varRef in o: 
                 varRefType=expressionType(varRef,self.__myUnit.symtab,aDecl.lineNumber)
-                if (varRefType and self.__isActiveInitSymtabType(varRef)):
+                if (varRefType and isinstance(varRefType.entryKind,TypetabEntry.NamedTypeEntryKind) and \
+                        varRefType.entryKind.symbolName.lower()==self._abstract_type+'_init'):
                     replObjectList.append(fe.Sel(varRef,"v"))
                     changed=True
                 else:
