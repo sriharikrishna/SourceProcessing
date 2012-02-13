@@ -335,7 +335,7 @@ class UnitPostProcessor(object):
                     replObjectList.append(varRef)
             replObjectValuePairList.append((replObjectList,v))
         if (changed) :
-            rDecl=fs.DataStmt(replObjectValuePairList,aDecl.lineNumber,aDecl.label,aDecl.lead,aDecl.stmt_name,aDecl.internal,aDecl.rest)
+            rDecl=fs.DataStmt(replObjectValuePairList,aDecl.stmt_name,aDecl.lineNumber,aDecl.label,aDecl.lead,aDecl.internal,aDecl.rest)
         return rDecl
         
     # Determines the function to be inlined (if there is one)

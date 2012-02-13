@@ -355,8 +355,8 @@ class GenStmt(_Mappable,_Mutable_T):
     def __deepcopy__(self,memo={}):
         '''cheaper deepcopy implementation for copying statements'''
         newSons=map(lambda l: copyExp(getattr(self,l)),self.get_sons())
-        newStmt=self.__class__(*newSons,lead=self.lead)
-        #newStmt.lead=self.lead
+        newStmt=self.__class__(*newSons)
+        newStmt.lead=self.lead
         newStmt.rawline=self.rawline
         if (DebugManager.check()):
             if (repr(self)!=repr(newStmt)):
