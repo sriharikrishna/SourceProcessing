@@ -8,7 +8,7 @@ from _Setup import *
 from PyUtil.symtab import Symtab,SymtabEntry,SymtabError, GenericInfo, FormalArgs, globalTypeTable
 from PyUtil.debugManager import DebugManager
 
-import fortStmts     as fs
+import PyFort.fortStmts     as fs
 import PyFort.fortExp       as fe
 
 class InterfaceInfo:
@@ -87,6 +87,7 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                         name = aDecl.lhs.a1
                         newLength = aDecl.lhs.a2
             theSymtabEntry = localSymtab.lookup_name_local(name)
+            theTmpDeclStmt=aTypeDeclStmt.__class__(aTypeDeclStmt.get_mod(),aTypeDeclStmt.get_attrs(),[aDecl])
             if theSymtabEntry: # already in symtab -> enter new information (taking exception to any conflicts)
                 DebugManager.debug('decl "'+str(aDecl)+'" already present in local symbol table as '+str(theSymtabEntry.debug(name)))
                 #theSymtabEntry.enterType(newType)
@@ -109,7 +110,7 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                     else:
                         localSymtab.augmentParentEntry(theSymtabEntry,parentSymtabEntry,name)            
                         DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: updated PARENT unit symtab entry '+parentSymtabEntry.debug(name))
-                typetab_id = globalTypeTable.getType(aTypeDeclStmt,localSymtab)
+                typetab_id = globalTypeTable.getType(theTmpDeclStmt,localSymtab)
                 theSymtabEntry.typetab_id=typetab_id
             else: # no symtab entry -> create one
                 if aTypeDeclStmt.parameter:
@@ -134,7 +135,7 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                     newSymtabEntry.enterDrvdTypeName(inDrvdTypeDefn)
                 DebugManager.debug('decl "'+str(aDecl)+'" NOT already present in symbol table => adding '+str(newSymtabEntry.debug(name)))
                 localSymtab.enter_name(name,newSymtabEntry)
-                typetab_id = globalTypeTable.getType(aTypeDeclStmt,localSymtab)
+                typetab_id = globalTypeTable.getType(theTmpDeclStmt,localSymtab)
                 newSymtabEntry.typetab_id=typetab_id
             unitSymbolEntry,sTable=localSymtab.lookup_name_level(curr.val.name())
             if (unitSymbolEntry and unitSymbolEntry.entryKind==SymtabEntry.FunctionEntryKind and  unitSymbolEntry.genericInfo and unitSymbolEntry.genericInfo.genericName):

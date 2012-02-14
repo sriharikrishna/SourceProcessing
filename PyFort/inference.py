@@ -127,11 +127,11 @@ class _TypeContext:
       if isinstance(t1.entryKind,TypetabEntry.ArrayEntryKind):
          # get type name of built in type
          t1_type=globalTypeTable.lookupTypeId(t1.entryKind.typetab_id).entryKind.type_name
-      else: t1_type=t1.entryKind.type_name
+      else: t1_type=t1.getBaseTypeEntry().entryKind.type_name
       if isinstance(t2.entryKind,TypetabEntry.ArrayEntryKind):
          # get type name of built in type
          t2_type=globalTypeTable.lookupTypeId(t2.entryKind.typetab_id).entryKind.type_name
-      else: t2_type=t2.entryKind.type_name
+      else: t2_type=t2.getBaseTypeEntry().entryKind.type_name
       if mergeit[t1_type] > mergeit[t2_type]: return t1
       return t2
 
@@ -184,7 +184,8 @@ class _TypeContext:
       if e.lower() in _logicon_set:
          return globalTypeTable.intrinsicTypeNameToEntry('logical')
       if e[0] in _quote_set:
-         return (_kw2type('character'),_lenfn(len(e)-2))
+         return globalTypeTable.getTypeEntry(fortStmts.CharacterStmt([_lenfn(len(e)-2)],[],[]),self.localSymtab)
+         #return (_kw2type('character'),_lenfn(len(e)-2))
 
    def __identifierType(self,anId):
       (symtabEntry,containingSymtab) = self.localSymtab.lookup_name_level(anId)

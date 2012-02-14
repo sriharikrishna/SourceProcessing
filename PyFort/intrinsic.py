@@ -102,7 +102,7 @@ __nonStandard = (
                  'sleep',
                  'time'   
                  )
-__builtInTypes = (
+__builtInTypes = [
     (fs.CharacterStmt,4),
     (fs.LogicalStmt,4),
     (fs.IntegerStmt,4),
@@ -111,7 +111,7 @@ __builtInTypes = (
     (fs.DoubleStmt,8),
     (fs.ComplexStmt,8),
     (fs.DoubleCplexStmt,16)
-)
+]
 
 def getNonStandard():
     return __nonStandard

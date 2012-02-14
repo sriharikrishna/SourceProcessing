@@ -279,7 +279,7 @@ class TypetabEntry(object):
             self.type_name=type_name  # name of built-in type (e.g. integer) (use type class here?) only if not a pointer
 
         def debug(self):
-            return 'BuiltInPointerEntryKind; name of built-in type: '+str(self.type_name)
+            return 'BuiltInEntryKind; name of built-in type: '+str(self.type_name)
 
     class CharacterEntryKind(BuiltInEntryKind):
         _sons = ['type_name','charlen_id']
@@ -287,6 +287,9 @@ class TypetabEntry(object):
         def __init__(self,charLenId):
             self.charlen_id=charLenId
             TypetabEntry.BuiltInEntryKind.__init__(self,'character')
+
+        def debug(self):
+            return 'CharacterEntryKind; name of built-in type: '+str(self.type_name)
 
     class BuiltInPointerEntryKind(GenericEntryKind):
         keyword = 'BIpointer'
@@ -358,25 +361,27 @@ class TypetabEntry(object):
 
     class AllocatableEntryKind(GenericEntryKind):
         keyword = 'allocatable'
+        _sons = ['typetab_id','rank']
 
         def __init__(self,typetab_id,rank):
             self.typetab_id=typetab_id # type id of base type
             self.rank=rank             # rank
 
         def debug(self):
-            return 'AllocatableEntryKind'
+            return 'AllocatableEntryKind; Type id of allocatable base type: '+str(self.typetab_id)+';rank: '+str(self.rank)
 
     def __init__(self,entryKind,typetab_id):
         self.entryKind = entryKind # some instance of self.GenericEntryKind
         self.typetab_id=typetab_id # typeid in type table for this TypeTabEntry
 
-    
     def getBaseTypeId(self):
         if isinstance(self.entryKind,TypetabEntry.ArrayEntryKind):
             return self.entryKind.typetab_id
         elif isinstance(self.entryKind,TypetabEntry.ArrayPointerEntryKind):
             return globalTypeTable.lookupTypeId(self.entryKind.typetab_id).getBaseTypeId()
         elif isinstance(self.entryKind,TypetabEntry.BuiltInPointerEntryKind):
+            return self.entryKind.typetab_id
+        elif isinstance(self.entryKind,TypetabEntry.AllocatableEntryKind):
             return self.entryKind.typetab_id
         else:
             return self.typetab_id

@@ -150,7 +150,12 @@ class UnitCanonicalizer(object):
         theNewTemp = _tmp_prefix + str(self.__tempCounter)
         self.__tempCounter += 1
         expTypeEntry = expressionType(anExpression,self.__myUnit.symtab,parentStmt.lineNumber)
-        (varTypeClass,typeKind)=globalTypeTable.intrinsicIdToTypeMap[expTypeEntry.getBaseTypeId()]
+        if isinstance(expTypeEntry.entryKind,TypetabEntry.CharacterEntryKind):
+            charLen=globalTypeTable.charLenTab.lookupCharLenId(expTypeEntry.entryKind.charlen_id)
+            varTypeClass=fs.CharacterStmt
+            typeKind=charLen.charLenExp
+        else:
+            (varTypeClass,typeKind)=globalTypeTable.intrinsicIdToTypeMap[expTypeEntry.getBaseTypeId()]
         varModifierList=[]
         varShape=expressionShape(anExpression,self.__myUnit.symtab,parentStmt.lineNumber)
         if isinstance(expTypeEntry.entryKind,TypetabEntry.BuiltInEntryKind) and expTypeEntry.entryKind.type_name=='real_8':

@@ -7,7 +7,7 @@ class CharacterLenTab(object):
         self.ids = dict() # string for the key and ArrayBoundsTabEntry for the value
         self.entry_counter=1
 
-    def lookupCharLenId(self,charlenid):
+    def lookupCharLenId(self,charlen_id):
         '''check for arrayid in the array bounds table'''
         if charlen_id in self.ids:
             return self.ids[charlen_id]
