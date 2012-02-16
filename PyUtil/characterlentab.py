@@ -37,3 +37,6 @@ class CharacterLenTabEntry(object):
     def __init__(self,charLenExp,charLenId):
         self.charLenExp=charLenExp    # expression for the character length
         self.charLenId=charLenId      # array bounds info id number in ArrayBoundsTab
+
+    def debug(self):
+        return 'CharacterLenTabEntry; character lenght expression: ',self.charLenExp,'; character length ID:',self.charLenId
