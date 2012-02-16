@@ -3,6 +3,7 @@ from unittest import *
 from useparse import *
 
 from PyUtil.symtab import Symtab,globalTypeTable
+from PyUtil.typetab import TypetabEntry
 
 from PyFort.inference import expressionType,_TypeContext,_kw2type,_lenfn 
 import PyFort.fortStmts as fortStmts
@@ -59,9 +60,9 @@ class TypeConstants(TestCase):
 
     def test3(self):
         'constants - strings'
-        (type,typeModList) = _TypeContext(0,theSymtab)._constantType(ep(r"'food'"))
-        typeMod = typeModList[0]
-        self.assertEquals(type,fortStmts.CharacterStmt)
+        constTypeEntry = _TypeContext(0,theSymtab)._constantType(ep(r"'food'"))
+        self.assert_(isinstance(constTypeEntry.entryKind,TypetabEntry.CharacterEntryKind))
+        typeMod=globalTypeTable.charLenTab.lookupCharLenId(constTypeEntry.entryKind.charlen_id).charLenExp[0]
         self.assert_(isinstance(typeMod,_F77Len))
         self.assertEquals(typeMod.len,'4')
 
