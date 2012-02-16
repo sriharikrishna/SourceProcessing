@@ -43,8 +43,7 @@ class TransformActiveVariables(object):
         for aUnit in fortUnitIterator(file,inputFormat):
             for aDeclStmt in aUnit.decls:
                 if isinstance(aDeclStmt,fs.CommonStmt):
-                    (stmtClass,[expType])=expressionType(aDeclStmt.declList[0],aUnit.symtab,aDeclStmt.lineNumber)
-                    if expType=='active':
+                    if self.__isActiveNamedType(aDeclStmt.declList[0],aDeclStmt):
                         TransformActiveVariables._commonBlocks.add(aDeclStmt.name.lower())
         DebugManager.debug('TransformActiveVariables: finished populating list of names of common blocks with active variables: '+str(TransformActiveVariables._commonBlocks))
 
@@ -52,12 +51,18 @@ class TransformActiveVariables(object):
         self.__myUnit = aUnit
         self.__newDecls=[]
 
+    def __isActiveNamedType(self,Exp,parentStmt):
+        expType=expressionType(varName,self.__myUnit.symtab,parentStmt.lineNumber)
+        if isinstance(expType.typeKind,TypetabEntry.NamedEntryKind):
+            if (expType.typeKind.symbolName=='active'):
+                return True
+        return False
+
     def __isActive(self,Exp,parentStmt):
         varName=fs.getVarName(Exp,parentStmt.lineNumber)
-        (stmtClass,expType)=expressionType(varName,
-                                           self.__myUnit.symtab,parentStmt.lineNumber)
-        if (len(expType)>0 and expType[0]=='active') or \
-                (varName.lower() in self._activeVars) or \
+        expType=expressionType(varName,self.__myUnit.symtab,parentStmt.lineNumber)
+        if self.__isActiveNamedType(Exp,parentStmt) or \
+                (varName.lower() in self._activeVas) or \
                 (varName.lower() in self._localActiveVars):
             return True
         return False
