@@ -9,6 +9,7 @@ import PyFort.fortStmts as fs
 import PyFort.fortExp as fe
 import copy
 from PyUtil.symtab import Symtab
+from PyUtil.typetab import TypetabEntry
 
 class TransformError(Exception):
     '''Exception for errors that occur during active variable transformation'''
@@ -52,18 +53,19 @@ class TransformActiveVariables(object):
         self.__newDecls=[]
 
     def __isActiveNamedType(self,Exp,parentStmt):
-        expType=expressionType(varName,self.__myUnit.symtab,parentStmt.lineNumber)
-        if isinstance(expType.typeKind,TypetabEntry.NamedEntryKind):
-            if (expType.typeKind.symbolName=='active'):
+        expType=expressionType(Exp,self.__myUnit.symtab,parentStmt.lineNumber)
+        if isinstance(expType.entryKind,TypetabEntry.ArrayEntryKind):
+            expType=expType.getBaseTypeEntry()
+        if isinstance(expType.entryKind,TypetabEntry.NamedTypeEntryKind):
+            if (expType.entryKind.symbolName=='active'):
                 return True
         return False
 
     def __isActive(self,Exp,parentStmt):
         varName=fs.getVarName(Exp,parentStmt.lineNumber)
-        expType=expressionType(varName,self.__myUnit.symtab,parentStmt.lineNumber)
         if self.__isActiveNamedType(Exp,parentStmt) or \
-                (varName.lower() in self._activeVas) or \
-                (varName.lower() in self._localActiveVars):
+               (varName.lower() in self._activeVars) or \
+               (varName.lower() in self._localActiveVars):
             return True
         return False
 
@@ -77,6 +79,17 @@ class TransformActiveVariables(object):
         elif isinstance(Exp,fe.App) and is_intrinsic(Exp.head) and not is_inquiry(Exp.head):
             Exp.head=getGenericName(Exp.head)
             Exp.args=[self.__transformActiveTypes(arg,parentStmt) for arg in Exp.args]
+        elif isinstance(Exp,fe.App):
+            try:
+                if not is_inquiry(Exp.head):
+                    if self.__isActive(Exp,parentStmt):
+                        Exp = fe.Sel(Exp,"v")
+                        parentStmt.modified = True
+                    if hasattr(Exp,'args'):
+                        Exp.args=[self.__transformActiveTypes(arg,parentStmt) for arg in Exp.args]
+                        parentStmt.modified=True
+            except:
+                pass            
         elif isinstance(Exp,str) or isinstance(Exp,fe.Sel) or isinstance(Exp,fe.App):
             try:
                 if self.__isActive(Exp,parentStmt):
@@ -120,10 +133,7 @@ class TransformActiveVariables(object):
                             for var in item:
                                 # if one variable is active, they all need to be active;
                                 # add non-active vars to a list of vars to be activated
-                                (stmtClass,expType)=expressionType(var,self.__myUnit.symtab,aDecl.lineNumber)
-                                # if equivalenced to an active variable not found in a common block, the type
-                                # inference should find that it's active
-                                if isinstance(expType,list) and len(expType)>0 and expType[0]=='active':
+                                if self.__isActiveNamedType(var,aDecl):
                                     active=True
                                 # if equivalenced to an active variable from a common block, the variable will
                                 # be in localActiveVars
