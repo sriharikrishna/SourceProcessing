@@ -951,8 +951,10 @@ class UnitPostProcessor(object):
     def __isActive(self,Exp,parentStmt):
         varName=fs.getVarName(Exp,parentStmt.lineNumber)
         expType=expressionType(varName,self.__myUnit.symtab,parentStmt.lineNumber)
-        if isinstance(expType.typeKind,TypetabEntry.NamedEntryKind):
-            if (expType.typeKind.symbolName==self._abstract_type):
+        if isinstance(expType.entryKind,TypetabEntry.ArrayEntryKind):
+            expType=expType.getBaseTypeEntry()
+        if isinstance(expType.entryKind,TypetabEntry.NamedTypeEntryKind):
+            if (expType.entryKind.symbolName==self._abstract_type):
                 return True
         return False
 
