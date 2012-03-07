@@ -87,7 +87,10 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                         name = aDecl.lhs.a1
                         newLength = aDecl.lhs.a2
             theSymtabEntry = localSymtab.lookup_name_local(name)
-            theTmpDeclStmt=aTypeDeclStmt.__class__(aTypeDeclStmt.get_mod(),aTypeDeclStmt.get_attrs(),[aDecl])
+            if isinstance(aDecl,fs._AssignInit):
+                theTmpDeclStmt=aTypeDeclStmt.__class__(aTypeDeclStmt.get_mod(),aTypeDeclStmt.get_attrs(),[aDecl.lhs])
+            else:
+                theTmpDeclStmt=aTypeDeclStmt.__class__(aTypeDeclStmt.get_mod(),aTypeDeclStmt.get_attrs(),[aDecl])
             if theSymtabEntry: # already in symtab -> enter new information (taking exception to any conflicts)
                 DebugManager.debug('decl "'+str(aDecl)+'" already present in local symbol table as '+str(theSymtabEntry.debug(name)))
                 #theSymtabEntry.enterType(newType)
@@ -102,7 +105,7 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                     theSymtabEntry.enterDrvdTypeName(inDrvdTypeDefn)
                 # for function/subroutine entries, also update this information in the parent symbol table
                 # if isinstance(theSymtabEntry.entryKind,SymtabEntry.ProcedureEntryKind):
-                if localSymtab.parent and theSymtabEntry.entryKind in (SymtabEntry.FunctionEntryKind,SymtabEntry.SubroutineEntryKind):
+                if localSymtab.parent and isinstance(theSymtabEntry.entryKind,SymtabEntry.ProcedureEntryKind):
                     parentSymtabEntry=localSymtab.parent.lookup_name_local(name)
                     if (not parentSymtabEntry):
                         localSymtab.replicateEntry(name,'local',name,localSymtab.parent,replicatingUp=True)
@@ -133,10 +136,10 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                     newSymtabEntry.enterConstInit(aDecl.rhs)
                 if inDrvdTypeDefn:
                     newSymtabEntry.enterDrvdTypeName(inDrvdTypeDefn)
-                DebugManager.debug('decl "'+str(aDecl)+'" NOT already present in symbol table => adding '+str(newSymtabEntry.debug(name)))
                 localSymtab.enter_name(name,newSymtabEntry)
                 typetab_id = globalTypeTable.getType(theTmpDeclStmt,localSymtab)
                 newSymtabEntry.typetab_id=typetab_id
+                DebugManager.debug('decl "'+str(aDecl)+'" NOT already present in symbol table => adding '+str(newSymtabEntry.debug(name)))
             unitSymbolEntry,sTable=localSymtab.lookup_name_level(curr.val.name())
             if (unitSymbolEntry and unitSymbolEntry.entryKind==SymtabEntry.FunctionEntryKind and  unitSymbolEntry.genericInfo and unitSymbolEntry.genericInfo.genericName):
                 genericSymbolEntry=localSymtab.lookup_name(unitSymbolEntry.genericInfo.genericName)
