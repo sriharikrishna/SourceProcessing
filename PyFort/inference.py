@@ -845,21 +845,44 @@ def __selSymtabName(aSel,localSymtab,lineNumber):
       raise InferenceError(sys._getframe().f_code.co_name+': Did not correctly resolve type of "'+aSel.head+'"',lineNumber)
    return dType[1][0]+":"+aSel.proj
 
-def __ntSymtabEntry(namedType,localSymtab,lineNumber):
+def __ntArrayReference(namedType,localSymtab,lineNumber):
+   DebugManager.debug(sys._getframe().f_code.co_name+' Named Type Expression "'+str(namedType))
    if isinstance(namedType,App):
-      return __ntSymtabEntry(namedType.head,localSymtab,lineNumber)
+      return __ntArrayReference(namedType.head,localSymtab,lineNumber)
    elif isinstance(namedType,Sel):
       nType=expressionType(namedType.head,localSymtab,lineNumber)
-      (ntSymtabEntry,ntSymtab)=nType.entryKind.localSymtab.lookup_name_level(nType.entryKind.symbolName+":"+namedType.proj)
-      ntTypeEntry=globalTypeTable.lookupTypeId(ntSymtabEntry.typetab_id)
-      if isinstance(ntTypeEntry.entryKind,TypetabEntry.NamedTypeEntryKind):
-         return __ntSymtabEntry(ntTypeEntry.entryKind.symbolName,nType.entryKind.localSymtab,lineNumber)
+      if isinstance(nType.entryKind,TypetabEntry.NamedTypeEntryKind):
+         (ntSymtabEntry,ntSymtab)=nType.entryKind.localSymtab.lookup_name_level(nType.entryKind.symbolName+":"+namedType.proj)
+         ntTypeEntry=globalTypeTable.lookupTypeId(ntSymtabEntry.typetab_id)
+         if isinstance(ntTypeEntry.entryKind,TypetabEntry.AllocatableEntryKind) or \
+                isinstance(ntTypeEntry.entryKind,TypetabEntry.ArrayEntryKind) or \
+                isinstance(ntTypeEntry.entryKind,TypetabEntry.ArrayPointerEntryKind) or \
+                isinstance(ntTypeEntry.entryKind,TypetabEntry.CharacterEntryKind) or \
+                (isinstance(ntTypeEntry.entryKind,TypetabEntry.BuiltInEntryKind) and ntTypeEntry.entryKind.type_name=='character'):
+            return True
+         return __ntArrayReference(ntTypeEntry.entryKind.symbolName,ntTypeEntry.entryKind.localSymtab,lineNumber)
       else:
-         return ntSymtabEntry
+         baseType=nType.getBaseTypeEntry()
+         (ntSymtabEntry,ntSymtab)=baseType.entryKind.localSymtab.lookup_name_level(baseType.entryKind.symbolName+":"+namedType.proj)
+         ntTypeEntry=globalTypeTable.lookupTypeId(ntSymtabEntry.typetab_id)
+         if isinstance(ntTypeEntry.entryKind,TypetabEntry.AllocatableEntryKind) or \
+                isinstance(ntTypeEntry.entryKind,TypetabEntry.ArrayEntryKind) or \
+                isinstance(ntTypeEntry.entryKind,TypetabEntry.ArrayPointerEntryKind) or \
+                isinstance(ntTypeEntry.entryKind,TypetabEntry.CharacterEntryKind) or \
+                (isinstance(ntTypeEntry.entryKind,TypetabEntry.BuiltInEntryKind) and ntTypeEntry.entryKind.type_name=='character'):
+            return True
+         elif isinstance(ntTypeEntry.entryKind,TypetabEntry.NamedTypeEntryKind):
+            return __ntArrayReference(ntTypeEntry.entryKind.symbolName,ntTypeEntry.entryKind.localSymtab,lineNumber)
    else:
       typeEntry=expressionType(namedType,localSymtab,lineNumber)
-      theSymtabEntry=typeEntry.entryKind.localSymtab.lookup_name(namedType)
-      return theSymtabEntry
+      DebugManager.debug(sys._getframe().f_code.co_name+' typetab entry is '+typeEntry.debug())
+      if isinstance(typeEntry.entryKind,TypetabEntry.AllocatableEntryKind) or \
+             isinstance(typeEntry.entryKind,TypetabEntry.ArrayEntryKind) or \
+             isinstance(theTypeEntry.entryKind,TypetabEntry.ArrayPointerEntryKind) or \
+             isinstance(typeEntry.entryKind,TypetabEntry.CharacterEntryKind) or \
+             (isinstance(typeEntry.entryKind,TypetabEntry.BuiltInEntryKind) and typeEntry.entryKind.type_name=='character'):
+         return True
+      return False
 
 def isArrayReference(theApp,localSymtab,lineNumber):
    if not isinstance(theApp,App):
@@ -867,26 +890,33 @@ def isArrayReference(theApp,localSymtab,lineNumber):
    DebugManager.debug(sys._getframe().f_code.co_name+' Application Expression "'+str(theApp))
    lookupName=""
    if isinstance(theApp.head,Sel): # example type%member(1)
-      theSymtabEntry=__ntSymtabEntry(theApp.head,localSymtab,lineNumber)
+      return __ntArrayReference(theApp.head,localSymtab,lineNumber)
    else:
       theSymtabEntry=localSymtab.lookup_name(theApp.head)
    DebugManager.debug(sys._getframe().f_code.co_name+' symtab entry is '+str(theSymtabEntry))
    if not theSymtabEntry:
       return False
-   theTypeEntry=globalTypeTable.lookupTypeId(theSymtabEntry.typetab_id)
    # there has to be a symbol table entry for a variable
    DebugManager.debug(sys._getframe().f_code.co_name+' for '+theSymtabEntry.debug(lookupName))
-   if isinstance(theSymtabEntry.entryKind(),SymtabEntry.ProcedureEntryKind):
+   if isinstance(theSymtabEntry.entryKind(),SymtabEntry.ProcedureEntryKind) or \
+          isinstance(theSymtabEntry.entryKind(),SymtabEntry.InterfaceEntryKind):
       return False
-   if (not theSymtabEntry.dimensions or theSymtabEntry.dimensions == ()) and \
-      (not theSymtabEntry.length or theSymtabEntry.length == 1):
+   if theSymtabEntry.typetab_id is None:
+      raise InferenceError(sys._getframe().f_code.co_name+': No Type id in SymtabEntry for App: '+str(theApp),lineNumber)
+   theTypeEntry=globalTypeTable.lookupTypeId(theSymtabEntry.typetab_id)
+   if (isinstance(theTypeEntry.entryKind,TypetabEntry.ArrayEntryKind) or \
+       isinstance(theTypeEntry.entryKind,TypetabEntry.AllocatableEntryKind) or \
+       isinstance(theTypeEntry.entryKind,TypetabEntry.ArrayPointerEntryKind) or \
+       isinstance(theTypeEntry.entryKind,TypetabEntry.CharacterEntryKind) or \
+       (isinstance(theTypeEntry.entryKind,TypetabEntry.BuiltInEntryKind) and theTypeEntry.entryKind.type_name=='character')):
+      return True
+   else:
       #  now we know that its NOT a scalar variable, but rather a function.  so we update the symbol table with this information.
       if (not theSymtabEntry.entryKind in [SymtabEntry.InterfaceEntryKind,SymtabEntry.StatementFunctionEntryKind]) : 
          DebugManager.debug(sys._getframe().f_code.co_name+' Application Expression "'+str(theApp)+\
                             '" for something that we thought was a scalar variable => assuming it\'s a function and updating the symbol table to reflect this')
          theSymtabEntry.enterEntryKind(SymtabEntry.FunctionEntryKind)
       return False
-   return True
 
 def isSpecExpression(theExp,localSymtab,lineNumber):
    ''' true of theExp could be used as a specification expression in a declaration, conservative (incomplete) logic'''
