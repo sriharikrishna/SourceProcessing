@@ -416,7 +416,7 @@ class SymtabEntry(object):
             raise SymtabError(sys._getframe().f_code.co_name+': name clash between symbols with kind '+str(self.entryKind)+' and kind '+str(newEntryKind)+' ',entry=self)
         self.entryKind = newEntryKind
 
-    def enterType(self,newType):
+    def enterType(self,newType,localSymtab):
         DebugManager.debug('\t\tSymtabEntry.enterType: entering type '+str(newType)+' for '+str(self))
         if not newType:
             raise SymtabError('SymtabEntry.enterType: newType is None!',entry=self)
@@ -426,7 +426,7 @@ class SymtabEntry(object):
             DebugManager.debug('\t\t\t(SymtabEntry.enterType: entering type information tells us that this procedure is a function)')
             self.entryKind = self.FunctionEntryKind
         newStmt=newType[0](newType[1],[],[])
-        self.typetab_id = globalTypeTable.getType(newStmt,self)
+        self.typetab_id = globalTypeTable.getType(newStmt,localSymtab)
 
     def copyAndEnterType(self,typetab_id):
         self.typetab_id=typetab_id

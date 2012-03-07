@@ -93,7 +93,7 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                 theTmpDeclStmt=aTypeDeclStmt.__class__(aTypeDeclStmt.get_mod(),aTypeDeclStmt.get_attrs(),[aDecl])
             if theSymtabEntry: # already in symtab -> enter new information (taking exception to any conflicts)
                 DebugManager.debug('decl "'+str(aDecl)+'" already present in local symbol table as '+str(theSymtabEntry.debug(name)))
-                #theSymtabEntry.enterType(newType)
+                theSymtabEntry.enterType(newType,localSymtab)
                 if (theSymtabEntry.dimensions and (newDimensions is None)):
                     pass
                 else:
@@ -104,8 +104,7 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                 if inDrvdTypeDefn:
                     theSymtabEntry.enterDrvdTypeName(inDrvdTypeDefn)
                 # for function/subroutine entries, also update this information in the parent symbol table
-                # if isinstance(theSymtabEntry.entryKind,SymtabEntry.ProcedureEntryKind):
-                if localSymtab.parent and isinstance(theSymtabEntry.entryKind,SymtabEntry.ProcedureEntryKind):
+                if localSymtab.parent and theSymtabEntry.entryKind in (SymtabEntry.FunctionEntryKind,SymtabEntry.SubroutineEntryKind):
                     parentSymtabEntry=localSymtab.parent.lookup_name_local(name)
                     if (not parentSymtabEntry):
                         localSymtab.replicateEntry(name,'local',name,localSymtab.parent,replicatingUp=True)

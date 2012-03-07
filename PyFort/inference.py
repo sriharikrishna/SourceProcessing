@@ -201,7 +201,7 @@ class _TypeContext:
          #try local implicit typing
          implicitLocalType=containingSymtab.implicit[anId[0]]
          if implicitLocalType: # we handle the error condition below
-            symtabEntry.enterType(containingSymtab.implicit[anId[0]])
+            symtabEntry.enterType(containingSymtab.implicit[anId[0]],containingSymtab)
             DebugManager.warning(sys._getframe().f_code.co_name+' implicit typing: '+symtabEntry.typePrint()+' '+anId,self.lineNumber,DebugManager.WarnType.implicit)
             returnType = globalTypeTable.getTypeEntry(implicitLocalType[0](implicitLocalType[1],[],[]),self.localSymtab)
          else:
@@ -704,6 +704,9 @@ def __functionShape(aFunctionApp,localSymtab,lineNumber):
          returnShape=copy.deepcopy(returnShape) # don't want to modify the original
          for dim in returnShape:
             aMapParams.replaceFormalWithActual(dim)
+      elif (aFunctionApp.args and symtabEntry and symtabEntry.funcFormalArgs):
+         aMapParams=MapParams(aFunctionApp,symtabEntry,lineNumber)
+         returnShape=copy.deepcopy(returnShape) # don't want to modify the original
    return returnShape
 
 def __selectionShape(aSelectionExpression,localSymtab,lineNumber):
@@ -713,6 +716,10 @@ def __selectionShape(aSelectionExpression,localSymtab,lineNumber):
    # lookup type of head
    dType=expressionType(aSelectionExpression.head,localSymtab,lineNumber)
    if isinstance(dType.entryKind,TypetabEntry.ArrayEntryKind):
+      if isinstance(aSelectionExpression.head,App):
+         if (dType.entryKind.getArrayRank()==len(aSelectionExpression.head.args)):
+            # constant
+            return None
       # this is the shape, so we can return now.
       return dType.entryKind.getArrayBounds()
    elif isinstance(aSelectionExpression.proj,Sel):
