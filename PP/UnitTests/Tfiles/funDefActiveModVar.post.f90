@@ -8,7 +8,7 @@ real function bar(x)
   use OAD_intrinsics
   use active_var
   real :: x
-  bar = x*2*foo
+  bar = x*2*foo%v
   return
 end function
 subroutine oad_s_bar(x,bar)
