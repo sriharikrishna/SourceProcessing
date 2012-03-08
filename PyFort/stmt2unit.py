@@ -223,6 +223,8 @@ def _processExternalStmt(anExternalStmt,curr):
 def _processCommonStmt(aCommonStmt,curr):
     localSymtab = curr.val.symtab
     DebugManager.debug('['+':'+str(aCommonStmt.lineNumber)+']: stmt2unit._processCommonStmt: called on "'+repr(aCommonStmt)+'" with localSymtab '+str(localSymtab) +" implicit "+str(localSymtab.implicit))
+    commonTypeId=None
+    updateDeclTypeList=[]
     for aDecl in aCommonStmt.declList:
         try:
             aDeclName=""
@@ -233,25 +235,37 @@ def _processCommonStmt(aCommonStmt,curr):
             theSymtabEntry = localSymtab.lookup_name(aDeclName)
             if not theSymtabEntry:
                 # symtab entry will be added by declaration
-                pass
-                #theTypeId = globalTypeTable.getType(aDecl,localSymtab)
-                # newSymtabEntry = SymtabEntry(SymtabEntry.VariableEntryKind,
-                #                              origin=Symtab._ourCommonScopePrefix+aCommonStmt.name)
-                # print "NEW ENTRY:",newSymtabEntry.debug()
-                # localSymtab.enter_name(aDeclName,newSymtabEntry)
-                # if isinstance(aDecl,fe.App):
-                #     newSymtabEntry.enterDimensions(aDecl.args)
-                # DebugManager.debug('\tcommon variable NOT already present in symbol table -- adding '+newSymtabEntry.debug(aDeclName))
+                newSymtabEntry = SymtabEntry(SymtabEntry.VariableEntryKind,
+                                             origin=Symtab._ourCommonScopePrefix+aCommonStmt.name)
+                localSymtab.enter_name(aDeclName,newSymtabEntry)
+                if isinstance(aDecl,fe.App):
+                    newSymtabEntry.enterDimensions(aDecl.args)
+                if commonTypeId:
+                    newSymtabEntry.typetab_id=commonTypeId
+                else:
+                    updateDeclTypeList.append(newSymtabEntry)
+                DebugManager.debug('\tcommon variable NOT already present in symbol table -- adding '+newSymtabEntry.debug(aDeclName))
             else:
                 DebugManager.debug('\tcommon variable already has SymtabEntry'+theSymtabEntry.debug(aDeclName))
                 theSymtabEntry.enterEntryKind(SymtabEntry.VariableEntryKind)
                 if isinstance(aDecl,fe.App):
                     theSymtabEntry.enterDimensions(aDecl.args)
                 theSymtabEntry.updateOrigin(Symtab._ourCommonScopePrefix+aCommonStmt.name)
+                commonTypeId=theSymtabEntry.typetab_id
         except SymtabError,e: # add lineNumber and symbol name to any SymtabError we encounter
             e.lineNumber = e.lineNumber or aCommonStmt.lineNumber
             e.symbolName = e.symbolName or aDeclName
             raise e
+    if commonTypeId:
+        for symtabEntry in updateDeclTypeList:
+            dimensions=symtabEntry.lookupDimensions()
+            if dimensions:
+                newTypeEntry=globalTypeTable.createArrayEntryKind(commonTypeId,dimensions)
+                globalTypeTable.ids[globalTypeTable.type_counter]=newTypeEntry
+                symtabEntry.typetab_id=globalTypeTable.type_counter
+                globalTypeTable.type_counter+=1
+            else:
+                symtabEntry.typetab_id=commonTypeId
     return aCommonStmt
 
 def _assign2stmtfn(anAssignmentStmt,curr):
