@@ -38,20 +38,20 @@ class TypeConstants(TestCase):
         self.assertEquals(_TypeContext(0,theSymtab)._constantType(ep('3')),
                           globalTypeTable.lookupTypeId(globalTypeTable.intrinsicTypeToIdMap['integer_4']))
 
-    def test1(self):
-        'constants - numerical values with modifiers'
+    # def test1(self):
+    #     'constants - numerical values with modifiers'
 
-        (type,typeModList) = _TypeContext(0,theSymtab)._constantType(ep('3.787_foo'))
-        typeMod = typeModList[0]
-        self.assertEquals(type,fortStmts.RealStmt)
-        self.assert_(isinstance(typeMod,_Kind))
-        self.assertEquals(typeMod.mod,'foo')
+    #     (type,typeModList) = _TypeContext(0,theSymtab)._constantType(ep('3.787_foo'))
+    #     typeMod = typeModList[0]
+    #     self.assertEquals(type,fortStmts.RealStmt)
+    #     self.assert_(isinstance(typeMod,_Kind))
+    #     self.assertEquals(typeMod.mod,'foo')
 
-        (type,typeModList) = _TypeContext(0,theSymtab)._constantType(ep('0_w2f__i8'))
-        typeMod = typeModList[0]
-        self.assertEquals(type,fortStmts.IntegerStmt)
-        self.assert_(isinstance(typeMod,_Kind))
-        self.assertEquals(typeMod.mod,'w2f__i8')
+    #     (type,typeModList) = _TypeContext(0,theSymtab)._constantType(ep('0_w2f__i8'))
+    #     typeMod = typeModList[0]
+    #     self.assertEquals(type,fortStmts.IntegerStmt)
+    #     self.assert_(isinstance(typeMod,_Kind))
+    #     self.assertEquals(typeMod.mod,'w2f__i8')
 
     def test2(self):
         'constants - logical values'
