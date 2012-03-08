@@ -110,6 +110,13 @@ class Typetab(object):
             self.ids[self.type_counter]=newEntry
             self.type_counter += 1
 
+    def createArrayEntryKind(self,baseTypeID,dimensions):
+        # get arrayid
+        arrayid=self.arrayBoundsTab.enterNewArrayBounds(dimensions)
+        kind=TypetabEntry.ArrayEntryKind(typetab_id=baseTypeID,arrayid=arrayid)
+        newEntry=TypetabEntry(kind,self.type_counter)
+        return newEntry
+
     # newType: pair  (type class,type modifier) => pass in only type class (don't need type mod)?
     # enter the type in the type table and return the typetab_id
     def __enterNewType(self,theType,localSymtab):
