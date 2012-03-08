@@ -908,14 +908,13 @@ def isArrayReference(theApp,localSymtab,lineNumber):
    if isinstance(theSymtabEntry.entryKind(),SymtabEntry.ProcedureEntryKind) or \
           isinstance(theSymtabEntry.entryKind(),SymtabEntry.InterfaceEntryKind):
       return False
-   if theSymtabEntry.typetab_id is None:
-      raise InferenceError(sys._getframe().f_code.co_name+': No Type id in SymtabEntry for App: '+str(theApp),lineNumber)
    theTypeEntry=globalTypeTable.lookupTypeId(theSymtabEntry.typetab_id)
-   if (isinstance(theTypeEntry.entryKind,TypetabEntry.ArrayEntryKind) or \
-       isinstance(theTypeEntry.entryKind,TypetabEntry.AllocatableEntryKind) or \
-       isinstance(theTypeEntry.entryKind,TypetabEntry.ArrayPointerEntryKind) or \
-       isinstance(theTypeEntry.entryKind,TypetabEntry.CharacterEntryKind) or \
-       (isinstance(theTypeEntry.entryKind,TypetabEntry.BuiltInEntryKind) and theTypeEntry.entryKind.type_name=='character')):
+   if theTypeEntry is not None and (isinstance(theTypeEntry.entryKind,TypetabEntry.ArrayEntryKind) or \
+                                       isinstance(theTypeEntry.entryKind,TypetabEntry.AllocatableEntryKind) or \
+                                       isinstance(theTypeEntry.entryKind,TypetabEntry.ArrayPointerEntryKind) or \
+                                       isinstance(theTypeEntry.entryKind,TypetabEntry.CharacterEntryKind) or \
+                                       (isinstance(theTypeEntry.entryKind,TypetabEntry.BuiltInEntryKind) and \
+                                           theTypeEntry.entryKind.type_name=='character')):
       return True
    else:
       #  now we know that its NOT a scalar variable, but rather a function.  so we update the symbol table with this information.
