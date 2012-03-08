@@ -5,10 +5,11 @@ canonicalization routines
 from _Setup import *
 
 from PyUtil.debugManager import DebugManager
-from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
+from PyUtil.symtab import Symtab,SymtabEntry,SymtabError,globalTypeTable
+from PyUtil.typetab import TypetabEntry
 from PyUtil.argreplacement import replaceArgs
 
-from PyFort.intrinsic import is_intrinsic,getGenericName, isUsedNonStandard
+from PyFort.intrinsic import is_intrinsic,getGenericName, isUsedNonStandard,getBuiltInTypes
 from PyFort.inference import InferenceError,expressionType,appType,isArrayReference,canonicalTypeClass,expressionShape,isSpecExpression
 import PyFort.flow as flow
 import PyFort.fortExp as fe
@@ -49,6 +50,9 @@ class UnitCanonicalizer(object):
     _subroutinizeIntegerFunctions = False
     
     _ourPassiveTypes=[fs.IntegerStmt,fs.CharacterStmt]
+    _ourPassiveTypeIds=[getBuiltInTypes().index((fs.CharacterStmt,4)),
+                        getBuiltInTypes().index((fs.IntegerStmt,4)),
+                        getBuiltInTypes().index((fs.IntegerStmt,8))]
 
     @staticmethod
     def setHoistConstantsFlag(hoistConstantsFlag):
@@ -108,15 +112,16 @@ class UnitCanonicalizer(object):
             if theSymtabEntry.entryKind==SymtabEntry.VariableEntryKind:
                 raise CanonError('UnitCanonicalizer.shouldSubroutinizeFunction called on array reference '+str(theApp)+" with "+theSymtabEntry.debug(theApp.head),parentStmt.lineNumber)
         try:
-            (funcType,modifier) = appType(theApp,self.__myUnit.symtab,parentStmt.lineNumber)
+            appTypeEntry = appType(theApp,self.__myUnit.symtab,parentStmt.lineNumber)
         except InferenceError,errorObj:
             DebugManager.warning("cannot determine return type and canonicalize function call; "+errorObj.msg,parentStmt.lineNumber)
             return False
         if is_intrinsic(theApp.head):
             if UnitCanonicalizer._overloadingMode:
                 return False
-            DebugManager.debug('UnitCanonicalizer.shouldSubroutinizeFunction: It\'s an intrinsic of type '+str(funcType))
-            return subroutinizedIntrinsics.shouldSubroutinize(theApp) and (UnitCanonicalizer._subroutinizeIntegerFunctions or not funcType == fs.IntegerStmt)
+            baseType=appTypeEntry.getBaseTypeEntry()
+            DebugManager.debug('UnitCanonicalizer.shouldSubroutinizeFunction: It\'s an intrinsic of type '+appTypeEntry.debug())
+            return subroutinizedIntrinsics.shouldSubroutinize(theApp) and (UnitCanonicalizer._subroutinizeIntegerFunctions or not (isinstance(baseType.entryKind,TypetabEntry.BuiltInEntryKind) and (baseType.entryKind.type_name=='integer_4')))
         else:
             return True
 
@@ -144,15 +149,18 @@ class UnitCanonicalizer(object):
         '''The new temporary variable assumes the value of anExpression'''
         theNewTemp = _tmp_prefix + str(self.__tempCounter)
         self.__tempCounter += 1
-        (varTypeClass,varModifierList) = expressionType(anExpression,self.__myUnit.symtab,parentStmt.lineNumber)
+        expTypeEntry = expressionType(anExpression,self.__myUnit.symtab,parentStmt.lineNumber)
+        if isinstance(expTypeEntry.entryKind,TypetabEntry.CharacterEntryKind):
+            charLen=globalTypeTable.charLenTab.lookupCharLenId(expTypeEntry.entryKind.charlen_id)
+            varTypeClass=fs.CharacterStmt
+            typeKind=charLen.charLenExp
+        else:
+            (varTypeClass,typeKind)=globalTypeTable.intrinsicIdToTypeMap[expTypeEntry.getBaseTypeId()]
+        varModifierList=[]
         varShape=expressionShape(anExpression,self.__myUnit.symtab,parentStmt.lineNumber)
-        if (varModifierList!=[] and isinstance(varModifierList[0],fs._FLenMod) and varModifierList[0].len=='*'):
-            raise CanonError('unable to determine length of temporary variable for '+str(anExpression),parentStmt.lineNumber)
-        if varTypeClass == fs.RealStmt and varModifierList == []:
-            varTypeClass = Symtab._default_real[0]
-            if varTypeClass == fs.DoubleStmt:
-                print >>sys.stderr,'WARNING: Temp variable forced to 8-byte float (real -> double)'
-        DebugManager.debug('replaced with '+str(theNewTemp)+' of type '+str(varTypeClass)+'('+str(varModifierList)+')')
+        if isinstance(expTypeEntry.entryKind,TypetabEntry.BuiltInEntryKind) and expTypeEntry.entryKind.type_name=='real_8':
+            print >>sys.stderr,'WARNING: Temp variable forced to 8-byte float (real -> double)'
+        DebugManager.debug('replaced with '+str(theNewTemp)+' of type '+expTypeEntry.debug())
         typeAttrList=[]
         needsAlloc=False
         if varShape:
@@ -170,12 +178,14 @@ class UnitCanonicalizer(object):
             typeAttrList.append("allocatable")
             DebugManager.warning("temporary  "+theNewTemp+" declared as allocatable but allocation logic is as of yet not implented",parentStmt.lineNumber)
         theNewDecl = varTypeClass(varModifierList,typeAttrList,[theNewTemp])
+        typeId = globalTypeTable.getType(theNewDecl,self.__myUnit.symtab)
         self.__myNewDecls.append(theNewDecl)
         self.__myUnit.symtab.enter_name(theNewTemp,
                                         SymtabEntry(SymtabEntry.VariableEntryKind,
                                                     type=(varTypeClass,varModifierList),
                                                     dimensions=varShape,
-                                                    origin='temp'))
+                                                    origin='temp',
+                                                    typetab_id=typeId))
         return (theNewTemp,varTypeClass,varModifierList)
 
     def __canonicalizeIntrinsicEllipsisRec(self,head,args):
@@ -326,18 +336,18 @@ class UnitCanonicalizer(object):
                 if isinstance(anArg,fe.NamedParam):
                     paramName=anArg.myId
                     anArg=anArg.myRHS
-                #TODO: remove parenthesis when the whole argument is in them??
                 DebugManager.debug((self.__recursionDepth - 1)*'|\t'+'|- argument "'+str(anArg)+'" ',newLine=False)
                 argType=None
                 argTypeMod=None
                 try: 
-                    (argType,argTypeMod) = expressionType(anArg,self.__myUnit.symtab,aSubCallStmt.lineNumber)
+                    argType = expressionType(anArg,self.__myUnit.symtab,aSubCallStmt.lineNumber)
                 except InferenceError, e :
                     DebugManager.warning("cannot canonicalize argument >"+str(anArg)+"< parsed as "+repr(anArg)+" because: "+e.msg,aSubCallStmt.lineNumber)
                     replacementArgs.append(anArg)
                     continue
                 # constant character expressions
-                if argType == fs.CharacterStmt:
+                if argType is not None and (isinstance(argType.entryKind,TypetabEntry.CharacterEntryKind) or \
+                        (isinstance(argType.entryKind,TypetabEntry.BuiltInEntryKind) and argType.entryKind.type_name=='character')):
                     if not self._hoistStringsFlag:
                         DebugManager.debug('is a string expression (which we aren\'t hoisting)')
                         replacementArgs.append(anArg)
@@ -557,9 +567,10 @@ class UnitCanonicalizer(object):
         self.__recursionDepth += 1
         newExp = exp
         if isinstance(exp,fe.App):
+            appTypeId=appType(exp,self.__myUnit.symtab,parentStmt.lineNumber)
             if ((not isArrayReference(exp,self.__myUnit.symtab,parentStmt.lineNumber))
                 and
-                (not appType(exp,self.__myUnit.symtab,parentStmt.lineNumber)[0] in UnitCanonicalizer._ourPassiveTypes)):
+                (not appTypeId in UnitCanonicalizer._ourPassiveTypeIds)):
                 newExp = self.__hoistExpression(exp,parentStmt,paramName)
         elif isinstance(exp,fe.Ops):
             newExp = fe.Ops(exp.op,

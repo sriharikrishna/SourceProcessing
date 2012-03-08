@@ -1,4 +1,4 @@
-      real(double) function fltrn() result(z)
+      double precision function fltrn() result(z)
 
         integer :: k
         integer,parameter :: r1 = 12211, m1 = 2147483563

@@ -135,7 +135,6 @@ class TestCanonicalizeEllipsis(TestCase):
         compareFiles(self.assertEquals,'ellipsisFunCall.f90','ellipsisFunCall.pre.f90',format='free')
         
 suite = asuite(C1,C2,TestCanonicalizeSubroutineCall,TestFunctionToSubroutine,TestCanonicalizeEllipsis)
-
 if __name__ == "__main__":
     sys.exit(runit(suite))
 

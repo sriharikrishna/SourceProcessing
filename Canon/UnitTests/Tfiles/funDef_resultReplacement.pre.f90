@@ -1,4 +1,4 @@
-      real(double) function fltrn() result(z)
+      double precision function fltrn() result(z)
         use OAD_intrinsics
 
         integer :: k
@@ -24,7 +24,7 @@
         integer,parameter :: a1 = 40014, q1 = 53668
         integer,parameter :: r2 = 3791, m2 = 2147483399
         integer,parameter :: a2 = 40692, q2 = 52774
-        real(double),intent(out) :: z
+        double precision,intent(out) :: z
         k = s1/q1
         s1 = a1*(s1-k*q1)-k*r1
         if (s1.lt.0) then

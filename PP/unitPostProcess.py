@@ -2,6 +2,7 @@ from _Setup import *
 
 from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
+from PyUtil.typetab import globalTypeTable,TypetabEntry
 from PyUtil.argreplacement import replaceArgs, replaceSon
 from PyUtil.errors import ScanError, ParseError, UserError
 
@@ -105,6 +106,7 @@ class UnitPostProcessor(object):
     @staticmethod
     def setAbstractType(abstractType):
         UnitPostProcessor._abstract_type = abstractType.lower()
+        globalTypeTable.getType(fs.DrvdTypeDecl([abstractType],[],[]),None)
 
     _mode = 'forward'
 
@@ -140,13 +142,6 @@ class UnitPostProcessor(object):
         # temporary setting to figure out if we are within an interface
         self.inInterface=False
 
-    def __isActiveInitSymtabType(self,oType):
-        ''' check symtab entry type given as oType, see class symtab.SymtabEntry '''
-        if (oType[0]==fs.DrvdTypeDecl):
-            if (oType[1][0].lower()==self._abstract_type+'_init'):
-                return True
-        return False
-    
     ##
     # a class to hold some context information affecting the logic for dealing with 
     # reference to variables of active type
@@ -259,10 +254,10 @@ class UnitPostProcessor(object):
         replacementStatement = \
             fs.CallStmt(aSubCallStmt.get_head(),
                         replacementArgs,
-                        aSubCallStmt.stmt_name,
                         lineNumber=aSubCallStmt.lineNumber,
                         label=aSubCallStmt.label,
-                        lead=aSubCallStmt.lead)
+                        lead=aSubCallStmt.lead,
+                        stmt_name=aSubCallStmt.stmt_name)
         return replacementStatement    
 
     # PARAMS:
@@ -332,7 +327,8 @@ class UnitPostProcessor(object):
             replObjectList=[]
             for varRef in o: 
                 varRefType=expressionType(varRef,self.__myUnit.symtab,aDecl.lineNumber)
-                if (varRefType and self.__isActiveInitSymtabType(varRefType)):
+                if (varRefType and isinstance(varRefType.entryKind,TypetabEntry.NamedTypeEntryKind) and \
+                        varRefType.entryKind.symbolName.lower()==self._abstract_type+'_init'):
                     replObjectList.append(fe.Sel(varRef,"v"))
                     changed=True
                 else:
@@ -942,7 +938,7 @@ class UnitPostProcessor(object):
                 for var in decl.declList:
                     # lookup in symtab
                     var_type = self.__myUnit.symtab.lookup_name(var).type
-                    if not isinstance(var_type[1][0],fs._Kind) and (var_type[1][0].lower() == self._abstract_type):
+                    if (var_type is not None) and not isinstance(var_type[1][0],fs._Kind) and (var_type[1][0].lower() == self._abstract_type):
                         initCommonStmt.declList.append(var)
                 # avoid initializing variables twice
                 # don't create subroutines for common blocks with no active variables
@@ -954,11 +950,12 @@ class UnitPostProcessor(object):
 
     def __isActive(self,Exp,parentStmt):
         varName=fs.getVarName(Exp,parentStmt.lineNumber)
-        (stmtClass,expType)=expressionType(varName,
-                                           self.__myUnit.symtab,
-                                           parentStmt.lineNumber)
-        if (len(expType)>0 and expType[0]==self._abstract_type):
-            return True
+        expType=expressionType(varName,self.__myUnit.symtab,parentStmt.lineNumber)
+        if isinstance(expType.entryKind,TypetabEntry.ArrayEntryKind):
+            expType=expType.getBaseTypeEntry()
+        if isinstance(expType.entryKind,TypetabEntry.NamedTypeEntryKind):
+            if (expType.entryKind.symbolName==self._abstract_type):
+                return True
         return False
 
     # recursively transforms an expression if it contains an active module variable

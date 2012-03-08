@@ -104,7 +104,7 @@ class C5(TestCase):
         a_ = self.assert_
         s = 'type(foo) :: x(10),y(len(kk),3),z,w'
         ps = pps(s)
-        a_(isinstance(ps,DrvdTypeDecl))
+        a_(isinstance(ps,fortStmts.DrvdTypeDecl))
         a_(not ps.attrs)
         ae(len(ps.decls),4)
 
@@ -114,7 +114,7 @@ class C5(TestCase):
         a_ = self.assert_
         s = 'type bar'
         ps = pps(s)
-        a_(isinstance(ps,DrvdTypeDefn))
+        a_(isinstance(ps,fortStmts.DrvdTypeDefn))
         ae(ps.name,'bar')
 
     def test3(self):
@@ -123,7 +123,7 @@ class C5(TestCase):
         a_ = self.assert_
         s = 'type(foo),dimension(10),target :: x,y,z(30)'
         ps = pps(s)
-        a_(isinstance(ps,DrvdTypeDecl),'instance check')
+        a_(isinstance(ps,fortStmts.DrvdTypeDecl),'instance check')
         ae(len(ps.attrs),2,'attr check')
         ae(len(ps.decls),3,'decls check')
 
@@ -144,7 +144,7 @@ class C6(TestCase):
         a_ = self.assert_
         s = 'double precision,pointer,intent(inout) :: y'
         ps = pps(s)
-        a_(isinstance(ps,DoubleStmt))
+        a_(isinstance(ps,fortStmts.DoubleStmt))
         a_(ps.attrs)
         ae(len(ps.attrs),2)
         ae(str(ps.attrs[1]),str(App('intent',['inout'])))
@@ -189,7 +189,7 @@ class C9(TestCase):
         ae = self.assertEquals
         a_ = self.assert_
         it = pps('end interface')
-        a_(isinstance(it,EndInterfaceStmt))
+        a_(isinstance(it,fortStmts.EndInterfaceStmt))
         
     def test2(self):
         '''end other things (module, program, function, subroutine, block data)'''
@@ -197,7 +197,7 @@ class C9(TestCase):
         a_ = self.assert_
         chk = ['module','program','function','subroutine','block data']
         for l in chk:
-            a_(isinstance(pps('end '+l),EndStmt))
+            a_(isinstance(pps('end '+l),fortStmts.EndStmt))
 
 class TestImplicitStmt(TestCase):
     '''Implicit statements'''
@@ -205,7 +205,7 @@ class TestImplicitStmt(TestCase):
         'implicit character*10'
         s1 = 'implicit character*10 (b,d,f-h,l-n)'
         v = pps(s1)
-        a_(isinstance(v,ImplicitStmt))
+        a_(isinstance(v,fortStmts.ImplicitStmt))
         ae(len(v.lst),1)
         ae(len(v.lst[0]),2)
         ae(len(v.lst[0][1]),4)
@@ -224,7 +224,7 @@ class TestImplicitStmt(TestCase):
         'implicit character (no len)'
         s1 = 'implicit character (b,d,f-h,l-n)'
         v = pps(s1)
-        a_(isinstance(v,ImplicitStmt))
+        a_(isinstance(v,fortStmts.ImplicitStmt))
         ae(len(v.lst),1)
         ae(len(v.lst[0]),2)
         ae(len(v.lst[0][1]),4)
@@ -243,7 +243,7 @@ class TestImplicitStmt(TestCase):
         'implicit real*4'
         s1 = 'implicit real*4 (a,f,h-k)'
         v = pps(s1)
-        a_(isinstance(v,ImplicitStmt))
+        a_(isinstance(v,fortStmts.ImplicitStmt))
         ae(len(v.lst),1)
         ae(len(v.lst[0]),2)
         ae(len(v.lst[0][1]),3)
@@ -261,7 +261,7 @@ class TestImplicitStmt(TestCase):
         'implicit integer (a,f)'
         s1 = 'implicit integer (a,f)'
         v = pps(s1)
-        a_(isinstance(v,ImplicitStmt))
+        a_(isinstance(v,fortStmts.ImplicitStmt))
         ae(len(v.lst),1)
         ae(len(v.lst[0]),2)
         ae(len(v.lst[0][1]),2)
@@ -278,7 +278,7 @@ class TestImplicitStmt(TestCase):
         'implicit real(RARB) (h,i,j)'
         s1 = 'implicit real(RARB) (h,i,j)'
         v = pps(s1)
-        a_(isinstance(v,ImplicitStmt))
+        a_(isinstance(v,fortStmts.ImplicitStmt))
         ae(len(v.lst),1)
 
         ae(len(v.lst[0]),2)
@@ -298,7 +298,7 @@ class TestImplicitStmt(TestCase):
         'implicit real(kind=FOOB) (b-d,f),real(RARB) (h,i,j)'
         s1 = 'implicit real(kind=FOOB) (b-d,f),real(RARB) (h,i,j)'
         v = pps(s1)
-        a_(isinstance(v,ImplicitStmt))
+        a_(isinstance(v,fortStmts.ImplicitStmt))
         ae(len(v.lst),2)
         ae(len(v.lst[0]),2)
         ae(len(v.lst[0][1]),2)
@@ -488,7 +488,7 @@ class TestCharacterDecls(TestCase):
         a_ = self.assert_
 
         v = pps('character*5  foo,bar,baz(10)')
-        a_(isinstance(v,CharacterStmt))
+        a_(isinstance(v,fortStmts.CharacterStmt))
         a_(v.mod)
         ae(v.mod[0].len,'5')
         a_(not v.attrs)
@@ -504,7 +504,7 @@ class TestCharacterDecls(TestCase):
         a_ = self.assert_
 
         v = pps('character*(*)  foo,bar,baz(10)')
-        a_(isinstance(v,CharacterStmt))
+        a_(isinstance(v,fortStmts.CharacterStmt))
         a_(isinstance(v.mod[0].len,_Star))
         a_(not v.attrs)
         a_(v.decls)
