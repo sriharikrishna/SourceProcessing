@@ -1,8 +1,8 @@
 from _Setup import *
 
 from PyUtil.debugManager import DebugManager
-from PyUtil.symtab import Symtab,SymtabEntry,SymtabError
-from PyUtil.typetab import globalTypeTable,TypetabEntry
+from PyUtil.symtab import Symtab,SymtabEntry,SymtabError,globalTypeTable
+from PyUtil.typetab import TypetabEntry
 from PyUtil.argreplacement import replaceArgs, replaceSon
 from PyUtil.errors import ScanError, ParseError, UserError
 
@@ -937,8 +937,7 @@ class UnitPostProcessor(object):
                 initCommonStmt = fs.CommonStmt(decl.name,[])
                 for var in decl.declList:
                     # lookup in symtab
-                    var_type = self.__myUnit.symtab.lookup_name(var).type
-                    if (var_type is not None) and not isinstance(var_type[1][0],fs._Kind) and (var_type[1][0].lower() == self._abstract_type):
+                    if self.__isActive(var,decl):
                         initCommonStmt.declList.append(var)
                 # avoid initializing variables twice
                 # don't create subroutines for common blocks with no active variables
@@ -954,7 +953,7 @@ class UnitPostProcessor(object):
         if isinstance(expType.entryKind,TypetabEntry.ArrayEntryKind):
             expType=expType.getBaseTypeEntry()
         if isinstance(expType.entryKind,TypetabEntry.NamedTypeEntryKind):
-            if (expType.entryKind.symbolName==self._abstract_type):
+            if (expType.entryKind.symbolName.lower()==self._abstract_type):
                 return True
         return False
 
