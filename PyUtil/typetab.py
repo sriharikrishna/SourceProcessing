@@ -317,9 +317,12 @@ class TypetabEntry(object):
             self.localSymtab=localSymtab      # scope named type is defined in
 
         def debug(self):
-            return 'NamedTypeEntryKind; symbolName:'+str(self.symbolName)+\
-                ', localSymtab where the type is defined: '+self.localSymtab.debug()
-            
+            returnString='NamedTypeEntryKind; symbolName:'+str(self.symbolName)
+            if self.localSymtab:
+                returnString+=', localSymtab where the type is defined: '+self.localSymtab.debug()
+            else:
+                returnString+=', localSymtab is None'
+            return returnString
 
     class NamedTypePointerEntryKind(GenericEntryKind):
         keyword = 'NTpointer'
@@ -330,8 +333,12 @@ class TypetabEntry(object):
             self.localSymtab=localSymtab # scope the symbolName is defined in
 
         def debug(self):
-            return 'NamedTypePointerEntryKind; symbolName:'+str(self.symbolName)+\
-                   ', localSymtab where symbolName is defined: '+self.localSymtab.debug()
+            returnString='NamedTypeEntryKind; symbolName:'+str(self.symbolName)
+            if self.localSymtab:
+                returnString+=', localSymtab where the type is defined: '+self.localSymtab.debug()
+            else:
+                returnString+=', localSymtab is None'
+            return returnString
 
     class ArrayEntryKind(GenericEntryKind):
         keyword = 'array'
