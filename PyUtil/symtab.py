@@ -134,6 +134,15 @@ class Symtab(object):
         if entry: return entry.lookupDimensions()
         return None
 
+    def getDerivedTypeMembers(self,dtypeName):
+        D = self.ids
+        memberNames=[]
+        if dtypeName in D:
+            for name in D:
+                if D[name].memberOfDrvdType==dtypeName:
+                    memberNames.append(name)
+        return memberNames
+
     def __rename(self,anExpression,targetEntrySymtab,replicatingUp=False):
         if isinstance(anExpression,str):
             origExp=anExpression
@@ -250,7 +259,12 @@ class Symtab(object):
                 renameEntry.renameKey=anOnlyItem.rhs
                 renameEntry.referenceEntry=aModuleUnit.symtab.lookup_name(anOnlyItem.rhs)
             else:
+                symtabEntry=aModuleUnit.symtab.lookup_name_level(anOnlyItem)
+                # need to add all named type components to symtab
+                memberNames=aModuleUnit.symtab.getDerivedTypeMembers(anOnlyItem)
                 aModuleUnit.symtab.replicateEntry(anOnlyItem,Symtab._ourModuleScopePrefix+aModuleUnit.name(),anOnlyItem,self)
+                for member in memberNames:
+                    aModuleUnit.symtab.replicateEntry(member,Symtab._ourModuleScopePrefix+aModuleUnit.name(),member,self)
 
     def enterLabelRef(self,label,labelRef):
         if self.labelRefs.has_key(label) :
