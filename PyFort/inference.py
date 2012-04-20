@@ -206,24 +206,24 @@ class _TypeContext:
             returnType = globalTypeTable.getTypeEntry(implicitLocalType[0](implicitLocalType[1],[],[]),self.localSymtab)
          else:
             DebugManager.warning('unimplemented type inference; returning None for '+sys._getframe().f_code.co_name,self.lineNumber,DebugManager.WarnType.implicit)
-            return None
+            returnType=None
       else: # no symtab entry -> try local implicit typing
          implicitType = self.localSymtab.implicit[anId[0]]
-         (theType,theMods)=implicitType
-         typeName = theType.kw
-         if len(theMods)>0:
-            [kindexp]=theMods
-            numBytes=self.__guessBytesFromKind(kindexp.mod)
-            if numBytes:
-               typeName=typeName+'_'+numBytes
-         elif typeName=='real' or typeName=='integer':
-            typeName=typeName+'_4'
-         elif typeName=='doubleprecision':
-            typeName='real_8'
-         returnType=globalTypeTable.intrinsicTypeNameToEntry(typeName)
-      if (returnType):
-         #DebugManager.warning(sys._getframe().f_code.co_name+' implicit typing: '+returnType.debug()+' '+anId,self.lineNumber,DebugManager.WarnType.implicit)
-         pass
+         if implicitType:
+            (theType,theMods)=implicitType
+            typeName = theType.kw
+            if len(theMods)>0:
+               [kindexp]=theMods
+               numBytes=self.__guessBytesFromKind(kindexp.mod)
+               if numBytes:
+                  typeName=typeName+'_'+numBytes
+            elif typeName=='real' or typeName=='integer':
+               typeName=typeName+'_4'
+            elif typeName=='doubleprecision':
+               typeName='real_8'
+            returnType=globalTypeTable.intrinsicTypeNameToEntry(typeName)
+         else:
+            returnType=None
       if not returnType:
          raise InferenceError(sys._getframe().f_code.co_name+': No type could be determined for identifier "'+anId+'"',self.lineNumber)
       return returnType
@@ -378,27 +378,44 @@ class _TypeContext:
 
    def _appType(self,anApp):
       DebugManager.debug(sys._getframe().f_code.co_name+' called on '+str(anApp)+'...',newLine=False)
-      if isinstance(anApp.head,App): # example: matrix(3)(2:14)
-         return self._appType(anApp.head)
       if isinstance(anApp.head,Sel):  # example type%member(1)
          expType=self._expressionType(anApp.head)
-         if isinstance(expType.entryKind,TypetabEntry.ArrayEntryKind):
+         if isinstance(expType.entryKind,TypetabEntry.AllocatableEntryKind):
+            arraySlice=False
+            newShape=[]
             for anArg in anApp.args:
-               arraySlice=False
                if isinstance(anArg,Ops) and anArg.op==':':
                   # arg is a slice
                   arraySlice=True
-                  break
-               if arraySlice:
-                  arrayid=globalTypeTable.arrayBoundsTab.enterNewArrayBounds(dimensionList)
-                  typeid=returnType.getBaseTypeId()
-                  tempType=TypetabEntry(TypetabEntry.ArrayEntryKind(arrayid,typeid),None)
-                  # we are returning an array type, but it is not the same shape as the array type of App.head
-                  # check to see if new array rank&dimensions are defined as a type.
-                  return tempType
-               return expType
+                  newShape.append(anArg)
+            if arraySlice:
+               # if some of the args are scalar, the rank is the len of newShape
+               typeid=expType.getBaseTypeId()
+               tempType=TypetabEntry(TypetabEntry.AllocatableEntryKind(typeid,len(newShape)),None)
+               # we are returning an array type, but it is not the same shape as the array type of App.head
+               # check to see if new array rank&dimensions are defined as a type.
+               return tempType
             # if the args are all scalar, then the type is a scalar which is the base type of expType
             return expType.getBaseTypeEntry()
+         if isinstance(expType.entryKind,TypetabEntry.ArrayEntryKind):
+            arraySlice=False
+            newShape=[]
+            for anArg in anApp.args:
+               if isinstance(anArg,Ops) and anArg.op==':':
+                  # arg is a slice
+                  arraySlice=True
+                  newShape.append(anArg)
+            if arraySlice:
+               arrayid=globalTypeTable.arrayBoundsTab.enterNewArrayBounds(dimensionList)
+               typeid=expType.getBaseTypeId()
+               tempType=TypetabEntry(TypetabEntry.ArrayEntryKind(arrayid,typeid),None)
+               # we are returning an array type, but it is not the same shape as the array type of App.head
+               # check to see if new array rank&dimensions are defined as a type.
+               return tempType
+            # if the args are all scalar, then the type is a scalar which is the base type of expType
+            return expType.getBaseTypeEntry()
+      if isinstance(anApp.head,App): # example: matrix(3)(2:14)
+         return self._appType(anApp.head)
       returnType = None
       # intrinsics: do a type merge
       if is_intrinsic(anApp.head):
@@ -438,7 +455,7 @@ class _TypeContext:
       DebugManager.debug(sys._getframe().f_code.co_name+' determining type of selection expression '+str(aSelectionExpression)+' using symtab '+str(self.localSymtab))
       # lookup type of head
       dType=self._expressionType(aSelectionExpression.head)
-      if isinstance(dType.entryKind,TypetabEntry.ArrayEntryKind):
+      if isinstance(dType.entryKind,TypetabEntry.ArrayEntryKind) or isinstance(dType.entryKind,TypetabEntry.AllocatableEntryKind):
          baseType=globalTypeTable.lookupTypeId(dType.getBaseTypeId())
          lookupName=baseType.entryKind.symbolName+":"+aSelectionExpression.proj
          (projSymtabEntry,projSymtab)=baseType.entryKind.localSymtab.lookup_name_level(lookupName)
