@@ -14,18 +14,22 @@ from PP.unitPostProcess import UnitPostProcessor,PostProcessError
 from PP.transformActiveVariables import TransformActiveVariables,TransformError
 from PP.templateExpansion import TemplateExpansion
 
+formatOpts={'fixed':72,'free':132}
+   
 ############## ADD OPTIONS TO OPT PARSER ##############
 def addSourceProcessingOptions(opt):
     opt.add_option('',
                    '--inputFormat',
-                   metavar='{ fixed | free }',
                    dest='inputFormat',
-                   help="<input_file> is in either 'fixed' or 'free' format",
+                   type='choice', choices=formatOpts.keys(),
+                   metavar="{ "+ " | ".join(formatOpts.keys())+" }",
+                   help="input file format",
                    default=None)
     opt.add_option('--outputFormat',
-                   metavar='{ fixed | free }',
                    dest='outputFormat',
-                   help="<output_file> is in either 'fixed' or 'free' format",
+                   metavar="{ "+ " | ".join(formatOpts.keys())+" }",
+                   type='choice', choices=formatOpts.keys(),
+                   help="output file format",
                    default=None)
     opt.add_option('','--infoUnitFile',
                    dest='infoUnitFile',
@@ -35,13 +39,13 @@ def addSourceProcessingOptions(opt):
                    dest='inputLineLength',
                    metavar='INT',
                    type=int,
-                   help='sets the max line length of the input file. The default line length is 72 for fixed format and 132 for free format.',
+                   help='sets the max line length of the input file. The default line lengths based on the format are '+' '.join(map(lambda l: l[0]+":"+str(l[1]),formatOpts.items())),
                    default=None)
     opt.add_option('','--outputLineLength',
                    dest='outputLineLength',
                    metavar='INT',
                    type=int,
-                   help='sets the max line length of the output file. The default line length is 72 for fixed format and 132 for free format.',
+                   help='sets the max line length of the output file. The default line lengths based on the format are '+' '.join(map(lambda l: l[0]+":"+str(l[1]),formatOpts.items())),
                    default=None)
     opt.add_option('-o',
                    '--output',
@@ -269,13 +273,11 @@ def SourceProcessingOptErrors(config,args):
            (config.inputFormat is not None):
         opt.error("inputFormat option must be specified with either 'fixed' or 'free' as an argument")
     if config.inputLineLength:
-        if config.inputLineLength < 72 or \
-           config.inputLineLength > 132:
-            opt.error("inputLineLength option must be specified with a value >=72 and <=132")
+        if config.inputLineLength < formatOpts['fixed'] :
+            opt.error("inputLineLength option must be specified with a value >="+str(formatOpts['fixed']))
     if config.outputLineLength:
-        if config.outputLineLength < 72 or \
-           config.outputLineLength > 132:
-            opt.error("outputLineLength option must be specified with a value >=72 and <=132")    
+        if config.outputLineLength < formatOpts['fixed'] :
+            opt.error("outputLineLength option must be specified with a value >="+str(formatOpts['fixed']))    
 
 def PrePostOptErrors(config,args):
     SourceProcessingOptErrors(config,args)
