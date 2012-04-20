@@ -129,10 +129,7 @@ class Typetab(object):
             # check that type is defined in table & get typeid
             baseType = theType.__class__(theType.get_mod(),[],[])
             typeID = self.getType(baseType,localSymtab)
-            # get arrayid
-            arrayid=self.arrayBoundsTab.enterNewArrayBounds(self.__getDimensions(theType,localSymtab))
-            kind=TypetabEntry.ArrayEntryKind(typetab_id=typeID,arrayid=arrayid)
-            newEntry=TypetabEntry(kind,self.type_counter)
+            newEntry=self.createArrayEntryKind(typeID,self.__getDimensions(theType,localSymtab))
         elif typeKind==TypetabEntry.ArrayPointerEntryKind or typeKind==TypetabEntry.BuiltInPointerEntryKind:
             # need to look up pointed-to type and check for typeid match
             baseType = theType.__class__(theType.get_mod(),[],[])
