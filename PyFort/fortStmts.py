@@ -648,8 +648,9 @@ class DrvdTypeDefn(Decl):
     kw     = kw_str
     _sons  = ['name']
 
-    def __init__(self,name,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+    def __init__(self,name,access_spec=None,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         self.name = name
+        self.access_spec=access_spec
         Decl.__init__(self,lineNumber,label,lead,internal,rest)
 
     def __repr__(self):
@@ -661,7 +662,11 @@ class DrvdTypeDefn(Decl):
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
-        p0    = treat(seq(lit('type'),zo1(lit('::')),id),lambda l: DrvdTypeDefn(l[2],lineNumber=lineNumber))
+        access_spec=disj(lit('public'),lit('private'))
+        p0    = treat(seq(lit('type'),
+                          zo1(seq(lit(','),access_spec)),
+                          zo1(lit('::')),id),
+                      lambda l: DrvdTypeDefn(l[3],l[1] and l[1][0][1] or None,lineNumber=lineNumber))
         (v,r) = p0(scan)
         v.rest = r
         return v
