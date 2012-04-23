@@ -190,7 +190,15 @@ def _processParameterStmt(aParameterStmt,curr):
                 DebugManager.debug('\tvariable "'+aNamedParam[0]+'" already present in local symbol table as '+theSymtabEntry.debug(aNamedParam[0]))
                 theSymtabEntry.enterConstInit(aNamedParam[2])
             else:
-                raise SymtabError("Parameter statement uses a variable not found in symtab",symbolName=aNamedParam[0],lineNumber=aParameterStmt.lineNumber)
+                # try implicit typing
+                implicitLocalType=localSymtab.implicit[aNamedParam[0][0]]
+                if implicitLocalType: # we handle the error condition below
+                    theSymtabEntry = SymtabEntry(SymtabEntry.VariableEntryKind,
+                                                 type=implicitLocalType)
+                    DebugManager.warning(sys._getframe().f_code.co_name+' implicit typing: '+str(implicitLocalType)+' '+str(aNamedParam),aParameterStmt.lineNumber,DebugManager.WarnType.implicit)
+                    theSymtabEntry.enterConstInit(aNamedParam[2])
+                else:
+                    raise SymtabError("Parameter statement uses a variable not found in symtab",symbolName=aNamedParam[0],lineNumber=aParameterStmt.lineNumber)
         except SymtabError,e: # add lineNumber and symbol name to any SymtabError we encounter
             e.lineNumber = e.lineNumber or aParameterStmt.lineNumber
             e.symbolName = e.symbolName or aNamedParam[0]
