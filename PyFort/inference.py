@@ -385,11 +385,13 @@ class _TypeContext:
             arraySlice=True
             dimensionList.append(anArg)
       if arraySlice:
-         arrayid=globalTypeTable.arrayBoundsTab.enterNewArrayBounds(dimensionList)
          typeid=expType.getBaseTypeId()
-         tempType=TypetabEntry(expType.entryKind.__class__(arrayid,typeid),None)
-         # we are returning an array type, but it is not the same shape as the array type of App.head
-         # check to see if new array rank&dimensions are defined as a type.
+         if isinstance(expType.entryKind,TypetabEntry.AllocatableEntryKind):
+            tempType=TypetabEntry(expType.entryKind.__class__(typeid,len(dimensionList)),None)
+         else:
+            arrayid=globalTypeTable.arrayBoundsTab.enterNewArrayBounds(dimensionList)
+            tempType=TypetabEntry(expType.entryKind.__class__(arrayid,typeid),None)
+         # we are returning an array/allocatable type, but it is not the same shape as the type of App.head
          return tempType
       return None
 
@@ -397,25 +399,9 @@ class _TypeContext:
       DebugManager.debug(sys._getframe().f_code.co_name+' called on '+str(anApp)+'...',newLine=False)
       if isinstance(anApp.head,Sel):  # example type%member(1)
          expType=self._expressionType(anApp.head)
-         if isinstance(expType.entryKind,TypetabEntry.AllocatableEntryKind):
-            arraySlice=False
-            dimensionList=[]
-            for anArg in anApp.args:
-               if isinstance(anArg,Ops) and anArg.op==':':
-                  # arg is a slice
-                  arraySlice=True
-                  dimensionList.append(anArg)
-            if arraySlice:
-               # if some of the args are scalar, the rank is the len of newShape
-               typeid=expType.getBaseTypeId()
-               tempType=TypetabEntry(TypetabEntry.AllocatableEntryKind(typeid,len(dimensionList)),None)
-               # we are returning an array type, but it is not the same shape as the array type of App.head
-               # check to see if new array rank&dimensions are defined as a type.
-               return tempType
-            # if the args are all scalar, then the type is a scalar which is the base type of expType
-            return expType.getBaseTypeEntry()
          if isinstance(expType.entryKind,TypetabEntry.ArrayEntryKind) or \
-                isinstance(expType.entryKind,TypetabEntry.ArrayPointerEntryKind):
+                isinstance(expType.entryKind,TypetabEntry.ArrayPointerEntryKind) or \
+                isinstance(expType.entryKind,TypetabEntry.AllocatableEntryKind):
             tempType=self.__createTempArrayType(anApp.args,expType)
             if tempType is None:
                # if the args are all scalar, then the type is a scalar which is the base type of expType
