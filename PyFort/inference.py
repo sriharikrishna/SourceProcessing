@@ -376,49 +376,56 @@ class _TypeContext:
       if specInfo:
          return globalTypeTable.lookupTypeId(specInfo[1].typetab_id)
 
+   def __createTempArrayType(self,arrayArgs,expType):
+      arraySlice=False
+      dimensionList=[]
+      for anArg in arrayArgs:
+         if isinstance(anArg,Ops) and anArg.op==':':
+            # arg is a slice
+            arraySlice=True
+            dimensionList.append(anArg)
+      if arraySlice:
+         arrayid=globalTypeTable.arrayBoundsTab.enterNewArrayBounds(dimensionList)
+         typeid=expType.getBaseTypeId()
+         tempType=TypetabEntry(expType.entryKind.__class__(arrayid,typeid),None)
+         # we are returning an array type, but it is not the same shape as the array type of App.head
+         # check to see if new array rank&dimensions are defined as a type.
+         return tempType
+      return None
+
    def _appType(self,anApp):
       DebugManager.debug(sys._getframe().f_code.co_name+' called on '+str(anApp)+'...',newLine=False)
       if isinstance(anApp.head,Sel):  # example type%member(1)
          expType=self._expressionType(anApp.head)
          if isinstance(expType.entryKind,TypetabEntry.AllocatableEntryKind):
             arraySlice=False
-            newShape=[]
+            dimensionList=[]
             for anArg in anApp.args:
                if isinstance(anArg,Ops) and anArg.op==':':
                   # arg is a slice
                   arraySlice=True
-                  newShape.append(anArg)
+                  dimensionList.append(anArg)
             if arraySlice:
                # if some of the args are scalar, the rank is the len of newShape
                typeid=expType.getBaseTypeId()
-               tempType=TypetabEntry(TypetabEntry.AllocatableEntryKind(typeid,len(newShape)),None)
+               tempType=TypetabEntry(TypetabEntry.AllocatableEntryKind(typeid,len(dimensionList)),None)
                # we are returning an array type, but it is not the same shape as the array type of App.head
                # check to see if new array rank&dimensions are defined as a type.
                return tempType
             # if the args are all scalar, then the type is a scalar which is the base type of expType
             return expType.getBaseTypeEntry()
-         if isinstance(expType.entryKind,TypetabEntry.ArrayEntryKind):
-            arraySlice=False
-            newShape=[]
-            for anArg in anApp.args:
-               if isinstance(anArg,Ops) and anArg.op==':':
-                  # arg is a slice
-                  arraySlice=True
-                  newShape.append(anArg)
-            if arraySlice:
-               arrayid=globalTypeTable.arrayBoundsTab.enterNewArrayBounds(dimensionList)
-               typeid=expType.getBaseTypeId()
-               tempType=TypetabEntry(TypetabEntry.ArrayEntryKind(arrayid,typeid),None)
-               # we are returning an array type, but it is not the same shape as the array type of App.head
-               # check to see if new array rank&dimensions are defined as a type.
-               return tempType
-            # if the args are all scalar, then the type is a scalar which is the base type of expType
-            return expType.getBaseTypeEntry()
+         if isinstance(expType.entryKind,TypetabEntry.ArrayEntryKind) or \
+                isinstance(expType.entryKind,TypetabEntry.ArrayPointerEntryKind):
+            tempType=self.__createTempArrayType(anApp.args,expType)
+            if tempType is None:
+               # if the args are all scalar, then the type is a scalar which is the base type of expType
+               return expType.getBaseTypeEntry()
+            return tempType
       if isinstance(anApp.head,App): # example: matrix(3)(2:14)
          return self._appType(anApp.head)
       returnType = None
       # intrinsics: do a type merge
-      if is_intrinsic(anApp.head):
+      if (not isinstance(anApp.head,Sel)) and is_intrinsic(anApp.head):
          returnType = self.__intrinsicType(anApp)
          DebugManager.debug(' It is an INTRINSIC of type '+str(returnType))
       # nonintrinsics: Look for it in the symbol table or for implicit type
@@ -428,26 +435,13 @@ class _TypeContext:
             # this must be a generic
             returnType=self.__genericFunctionType(anApp)
          if isinstance(returnType.entryKind,TypetabEntry.ArrayEntryKind):
-            dimensionList=[]
-            arraySlice=False
-            # check that anApp.args are not slices
-            for anArg in anApp.args:
-               if isinstance(anArg,Ops) and (anArg.op==':'):
-                  # arg is a slice
-                  arraySlice=True
-                  break
-            if arraySlice:
-               arrayid=globalTypeTable.arrayBoundsTab.enterNewArrayBounds(dimensionList)
-               typeid=returnType.getBaseTypeId()
-               tempType=TypetabEntry(TypetabEntry.ArrayEntryKind(arrayid,typeid),None)
-               # we are returning an array type, but it is not the same shape as the array type of App.head
-               # check to see if new array rank&dimensions are defined as a type.
-               return tempType
-            elif (returnType.entryKind.getArrayRank()==len(anApp.args)):
-               return returnType.getBaseTypeEntry()
-            else:
-               # ERROR
-               raise InferenceError(sys._getframe().f_code.co_name+': This is not an array slice, but the type entry rank and number of args do not match',self.lineNumber)
+            tempType=self.__createTempArrayType(anApp.args,returnType)
+            if tempType is None:
+               if (returnType.entryKind.getArrayRank()==len(anApp.args)):
+                  return returnType.getBaseTypeEntry()
+               else:
+                  raise InferenceError(sys._getframe().f_code.co_name+': This is not an array slice, but the type entry rank and number of args do not match',self.lineNumber)
+            return tempType
          DebugManager.debug(' It is an NONINTRINSIC of type '+str(returnType))
       return returnType
 
