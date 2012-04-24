@@ -364,11 +364,22 @@ class TypetabEntry(object):
         keyword = 'ARpointer'
         _sons = ['typetab_id']
 
-        def __init__(self,typetab_id):
-            self.typetab_id=typetab_id        # type id of array type of target
+        def __init__(self,typetab_id,tempTypetabEntry=None):
+            self.typetab_id=typetab_id             # type id of array type of target
+            self.tempTypetabEntry=tempTypetabEntry # temporary Typetab entry object of ArrayEntryKind (not in globalTypeTable)
+            if not (typetab_id or tempTypetabEntry):
+                # raise error; must define an ArrayEntryKind of pointed-to object
+                raise TypetabError('attempting to add an ArrayPointerEntryKind without either a typetab_id or a temporary TypetabEntry for the ArrayEntryKind of the pointed-to object.')
+            if (typetab_id and tempTypetabEntry):
+                raise TypetabError('attempting to add an ArrayPointerEntryKind with both a typetab_id and a temporary TypetabEntry. One & only one should be defined.')
 
         def debug(self):
             return 'ArrayPointerEntryKind; Type id of array type of target: '+str(self.typetab_id)
+
+        def getArrayTypeEntry(self):
+            if self.typetab_id:
+                return globalTypeTable.lookupTypeId(self.typetab_id)
+            return self.tempTypetabEntry
 
     class AllocatableEntryKind(GenericEntryKind):
         keyword = 'allocatable'
@@ -389,7 +400,7 @@ class TypetabEntry(object):
         if isinstance(self.entryKind,TypetabEntry.ArrayEntryKind):
             return self.entryKind.typetab_id
         elif isinstance(self.entryKind,TypetabEntry.ArrayPointerEntryKind):
-            return globalTypeTable.lookupTypeId(self.entryKind.typetab_id).getBaseTypeId()
+            return self.entryKind.getArrayTypeEntry().getBaseTypeId()
         elif isinstance(self.entryKind,TypetabEntry.BuiltInPointerEntryKind):
             return self.entryKind.typetab_id
         elif isinstance(self.entryKind,TypetabEntry.AllocatableEntryKind):

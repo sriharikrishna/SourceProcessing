@@ -388,9 +388,14 @@ class _TypeContext:
          typeid=expType.getBaseTypeId()
          if isinstance(expType.entryKind,TypetabEntry.AllocatableEntryKind):
             tempType=TypetabEntry(expType.entryKind.__class__(typeid,len(dimensionList)),None)
-         else:
+         elif isinstance(expType.entryKind,TypetabEntry.ArrayEntryKind):
             arrayid=globalTypeTable.arrayBoundsTab.enterNewArrayBounds(dimensionList)
-            tempType=TypetabEntry(expType.entryKind.__class__(arrayid,typeid),None)
+            tempType=TypetabEntry(TypetabEntry.ArrayEntryKind(arrayid,typeid),None)
+         else:
+            # ArrayPointerEntryKind
+            arrayid=globalTypeTable.arrayBoundsTab.enterNewArrayBounds(dimensionList)
+            tempArrayType=TypetabEntry(TypetabEntry.ArrayEntryKind(arrayid,typeid),None)
+            tempType=TypetabEntry(TypetabEntry.ArrayPointerEntryKind(None,tempArrayType),None)
          # we are returning an array/allocatable type, but it is not the same shape as the type of App.head
          return tempType
       return None
