@@ -426,7 +426,9 @@ class SymtabEntry(object):
         # the replacement entry kind must be an 'instance' of the existing one.
         # for example, we can replace a procedureKind with a functionKind,
         # but we cannot replace a variableKind with a functionKind
-        if not isinstance(newEntryKind(),self.entryKind):
+        # if the old entry kind is an instance of the new one, (such as SubroutineEntryKind->ProcedureEntryKind),
+        # replacement is acceptable as well
+        if not (isinstance(newEntryKind(),self.entryKind) or isinstance(self.entryKind(),newEntryKind)):
             raise SymtabError(sys._getframe().f_code.co_name+': name clash between symbols with kind '+str(self.entryKind)+' and kind '+str(newEntryKind)+' ',entry=self)
         self.entryKind = newEntryKind
 

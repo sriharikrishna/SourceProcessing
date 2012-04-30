@@ -375,7 +375,7 @@ def _unit_entry(self,cur):
             entry.genericInfo=mpSymtabEntry.genericInfo
             currentSymtab.enter_name(self.name,entry)
             # if it is a function  - collect argument information
-            if (isinstance(self,fs.FunctionStmt)) :
+            if (isinstance(self,fs.FunctionStmt)) or (isinstance(self,fs.SubroutineStmt)) :
                 genSymTabEntry=currentSymtab.parent.lookup_name(mpSymtabEntry.genericInfo.genericName)
                 if (genSymTabEntry is None):
                     raise SymtabError('cannot find generic with name '+mpSymtabEntry.genericInfo.genericName)
