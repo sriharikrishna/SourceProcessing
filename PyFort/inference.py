@@ -440,7 +440,8 @@ class _TypeContext:
       DebugManager.debug(sys._getframe().f_code.co_name+' determining type of selection expression '+str(aSelectionExpression)+' using symtab '+str(self.localSymtab))
       # lookup type of head
       dType=self._expressionType(aSelectionExpression.head)
-      if isinstance(dType.entryKind,TypetabEntry.ArrayEntryKind) or isinstance(dType.entryKind,TypetabEntry.AllocatableEntryKind):
+      if isinstance(dType.entryKind,TypetabEntry.ArrayEntryKind) or isinstance(dType.entryKind,TypetabEntry.AllocatableEntryKind) \
+             or isinstance(dType.entryKind,TypetabEntry.ArrayPointerEntryKind):
          baseType=globalTypeTable.lookupTypeId(dType.getBaseTypeId())
          lookupName=baseType.entryKind.symbolName+":"+aSelectionExpression.proj
          (projSymtabEntry,projSymtab)=baseType.entryKind.localSymtab.lookup_name_level(lookupName)
