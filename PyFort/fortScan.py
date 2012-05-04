@@ -145,6 +145,11 @@ def s_white(self,s):
     'return one space for whitespace'
     return ' '
 
+inputLineLength = 0
+def setInputLineLength(length):
+    global inputLineLength
+    inputLineLength = length
+
 scan1 = Scanner([
     (pointerAssignSymbol_re, s_ident),
     (id_re,      s_ident),

@@ -4,9 +4,10 @@ from optparse import OptionParser
 
 from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabError
-from PyFort.flow import setOutputLineLength, setOutputFormat,setInputLineLength
+from PyFort.flow import setOutputLineLength, setOutputFormat
 from PyFort.intrinsic import getNonStandard,useNonStandard
 from PyFort.fortFile import Ffile
+from PyFort.fortScan import setInputLineLength
 import PyFort.fortStmts as fs
 import PyFort.fortExp as fe
 from Canon.canon import UnitCanonicalizer,CanonError

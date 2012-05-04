@@ -4,7 +4,7 @@ from PyUtil.flatten import flatten
 from PyUtil.chomp import chomp
 from PyFort.kill_bang import *
 from PyUtil.assembler import *
-from PyFort.fortScan import postluded_lo_q_patn, preluded_ro_q_patn
+from PyFort.fortScan import postluded_lo_q_patn, preluded_ro_q_patn, inputLineLength
 
 _cont_re = r'& (([\s]*[!].*) | \s*) $'
 _cont_re = re.compile(_cont_re,re.X)
@@ -135,6 +135,10 @@ def _fjoin(asm):
     current_line = []
     initial_line = True
     for (cl,comments) in conts:
+        if inputLineLength != 0:
+            if cl[inputLineLength:] != '':
+                print >> sys.stderr, "The following text is being cut because the statement exceeded the specified line length: "+jl[inputLineLength:]
+            cl = cl[:inputLineLength]
         index=0
         eol_comm=None
         (cl,eol_comm)=_process_conts(cl)

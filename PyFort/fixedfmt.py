@@ -4,6 +4,7 @@ from PyUtil.flatten import flatten
 from PyUtil.chomp import chomp
 from PyFort.kill_bang import *
 from PyUtil.assembler import *
+from PyFort.fortScan import inputLineLength
 
 def cont_p(l):
     '''given a line l, return true if l is a continuation line'''
@@ -50,6 +51,10 @@ def _fjoin(dta):
         internal_comments.append(c)
 
     for cont in dta[1]:
+        if inputLineLength != 0:
+            if cont[inputLineLength:] != '':
+                print >> sys.stderr, "The following text is being cut because the statement exceeded the specified line length: "+jl[inputLineLength:]
+            cont = cont[:inputLineLength]
         internal_comments.extend(cont[0])
         (l,c) = kill_bang_comment(chomp(cont[1])[6:])
         if not c == '':

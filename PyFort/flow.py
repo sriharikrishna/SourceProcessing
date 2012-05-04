@@ -71,7 +71,6 @@ flow_line = _fixed_flow_line
 formatStart = _fixedFormatStart
 outputLineLength = _fixed_line_len
 outputLineLengthSet = False
-inputLineLength = 0
 commentInit = _fixed_comment
 
 inputFormat = 'fixed'
@@ -110,6 +109,3 @@ def setOutputLineLength(length):
     outputLineLength = length
     outputLineLengthSet = True
 
-def setInputLineLength(length):
-    global inputLineLength
-    inputLineLength = length
