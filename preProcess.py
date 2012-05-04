@@ -16,7 +16,6 @@ from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabError
 from PyUtil.options import addCanonOptions,CanonOptErrors,setCanonFlags
 
-from PyFort.flow import setOutputLineLength, setOutputFormat
 from PyFort.fortUnit import Unit,fortUnitIterator
 from PyFort.fortFile import Ffile
 import PyFort.fortStmts as fs

@@ -19,7 +19,7 @@ from PyUtil.options import addPostProcessorOptions,PostProcessorOptErrors,setPos
 
 from PyIR.prog1 import Prog1
 
-from PyFort.flow import setOutputLineLength, setInputLineLength, setOutputFormat
+from PyFort.flow import setOutputFormat
 import PyFort.flow as flow
 from PyFort.fortUnit import Unit,fortUnitIterator
 from PyFort.fortFile import Ffile
