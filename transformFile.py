@@ -13,7 +13,6 @@ from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabError
 from PyFort.fortFile import Ffile
 import PyFort.fortStmts as fs
-from PyFort.flow import setInputLineLength, setOutputLineLength, setOutputFormat
 
 def cleanup(config):
     import os 
