@@ -6,6 +6,7 @@ a predicate to test for a function being an intrinsic
 '''
 __intrinsics = (
     'abs',
+    'achar',
     'acos',
     'adjustl',
     'adjustr',
@@ -26,6 +27,7 @@ __intrinsics = (
     'cmplx',
     'cos',
     'dabs',
+    'dacos',
     'dble',
     'dcos',
     'dexp',
@@ -41,6 +43,7 @@ __intrinsics = (
     'exp',
     'float',
     'iabs',
+    'iachar',
     'iand',
     'ichar',
     'idint',
@@ -158,7 +161,7 @@ def getGenericName(op):
         return archaicName[1:-1]
     elif (archaicName[-1] in ('0','1') and archaicName[:-1] in ('max','min') ):
         return archaicName[:-1]
-    elif (archaicName[0] == 'd' and archaicName[1:] in ('sign','abs','log','sqrt','mod','sin','cos') ):
+    elif (archaicName[0] == 'd' and archaicName[1:] in ('abs','acos','cos','log','mod','sign','sin','sqrt') ):
         return archaicName[1:]
     elif (archaicName[0] == 'i' and archaicName[1:] in ('abs') ):
         return archaicName[1:]

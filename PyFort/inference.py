@@ -247,13 +247,13 @@ class _TypeContext:
          else:
             typeName=typeName+'_4'
          return globalTypeTable.intrinsicTypeNameToEntry(typeName)
-      elif anIntrinsicApp.head.lower() in ['ichar','idint','int','lbound','maxloc','scan','shape','size','ubound']:
+      elif anIntrinsicApp.head.lower() in ['iachar','ichar','idint','int','lbound','maxloc','scan','shape','size','ubound']:
          return globalTypeTable.intrinsicTypeNameToEntry('integer_4')
       elif anIntrinsicApp.head.lower() in ['dble','dfloat','dabs','dexp','dlog','dsqrt','dmod']:
          return globalTypeTable.intrinsicTypeNameToEntry('real_8')
       elif anIntrinsicApp.head.lower() == 'cmplx':
          return globalTypeTable.intrinsicTypeNameToEntry('complex_8')
-      elif anIntrinsicApp.head.lower() == 'repeat':
+      elif anIntrinsicApp.head.lower() in ['achar','repeat']:
          return globalTypeTable.intrinsicTypeNameToEntry('character')
       elif anIntrinsicApp.head.lower() in ['all','iand','ior','lge','lgt','lle','llt','present']:
          return globalTypeTable.intrinsicTypeNameToEntry('logical')
