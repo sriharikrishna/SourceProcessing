@@ -154,9 +154,10 @@ class UnitCanonicalizer(object):
             charLen=globalTypeTable.charLenTab.lookupCharLenId(expTypeEntry.entryKind.charlen_id)
             varTypeClass=fs.CharacterStmt
             typeKind=charLen.charLenExp
+            varModifierList=[typeKind]
         else:
             (varTypeClass,typeKind)=globalTypeTable.intrinsicIdToTypeMap[expTypeEntry.getBaseTypeId()]
-        varModifierList=[]
+            varModifierList=[]
         varShape=expressionShape(anExpression,self.__myUnit.symtab,parentStmt.lineNumber)
         if isinstance(expTypeEntry.entryKind,TypetabEntry.BuiltInEntryKind) and expTypeEntry.entryKind.type_name=='real_8':
             print >>sys.stderr,'WARNING: Temp variable forced to 8-byte float (real -> double)'
