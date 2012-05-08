@@ -151,9 +151,9 @@ class UnitCanonicalizer(object):
         self.__tempCounter += 1
         expTypeEntry = expressionType(anExpression,self.__myUnit.symtab,parentStmt.lineNumber)
         if isinstance(expTypeEntry.entryKind,TypetabEntry.CharacterEntryKind):
-            charLen=globalTypeTable.charLenTab.lookupCharLenId(expTypeEntry.entryKind.charlen_id)
+            charLenEntry=globalTypeTable.charLenTab.lookupCharLenId(expTypeEntry.entryKind.charlen_id)
             varTypeClass=fs.CharacterStmt
-            typeKind=charLen.charLenExp
+            typeKind=charLenEntry.getCharLenExp()
             varModifierList=[typeKind]
         else:
             (varTypeClass,typeKind)=globalTypeTable.intrinsicIdToTypeMap[expTypeEntry.getBaseTypeId()]
