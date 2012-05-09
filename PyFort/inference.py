@@ -27,7 +27,7 @@ class InferenceError(Exception):
 
 
 def _kw2type(s): return(fortStmts.kwtbl[s.lower()])
-def _lenfn(n): return [fortStmts._F77Len(str(n))]
+def _lenfn(n): return fortStmts._F77Len(str(n))
 
 _modhash = { fortStmts._Prec     : 0,
              fortStmts._Kind     : 1,

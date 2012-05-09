@@ -26,7 +26,7 @@ class TypeUtils(TestCase):
 
     def test2(self):
         '_lenfn'
-        self.assertEquals(str(_lenfn(15)[0]),'*15')
+        self.assertEquals(str(_lenfn(15)),'*15')
 
 class TypeConstants(TestCase):
     def test0(self):
@@ -62,7 +62,7 @@ class TypeConstants(TestCase):
         'constants - strings'
         constTypeEntry = _TypeContext(0,theSymtab)._constantType(ep(r"'food'"))
         self.assert_(isinstance(constTypeEntry.entryKind,TypetabEntry.CharacterEntryKind))
-        typeMod=globalTypeTable.charLenTab.lookupCharLenId(constTypeEntry.entryKind.charlen_id).charLenExp[0]
+        typeMod=globalTypeTable.charLenTab.lookupCharLenId(constTypeEntry.entryKind.charlen_id).charLenExp
         self.assert_(isinstance(typeMod,_F77Len))
         self.assertEquals(typeMod.len,'4')
 
