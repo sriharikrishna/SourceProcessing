@@ -376,30 +376,6 @@ class _TypeContext:
       if specInfo:
          return globalTypeTable.lookupTypeId(specInfo[1].typetab_id)
 
-   def __createTempArrayType(self,arrayArgs,expType):
-      arraySlice=False
-      dimensionList=[]
-      for anArg in arrayArgs:
-         if isinstance(anArg,Ops) and anArg.op==':':
-            # arg is a slice
-            arraySlice=True
-            dimensionList.append(anArg)
-      if arraySlice:
-         typeid=expType.getBaseTypeId()
-         if isinstance(expType.entryKind,TypetabEntry.AllocatableEntryKind):
-            tempType=TypetabEntry(expType.entryKind.__class__(typeid,len(dimensionList)),None)
-         elif isinstance(expType.entryKind,TypetabEntry.ArrayEntryKind):
-            arrayid=globalTypeTable.arrayBoundsTab.enterNewArrayBounds(dimensionList)
-            tempType=TypetabEntry(TypetabEntry.ArrayEntryKind(arrayid,typeid),None)
-         else:
-            # ArrayPointerEntryKind
-            arrayid=globalTypeTable.arrayBoundsTab.enterNewArrayBounds(dimensionList)
-            tempArrayType=TypetabEntry(TypetabEntry.ArrayEntryKind(arrayid,typeid),None)
-            tempType=TypetabEntry(TypetabEntry.ArrayPointerEntryKind(None,tempArrayType),None)
-         # we are returning an array/allocatable type, but it is not the same shape as the type of App.head
-         return tempType
-      return None
-
    def _appType(self,anApp):
       DebugManager.debug(sys._getframe().f_code.co_name+' called on '+str(anApp)+'...',newLine=False)
       if isinstance(anApp.head,Sel):  # example type%member(1)
@@ -407,11 +383,16 @@ class _TypeContext:
          if isinstance(expType.entryKind,TypetabEntry.ArrayEntryKind) or \
                 isinstance(expType.entryKind,TypetabEntry.ArrayPointerEntryKind) or \
                 isinstance(expType.entryKind,TypetabEntry.AllocatableEntryKind):
-            tempType=self.__createTempArrayType(anApp.args,expType)
-            if tempType is None:
-               # if the args are all scalar, then the type is a scalar which is the base type of expType
-               return expType.getBaseTypeEntry()
-            return tempType
+            arraySlice=False
+            for anArg in anApp.args:
+               if isinstance(anArg,Ops) and anArg.op==':':
+                  # arg is a slice
+                  arraySlice=True
+            if arraySlice:
+               newType=globalTypeTable.enterArrayType(expType.getBaseTypeId(),anApp.args,expType.entryKind)
+               return newType
+            # if the args are all scalar, then the type is a scalar which is the base type of expType
+            return expType.getBaseTypeEntry()
       if isinstance(anApp.head,App): # example: matrix(3)(2:14)
          return self._appType(anApp.head)
       returnType = None
@@ -426,13 +407,16 @@ class _TypeContext:
             # this must be a generic
             returnType=self.__genericFunctionType(anApp)
          if isinstance(returnType.entryKind,TypetabEntry.ArrayEntryKind):
-            tempType=self.__createTempArrayType(anApp.args,returnType)
-            if tempType is None:
-               if (returnType.entryKind.getArrayRank()==len(anApp.args)):
-                  return returnType.getBaseTypeEntry()
-               else:
-                  raise InferenceError(sys._getframe().f_code.co_name+': This is not an array slice, but the type entry rank and number of args do not match',self.lineNumber)
-            return tempType
+            arraySlice=False
+            for anArg in anApp.args:
+               if isinstance(anArg,Ops) and anArg.op==':':
+                  # arg is a slice
+                  arraySlice=True
+            if arraySlice:
+               newType=globalTypeTable.enterArrayType(returnType.getBaseTypeId(),anApp.args,returnType.entryKind)
+               return newType
+            # if the args are all scalar, then the type is a scalar which is the base type of expType
+            return returnType.getBaseTypeEntry()
          DebugManager.debug(' It is an NONINTRINSIC of type '+str(returnType))
       return returnType
 

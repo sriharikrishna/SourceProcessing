@@ -5,6 +5,7 @@ import string
 import copy
 from _Setup import *
 
+from PyUtil.typetab import TypetabEntry
 from PyUtil.symtab import Symtab,SymtabEntry,SymtabError, GenericInfo, FormalArgs, globalTypeTable
 from PyUtil.debugManager import DebugManager
 
@@ -268,7 +269,7 @@ def _processCommonStmt(aCommonStmt,curr):
         for symtabEntry in updateDeclTypeList:
             dimensions=symtabEntry.lookupDimensions()
             if dimensions:
-                newTypeEntry=globalTypeTable.createArrayEntryKind(commonTypeId,dimensions)
+                newTypeEntry=globalTypeTable.enterArrayType(commonTypeId,dimensions,TypetabEntry.ArrayEntryKind)
                 globalTypeTable.ids[globalTypeTable.type_counter]=newTypeEntry
                 symtabEntry.typetab_id=globalTypeTable.type_counter
                 globalTypeTable.type_counter+=1
