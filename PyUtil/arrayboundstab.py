@@ -89,6 +89,12 @@ class ArrayBoundsTab(object):
         self.array_counter += 1
         return newEntry.arrayid
 
+    def getArrayBoundsId(self,dimensions):
+        array_id=self.lookupArrayBounds(dimensions)
+        if array_id==None:
+            array_id=self.enterNewArrayBounds(dimensions)
+        return array_id
+
 class ArrayBoundsTabEntry(object):
 
     class DimensionEntry(object):
