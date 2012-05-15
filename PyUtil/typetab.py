@@ -1,5 +1,6 @@
 from _Setup import *
 
+from PyUtil.debugManager import DebugManager
 from PyUtil.caselessDict import caselessDict as cDict
 from PyUtil.arrayboundstab import ArrayBoundsTab
 from PyUtil.characterlentab import CharacterLenTab
@@ -35,6 +36,7 @@ class Typetab(object):
 
     def lookupTypeId(self,typeid):
         '''check for typeid in the type table'''
+        DebugManager.debug('Typetab.lookupTypeId called on "'+str(typeid)+'"')
         if typeid in self.ids:
             return self.ids[typeid]
         else:
@@ -110,16 +112,25 @@ class Typetab(object):
             self.ids[self.type_counter]=newEntry
             self.type_counter += 1
 
-    def createArrayEntryKind(self,baseTypeID,dimensions):
-        # get arrayid
-        arrayid=self.arrayBoundsTab.enterNewArrayBounds(dimensions)
-        kind=TypetabEntry.ArrayEntryKind(typetab_id=baseTypeID,arrayid=arrayid)
-        newEntry=TypetabEntry(kind,self.type_counter)
+    def enterArrayType(self,baseTypeID,dimensions,entryKind):
+        if entryKind==TypetabEntry.AllocatableEntryKind:
+            # AllocatableEntryKind
+            newEntry=TypetabEntry(TypetabEntry.AllocatableEntryKind(baseTypeID,len(dimensions)),self.type_counter)
+        elif entryKind==TypetabEntry.ArrayEntryKind:
+            # ArrayEntryKind
+            arrayid=self.arrayBoundsTab.getArrayBoundsId(dimensions)
+            newEntry=TypetabEntry(TypetabEntry.ArrayEntryKind(arrayid,baseTypeID),self.type_counter)
+        else:
+            # ArrayPointerEntryKind
+            newEntry=TypetabEntry(TypetabEntry.ArrayPointerEntryKind(baseTypeID),self.type_counter)
+        self.ids[self.type_counter]=newEntry
+        self.type_counter += 1
         return newEntry
 
     # newType: pair  (type class,type modifier) => pass in only type class (don't need type mod)?
     # enter the type in the type table and return the typetab_id
     def __enterNewType(self,theType,localSymtab):
+        DebugManager.debug('Typetab.__enterNewType called on "'+str(theType)+'"')
         typeKind=self.__getTypeKind(theType,localSymtab)
         newEntry=None
         if typeKind==TypetabEntry.NamedTypeEntryKind:
@@ -129,8 +140,16 @@ class Typetab(object):
             # check that type is defined in table & get typeid
             baseType = theType.__class__(theType.get_mod(),[],[])
             typeID = self.getType(baseType,localSymtab)
-            newEntry=self.createArrayEntryKind(typeID,self.__getDimensions(theType,localSymtab))
-        elif typeKind==TypetabEntry.ArrayPointerEntryKind or typeKind==TypetabEntry.BuiltInPointerEntryKind:
+            newEntry=self.enterArrayType(typeID,self.__getDimensions(theType,localSymtab),typeKind)
+            return newEntry.typetab_id
+        elif typeKind==TypetabEntry.ArrayPointerEntryKind:
+            # need to look up pointed-to type and check for typeid match
+            baseType = theType.__class__(theType.get_mod(),[],[])
+            baseType.dimension = self.__getDimensions(theType,localSymtab)
+            typeID = self.getType(baseType,localSymtab)
+            newEntry=self.enterArrayType(typeID,self.__getDimensions(theType,localSymtab),typeKind)
+            return newEntry.typetab_id
+        elif typeKind==TypetabEntry.BuiltInPointerEntryKind:
             # need to look up pointed-to type and check for typeid match
             baseType = theType.__class__(theType.get_mod(),[],[])
             baseType.dimension = self.__getDimensions(theType,localSymtab)
@@ -151,8 +170,8 @@ class Typetab(object):
         elif typeKind==TypetabEntry.AllocatableEntryKind:
             baseType = theType.__class__(theType.get_mod(),[],[])
             typeID = self.getType(baseType,localSymtab)
-            kind=TypetabEntry.AllocatableEntryKind(typeID,self.__getDimensions(theType,localSymtab))
-            newEntry=TypetabEntry(kind,self.type_counter)
+            newEntry=self.enterArrayType(typeID,self.__getDimensions(theType,localSymtab),typeKind)
+            return newEntry.typetab_id
         elif typeKind==TypetabEntry.BuiltInEntryKind:
             # these should already be added, unless it's a character with a length specifier
             raise TypetabError('attempting to incorrectly add a Built In type to the type table.',str(theType))
@@ -171,6 +190,7 @@ class Typetab(object):
     # if not: create & add; return typeid
     # else: return typeid
     def lookupType(self,theType,localSymtab):
+        DebugManager.debug('Typetab.lookupType called on "'+str(theType)+'"')
         typeKind=self.__getTypeKind(theType,localSymtab)
         kindEntryMatches = [e for e in self.ids.values() if isinstance(e.entryKind,typeKind)]
         if len(kindEntryMatches)==0:
@@ -239,14 +259,16 @@ class Typetab(object):
 
     # get the type id; if it is not already in the table, add it
     def getType(self,theType,localSymtab):
+        DebugManager.debug('Typetab.getType called on "'+str(theType)+'"')
         typeid = self.lookupType(theType,localSymtab)
         if not typeid:
             newType=self.__enterNewType(theType,localSymtab)
             return newType
         return typeid
 
-    # get the type id; if it is not already in the table, add it
+    # get the type entry; if it is not already in the table, add it
     def getTypeEntry(self,theType,localSymtab):
+        DebugManager.debug('Typetab.getTypeEntry called on "'+str(theType)+'"')
         typeid=self.getType(theType,localSymtab)
         return globalTypeTable.lookupTypeId(typeid)
 
@@ -364,22 +386,14 @@ class TypetabEntry(object):
         keyword = 'ARpointer'
         _sons = ['typetab_id']
 
-        def __init__(self,typetab_id,tempTypetabEntry=None):
+        def __init__(self,typetab_id):
             self.typetab_id=typetab_id             # type id of array type of target
-            self.tempTypetabEntry=tempTypetabEntry # temporary Typetab entry object of ArrayEntryKind (not in globalTypeTable)
-            if not (typetab_id or tempTypetabEntry):
-                # raise error; must define an ArrayEntryKind of pointed-to object
-                raise TypetabError('attempting to add an ArrayPointerEntryKind without either a typetab_id or a temporary TypetabEntry for the ArrayEntryKind of the pointed-to object.')
-            if (typetab_id and tempTypetabEntry):
-                raise TypetabError('attempting to add an ArrayPointerEntryKind with both a typetab_id and a temporary TypetabEntry. One & only one should be defined.')
 
         def debug(self):
             return 'ArrayPointerEntryKind; Type id of array type of target: '+str(self.typetab_id)
 
         def getArrayTypeEntry(self):
-            if self.typetab_id:
-                return globalTypeTable.lookupTypeId(self.typetab_id)
-            return self.tempTypetabEntry
+            return globalTypeTable.lookupTypeId(self.typetab_id)
 
     class AllocatableEntryKind(GenericEntryKind):
         keyword = 'allocatable'
@@ -397,6 +411,7 @@ class TypetabEntry(object):
         self.typetab_id=typetab_id # typeid in type table for this TypeTabEntry
 
     def getBaseTypeId(self):
+        DebugManager.debug('TypetabEntry.getBaseTypeId called on type: '+self.debug())
         if isinstance(self.entryKind,TypetabEntry.ArrayEntryKind):
             return self.entryKind.typetab_id
         elif isinstance(self.entryKind,TypetabEntry.ArrayPointerEntryKind):
@@ -409,6 +424,7 @@ class TypetabEntry(object):
             return self.typetab_id
 
     def getBaseTypeEntry(self):
+        DebugManager.debug('TypetabEntry.getBaseTypeEntry called on type: '+self.debug())
         return globalTypeTable.lookupTypeId(self.getBaseTypeId())
 
     def debug(self,name='<symbol name unknown>'):
