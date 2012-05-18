@@ -37,9 +37,9 @@ def _beginDrvdTypeDefn(aDrvdTypeDefn,curr):
     access=None # DrvdTypeDefn currently cannot parse qualifiers
     curr.val._in_drvdType=aDrvdTypeDefn.name
     if theSymtabEntry: # already in symtab, shouldn't happen  
-        theSymtabEntry.enterEntryKind(SymtabEntry.DerivedTypeEntryKind)
+        theSymtabEntry.enterEntryKind(SymtabEntry.DerivedTypeEntryKind(aDrvdTypeDefn.base_type))
     else :
-        newSymtabEntry = SymtabEntry(SymtabEntry.DerivedTypeEntryKind,
+        newSymtabEntry = SymtabEntry(SymtabEntry.DerivedTypeEntryKind(aDrvdTypeDefn.base_type),
                                      type=None,
                                      dimensions=None,
                                      length=None,

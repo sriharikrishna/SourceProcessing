@@ -372,6 +372,9 @@ class SymtabEntry(object):
     class DerivedTypeEntryKind(GenericEntryKind):
         keyword = 'type'
 
+        def __init__(self,base_type=None):
+            self.base_type=base_type
+
     def __init__(self,entryKind,type=None,dimensions=None,length=None,origin=None,renameKey=None,access=None,typetab_id=None):
         self.entryKind = entryKind # some instanve of self.GenericEntryKind
         # use type table now

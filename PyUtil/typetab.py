@@ -6,7 +6,7 @@ from PyUtil.arrayboundstab import ArrayBoundsTab
 from PyUtil.characterlentab import CharacterLenTab
 
 from PyFort.intrinsic import getBuiltInTypes
-from PyFort.fortStmts import DrvdTypeDecl, DrvdTypeDefn, CharacterStmt,RealStmt,_NoInit
+from PyFort.fortStmts import DrvdTypeDecl, DrvdTypeDefn, CharacterStmt,RealStmt,_NoInit,UPClassStmt
 from PyFort.fortExp import Ops,App
 
 class TypetabError(Exception):
@@ -127,6 +127,24 @@ class Typetab(object):
         self.type_counter += 1
         return newEntry
 
+    # get a NamedType entry (or NamedTypePointer) by symbolName & symtab
+    # if it's not present already, add it
+    def __getNamedType(self,symbolName,localSymtab):
+        kindEntryMatches = [e for e in self.ids.values() if isinstance(e.entryKind,TypetabEntry.NamedTypeEntryKind) or isinstance(e.entryKind,TypetabEntry.NamedTypePointerEntryKind)]
+        if len(kindEntryMatches)!=0:
+            # check symbol name
+            kindEntryMatches = [e for e in kindEntryMatches if (e.entryKind.symbolName==symbolName)]
+            match = [e for e in kindEntryMatches if ((e.entryKind.localSymtab==None) or (e.entryKind.localSymtab==localSymtab))]
+            if match:
+                return match[0].typetab_id
+        # if no match, add a new type entry
+        # if every base type is added as it is searched, then the type entry here does not have a base type.
+        newTypetabKind=TypetabEntry.NamedTypeEntryKind(symbolName,localSymtab,None)
+        newEntry=TypetabEntry(newTypetabKind,self.type_counter)
+        self.type_counter+=1
+        return newEntry.typetab_id
+        
+
     # newType: pair  (type class,type modifier) => pass in only type class (don't need type mod)?
     # enter the type in the type table and return the typetab_id
     def __enterNewType(self,theType,localSymtab):
@@ -134,7 +152,12 @@ class Typetab(object):
         typeKind=self.__getTypeKind(theType,localSymtab)
         newEntry=None
         if typeKind==TypetabEntry.NamedTypeEntryKind:
-            kind=TypetabEntry.NamedTypeEntryKind(theType.get_mod()[0],localSymtab)
+            symbolName=theType.get_mod()[0]
+            print symbolName
+            (symtabEntry,baseSymtab)=localSymtab.lookup_name_level(symbolName)
+            baseName=symtabEntry.entryKind.base_type
+            baseTypeId=self.__getNamedType(baseName,baseSymtab)
+            kind=TypetabEntry.NamedTypeEntryKind(symbolName,localSymtab,baseTypeId)
             newEntry=TypetabEntry(kind,self.type_counter)
         elif typeKind==TypetabEntry.ArrayEntryKind:
             # check that type is defined in table & get typeid
@@ -159,9 +182,14 @@ class Typetab(object):
         elif typeKind==TypetabEntry.NamedTypePointerEntryKind:
             if isinstance(theType,DrvdTypeDecl):
                 symbolName=theType.get_mod()[0]
+                (symtabEntry,baseSymtab)=localSymtab.lookup_name_level(symbolName)
+                base_type=symtabEntry.entryKind.base_type
+                baseTypeId=self.__getNamedType(base_type,baseSymtab)
             elif isinstance(theType,DrvdTypeDefn):
                 symbolName=theType.name
-            kind=TypetabEntry.NamedTypePointerEntryKind(symbolName,localSymtab)
+                (symtabEntry,baseSymtab)=localSymtab.lookup_name_level(theType.base_type)
+                baseTypeId=self.__getNamedType(theType.base_type,baseSymtab)
+            kind=TypetabEntry.NamedTypePointerEntryKind(symbolName,localSymtab,baseTypeId)
             newEntry=TypetabEntry(kind,self.type_counter)
         elif typeKind==TypetabEntry.CharacterEntryKind:
             charLenId = self.charLenTab.getCharLen(theType.get_mod()[0])
@@ -212,7 +240,6 @@ class Typetab(object):
                     if match:
                         return match[0].typetab_id                
             elif typeKind==TypetabEntry.NamedTypeEntryKind or typeKind==TypetabEntry.NamedTypePointerEntryKind:
-                #if typeKind==TypetabEntry.NamedTypePointerEntryKind:
                 # check symbol name
                 # newType is DrvdTypeDecl or DrvdTypeDefn
                 if isinstance(theType,DrvdTypeDecl):
@@ -260,6 +287,9 @@ class Typetab(object):
     # get the type id; if it is not already in the table, add it
     def getType(self,theType,localSymtab):
         DebugManager.debug('Typetab.getType called on "'+str(theType)+'"')
+        if isinstance(theType,UPClassStmt):
+            # unlimited polymorphic entity=> not declared to have a type
+            return None
         typeid = self.lookupType(theType,localSymtab)
         if not typeid:
             newType=self.__enterNewType(theType,localSymtab)
@@ -331,9 +361,13 @@ class TypetabEntry(object):
         keyword = 'namedtype'
         _sons = ['localSymtab']
 
-        def __init__(self,symbolName,localSymtab):
-            self.symbolName=symbolName
+        def __init__(self,symbolName,localSymtab,baseTypeId=None,polymorphic=False):
+            self.symbolName=symbolName        # symbolName of named type
             self.localSymtab=localSymtab      # scope named type is defined in
+            self.baseTypeId=baseTypeId        # baseType, if this is a type which extends another named type
+
+        def getBaseTypeEntry(self):
+            return self.baseType
 
         def debug(self):
             returnString='NamedTypeEntryKind; symbolName:'+str(self.symbolName)
@@ -347,9 +381,10 @@ class TypetabEntry(object):
         keyword = 'NTpointer'
         _sons = ['symbolName','localSymtab']
 
-        def __init__(self,symbolName,localSymtab):
-            self.symbolName=symbolName
-            self.localSymtab=localSymtab # scope the symbolName is defined in
+        def __init__(self,symbolName,localSymtab,baseTypeId):
+            self.symbolName=symbolName        # symbolName of named type
+            self.localSymtab=localSymtab      # scope the symbolName is defined in
+            self.baseTypeId=baseTypeId        # baseType, if this is a type which extends another named type
 
         def debug(self):
             returnString='NamedTypeEntryKind; symbolName:'+str(self.symbolName)
