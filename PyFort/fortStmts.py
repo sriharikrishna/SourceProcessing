@@ -640,6 +640,59 @@ class DrvdTypeDecl(TypeDecl):
                                    attr_str,
                                    ','.join([str(d) for d in self.decls]))
 
+class ClassStmt(DrvdTypeDecl):
+    '''
+    used to declare polymorphic entities of specified type "type," or an unlimited polymorphic entity
+    modifier is the name of the type.
+    '''
+    kw     = 'class'
+    kw_str = kw
+
+    spec=seq(lit(kw),
+             lit('('),
+             id,
+             lit(')'))
+    
+    @staticmethod
+    def parse(ws_scan,lineNumber):
+        scan = filter(lambda x: x != ' ',ws_scan)
+        if scan[2]=='*':
+            return UPClassStmt.parse(ws_scan,lineNumber)
+        p0 = seq(ClassStmt.spec,
+                 type_attr_list,
+                 zo1(lit('::')),
+                 cslist(decl_item))
+        p0 = treat(p0,lambda l: ClassStmt([l[0][2]],l[1],l[3],lineNumber=lineNumber))
+        (v,r) = p0(scan)
+        v.rest=r
+        return v
+
+class UPClassStmt(ClassStmt):
+    '''
+    unlimited polymorphic entity
+    used to declare polymorphic entities of specified type "type," or an unlimited polymorphic entity
+    modifier is the name of the type.
+    '''
+    kw     = 'class'
+    kw_str = kw
+
+    spec=seq(lit(kw),
+             lit('('),
+             lit('*'),
+             lit(')'))
+    
+    @staticmethod
+    def parse(ws_scan,lineNumber):
+        scan = filter(lambda x: x != ' ',ws_scan)
+        p0 = seq(UPClassStmt.spec,
+                 type_attr_list,
+                 zo1(lit('::')),
+                 cslist(decl_item))
+        p0 = treat(p0,lambda l: UPClassStmt([l[0][2]],l[1],l[3],lineNumber=lineNumber))
+        (v,r) = p0(scan)
+        v.rest=r
+        return v
+
 class DrvdTypeDefn(Decl):
     '''
     derived type definition (start)
@@ -648,8 +701,9 @@ class DrvdTypeDefn(Decl):
     kw     = kw_str
     _sons  = ['name']
 
-    def __init__(self,name,access_spec=None,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+    def __init__(self,name,base_type=None,access_spec=None,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         self.name = name
+        self.base_type=base_type
         self.access_spec=access_spec
         Decl.__init__(self,lineNumber,label,lead,internal,rest)
 
@@ -664,9 +718,10 @@ class DrvdTypeDefn(Decl):
         scan = filter(lambda x: x != ' ',ws_scan)
         access_spec=disj(lit('public'),lit('private'))
         p0    = treat(seq(lit('type'),
+                          zo1(seq(lit(','),lit('extends'),lit('('),id,lit(')'))),
                           zo1(seq(lit(','),access_spec)),
                           zo1(lit('::')),id),
-                      lambda l: DrvdTypeDefn(l[3],l[1] and l[1][0][1] or None,lineNumber=lineNumber))
+                      lambda l: DrvdTypeDefn(l[4],l[1] and l[1][0][3] or None,l[2] and l[2][0][1] or None,lineNumber=lineNumber))
         (v,r) = p0(scan)
         v.rest = r
         return v
@@ -3006,7 +3061,7 @@ kwtbl = dict(assign          = DeletedAssignStmt,
 
 kwtbl.update(kwBuiltInTypesTbl)
 
-for kw in ('if','continue','return','else','print','use','cycle','exit','rewind','where','elsewhere','format','pointer','target'):
+for kw in ('if','continue','return','else','print','use','cycle','exit','rewind','where','elsewhere','format','pointer','target','class'):
     kwtbl[kw] = globals()[kw.capitalize() + 'Stmt']
     
 lhs    = disj(app,id)
