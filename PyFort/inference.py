@@ -194,7 +194,7 @@ class _TypeContext:
          returnType = globalTypeTable.lookupTypeId(symtabEntry.typetab_id)
          DebugManager.debug('with symtab entry '+symtabEntry.debug(anId)+' -> returning type '+str(returnType))
       # an entry exists with no type -> try to type implicitly
-      elif symtabEntry and symtabEntry.entryKind==SymtabEntry.InterfaceEntryKind:
+      elif symtabEntry and isinstance(symtabEntry.entryKind,SymtabEntry.InterfaceEntryKind):
          DebugManager.debug('with symtab entry'+symtabEntry.debug(anId)+' (is an interface name).')
          return None
       elif symtabEntry:
@@ -892,8 +892,8 @@ def isArrayReference(theApp,localSymtab,lineNumber):
       return False
    # there has to be a symbol table entry for a variable
    DebugManager.debug(sys._getframe().f_code.co_name+' for '+theSymtabEntry.debug(lookupName))
-   if isinstance(theSymtabEntry.entryKind(),SymtabEntry.ProcedureEntryKind) or \
-          isinstance(theSymtabEntry.entryKind(),SymtabEntry.InterfaceEntryKind):
+   if isinstance(theSymtabEntry.entryKind,SymtabEntry.ProcedureEntryKind) or \
+          isinstance(theSymtabEntry.entryKind,SymtabEntry.InterfaceEntryKind):
       return False
    theTypeEntry=globalTypeTable.lookupTypeId(theSymtabEntry.typetab_id)
    if theTypeEntry is not None and (isinstance(theTypeEntry.entryKind,TypetabEntry.ArrayEntryKind) or \
@@ -905,10 +905,10 @@ def isArrayReference(theApp,localSymtab,lineNumber):
       return True
    else:
       #  now we know that its NOT a scalar variable, but rather a function.  so we update the symbol table with this information.
-      if (not theSymtabEntry.entryKind in [SymtabEntry.InterfaceEntryKind,SymtabEntry.StatementFunctionEntryKind]) : 
+      if (not theSymtabEntry.entryKind.__class__ in [SymtabEntry.InterfaceEntryKind,SymtabEntry.StatementFunctionEntryKind]) : 
          DebugManager.debug(sys._getframe().f_code.co_name+' Application Expression "'+str(theApp)+\
                             '" for something that we thought was a scalar variable => assuming it\'s a function and updating the symbol table to reflect this')
-         theSymtabEntry.enterEntryKind(SymtabEntry.FunctionEntryKind)
+         theSymtabEntry.enterEntryKind(SymtabEntry.FunctionEntryKind())
       return False
 
 def isSpecExpression(theExp,localSymtab,lineNumber):

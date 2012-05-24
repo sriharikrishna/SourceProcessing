@@ -153,10 +153,12 @@ class Typetab(object):
         newEntry=None
         if typeKind==TypetabEntry.NamedTypeEntryKind:
             symbolName=theType.get_mod()[0]
-            print symbolName
-            (symtabEntry,baseSymtab)=localSymtab.lookup_name_level(symbolName)
-            baseName=symtabEntry.entryKind.base_type
-            baseTypeId=self.__getNamedType(baseName,baseSymtab)
+            baseTypeId=None
+            if localSymtab is not None:
+                (symtabEntry,baseSymtab)=localSymtab.lookup_name_level(symbolName)
+                if symtabEntry:
+                    baseName=symtabEntry.entryKind.base_type
+                    baseTypeId=self.__getNamedType(baseName,baseSymtab)
             kind=TypetabEntry.NamedTypeEntryKind(symbolName,localSymtab,baseTypeId)
             newEntry=TypetabEntry(kind,self.type_counter)
         elif typeKind==TypetabEntry.ArrayEntryKind:
@@ -180,11 +182,13 @@ class Typetab(object):
             kind=typeKind(typeID)
             newEntry=TypetabEntry(kind,self.type_counter)
         elif typeKind==TypetabEntry.NamedTypePointerEntryKind:
+            baseTypeId=None
             if isinstance(theType,DrvdTypeDecl):
                 symbolName=theType.get_mod()[0]
                 (symtabEntry,baseSymtab)=localSymtab.lookup_name_level(symbolName)
-                base_type=symtabEntry.entryKind.base_type
-                baseTypeId=self.__getNamedType(base_type,baseSymtab)
+                if symtabEntry:
+                    base_type=symtabEntry.entryKind.base_type
+                    baseTypeId=self.__getNamedType(base_type,baseSymtab)
             elif isinstance(theType,DrvdTypeDefn):
                 symbolName=theType.name
                 (symtabEntry,baseSymtab)=localSymtab.lookup_name_level(theType.base_type)

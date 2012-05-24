@@ -107,9 +107,9 @@ class UnitCanonicalizer(object):
             return False
         theSymtabEntry = self.__myUnit.symtab.lookup_name(theApp.head)
         if theSymtabEntry: 
-            if theSymtabEntry.entryKind==SymtabEntry.StatementFunctionEntryKind:
+            if isinstance(theSymtabEntry.entryKind,SymtabEntry.StatementFunctionEntryKind):
                 return False
-            if theSymtabEntry.entryKind==SymtabEntry.VariableEntryKind:
+            if isinstance(theSymtabEntry.entryKind,SymtabEntry.VariableEntryKind):
                 raise CanonError('UnitCanonicalizer.shouldSubroutinizeFunction called on array reference '+str(theApp)+" with "+theSymtabEntry.debug(theApp.head),parentStmt.lineNumber)
         try:
             appTypeEntry = appType(theApp,self.__myUnit.symtab,parentStmt.lineNumber)
@@ -182,7 +182,7 @@ class UnitCanonicalizer(object):
         typeId = globalTypeTable.getType(theNewDecl,self.__myUnit.symtab)
         self.__myNewDecls.append(theNewDecl)
         self.__myUnit.symtab.enter_name(theNewTemp,
-                                        SymtabEntry(SymtabEntry.VariableEntryKind,
+                                        SymtabEntry(SymtabEntry.VariableEntryKind(),
                                                     type=(varTypeClass,varModifierList),
                                                     dimensions=varShape,
                                                     origin='temp',
@@ -295,7 +295,7 @@ class UnitCanonicalizer(object):
                 if not isinstance(theExpression.head,fe.Sel):
                     aSymtabEntry=self.__myUnit.symtab.lookup_name(theExpression.head)
                     # see if it is  a statement function and expand it
-                    if (aSymtabEntry and aSymtabEntry.entryKind==SymtabEntry.StatementFunctionEntryKind):
+                    if (aSymtabEntry and isinstance(aSymtabEntry.entryKind,SymtabEntry.StatementFunctionEntryKind)):
                         parentStmt.beenModified = True
                         replacementExpression=self.__expandStmtFunExp(fe.App(replacementHead,replacementArgs))
                     # check whether we need to convert the function to the generic name (e.g. alog => log)
@@ -374,7 +374,7 @@ class UnitCanonicalizer(object):
                     symtabEntry=self.__myUnit.symtab.lookup_name(anArg)
                     if (symtabEntry
                         and 
-                        symtabEntry.entryKind==SymtabEntry.FunctionEntryKind):
+                        isinstance(symtabEntry.entryKind,SymtabEntry.ProcedureEntryKind)):
                         if (function2subroutine.wasSubroutinized(symtabEntry.getScopePrefix(self.__myUnit)+anArg)) :
                             replacementArgs.append(function2subroutine.name_init+anArg); 
                             DebugManager.debug('is an identifier referring to a subroutinized function')

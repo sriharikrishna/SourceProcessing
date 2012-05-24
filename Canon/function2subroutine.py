@@ -128,7 +128,7 @@ def convertFunctionOrEntryStmt(theStmt,theUnit):
     args=[]
     for arg in theStmt.args:
         symtabEntry=theUnit.symtab.lookup_name(arg)
-        if (symtabEntry and symtabEntry.entryKind==SymtabEntry.FunctionEntryKind and symtabEntry.origin=="dummy") :
+        if (symtabEntry and isinstance(symtabEntry.entryKind,SymtabEntry.FunctionEntryKind) and symtabEntry.origin=="dummy") :
             args.append(fe.copyExp(name_init+arg.lower()))
         else:
             args.append(fe.copyExp(arg))
