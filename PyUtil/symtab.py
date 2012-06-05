@@ -16,18 +16,30 @@ from PyFort.intrinsic import is_intrinsic
 
 from PyUtil.typetab import Typetab,globalTypeTable
 
-class GenericInfo(object):
+class FormalArgs(object):
     def __init__(self):
-        # for resolvableTo a dictionary item is
-        # <specificName>:<signature>
-        # where <signature> is a dictionary of
-        # <formalParameterName>:((<type class>,<typeModifierList>),dimensions)
-        self.resolvableTo = {}
-        # this is the generic interface name 
-        self.genericName=None
+        self.args = {} # <name>:(<position>,<symtabEntry>) 
+
+    def nameByPosition(self,position):
+        argsIter=itertools.ifilter(lambda l: position==l[1][0],self.args.items())
+        try : 
+            return argsIter.next()[0]
+        except StopIteration, e:
+            raise SymtabError("no formal argument known for position "+str(position))
 
     def debug(self):
-        outString = 'generic info '+str(self)+':'+str(self.resolvableTo)+':'+str(self.genericName)
+        outString = 'formal args: ''{'+','.join(map(lambda l: str(l[0])+':('+str(l[1][0])+','+l[1][1].debug(l[0]),self.args.items()))+'}'
+        return outString
+
+class GenericInfo(object):
+    ''' associated with an interface '''
+    def __init__(self):
+        # for resolvableTo a dictionary item is
+        # <specificName>:<symtabEntry>
+        self.resolvableTo = {}
+
+    def debug(self):
+        outString = 'generic info '+str(self)+'{'+','.join(map(lambda l: str(l[0])+':'+l[1].debug(l[0]),self.resolvableTo.items()))+'}'
         return outString
 
 class SymtabError(Exception):
@@ -43,21 +55,6 @@ class SymtabError(Exception):
             symbolNameStr = self.symbolName or '<symbol name unknown>'
             errString+='\nFor entry'+str(self.entry.debug(symbolNameStr))
         return (errString)
-
-class FormalArgs(object):
-    def __init__(self):
-        self.args = {} # <name>:(<position>.<symtabEntry>) 
-
-    def nameByPosition(self,position):
-        argsIter=itertools.ifilter(lambda l: position==l[1][0],self.args.items())
-        try : 
-            return argsIter.next()[0]
-        except StopIteration, e:
-            raise SymtabError("no formal argument known for position "+str(position))
-
-    def debug(self):
-        outString = 'formal args: '+str(self.args)
-        return outString
 
 class Symtab(object):
 
@@ -221,7 +218,7 @@ class Symtab(object):
         theNewEntry.updateOrigin(theOrigin)
         # keep a ref to the same generic Info, arg list
         theNewEntry.genericInfo=theLocalEntry.genericInfo
-        theNewEntry.funcFormalArgs=theLocalEntry.funcFormalArgs
+        theNewEntry.specificFormalArgs=theLocalEntry.specificFormalArgs
         otherSymtab.enter_name(newName,theNewEntry)
         DebugManager.debug(sys._getframe().f_code.co_name+': original < '+theLocalEntry.debug(aKey)+' > replicated as < '+theNewEntry.debug(newName)+' >')
         return theNewEntry
@@ -388,8 +385,8 @@ class SymtabEntry(object):
         self.access = access# None | 'private' | 'public' | 'privatedefault' | 'publicdefault']
         # takes a GenericInfo instance when used for generic functions/subroutines (interfaces)
         self.genericInfo = None 
-        # for functions takes a FormalArgs instance when used for the specific (non-generic) parameter list 
-        self.funcFormalArgs = None 
+        # for specific functions/subroutines takes a FormalArgs instance
+        self.specificFormalArgs = None 
         self.memberOfDrvdType = None
         self.typetab_id = typetab_id
 
@@ -476,11 +473,11 @@ class SymtabEntry(object):
         else:
             self.origin = anOriginStr
 
-    def addResolveName(self,resolvesTo):
+    def addResolveName(self,resolvesTo,resolvesToSymtabEntry):
         if (self.genericInfo is None):
             self.genericInfo=GenericInfo()
         if not resolvesTo.lower in self.genericInfo.resolvableTo :
-            self.genericInfo.resolvableTo[resolvesTo.lower()]=None
+            self.genericInfo.resolvableTo[resolvesTo.lower()]=resolvesToSymtabEntry
 
     def enterDrvdTypeName(self,aDrvdTypeName):
         self.memberOfDrvdType=aDrvdTypeName
@@ -501,8 +498,8 @@ class SymtabEntry(object):
             self.constInit=other.constInit
         if (not self.genericInfo):
             self.genericInfo=other.genericInfo
-        if (not self.funcFormalArgs):
-            self.funcFormalArgs=other.funcFormalArgs    
+        if (not self.specificFormalArgs):
+            self.specificFormalArgs=other.specificFormalArgs    
 
     def setDefaultAccess(self,anAccessKW):
         if (self.access):
@@ -537,7 +534,7 @@ class SymtabEntry(object):
                                          attrDump(self,'renameKey')+ \
                                          attrDump(self,'access')+ \
                                          ((self.genericInfo and (', genericInfo='+str(self.genericInfo.debug()))) or '')+\
-                                         ((self.funcFormalArgs and (', funcFormalArgs='+str(self.funcFormalArgs.debug()))) or '')+\
+                                         ((self.specificFormalArgs and (', specificFormalArgs='+str(self.specificFormalArgs.debug()))) or '')+\
                                          attrDump(self,'memberOfDrvdType')+ \
                                          ']'
     

@@ -406,6 +406,8 @@ class _TypeContext:
          if (returnType is None) :
             # this must be a generic
             returnType=self.__genericFunctionType(anApp)
+         if (returnType is None) :
+            raise InferenceError(sys._getframe().f_code.co_name+': no return type for generic call to "'+str(anApp)+'"',self.lineNumber)
          if isinstance(returnType.entryKind,TypetabEntry.ArrayEntryKind):
             arraySlice=False
             for anArg in anApp.args:
@@ -629,14 +631,14 @@ def __functionShape(aFunctionApp,localSymtab,lineNumber):
                   raise InferenceError(sys._getframe().f_code.co_name+': Formal parameter for actual named parameter: '+str(arg)+
                                        ' is already in the  mapping dictionary for positional parameter '+
                                        str(argDict[arg.myId][1])+' at position '+str(argDict[arg.myId][0]),lineNumber)
-               namedParmFormalPosition=symtabEntry.funcFormalArgs.positionOf(arg.myId)
+               namedParmFormalPosition=symtabEntry.specificFormalArgs.positionOf(arg.myId)
                if (namedParmFormalPosition in map(lambda l: l[0],self.argDict.values())):
                   raise InferenceError(sys._getframe().f_code.co_name+': Formal parameter position '+namedParmFormalPosition+' for actual named parameter: '+str(arg)+
                                        ' is already in the  mapping dictionary as '+
                                        str(argDict[arg.myId][1]),lineNumber)
-               self.argDict[arg.myId]=(symtabEntry.funcFormalArgs.positionOf(arg.myId),arg.myRHS)
+               self.argDict[arg.myId]=(symtabEntry.specificFormalArgs.positionOf(arg.myId),arg.myRHS)
             else:
-               formalParm=symtabEntry.funcFormalArgs.nameByPosition(pos)
+               formalParm=symtabEntry.specificFormalArgs.nameByPosition(pos)
                if (formalParm in self.argDict.keys() or pos in map(lambda l: l[0],self.argDict.values())):
                   raise InferenceError(sys._getframe().f_code.co_name+': Formal parameter: '+formalParm+' for position '+str(pos)+
                                        ' is already in the  mapping dictionary with actual parameter value '+str(self.argDict[arg.myId][1]),lineNumber)
@@ -685,13 +687,13 @@ def __functionShape(aFunctionApp,localSymtab,lineNumber):
          if (not (aFunctionApp.head.lower() in __ourMissingFuncDefs)) :
             __ourMissingFuncDefs.add(aFunctionApp.head.lower())
             DebugManager.warning('no explicit definition for function "'+str(aFunctionApp.head)+'" called as "'+str(aFunctionApp)+'" found within the current compile unit.',lineNumber,DebugManager.WarnType.noDefinition)
-      if (returnShape and aFunctionApp.args and symtabEntry and symtabEntry.funcFormalArgs):
+      if (returnShape and aFunctionApp.args and symtabEntry and symtabEntry.specificFormalArgs):
          # the dimensions need to be checked for references to formal parameters
          aMapParams=MapParams(aFunctionApp,symtabEntry,lineNumber)
          returnShape=copy.deepcopy(returnShape) # don't want to modify the original
          for dim in returnShape:
             aMapParams.replaceFormalWithActual(dim)
-      elif (aFunctionApp.args and symtabEntry and symtabEntry.funcFormalArgs):
+      elif (aFunctionApp.args and symtabEntry and symtabEntry.specificFormalArgs):
          aMapParams=MapParams(aFunctionApp,symtabEntry,lineNumber)
          returnShape=copy.deepcopy(returnShape) # don't want to modify the original
    return returnShape
@@ -756,47 +758,50 @@ def expressionShape(anExpression,localSymtab,lineNumber):
 
 def _genericResolve(aFunctionApp,localSymtab,lineNumber):
    ''' returns tuple (<specificName>,<symtabEntry>) for generic aFunctionApp '''
+   DebugManager.debug(sys._getframe().f_code.co_name+' entered for '+str(aFunctionApp))
    # find the symbol:
    sName=aFunctionApp.head
    symtabEntry=localSymtab.lookup_name(aFunctionApp.head)
    if symtabEntry is None:
       # f77 style call, doesn't have to be in the symboltable
+      DebugManager.debug(sys._getframe().f_code.co_name+' no symtab entry, f77 style call '+
+                         aFunctionApp.head+'('+','.join([str(arg) for arg in aFunctionApp.args]))
       return None
    if (symtabEntry.genericInfo is None
        or
        len(symtabEntry.genericInfo.resolvableTo)==0) : # not overloaded
+      DebugManager.debug(sys._getframe().f_code.co_name+' returning specific call info '+sName+' because of '+str(symtabEntry.debug())) 
       return (sName,symtabEntry)
    # find a match for the signature:
    matchedName=""
    matchCount=0
    for sName in symtabEntry.genericInfo.resolvableTo.keys():
-      signature=symtabEntry.genericInfo.resolvableTo[sName]
+      specificFormalArgs=symtabEntry.genericInfo.resolvableTo[sName].specificFormalArgs
       # we don't cover optional arguments here - yet
-      if len(signature)!=len(aFunctionApp.args):
+      if len(specificFormalArgs.args)!=len(aFunctionApp.args):
          DebugManager.debug(sys._getframe().f_code.co_name+' signature length mismatch at specific '+
-                            str(sName)+'('+','.join(signature.keys())+
+                            str(sName)+'('+','.join(specificFormalArgs.args.keys())+
                             ') for generic call '+
                             aFunctionApp.head+'('+','.join([str(arg) for arg in aFunctionApp.args]))
          continue
       matched=True
       aTypeContext=_TypeContext(lineNumber,localSymtab)
-      for formal,actual in zip(signature.keys(),aFunctionApp.args):
+      for formal,actual in zip(specificFormalArgs.args.keys(),aFunctionApp.args):
          theExpressionType=expressionType(actual,localSymtab,lineNumber)
-         sigBaseType=globalTypeTable.lookupTypeId(signature[formal][0]).getBaseTypeId()
+         sigType=globalTypeTable.lookupTypeId(specificFormalArgs.args[formal][1].typetab_id)
+         sigBaseType=sigType.getBaseTypeId()
          if (sigBaseType!=theExpressionType.getBaseTypeId()):
             DebugManager.debug(sys._getframe().f_code.co_name+' argument type mismatch for specific "'+
                                str(sName)+'" at formal "'+
-                               str(formal)+'"('+str(signature[formal][0])+')'
+                               str(formal)+'"('+str(specificFormalArgs.args[formal][0])+')'
                                ' for call to generic "'+
                                aFunctionApp.head+'" at actual "'+
                                str(actual)+'"('+ str(expressionType(actual,localSymtab,lineNumber))+')')
             matched=False
             break
          formalRank=0
-         if (signature[formal][1]): 
-            formalRank=len(signature[formal][1])
-         elif isinstance(globalTypeTable.lookupTypeId(signature[formal][0]).entryKind,TypetabEntry.ArrayEntryKind):
-            formalRank=globalTypeTable.lookupTypeId(signature[formal][0]).entryKind.getArrayRank()
+         if isinstance(sigType.entryKind,TypetabEntry.ArrayEntryKind):
+            formalRank=globalTypeTable.lookupTypeId(specificFormalArgs.args[formal][1].typetab_id).entryKind.getArrayRank()
          actualRank=0
          actualShape=expressionShape(actual,localSymtab,lineNumber)
          if (actualShape):
