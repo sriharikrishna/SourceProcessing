@@ -34,6 +34,9 @@ class Typetab(object):
         self.arrayBoundsTab=ArrayBoundsTab()
         self.charLenTab=CharacterLenTab()
 
+    def debug(self):
+         return  'TypeTab:[\n'+'\n'.join(map(lambda l: '\t'+l.debug(),self.ids.values()))+'\n]'
+
     def lookupTypeId(self,typeid):
         '''check for typeid in the type table'''
         DebugManager.debug('Typetab.lookupTypeId called on "'+str(typeid)+'"')
@@ -339,7 +342,7 @@ class TypetabEntry(object):
             self.type_name=type_name  # name of built-in type (e.g. integer) (use type class here?) only if not a pointer
 
         def debug(self):
-            return 'BuiltInEntryKind; name of built-in type: '+str(self.type_name)
+            return '[BuiltInEntryKind; name of built-in type: '+str(self.type_name)+']'
 
     class CharacterEntryKind(BuiltInEntryKind):
         _sons = ['type_name','charlen_id']
@@ -349,7 +352,7 @@ class TypetabEntry(object):
             TypetabEntry.BuiltInEntryKind.__init__(self,'character')
 
         def debug(self):
-            return 'CharacterEntryKind; name of built-in type: '+str(self.type_name)
+            return '[CharacterEntryKind; name of built-in type: '+str(self.type_name)+']'
 
     class BuiltInPointerEntryKind(GenericEntryKind):
         keyword = 'BIpointer'
@@ -359,7 +362,7 @@ class TypetabEntry(object):
             self.typetab_id=typetab_id        # type id of built-in type pointed to
 
         def debug(self):
-            return 'BuiltInPointerEntryKind; typeid of built-in type pointed to: '+str(self.typetab_id)
+            return '[BuiltInPointerEntryKind; typeid of built-in type pointed to: '+str(self.typetab_id)+']'
 
     class NamedTypeEntryKind(GenericEntryKind):
         keyword = 'namedtype'
@@ -374,11 +377,12 @@ class TypetabEntry(object):
             return self.baseType
 
         def debug(self):
-            returnString='NamedTypeEntryKind; symbolName:'+str(self.symbolName)
+            returnString='[NamedTypeEntryKind; symbolName:'+str(self.symbolName)
             if self.localSymtab:
-                returnString+=', localSymtab where the type is defined: '+self.localSymtab.debug()
+                returnString+=', localSymtab where the type is defined: ' + str(id(self.localSymtab))
             else:
                 returnString+=', localSymtab is None'
+            returnString+=']'    
             return returnString
 
     class NamedTypePointerEntryKind(GenericEntryKind):
@@ -391,11 +395,12 @@ class TypetabEntry(object):
             self.baseTypeId=baseTypeId        # baseType, if this is a type which extends another named type
 
         def debug(self):
-            returnString='NamedTypeEntryKind; symbolName:'+str(self.symbolName)
+            returnString='[NamedTypePointerEntryKind; symbolName:'+str(self.symbolName)
             if self.localSymtab:
-                returnString+=', localSymtab where the type is defined: '+self.localSymtab.debug()
+                returnString+=', localSymtab where the type is defined: '+ str(id(self.localSymtab))
             else:
                 returnString+=', localSymtab is None'
+            returnStrin+=']'    
             return returnString
 
     class ArrayEntryKind(GenericEntryKind):
@@ -418,8 +423,8 @@ class TypetabEntry(object):
             return arrayTabEntry.rank
 
         def debug(self):
-            return 'ArrayEntryKind; Array id for array table where dimension information is stored: '+str(self.arrayid)+\
-                                    ', Type id of built-in or named array type: '+str(self.typetab_id)
+            return '[ArrayEntryKind; Array id for array table where dimension information is stored: '+str(self.arrayid)+\
+                                    ', Type id of built-in or named array type: '+str(self.typetab_id) +']'
 
     class ArrayPointerEntryKind(GenericEntryKind):
         keyword = 'ARpointer'
@@ -429,7 +434,7 @@ class TypetabEntry(object):
             self.typetab_id=typetab_id             # type id of array type of target
 
         def debug(self):
-            return 'ArrayPointerEntryKind; Type id of array type of target: '+str(self.typetab_id)
+            return '[ArrayPointerEntryKind; Type id of array type of target: '+str(self.typetab_id)+']'
 
         def getArrayTypeEntry(self):
             return globalTypeTable.lookupTypeId(self.typetab_id)
@@ -443,7 +448,7 @@ class TypetabEntry(object):
             self.rank=rank             # rank
 
         def debug(self):
-            return 'AllocatableEntryKind; Type id of allocatable base type: '+str(self.typetab_id)+';rank: '+str(self.rank)
+            return '[AllocatableEntryKind; Type id of allocatable base type: '+str(self.typetab_id)+';rank: '+str(self.rank)+']'
 
     def __init__(self,entryKind,typetab_id):
         self.entryKind = entryKind # some instance of self.GenericEntryKind
@@ -466,8 +471,8 @@ class TypetabEntry(object):
         DebugManager.debug('TypetabEntry.getBaseTypeEntry called on type: '+self.debug())
         return globalTypeTable.lookupTypeId(self.getBaseTypeId())
 
-    def debug(self,name='<symbol name unknown>'):
-        return '[TypetabEntry('+str(self)+') "'+name+'" -> entryKind='+self.entryKind.debug()+\
+    def debug(self):
+        return '[TypetabEntry('+str(id(self))+') -> entryKind='+self.entryKind.debug()+\
                                          ', typetab_id='+str(self.typetab_id)+\
                                          ']'
 
