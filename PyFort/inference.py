@@ -789,8 +789,7 @@ def _genericResolve(aFunctionApp,localSymtab,lineNumber):
       for formal,actual in zip(specificFormalArgs.args.keys(),aFunctionApp.args):
          theExpressionType=expressionType(actual,localSymtab,lineNumber)
          sigType=globalTypeTable.lookupTypeId(specificFormalArgs.args[formal][1].typetab_id)
-         sigBaseType=sigType.getBaseTypeId()
-         if (sigBaseType!=theExpressionType.getBaseTypeId()):
+         if (not globalTypeTable.equivalence(theExpressionType,sigType)):
             DebugManager.debug(sys._getframe().f_code.co_name+' argument type mismatch for specific "'+
                                str(sName)+'" at formal "'+
                                str(formal)+'"('+str(specificFormalArgs.args[formal][0])+')'
