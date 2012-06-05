@@ -825,12 +825,12 @@ def _genericResolve(aFunctionApp,localSymtab,lineNumber):
       reason="Could not match"
    else:
       reason="Ambiguous matches for" 
-   actualSignature="("+".".join(map(lambda l: str(expressionType(l,localSymtab,lineNumber)), aFunctionApp.args))+")"
+   actualSignature="("+".".join(map(lambda l: expressionType(l,localSymtab,lineNumber).debug(), aFunctionApp.args))+")"
    specifics=[]
    for sName in symtabEntry.genericInfo.resolvableTo.keys():
-      signature=symtabEntry.genericInfo.resolvableTo[sName]
-      specifics.append(sName+"("+",".join(map(str,signature.keys()))+")"+"("+".".join(map(lambda l: str(signature[l]), signature.keys()))+")")
-   raise InferenceError(sys._getframe().f_code.co_name+': '+reason+' call to generic '+aFunctionApp.head+actualSignature+' to specific implemantation\n '+'\n'.join(specifics),lineNumber)
+      signature=symtabEntry.genericInfo.resolvableTo[sName].specificFormalArgs.args
+      specifics.append("\t"+sName+"("+",".join(map(lambda l: globalTypeTable.lookupTypeId(l[1].typetab_id).debug(),signature.values()))+")")
+   raise InferenceError(sys._getframe().f_code.co_name+': '+reason+' call to generic '+aFunctionApp.head+actualSignature+' to specific implemantation(s):\n '+'\n'.join(specifics),lineNumber)
 
 def __isRangeExpression(theExpression):
    return (isinstance(theExpression,Ops) and theExpression.op==':')
