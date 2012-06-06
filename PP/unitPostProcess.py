@@ -449,32 +449,30 @@ class UnitPostProcessor(object):
         self.__inlineUnit = None
 
         for Stmt in Stmts:
-            argReps = min(len(inlineArgs),len(replacementArgs))
-            argReps -= 1
             if isinstance(Stmt,fs.Comments):
-                Stmt.set_rawline(replaceArgs(argReps,Stmt.get_rawline(),inlineArgs,replacementArgs))
+                Stmt.set_rawline(replaceArgs(Stmt.get_rawline(),inlineArgs,replacementArgs))
                 ExecsAppend(Stmt)
             elif isinstance(Stmt,fs.AssignStmt):
-                lhs = replaceArgs(argReps,str(Stmt.get_lhs()),inlineArgs,replacementArgs)
-                rhs = replaceArgs(argReps,str(Stmt.get_rhs()),inlineArgs,replacementArgs)
+                lhs = replaceArgs(str(Stmt.get_lhs()),inlineArgs,replacementArgs)
+                rhs = replaceArgs(str(Stmt.get_rhs()),inlineArgs,replacementArgs)
                 newStmt = fs.AssignStmt(lhs,rhs,lead=stmt_lead)
                 ExecsAppend(newStmt)
             elif isinstance(Stmt,fs.StmtFnStmt):
                 name=replaceArgs\
-                      (argReps,str(Stmt.get_name()),inlineArgs,replacementArgs)
-                newArgs=[replaceArgs(argReps,str(arg),inlineArgs,replacementArgs) for arg in Stmt.get_args()]
+                      (str(Stmt.get_name()),inlineArgs,replacementArgs)
+                newArgs=[replaceArgs(str(arg),inlineArgs,replacementArgs) for arg in Stmt.get_args()]
                 body=replaceArgs\
-                      (argReps,str(Stmt.get_body()),inlineArgs,replacementArgs)
+                      (str(Stmt.get_body()),inlineArgs,replacementArgs)
                 newStmt = fs.StmtFnStmt(name,newArgs,body,lead=stmt_lead)
                 ExecsAppend(newStmt)
             elif isinstance(Stmt,fs.IOStmt):
-                newItemList=[replaceArgs(argReps,str(item),inlineArgs,replacementArgs) for item in Stmt.get_itemList()]
+                newItemList=[replaceArgs(str(item),inlineArgs,replacementArgs) for item in Stmt.get_itemList()]
                 Stmt.set_itemList(newItemList)
                 Stmt.lead = stmt_lead
                 ExecsAppend(Stmt)
             elif isinstance(Stmt,fs.AllocateStmt) \
               or isinstance(Stmt,fs.DeallocateStmt) :
-                Stmt.set_rawline(replaceArgs(argReps,Stmt.get_rawline(),inlineArgs,replacementArgs)+''.join(Stmt.internal))
+                Stmt.set_rawline(replaceArgs(Stmt.get_rawline(),inlineArgs,replacementArgs)+''.join(Stmt.internal))
                 Stmt.lead = stmt_lead
                 ExecsAppend(Stmt)
             elif isinstance(Stmt,fs.WhileStmt) or \
@@ -482,7 +480,7 @@ class UnitPostProcessor(object):
                 for aSon in Stmt.get_sons():
                     theSon = getattr(Stmt,aSon)
                     if theSon :
-                    	newSon = replaceArgs(argReps,str(theSon),inlineArgs,replacementArgs)
+                    	newSon = replaceArgs(str(theSon),inlineArgs,replacementArgs)
                         Stmt.set_son(aSon,newSon)
                 Stmt.lead = stmt_lead
                 ExecsAppend(Stmt)
@@ -493,13 +491,13 @@ class UnitPostProcessor(object):
                         index = 0
                         while index < len(theSon):
                             arg = theSon[index]
-                            newSon = replaceSon(argReps,arg,inlineArgs,replacementArgs)
+                            newSon = replaceSon(arg,inlineArgs,replacementArgs)
                             if newSon is not arg:
                                 theSon[index] = newSon
                                 Stmt.modified = True
                             index += 1
                     elif theSon is not None:
-                        newSon = replaceSon(argReps,theSon,inlineArgs,replacementArgs)
+                        newSon = replaceSon(theSon,inlineArgs,replacementArgs)
                         Stmt.set_son(aSon,newSon)
                 Stmt.lead = stmt_lead
                 ExecsAppend(Stmt)

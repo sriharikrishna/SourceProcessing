@@ -3,7 +3,6 @@ import re
 
 # Replaces inline args with the given replacement args
 # PARAMS:
-# argReps -- the number of times to loop through looking at arguments (the
 # number of arguments to look at); equal to the minimum of the number of
 # inlineArgs and number of replacementArgs
 # string -- the string in which arguments must be replaced
@@ -11,7 +10,7 @@ import re
 # replacementArgs -- arguments from the input file being processed
 # RETURNS: a modified strings with all inlineArgs replaced by the 
 # appropriate argument from replacementArgs
-def replaceArgs(argReps,string,inlineArgs,replacementArgs):
+def replaceArgs(string,inlineArgs,replacementArgs):
     replDict=dict(zip(inlineArgs,map(str,replacementArgs)))
     rExp=re.compile('|'.join(map(lambda l:'(\\b'+l+'\\b)',map(re.escape,replDict))))
     def oneReplaceMatch(match):
@@ -22,7 +21,6 @@ def replaceArgs(argReps,string,inlineArgs,replacementArgs):
 # Replaces inline args with the given args
 # called on _son attributes
 # PARAMS:
-# argReps -- the number of times to loop through looking at arguments (the
 # number of arguments to look at); equal to the minimum of the number of
 # inlineArgs and number of replacementArgs
 # arg -- the expression to be modified (is one of the sons of a statement)
@@ -30,7 +28,7 @@ def replaceArgs(argReps,string,inlineArgs,replacementArgs):
 # replacementArgs -- arguments from the input file being processed
 # RETURNS: a modified expression to replace the old son in the statement
 # being processed
-def replaceSon(argReps,arg,inlineArgs,replacementArgs):
+def replaceSon(arg,inlineArgs,replacementArgs):
     index=inlineArgs.index
     newSon = arg
     if isinstance(arg,fe.Sel):
@@ -44,7 +42,7 @@ def replaceSon(argReps,arg,inlineArgs,replacementArgs):
         newArgsAppend=newArgs.append
         for anArg in args:
             if isinstance(anArg,fe.App) or isinstance(anArg,fe.Sel):
-                newArgsAppend(replaceSon(argReps,anArg,inlineArgs,replacementArgs))
+                newArgsAppend(replaceSon(anArg,inlineArgs,replacementArgs))
             else:
                 if anArg in inlineArgs and len(replacementArgs)>index(anArg):
                     newArg=replacementArgs[index(anArg)]
@@ -58,8 +56,8 @@ def replaceSon(argReps,arg,inlineArgs,replacementArgs):
         newSon = fe.App(head,newArgs)
     elif isinstance(arg,fe.Ops):
         newSon=fe.Ops(arg.op,
-                      replaceArgs(argReps,str(arg.a1),inlineArgs,replacementArgs),
-                      replaceArgs(argReps,str(arg.a2),inlineArgs,replacementArgs))
+                      replaceArgs(str(arg.a1),inlineArgs,replacementArgs),
+                      replaceArgs(str(arg.a2),inlineArgs,replacementArgs))
     elif arg in inlineArgs and len(replacementArgs)>index(arg):
             newSon=replacementArgs[index(arg)]
     return newSon

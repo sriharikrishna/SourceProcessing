@@ -622,7 +622,7 @@ class UnitCanonicalizer(object):
                 if anExp.head == stmtFnStmt.name:
                     newSon = fe.ParenExp(stmtFnStmt.body)
                     # replace args
-                    newSon = replaceArgs(len(anExp.args)-1,str(newSon),stmtFnStmt.args,newArgs)
+                    newSon = replaceArgs(str(newSon),stmtFnStmt.args,newArgs)
                 else:
                     newSon = fe.App(anExp.head,newArgs)
         elif isinstance(anExp,fe.Ops):
