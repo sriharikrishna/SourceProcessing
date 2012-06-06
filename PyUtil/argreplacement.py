@@ -12,13 +12,12 @@ import re
 # RETURNS: a modified strings with all inlineArgs replaced by the 
 # appropriate argument from replacementArgs
 def replaceArgs(argReps,string,inlineArgs,replacementArgs):
-    arg_re = r'\b%s\b'
-    while argReps>=0:
-        argSplit=re.compile(arg_re % str(inlineArgs[argReps]))
-        strList = argSplit.split(string)
-        string=str(replacementArgs[argReps]).join(strList)
-        argReps -= 1
-    return string
+    replDict=dict(zip(inlineArgs,map(str,replacementArgs)))
+    rExp=re.compile('|'.join(map(lambda l:'(\\b'+l+'\\b)',map(re.escape,replDict))))
+    def oneReplaceMatch(match):
+        return replDict[match.group(0)]
+    nStr=re.sub(rExp,oneReplaceMatch, string)    
+    return nStr
 
 # Replaces inline args with the given args
 # called on _son attributes
