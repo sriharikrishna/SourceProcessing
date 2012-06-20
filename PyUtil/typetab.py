@@ -10,6 +10,7 @@ from PyFort.fortStmts import DrvdTypeDecl, DrvdTypeDefn, CharacterStmt,RealStmt,
 from PyFort.fortExp import Ops,App
 
 class TypetabError(Exception):
+    '''exception for errors that occur when using the type table'''
     def __init__(self,msg,theType=None,entry=None,lineNumber=None):
         self.msg = msg
         self.theType = theType
@@ -24,7 +25,8 @@ class TypetabError(Exception):
         return (errString)
 
 class Typetab(object):
-    
+    'class to manage interactions with type table, such as entry additions and lookups'
+
     def __init__(self):
         self.ids = dict() # string for the key and TypetabEntry for the value
         self.intrinsicIdToTypeMap=dict() # typetab id for the key and (fortStmt Type,Kind) pair for value
@@ -46,9 +48,11 @@ class Typetab(object):
             return None
 
     def intrinsicTypeNameToEntry(self,type_name):
+        '''get typeid by intrinisic type name'''
         return self.lookupTypeId(self.intrinsicTypeToIdMap[type_name])
 
     def __getBuiltInName(self,theType,localSymtab):
+        '''get the built-in type name from the given type & symtab'''
         from PyFort.inference import guessBytes
         if (theType.kw=='doubleprecision'):
             numBytes=guessBytes((theType.__class__,theType.get_mod()),localSymtab,0)
@@ -64,6 +68,7 @@ class Typetab(object):
         return typeName
 
     def __getDimensions(self,theType,localSymtab):
+        '''get the dimensions of the declaration from given type and symtab'''
         if theType.dimension:
             return theType.dimension
         elif len(theType.get_decls())>0:
@@ -76,6 +81,7 @@ class Typetab(object):
         return None
 
     def __getTypeKind(self,theType,localSymtab):
+        '''get the TypetabEntry kind'''
         if theType.allocatable:
             return TypetabEntry.AllocatableEntryKind
         elif theType.pointer:
@@ -100,6 +106,7 @@ class Typetab(object):
                 return TypetabEntry.BuiltInEntryKind
 
     def __enterBuiltInTypes(self):
+        '''populate the type table with the built-in types'''
         for aTypePair in getBuiltInTypes():
             if aTypePair[0].kw=='doubleprecision':
                 entryKind=TypetabEntry.BuiltInEntryKind('real_8')
@@ -116,6 +123,7 @@ class Typetab(object):
             self.type_counter += 1
 
     def enterArrayType(self,baseTypeID,dimensions,entryKind):
+        '''create a new TypetabEntry for the array type & add it to the type table'''
         if entryKind==TypetabEntry.AllocatableEntryKind:
             # AllocatableEntryKind
             newEntry=TypetabEntry(TypetabEntry.AllocatableEntryKind(baseTypeID,len(dimensions)),self.type_counter)
@@ -133,6 +141,7 @@ class Typetab(object):
     # get a NamedType entry (or NamedTypePointer) by symbolName & symtab
     # if it's not present already, add it
     def __getNamedType(self,symbolName,localSymtab):
+        '''get the named type entry typeid for the given symbolName and symtab'''
         kindEntryMatches = [e for e in self.ids.values() if isinstance(e.entryKind,TypetabEntry.NamedTypeEntryKind) or isinstance(e.entryKind,TypetabEntry.NamedTypePointerEntryKind)]
         if len(kindEntryMatches)!=0:
             # check symbol name
@@ -151,6 +160,7 @@ class Typetab(object):
     # newType: pair  (type class,type modifier) => pass in only type class (don't need type mod)?
     # enter the type in the type table and return the typetab_id
     def __enterNewType(self,theType,localSymtab):
+        '''create a TypetabEntry for the given type decl and add it to the type table'''
         DebugManager.debug('Typetab.__enterNewType called on "'+str(theType)+'"')
         typeKind=self.__getTypeKind(theType,localSymtab)
         newEntry=None
@@ -222,9 +232,10 @@ class Typetab(object):
     # if type is not present, add it
     # filter for same # derefs and entrykind
     # then filter results again for match
-    # if not: create & add; return typeid
+    # if not: return None
     # else: return typeid
     def lookupType(self,theType,localSymtab):
+        '''attempt to match the given type decl to one in the type table and return the typeid or None'''
         DebugManager.debug('Typetab.lookupType called on "'+str(theType)+'"')
         typeKind=self.__getTypeKind(theType,localSymtab)
         kindEntryMatches = [e for e in self.ids.values() if isinstance(e.entryKind,typeKind)]
@@ -293,6 +304,7 @@ class Typetab(object):
 
     # get the type id; if it is not already in the table, add it
     def getType(self,theType,localSymtab):
+        '''look up the given type decl in the type table, or add it if necessary, and return the typeid'''
         DebugManager.debug('Typetab.getType called on "'+str(theType)+'"')
         if isinstance(theType,UPClassStmt):
             # unlimited polymorphic entity=> not declared to have a type
@@ -305,6 +317,7 @@ class Typetab(object):
 
     # get the type entry; if it is not already in the table, add it
     def getTypeEntry(self,theType,localSymtab):
+        '''look up the given type decl in the type table, or add it if necessary, and return the type entry'''
         DebugManager.debug('Typetab.getTypeEntry called on "'+str(theType)+'"')
         typeid=self.getType(theType,localSymtab)
         return globalTypeTable.lookupTypeId(typeid)
@@ -328,6 +341,7 @@ class Typetab(object):
         return True
 
 class TypetabEntry(object):
+    'class to manage type table entries'
 
     class GenericEntryKind(object):
         keyword = 'unknown'
