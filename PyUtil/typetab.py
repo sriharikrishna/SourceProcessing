@@ -25,7 +25,7 @@ class TypetabError(Exception):
         return (errString)
 
 class Typetab(object):
-    'class to manage interactions with type table, such as entry additions and lookups'
+    '''class to manage built-in types, arrays & user-defined types'''
 
     def __init__(self):
         self.ids = dict() # string for the key and TypetabEntry for the value

@@ -3,6 +3,7 @@ from _Setup import *
 import PyFort.fortExp as fe
 
 class ArrayBoundsTab(object):
+    '''class to keep track of array bounds for array entry types in type table'''
     def __init__(self):
         self.ids = dict() # string for the key and ArrayBoundsTabEntry for the value
         self.array_counter=1
@@ -16,6 +17,7 @@ class ArrayBoundsTab(object):
 
     # only check equivalence for arrays with constant dimensions
     def arrayBoundsEntryEq(self,arrayBoundsEntryPair):
+        '''return true if the two array bounds entries in the pair are equivalent'''
         if all(map(lambda l: (not l.constant_dims),arrayBoundsEntryPair)):
             return False
         if arrayBoundsEntryPair[0].rank!=arrayBoundsEntryPair[1].rank:
@@ -24,7 +26,8 @@ class ArrayBoundsTab(object):
                                      arrayBoundsEntryPair[1].dimArray])
 
     def checkDimArrayEq(self,dimArrayPair):
-        # pair of dimensionEntry lists; want to have list of dimensionEntry pairs
+        '''return True if the dimensions in each of the two dimensionEntry lists are equivalent'''
+        # pair of dimensionEntry lists; want to have list of dimensionEntry pairs & then compare
         dimEntryPairsArray=[]; i=0
         while i<len(dimArrayPair[0]):
             dimEntryPairsArray.append((dimArrayPair[0][i],dimArrayPair[1][i]))
@@ -36,6 +39,7 @@ class ArrayBoundsTab(object):
     # if array dimensions are constants, look up array bounds in table
     # if not, return None
     def lookupArrayBounds(self,arrayDims):
+        ''' get the id for the array bounds entry corresponding to the given dimensions, or return None'''
         rank=len(arrayDims)
         rankEntryMatches = [e for e in self.ids.values() if (e.constant_dims and e.rank==rank)]
         if not rankEntryMatches:
@@ -64,6 +68,7 @@ class ArrayBoundsTab(object):
     # add new array bounds entry if the bounds of arrayType do not already have an entry in the table
     # return arrayid
     def enterNewArrayBounds(self,dimensions):
+        '''create an array bounds table entry for the given dimensions'''
         dimArray=[]
         rank=len(dimensions)
         constant_dims=True
@@ -90,12 +95,14 @@ class ArrayBoundsTab(object):
         return newEntry.arrayid
 
     def getArrayBoundsId(self,dimensions):
+        '''get the array bounds entry id for the given dimensions, creating a new entry if necessary'''
         array_id=self.lookupArrayBounds(dimensions)
         if array_id==None:
             array_id=self.enterNewArrayBounds(dimensions)
         return array_id
 
 class ArrayBoundsTabEntry(object):
+    '''class to manage array bounds table entries'''
 
     class DimensionEntry(object):
         def __init__(self,lower,upper):
