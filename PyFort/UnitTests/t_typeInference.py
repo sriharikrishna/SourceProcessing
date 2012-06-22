@@ -74,19 +74,19 @@ class TypeOpsExpressions(TestCase):
         ae = self.assertEquals
 
         e1 = ep('x * y')
-        ae(expressionType(e1,theSymtab,lineNumber=0).typetab_id,5)
+        ae(expressionType(e1,theSymtab,lineNumber=0).typetab_id,7)
 
         e1 = ep('5.11d0 * 4.77d0')
-        ae(expressionType(e1,theSymtab,lineNumber=0).typetab_id,6)
+        ae(expressionType(e1,theSymtab,lineNumber=0).typetab_id,8)
 
         e1 = ep('i + 4')
-        ae(expressionType(e1,theSymtab,lineNumber=0).typetab_id,3)
+        ae(expressionType(e1,theSymtab,lineNumber=0).typetab_id,5)
 
         e1 = ep('z + 5.11d0 * 4.77d0')
-        ae(expressionType(e1,theSymtab,lineNumber=0).typetab_id,6)
+        ae(expressionType(e1,theSymtab,lineNumber=0).typetab_id,8)
 
         e1 = ep('x * 5.11d0 + i * 4.77')
-        ae(expressionType(e1,theSymtab,lineNumber=0).typetab_id,6)
+        ae(expressionType(e1,theSymtab,lineNumber=0).typetab_id,8)
 
 def _gt(decl):
     'generate type reps f decl strings, using parser'

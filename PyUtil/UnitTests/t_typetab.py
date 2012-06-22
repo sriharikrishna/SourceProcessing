@@ -23,31 +23,31 @@ class C1(TestCase):
         '''look up built in type integer'''
         integerStmt=fs.IntegerStmt([],[],['foo'])
         typeid = self.typetab.lookupType(integerStmt,self.symtab)
-        ae(typeid,3)
+        ae(typeid,5)
 
     def test2(self):
         '''lookup built in type real'''
         realStmt=fs.RealStmt([],[],['foo'])
         typeid = self.typetab.lookupType(realStmt,self.symtab)
-        ae(typeid,5)
+        ae(typeid,7)
 
     def test3(self):
         '''look up built in type double'''
         doubleStmt=fs.DoubleStmt([],[],['foo'])
         typeid = self.typetab.lookupType(doubleStmt,self.symtab)
-        ae(typeid,6)
+        ae(typeid,8)
 
     def test4(self):
         '''look up built in type complex'''
         complexStmt=fs.ComplexStmt([],[],['foo'])
         typeid = self.typetab.lookupType(complexStmt,self.symtab)
-        ae(typeid,7)
+        ae(typeid,9)
 
     def test5(self):
         '''look up built in type double complex'''
         doubleComplexStmt=fs.DoubleCplexStmt([],[],['foo'])
         typeid = self.typetab.lookupType(doubleComplexStmt,self.symtab)
-        ae(typeid,8)
+        ae(typeid,10)
 
     def test6(self):
         '''look up built in type logical'''
@@ -65,7 +65,7 @@ class C1(TestCase):
         '''test named type entry'''
         drvdType=fs.DrvdTypeDecl(['t'],[],[fs._NoInit('bar')])
         typeid = self.typetab.getType(drvdType,self.symtab)
-        ae(typeid,9)
+        ae(typeid,11)
 
     def test9(self):
         '''test named type lookup'''
@@ -80,7 +80,7 @@ class C1(TestCase):
         typeid1 = self.typetab.getType(arrayStmt,self.symtab)
         typeid2 = self.typetab.lookupType(arrayStmt,self.symtab)
         ae(typeid1,typeid2)
-
+        
     def test11(self):
         '''test built in type pointer entry and lookup'''
         integerPtrStmt=fs.IntegerStmt([],['pointer',],['foo'])
