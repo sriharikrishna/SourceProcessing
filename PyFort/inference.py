@@ -247,7 +247,7 @@ class _TypeContext:
          else:
             typeName=typeName+'_4'
          return globalTypeTable.intrinsicTypeNameToEntry(typeName)
-      elif anIntrinsicApp.head.lower() in ['iachar','ichar','idint','int','lbound','maxloc','scan','shape','size','ubound']:
+      elif anIntrinsicApp.head.lower() in ['iachar','ichar','idint','index','int','lbound','maxloc','scan','shape','size','ubound']:
          return globalTypeTable.intrinsicTypeNameToEntry('integer_4')
       elif anIntrinsicApp.head.lower() in ['dble','dfloat','dabs','dexp','dlog','dsqrt','dmod']:
          return globalTypeTable.intrinsicTypeNameToEntry('real_8')
