@@ -108,6 +108,8 @@ __nonStandard = (
 __builtInTypes = [
     (fs.CharacterStmt,4),
     (fs.LogicalStmt,4),
+    (fs.IntegerStmt,1),
+    (fs.IntegerStmt,2),
     (fs.IntegerStmt,4),
     (fs.IntegerStmt,8),
     (fs.RealStmt,4),
