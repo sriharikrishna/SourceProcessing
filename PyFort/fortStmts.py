@@ -234,6 +234,12 @@ class _PointerInit(_Init):
     def get_sons(self):
         return self._sons
 
+    def set_son(self,theSon,newSon):
+        oldSon = getattr(self,theSon)
+        if newSon is not oldSon:
+            setattr(self,theSon,newSon)
+            self.modified = True
+
     def __deepcopy__(self,memo={}):
         return _PointerInit(self.lhs,self.rhs)
 class _AssignInit(_Init):
@@ -254,6 +260,12 @@ class _AssignInit(_Init):
 
     def get_sons(self):
         return self._sons
+
+    def set_son(self,theSon,newSon):
+        oldSon = getattr(self,theSon)
+        if newSon is not oldSon:
+            setattr(self,theSon,newSon)
+            self.modified = True
 
     def __deepcopy__(self,memo={}):
         return _AssignInit(self.lhs,self.rhs)
@@ -2555,6 +2567,101 @@ class ContinueStmt(Leaf):
     kw_str = kw
 
 
+class SelectTypeStmt(Exec):
+    #FIXME: optional case construct name 
+    '''
+    [type-construct-name :] select type (type-expression)
+    '''
+    _sons = ['typeExpression']
+    kw = 'selecttype'
+    kw_str = 'select type'
+
+    @staticmethod
+    def parse(ws_scan,lineNumber):
+        scan = filter(lambda x: x != ' ',ws_scan)
+        formTypeSelector = disj(seq(id,lit('=>'),id),Exp)
+        formSelectTypeStmt = seq(lit(SelectTypeStmt.kw),
+                                 lit('('),
+                                 formTypeSelector,
+                                 lit(')'))
+        try:
+            ((selectTypeKeyword,openParen,typeExpression,closeParen),rest) = formSelectTypeStmt(scan)
+        except ListAssemblerException,e:
+            raise ParseError(lineNumber,scan,'Select Type statement')
+        return SelectTypeStmt(typeExpression,selectTypeKeyword,lineNumber,rest=rest)
+
+    def __init__(self,typeExpression,stmt_name=kw_str,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.typeExpression = typeExpression
+        self.stmt_name = stmt_name
+        Exec.__init__(self,lineNumber,label,lead,internal,rest)
+
+    def __str__(self):
+        return '%s (%s)' % (self.stmt_name,str(self.typeExpression))
+
+class TypeIsStmt(Exec):
+    #FIXME: optional case construct name 
+    '''
+    type is (type-name)
+    '''
+    _sons = []
+    kw = 'typeis'
+    kw_str = 'type is'
+
+    @staticmethod
+    def parse(ws_scan,lineNumber):
+        scan = filter(lambda x: x != ' ',ws_scan)
+        formTypeIsStmt = seq(lit(TypeIsStmt.kw),
+                             lit('('),
+                             id,
+                             lit(')'))
+        try:
+            ((typeIsKeyword,lparen,type_name,rparen),rest) = formTypeIsStmt(scan)
+        except ListAssemblerException,e:
+            raise ParseError(lineNumber,scan,'case default statement')
+        return TypeIsStmt(type_name,lineNumber,rest=rest)
+
+    def __init__(self,type_name,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.type_name=type_name
+        Exec.__init__(self,lineNumber,label,lead,internal,rest)
+
+    def __str__(self):
+        return 'type is ('+self.type_name+')'
+
+    def __repr__(self):
+        return 'TypeIsStmt(%s)' % (repr(self.type_name),)
+
+class ClassIsStmt(Exec):
+    #FIXME: optional case construct name 
+    '''
+    class is (class-name)
+    '''
+    _sons = []
+    kw = 'classis'
+    kw_str = 'class is'
+
+    @staticmethod
+    def parse(ws_scan,lineNumber):
+        scan = filter(lambda x: x != ' ',ws_scan)
+        formClassIsStmt = seq(lit(ClassIsStmt.kw),
+                             lit('('),
+                             id,
+                             lit(')'))
+        try:
+            ((classIsKeyword,lparen,class_name,rparen),rest) = formClassIsStmt(scan)
+        except ListAssemblerException,e:
+            raise ParseError(lineNumber,scan,'case default statement')
+        return ClassIsStmt(class_name,lineNumber,rest=rest)
+
+    def __init__(self,class_name,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.class_name=class_name
+        Exec.__init__(self,lineNumber,label,lead,internal,rest)
+
+    def __str__(self):
+        return 'class is ('+self.class_name+')'
+
+    def __repr__(self):
+        return 'ClassIsStmt(%s)' % (repr(self.class_name),)
+
 class SelectCaseStmt(Exec):
     #FIXME: optional case construct name 
     '''
@@ -3049,6 +3156,9 @@ kwtbl = dict(assign          = DeletedAssignStmt,
              endselect       = EndSelectCaseStmt,
              casedefault     = CaseDefaultStmt,
              case            = CaseRangeListStmt,
+             selecttype      = SelectTypeStmt,
+             typeis          = TypeIsStmt,
+             classis          = ClassIsStmt,
              intent          = IntentStmt,
              optional        = OptionalStmt,
              allocate        = AllocateStmt,
