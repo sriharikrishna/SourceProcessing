@@ -923,6 +923,39 @@ class TestCaseStmts(TestCase):
         self.assertEquals(theString,str(pps(theString)))
 
 
+class TestSelectTypeStmt(TestCase):
+    '''select case statements'''
+    def test0(self):
+        '''select type statement with space'''
+        s = 'select type (foo)'
+        r = SelectTypeStmt('foo')
+        self.assertEquals(repr(pps(s)),repr(r))
+        self.assertEquals(s,str(r))
+
+    def test1(self):
+        '''select type statement without space'''
+        s = 'selecttype (foo)'
+        r = SelectTypeStmt('foo')
+        self.assertEquals(repr(pps(s)),repr(r))
+
+class TestTypeIsStmt(TestCase):
+    '''type is statements'''
+    def test0(self):
+        '''type is statement'''
+        s = 'type is (foo)'
+        r = TypeIsStmt('foo')
+        self.assertEquals(repr(pps(s)),repr(r))
+        self.assertEquals(s,str(r))
+
+class TestClassIsStmt(TestCase):
+    '''class is statements'''
+    def test0(self):
+        '''class is statement'''
+        s = 'class is (foo)'
+        r = ClassIsStmt('foo')
+        self.assertEquals(repr(pps(s)),repr(r))
+        self.assertEquals(s,str(r))
+
 class TestInterfaces(TestCase):
     '''stuff to do with interfaces'''
 
@@ -1599,6 +1632,9 @@ suite = asuite(C2,C3,C4,C5,C6,C8,C9,
                TestFunctionStmt,
                TestSelectCaseStmt,
                TestCaseStmts,
+               TestSelectTypeStmt,
+               TestTypeIsStmt,
+               TestClassIsStmt,
                TestUseStmts,
                TestPointerAssignStmt,
                TestSubroutineStmt,
