@@ -851,6 +851,8 @@ def __ntArrayReference(namedType,localSymtab,lineNumber):
       nType=expressionType(namedType.head,localSymtab,lineNumber)
       if isinstance(nType.entryKind,TypetabEntry.NamedTypeEntryKind):
          (ntSymtabEntry,ntSymtab)=nType.entryKind.localSymtab.lookup_name_level(nType.entryKind.symbolName+":"+namedType.proj)
+         if ntSymtabEntry is None:
+            return False
          ntTypeEntry=globalTypeTable.lookupTypeId(ntSymtabEntry.typetab_id)
          if isinstance(ntTypeEntry.entryKind,TypetabEntry.AllocatableEntryKind) or \
                 isinstance(ntTypeEntry.entryKind,TypetabEntry.ArrayEntryKind) or \
