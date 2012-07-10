@@ -356,7 +356,7 @@ class TypetabEntry(object):
             self.type_name=type_name  # name of built-in type (e.g. integer) (use type class here?) only if not a pointer
 
         def debug(self):
-            return '[BuiltInEntryKind; name of built-in type: '+str(self.type_name)+']'
+            return '[BuiltInEntryKind: '+str(self.type_name)+']'
 
     class CharacterEntryKind(BuiltInEntryKind):
         _sons = ['type_name','charlen_id']
@@ -366,7 +366,7 @@ class TypetabEntry(object):
             TypetabEntry.BuiltInEntryKind.__init__(self,'character')
 
         def debug(self):
-            return '[CharacterEntryKind; name of built-in type: '+str(self.type_name)+']'
+            return '[CharacterEntryKind; '+str(self.type_name)+']'
 
     class BuiltInPointerEntryKind(GenericEntryKind):
         keyword = 'BIpointer'
