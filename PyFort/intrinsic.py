@@ -116,7 +116,8 @@ __builtInTypes = [
     (fs.RealStmt,4),
     (fs.DoubleStmt,8),
     (fs.ComplexStmt,8),
-    (fs.DoubleCplexStmt,16)
+    (fs.DoubleCplexStmt,16),
+    (fs.ExternalStmt,0) #special case external subroutine
 ]
 
 def getNonStandard():

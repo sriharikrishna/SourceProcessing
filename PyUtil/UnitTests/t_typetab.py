@@ -65,7 +65,7 @@ class C1(TestCase):
         '''test named type entry'''
         drvdType=fs.DrvdTypeDecl(['t'],[],[fs._NoInit('bar')])
         typeid = self.typetab.getType(drvdType,self.symtab)
-        ae(typeid,11)
+        ae(typeid,12)
 
     def test9(self):
         '''test named type lookup'''
