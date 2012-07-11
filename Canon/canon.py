@@ -373,8 +373,10 @@ class UnitCanonicalizer(object):
                 elif isinstance(anArg,str):
                     symtabEntry=self.__myUnit.symtab.lookup_name(anArg)
                     if (symtabEntry
-                        and 
-                        isinstance(symtabEntry.entryKind,SymtabEntry.FunctionEntryKind)):
+                        and
+                        (globalTypeTable.lookupTypeId(symtabEntry.typetab_id).isExternal()
+                         or 
+                         isinstance(symtabEntry.entryKind,SymtabEntry.FunctionEntryKind))):
                         if (function2subroutine.wasSubroutinized(symtabEntry.getScopePrefix(self.__myUnit)+anArg)) :
                             replacementArgs.append(function2subroutine.name_init+anArg); 
                             DebugManager.debug('is an identifier referring to a subroutinized function')
