@@ -212,8 +212,8 @@ def _processExternalStmt(anExternalStmt,curr):
     for aProcedureName in anExternalStmt.procedureNames:
         try:
             theSymtabEntry = localSymtab.lookup_name(aProcedureName)
-            if not theSymtabEntry:
-                newSymtabEntry = SymtabEntry(SymtabEntry.ProcedureEntryKind(),
+            if not theSymtabEntry: # first guess - assume it is an external subroutine
+                newSymtabEntry = SymtabEntry(SymtabEntry.SubroutineEntryKind(),typetab_id=globalTypeTable.getType(anExternalStmt,localSymtab),
                                              origin='external')
                 localSymtab.enter_name(aProcedureName,newSymtabEntry)
                 DebugManager.debug('\tprocedure NOT already present in symbol table -- adding '+newSymtabEntry.debug(aProcedureName))
@@ -221,7 +221,7 @@ def _processExternalStmt(anExternalStmt,curr):
                 DebugManager.debug('\tprocedure already has SymtabEntry'+theSymtabEntry.debug(aProcedureName))
                 # if the entry has a type, we know it's a function
                 newEntryKind = theSymtabEntry.typetab_id and SymtabEntry.FunctionEntryKind \
-                                                    or SymtabEntry.ProcedureEntryKind
+                                                    or SymtabEntry.SubroutineEntryKind
                 theSymtabEntry.enterEntryKind(newEntryKind())
         except SymtabError,e: # add lineNumber and symbol name to any SymtabError we encounter
             e.lineNumber = e.lineNumber or anExternalStmt.lineNumber
