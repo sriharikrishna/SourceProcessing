@@ -873,6 +873,8 @@ def __ntArrayReference(namedType,localSymtab,lineNumber):
       else:
          baseType=nType.getBaseTypeEntry()
          (ntSymtabEntry,ntSymtab)=baseType.entryKind.localSymtab.lookup_name_level(baseType.entryKind.symbolName+":"+namedType.proj)
+         if ntSymtabEntry is None:
+            return False
          ntTypeEntry=globalTypeTable.lookupTypeId(ntSymtabEntry.typetab_id)
          if isinstance(ntTypeEntry.entryKind,TypetabEntry.AllocatableEntryKind) or \
                 isinstance(ntTypeEntry.entryKind,TypetabEntry.ArrayEntryKind) or \
