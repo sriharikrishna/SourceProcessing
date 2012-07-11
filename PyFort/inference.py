@@ -202,7 +202,7 @@ class _TypeContext:
          implicitLocalType=containingSymtab.implicit[anId[0]]
          if implicitLocalType: # we handle the error condition below
             symtabEntry.enterType(containingSymtab.implicit[anId[0]],containingSymtab)
-            DebugManager.warning(sys._getframe().f_code.co_name+' implicit typing: '+symtabEntry.typePrint()+' '+anId,self.lineNumber,DebugManager.WarnType.implicit)
+            DebugManager.warning(sys._getframe().f_code.co_name+' implicit typing for symbol >'+anId+'< to type: '+symtabEntry.typePrint(),self.lineNumber,DebugManager.WarnType.implicit)
             returnType = globalTypeTable.getTypeEntry(implicitLocalType[0](implicitLocalType[1],[],[]),self.localSymtab)
          else:
             DebugManager.warning('unimplemented type inference; returning None for '+sys._getframe().f_code.co_name,self.lineNumber,DebugManager.WarnType.implicit)
