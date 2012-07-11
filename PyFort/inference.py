@@ -419,6 +419,15 @@ class _TypeContext:
                return newType
             # if the args are all scalar, then the type is a scalar which is the base type of expType
             return returnType.getBaseTypeEntry()
+         if (returnType.isExternal()) :
+            # this must be an implicitly typed external function
+            # update the type
+            (symtabEntry,containingSymtab) = self.localSymtab.lookup_name_level(anApp.head)
+            implicitLocalType=containingSymtab.implicit[anApp.head[0]]
+            if implicitLocalType: 
+               symtabEntry.enterType(implicitLocalType,containingSymtab)
+               DebugManager.warning(sys._getframe().f_code.co_name+' implicit typing for external symbol >'+anApp.head+'< to type: '+symtabEntry.typePrint(),self.lineNumber,DebugManager.WarnType.implicit)
+               returnType = globalTypeTable.getTypeEntry(implicitLocalType[0](implicitLocalType[1],[],[]),self.localSymtab)
          DebugManager.debug(' It is an NONINTRINSIC of type '+str(returnType))
       return returnType
 
