@@ -373,7 +373,7 @@ class SymtabEntry(object):
             self.base_type=base_type
 
     def __init__(self,entryKind,type=None,dimensions=None,length=None,origin=None,renameKey=None,access=None,typetab_id=None):
-        self.entryKind = entryKind # some instanve of self.GenericEntryKind
+        self.entryKind = entryKind # some instance of self.GenericEntryKind
         # use type table now
         self.type = type # pair  (type class,type modifier) 
         self.dimensions = dimensions # None or list of expressions
