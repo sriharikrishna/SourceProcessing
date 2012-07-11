@@ -493,5 +493,8 @@ class TypetabEntry(object):
                                          ', typetab_id='+str(self.typetab_id)+\
                                          ']'
 
+    def isExternal(self):
+        return (isinstance(self.entryKind,TypetabEntry.BuiltInEntryKind) and self.entryKind.type_name=='external')
+    
 global globalTypeTable
 globalTypeTable=Typetab()
