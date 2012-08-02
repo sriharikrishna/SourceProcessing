@@ -983,7 +983,7 @@ class TestUseStmts(TestCase):
     def test1(self):
         'plain use statement'
         theString = 'uSe s_lib'
-        theRepr = UseAllStmt('s_lib',None,'uSe')
+        theRepr = UseAllStmt('s_lib',None,None,'uSe')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
 
@@ -992,6 +992,7 @@ class TestUseStmts(TestCase):
         theString = 'USE S_LIB, pressure => x_pres,altiude => x_alt'
         theRepr = UseAllStmt('S_LIB',
                              [_PointerInit('pressure','x_pres'), _PointerInit('altiude','x_alt')],
+                             None,
                              'USE')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
@@ -1000,6 +1001,7 @@ class TestUseStmts(TestCase):
         'use statement with only list'
         theString = 'use data_C, only: xn,xj,nthr,eb_grp,art'
         theRepr = UseOnlyStmt('data_C',['xn', 'xj', 'nthr', 'eb_grp', 'art'],
+                              None,
                               'use')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))
@@ -1009,6 +1011,7 @@ class TestUseStmts(TestCase):
         theString = 'use months, only: january => jan,may,june => jun'
         theRepr = UseOnlyStmt('months',
                               [_PointerInit('january','jan'), 'may', _PointerInit('june','jun')],
+                              None,
                               'use')
         self.assertEquals(repr(pps(theString)),repr(theRepr))
         self.assertEquals(theString,str(theRepr))

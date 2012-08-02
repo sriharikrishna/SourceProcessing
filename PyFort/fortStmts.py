@@ -1781,13 +1781,20 @@ class UseStmt(Decl):
                              id)
         formRenameItem = treat(formRenameItem, lambda x: _PointerInit(x[0],x[2]))
 
-        # use statement with NO ONLY: (we currently don't support module nature)
+        formModuleNature = seq(zo1(seq(lit(','),
+                                       id)),
+                               lit('::'))
+        formModuleNature = treat(formModuleNature, lambda x: x[0] and x[0][0][1] or None)
+
+        # use statement with NO ONLY:
         # USE [[ , module-nature ] :: ] module-name [ , rename-list ]
+        # module-nature is one of [intrinsic,non_intrinsic]
         formUseAllStmt = seq(lit(UseStmt.kw),
+                             zo1(formModuleNature),
                              id,
                              zo1(seq(lit(','),
                                      cslist(formRenameItem))))
-        formUseAllStmt = treat(formUseAllStmt, lambda x: UseAllStmt(x[1],x[2] and x[2][0][1] or None,x[0],lineNumber))
+        formUseAllStmt = treat(formUseAllStmt, lambda x: UseAllStmt(x[2],x[3] and x[3][0][1] or None,x[1] or None,x[0],lineNumber=lineNumber))
 
         # forms of onlyItem:
         # generic-name
@@ -1799,26 +1806,28 @@ class UseStmt(Decl):
         formOnlyItem = disj(formRenameItem,
                             id)
 
-        # use statement WITH ONLY: (we currently don't support module nature)
+        # use statement WITH ONLY:
         # USE [[ , module-nature ] :: ] module-name , ONLY : [ only-list ]
         formUseOnlyStmt = seq(lit(UseStmt.kw),
+                              zo1(formModuleNature),
                               id,
                               lit(','),
                               lit('only'),
                               lit(':'),
                               cslist(formOnlyItem))
-        formUseOnlyStmt = treat(formUseOnlyStmt, lambda x: UseOnlyStmt(x[1],x[5],x[0],lineNumber))
+        formUseOnlyStmt = treat(formUseOnlyStmt, lambda x: UseOnlyStmt(x[2],x[6],x[1] or None, x[0],lineNumber=lineNumber))
 
         (theParsedStmt,rest) = disj(formUseOnlyStmt,formUseAllStmt)(scan)
         theParsedStmt.rest = rest
         return theParsedStmt
 
 class UseAllStmt(UseStmt):
-    _sons  = ['moduleName','renameList']
+    _sons  = ['moduleName','renameList','moduleNature']
 
-    def __init__(self,moduleName,renameList,stmt_name=UseStmt.kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+    def __init__(self,moduleName,renameList,moduleNature=None,stmt_name=UseStmt.kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         self.moduleName = moduleName
         self.renameList = renameList
+        self.moduleNature = moduleNature
         self.stmt_name = stmt_name
         UseStmt.__init__(self,lineNumber,label,lead,internal,rest)
 
@@ -1830,11 +1839,12 @@ class UseAllStmt(UseStmt):
         return self.stmt_name+' '+str(self.moduleName)+renameListStr
 
 class UseOnlyStmt(UseStmt):
-    _sons  = ['moduleName','onlyList']
+    _sons  = ['moduleName','onlyList','moduleNature']
 
-    def __init__(self,moduleName,onlyList,stmt_name=UseStmt.kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+    def __init__(self,moduleName,onlyList,moduleNature=None,stmt_name=UseStmt.kw,lineNumber=0,label=False,lead='',internal=[],rest=[]):
         self.moduleName = moduleName
         self.onlyList = onlyList
+        self.moduleNature = moduleNature
         self.stmt_name = stmt_name
         UseStmt.__init__(self,lineNumber,label,lead,internal,rest)
 
