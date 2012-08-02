@@ -53,7 +53,7 @@ class SymtabError(Exception):
         errString='\nERROR: SymtabError at line '+str(self.lineNumber)+':'+str(self.msg)
         if self.entry:
             symbolNameStr = self.symbolName or '<symbol name unknown>'
-            errString+='\nFor entry'+str(self.entry.debug(symbolNameStr))
+            errString+='\n\tfor entry'+str(self.entry.debug(symbolNameStr))
         return (errString)
 
 class Symtab(object):
@@ -373,7 +373,7 @@ class SymtabEntry(object):
             self.base_type=base_type
 
     def __init__(self,entryKind,type=None,dimensions=None,length=None,origin=None,renameKey=None,access=None,typetab_id=None):
-        self.entryKind = entryKind # some instanve of self.GenericEntryKind
+        self.entryKind = entryKind # some instance of self.GenericEntryKind
         self.dimensions = dimensions # None or list of expressions
         self.length = length # specific for character statements, see stmt2unit
         self.constInit=None #  expression if initialized with a constant expression 
@@ -431,14 +431,15 @@ class SymtabEntry(object):
         self.entryKind = newEntryKind
 
     def enterType(self,newType,localSymtab):
-        DebugManager.debug('\t\tSymtabEntry.enterType: entering type '+str(newType)+' for '+str(self))
+        DebugManager.debug('\t\t'+sys._getframe().f_code.co_name+': entering type '+str(newType)+' for '+self.debug())
         if not newType:
-            raise SymtabError('SymtabEntry.enterType: newType is None!',entry=self)
-        if self.typetab_id : # assume a name clash
-            raise SymtabError('SymtabEntry.enterType: Name clash -- the declaration for this symbol conflicts with an earlier declaration using the same name"',entry=self)
-        if self.entryKind == self.ProcedureEntryKind:
-            DebugManager.debug('\t\t\t(SymtabEntry.enterType: entering type information tells us that this procedure is a function)')
-            self.entryKind = self.FunctionEntryKind
+            raise SymtabError(sys._getframe().f_code.co_name+': newType is None!',entry=self)
+        if (self.typetab_id and  (not (globalTypeTable.lookupTypeId(self.typetab_id).isExternal() and isinstance(self.entryKind,self.SubroutineEntryKind)))):
+            # assume a name clash
+            raise SymtabError(sys._getframe().f_code.co_name+': name clash because the declaration for this symbol conflicts with an earlier declaration using the same name',entry=self)
+        if isinstance(self.entryKind,self.ProcedureEntryKind):
+            DebugManager.debug('\t\t'+sys._getframe().f_code.co_name+': entering type information tells us that this procedure is a function)')
+            self.entryKind = self.FunctionEntryKind()
         newStmt=newType[0](newType[1],[],[])
         self.typetab_id = globalTypeTable.getType(newStmt,localSymtab)
 

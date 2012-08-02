@@ -6,7 +6,7 @@ from PyUtil.arrayboundstab import ArrayBoundsTab
 from PyUtil.characterlentab import CharacterLenTab
 
 from PyFort.intrinsic import getBuiltInTypes
-from PyFort.fortStmts import DrvdTypeDecl, DrvdTypeDefn, CharacterStmt,RealStmt,_NoInit,UPClassStmt
+from PyFort.fortStmts import DrvdTypeDecl, DrvdTypeDefn, CharacterStmt,RealStmt,_NoInit,UPClassStmt,ExternalStmt
 from PyFort.fortExp import Ops,App
 
 class TypetabError(Exception):
@@ -60,7 +60,7 @@ class Typetab(object):
         elif (theType.kw=='doublecomplex'):
             numBytes=guessBytes((theType.__class__,theType.get_mod()),localSymtab,0)
             typeName='complex_'+str(numBytes)
-        elif (theType.kw=='logical' or theType.kw=='character'):
+        elif (theType.kw in ['character','external','logical']):
             return theType.kw
         else:
             numBytes=guessBytes((theType.__class__,theType.get_mod()),localSymtab,0)
@@ -82,9 +82,12 @@ class Typetab(object):
 
     def __getTypeKind(self,theType,localSymtab):
         '''get the TypetabEntry kind'''
+        # do the special case first:
+        if isinstance(theType,ExternalStmt):
+            return TypetabEntry.BuiltInEntryKind
         if theType.allocatable:
             return TypetabEntry.AllocatableEntryKind
-        elif theType.pointer:
+        if theType.pointer:
             if self.__getDimensions(theType,localSymtab):
                 return TypetabEntry.ArrayPointerEntryKind
             elif isinstance(theType,DrvdTypeDecl) or isinstance(theType,DrvdTypeDefn):
@@ -112,7 +115,7 @@ class Typetab(object):
                 entryKind=TypetabEntry.BuiltInEntryKind('real_8')
             elif aTypePair[0].kw=='doublecomplex':
                 entryKind=TypetabEntry.BuiltInEntryKind('complex_16')
-            elif aTypePair[0].kw=='character' or aTypePair[0].kw=='logical':
+            elif aTypePair[0].kw in ['character','external','logical']:
                 entryKind=TypetabEntry.BuiltInEntryKind(aTypePair[0].kw)
             else:
                 entryKind = TypetabEntry.BuiltInEntryKind(aTypePair[0].kw+'_'+str(aTypePair[1]))
@@ -490,5 +493,8 @@ class TypetabEntry(object):
                                          ', typetab_id='+str(self.typetab_id)+\
                                          ']'
 
+    def isExternal(self):
+        return (isinstance(self.entryKind,TypetabEntry.BuiltInEntryKind) and self.entryKind.type_name=='external')
+    
 global globalTypeTable
 globalTypeTable=Typetab()
