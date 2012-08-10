@@ -1344,7 +1344,7 @@ class CharacterStmt(TypeDecl):
     _starmod  = seq(lit('('),lit('*'),lit(')'))
     _starmod  = treat(_starmod,lambda l: _Star())
     
-    _lenmod   = disj(pred(is_int),_starmod)
+    _lenmod   = disj(seq(lit('('),pred(is_int),lit(')')),pred(is_int),_starmod)
     _f77mod   = seq(lit('*'),_lenmod)
     _f77mod   = treat(_f77mod,lambda l: _F77Len(l[1]))
     
