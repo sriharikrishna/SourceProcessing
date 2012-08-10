@@ -998,7 +998,7 @@ class DataStmt(Decl):
     @staticmethod
     def parse(ws_scan,lineNumber):
         ''' 
-        \todo we don't cover the full range of the DATA stmt syntax.
+        \todo we do not cover the full range of the DATA stmt syntax.
         among the exceptions are: 
          - from the dataObject pattern we subobject patterns combining App with Sel 
         '''
