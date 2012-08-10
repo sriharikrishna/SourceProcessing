@@ -65,7 +65,7 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
     localSymtab = curr.val.symtab
     newType = (aTypeDeclStmt.__class__,aTypeDeclStmt.mod)
     newLength = None
-    DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: stmt2unit._processTypedeclStmt('+str(aTypeDeclStmt)+') with default dimensions '+str(aTypeDeclStmt.dimension))
+    DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: stmt2unit._processTypedeclStmt('+repr(aTypeDeclStmt)+') with default dimensions '+str(aTypeDeclStmt.dimension))
     access=None
     inDrvdTypeDefn=curr.val._in_drvdType
     for anAttribute in aTypeDeclStmt.attrs :
