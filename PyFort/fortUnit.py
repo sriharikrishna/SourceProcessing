@@ -149,18 +149,10 @@ class Unit(object):
             print >> out,self.cmnt.flow(),
         if self.uinfo:
             print >> out,self.uinfo.flow(),
-            if not self.uinfo.modified and len(self.uinfo.internal)>0:
-                print >> out,''.join(self.uinfo.internal)
         for aDeclStmt in self.decls:
             print >> out,aDeclStmt.flow(),
-            if not isinstance(aDeclStmt,fs.Comments) and not aDeclStmt.modified and \
-                    len(aDeclStmt.internal)>0:
-                print >> out,''.join(aDeclStmt.internal)
         for anExecStmt in self.execs:
             print >> out,anExecStmt.flow(),
-            if not isinstance(anExecStmt,fs.Comments) and not anExecStmt.modified and \
-                    len(anExecStmt.internal)>0:
-                print >> out,''.join(anExecStmt.internal)
         for aContainsEntry in self.contains:
             print >> out,aContainsEntry.flow(),
         for aSubUnit in self.ulist:
@@ -168,9 +160,6 @@ class Unit(object):
         if self.end:
             for anEndListEntry in self.end:
                 print >> out,anEndListEntry.flow(),
-                if not isinstance(anEndListEntry,fs.Comments) and not anEndListEntry.modified and \
-                        len(anEndListEntry.internal)>0:
-                    print >> out,''.join(anEndListEntry.internal)
 
     # print everything but the comments and executable statements to \p out
     def printDecls(self,out=sys.stdout):

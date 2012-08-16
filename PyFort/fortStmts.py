@@ -453,6 +453,10 @@ class NonComment(GenStmt):
             formattedOutput = flow.flow_line(labelStr + self.lead + self.get_rawline()) + '\n'
         else:
             formattedOutput = flow.flow_line(labelStr + self.lead + self.get_rawline()) + '\n'
+        comments=''
+        for aComment in self.internal:
+            newComment=Comments(aComment).flow()
+            formattedOutput+=newComment
         return formattedOutput
 
     def same_level(self,parsed):
