@@ -44,7 +44,6 @@ def process_fort_stmt(stmt_tuple,lineNumber,jlf):
     # assigned
     if isinstance(obj,list):
         obj[0].internal = intl
-        #obj[0].internal = []
         obj[0].label = label
         for anObj in obj:
             anObj.lead = lead
@@ -52,7 +51,6 @@ def process_fort_stmt(stmt_tuple,lineNumber,jlf):
         ## assign rawline, internal comments, label, and lead to the statement obj
         obj.rawline = obj.rawline
         obj.internal = intl
-        #obj.internal = []
         obj.label = label
         obj.lead = lead
     return obj
