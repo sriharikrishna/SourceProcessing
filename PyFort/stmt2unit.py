@@ -40,14 +40,23 @@ def _beginDrvdTypeDefn(aDrvdTypeDefn,curr):
         theSymtabEntry.enterEntryKind(SymtabEntry.DerivedTypeEntryKind(aDrvdTypeDefn.base_type))
     else :
         newSymtabEntry = SymtabEntry(SymtabEntry.DerivedTypeEntryKind(aDrvdTypeDefn.base_type),
-                                     type=None,
                                      dimensions=None,
                                      length=None,
                                      origin='local',
                                      access=access)
+        typetab_id=globalTypeTable.enterNamedType(curr.val._in_drvdType,curr.val.symtab)    
+        newSymtabEntry.typetab_id=typetab_id
         DebugManager.debug('defn "'+str(aDrvdTypeDefn)+'" NOT already present in symbol table => adding '+str(newSymtabEntry.debug(aDrvdTypeDefn.name)))
         localSymtab.enter_name(aDrvdTypeDefn.name,newSymtabEntry)
+    # add to type table & set typetab_id
     return aDrvdTypeDefn
+
+def _typebound_proc_block(aContainsStmt, curr):
+    'if a contains statement occurs in a derived type definition, then there is a type-bound procedure block, and fs.ContainsStmt is a decl'
+    localSymtab = curr.val.symtab
+    if curr.val._in_drvdType:
+        return True
+    return False
 
 def _endDrvdTypeDefn(aEndDrvdTypeDefnStmt,curr):
     'derived type definition end  -- unset the name on the unit'
@@ -660,6 +669,7 @@ fs.EndFunctionStmt.unit_exit      = _unit_exit          # end definition
 # the symbol table contents is merged with the enclosing
 # unit's symbol table. 
 fs.DrvdTypeDefn.decl2unitAction       = _beginDrvdTypeDefn  # start definition
+fs.ContainsStmt.is_decl               = _typebound_proc_block
 fs.EndDrvdTypeDefn.decl2unitAction    = _endDrvdTypeDefn    # end definition
 
 

@@ -162,6 +162,9 @@ class Sel(_Exp):
     def map(self,fn):
         return Sel(fn(self.head),fn(self.proj))
 
+    def lower(self):
+        return Sel(self.head.lower(),self.proj.lower())
+
 class _AtomH(object):
     'helper class, captures the args of app or selection'
     _sons = ['arglist']
@@ -381,6 +384,11 @@ def _mkapp0(a):
     (h,dc1,dc2) = a
     return App(h,[])
 
+def _mksel(a):
+    '''turn a recognized sel into a Sel object'''
+    (head,dc,proj) = a
+    return Sel(head,proj)
+
 def _mkapp_ch(a):
     'turn a chain of apps into a single app'
     (h,lst) = a
@@ -516,6 +524,9 @@ app0      = seq(id,lit('('),lit(')'))
 app0      = treat(app0,_mkapp0)
 
 app       = disj(app1,app0)
+
+sel       = seq(id,lit('%'),id)
+sel       = treat(sel,_mksel)
 
 unaryExp  = seq(unary,atom)
 unaryExp  = treat(unaryExp,_mkunary)

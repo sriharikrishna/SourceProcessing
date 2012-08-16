@@ -122,7 +122,11 @@ class UnitCanonicalizer(object):
             baseType=appTypeEntry.getBaseTypeEntry()
             DebugManager.debug('UnitCanonicalizer.shouldSubroutinizeFunction: It\'s an intrinsic of type '+appTypeEntry.debug())
             return subroutinizedIntrinsics.shouldSubroutinize(theApp) and (UnitCanonicalizer._subroutinizeIntegerFunctions or not (isinstance(baseType.entryKind,TypetabEntry.BuiltInEntryKind) and (baseType.entryKind.type_name=='integer_4')))
+        elif isinstance(appTypeEntry.entryKind,TypetabEntry.NamedTypeEntryKind):
+            # this is an implicit initialization; do not subroutinize
+            return False
         else:
+            # need to fix for case where app.head is a type (implicit initialization)
             return True
 
     def __fixSpecExpression(self,theExp,lineNumber):

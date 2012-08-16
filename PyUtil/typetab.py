@@ -141,6 +141,14 @@ class Typetab(object):
         self.type_counter += 1
         return newEntry
 
+    def enterNamedType(self,symbolName,localSymtab):
+        '''create a new TypetabEntry for the user-defined type & add it to the type table'''
+        newTypetabKind=TypetabEntry.NamedTypeEntryKind(symbolName,localSymtab,None)
+        newEntry=TypetabEntry(newTypetabKind,self.type_counter)
+        self.ids[self.type_counter]=newEntry
+        self.type_counter+=1
+        return newEntry.typetab_id
+
     # get a NamedType entry (or NamedTypePointer) by symbolName & symtab
     # if it's not present already, add it
     def __getNamedType(self,symbolName,localSymtab):
@@ -154,11 +162,7 @@ class Typetab(object):
                 return match[0].typetab_id
         # if no match, add a new type entry
         # if every base type is added as it is searched, then the type entry here does not have a base type.
-        newTypetabKind=TypetabEntry.NamedTypeEntryKind(symbolName,localSymtab,None)
-        newEntry=TypetabEntry(newTypetabKind,self.type_counter)
-        self.type_counter+=1
-        return newEntry.typetab_id
-        
+        self.enterNamedType(symbolName,localSymtab)
 
     # newType: pair  (type class,type modifier) => pass in only type class (don't need type mod)?
     # enter the type in the type table and return the typetab_id

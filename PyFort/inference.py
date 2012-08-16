@@ -920,6 +920,9 @@ def isArrayReference(theApp,localSymtab,lineNumber):
                                        (isinstance(theTypeEntry.entryKind,TypetabEntry.BuiltInEntryKind) and \
                                            theTypeEntry.entryKind.type_name=='character')):
       return True
+   elif theTypeEntry is not None and isinstance(theTypeEntry.entryKind,TypetabEntry.NamedTypeEntryKind):
+      # named type initialization
+      return False
    else:
       #  now we know that its NOT a scalar variable, but rather a function.  so we update the symbol table with this information.
       if (not theSymtabEntry.entryKind.__class__ in [SymtabEntry.InterfaceEntryKind,SymtabEntry.StatementFunctionEntryKind]) : 

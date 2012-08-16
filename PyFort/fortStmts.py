@@ -1987,10 +1987,12 @@ class CallStmt(Exec):
     @staticmethod
     def parse(ws_scan,lineNumber):
         scan = filter(lambda x: x != ' ',ws_scan)
-        prefix = seq(lit(CallStmt.kw),disj(app,id))
+        prefix = seq(lit(CallStmt.kw),disj(app,sel,id))
         ((dc,a),rst) = prefix(scan)
         if (isinstance(a,App)):
             return CallStmt(a.head,a.args,dc,lineNumber,rest=rst)
+        elif isinstance(a,Sel):
+            return CallStmt(a,[],dc,lineNumber,rest=rst)
         else:
             return CallStmt(a,[],dc,lineNumber,rest=rst)
 
