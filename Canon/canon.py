@@ -239,7 +239,7 @@ class UnitCanonicalizer(object):
         self.__recursionDepth -= 1
         return theNewTemp
 
-    def __hoistExpression(self,theExpression,parentStmt,paramName):
+    def __hoistExpression(self,theExpression,parentStmt,paramName,forceIt=False):
         # function calls that are to be turned into subroutine calls
         # -> return the temp that carries the value for the new subcall
         # or alternatively if paramName is set return the construct
@@ -250,7 +250,8 @@ class UnitCanonicalizer(object):
             DebugManager.debug('it is a function call to be subroutinized')
             return self.__canonicalizeFuncCall(theExpression,parentStmt)
         # if argument is a variable reference then don't hoist
-        if ((isinstance(theExpression,str) and fe.is_id(theExpression)) 
+        if (not forceIt and
+            (isinstance(theExpression,str) and fe.is_id(theExpression)) 
             or 
             (isinstance(theExpression,fe.App) and isArrayReference(theExpression,self.__myUnit.symtab,parentStmt.lineNumber))
             or
@@ -373,7 +374,7 @@ class UnitCanonicalizer(object):
                     else:
                         DebugManager.debug('is a constant expression to be hoisted:',newLine=False)
                         replacementArgs.append(self.__hoistExpression(anArg,aSubCallStmt,paramName))
-                # variables (with VariableEntry in symbol table) -> do nothing
+                # variables (with VariableEntry in symbol table) -> do nothing except for pointers to subroutinized functions and PARAMTERs 
                 elif isinstance(anArg,str):
                     symtabEntry=self.__myUnit.symtab.lookup_name(anArg)
                     if (symtabEntry
@@ -386,8 +387,10 @@ class UnitCanonicalizer(object):
                             DebugManager.debug('is an identifier referring to a subroutinized function')
                         else :
                             DebugManager.warning('argument '+anArg+' in call to '+aSubCallStmt.head+' is classified as a function but we have not seen the definition and will assume it is not going to be subroutinized' ,lineNumber=aSubCallStmt.lineNumber)
-                            
                             replacementArgs.append(anArg)
+                    elif (symtabEntry and symtabEntry.constInit and self._hoistConstantsFlag):
+                        DebugManager.debug('is a PARAMETER identifier to be hoisted:',newLine=False)
+                        replacementArgs.append(self.__hoistExpression(anArg,aSubCallStmt,paramName,True))
                     else : 
                         DebugManager.debug('is an identifier')
                         replacementArgs.append(anArg)
