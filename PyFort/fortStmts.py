@@ -453,7 +453,6 @@ class NonComment(GenStmt):
             formattedOutput = flow.flow_line(labelStr + self.lead + self.get_rawline()) + '\n'
         else:
             formattedOutput = flow.flow_line(labelStr + self.lead + self.get_rawline()) + '\n'
-        comments=''
         for aComment in self.internal:
             newComment=Comments(aComment).flow()
             formattedOutput+=newComment
@@ -1040,16 +1039,37 @@ class EndInterfaceStmt(DeclLeaf):
     'End of interface block'
     kw    = 'endinterface'
     kw_str = 'end interface'
+    _sons =['name']
 
     @staticmethod
     def parse(ws_scan,lineNumber) :
         scan = filter(lambda x: x != ' ',ws_scan)
-        form = seq(lit(EndInterfaceStmt.kw)) # 0 = stmt_name
-        (id,rest) = form(scan)
-        return EndInterfaceStmt(lineNumber=lineNumber,rest=rest)
+        form = seq(lit(EndInterfaceStmt.kw), # 0 = stmt_name
+                   zo1(id)) # interface name
+        ((endInterfaceKeyword,interfaceName),rest) = form(scan)
+        name = interfaceName and interfaceName[0] or None
+        return EndInterfaceStmt(name,lineNumber=lineNumber,rest=rest)
 
-    def __init__(self,stmt_name=kw_str,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+    def __init__(self,name=None,stmt_name=kw_str,lineNumber=0,label=False,lead='',internal=[],rest=[]):
+        self.name=name
         DeclLeaf.__init__(self,lineNumber,label,lead,internal,rest)
+
+    def __repr__(self):
+        return 'EndInterfaceStmt(%s)' % self.name
+
+    def __str__(self,whitespace=False):
+        if self.name:
+            return self.kw_str+' %s' % self.name
+        else:
+            return self.kw_str
+
+    def get_name(self):
+        return self.name
+
+    def set_name(self,newName):
+        if self.name != newName:
+            self.name = newName
+            self.modified = True
 
 class EndDrvdTypeDefn(DeclLeaf):
     'end of a derived type definition'

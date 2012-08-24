@@ -106,9 +106,14 @@ def convertInterfaceBlock(oldInterfaceBlock,oldFuncnewSubPairs,keepFunctionDef):
                     raise FunToSubError(sys._getframe().f_code.co_name+": error transforming interface block")
                 # rename interface
                 old_name = newInterfaceBlock[0].get_name()
-                newInterfaceBlock[0].set_name(name_init+old_name)
+                new_name = name_init+old_name
+                newInterfaceBlock[0].set_name(new_name)
+                if newInterfaceBlock[-1].get_name():
+                    newInterfaceBlock[-1].set_name(new_name)
                 if (keepFunctionDef):
                     newInterfaceBlock.extend(oldInterfaceBlock)
+                global ourConvertedScopedNameList
+                ourConvertedScopedNameList.append(old_name.lower())
             return newInterfaceBlock
     for aDecl in oldInterfaceBlock: # not a block with module procedures
         (newDecl,modified) = convertFunctionDecl(aDecl,oldFuncnewSubPairs)
