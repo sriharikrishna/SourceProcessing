@@ -402,7 +402,6 @@ class UnitCanonicalizer(object):
                 else:
                     DebugManager.debug('is a nontrivial expression to be hoisted:',newLine=False)
                     replacementArgs.append(self.__hoistExpression(anArg,aSubCallStmt,paramName))
-            aSubCallStmt.beenModified=True
         else :
             DebugManager.warning('arguments in call to a non-standard intrinsic subroutine '+str(aSubCallStmt.head)+' are not hoisted',lineNumber=aSubCallStmt.lineNumber)
             replacementArgs=aSubCallStmt.args
@@ -411,8 +410,7 @@ class UnitCanonicalizer(object):
                                            replacementArgs,
                                            lineNumber=aSubCallStmt.lineNumber,
                                            label=aSubCallStmt.label,
-                                           lead=aSubCallStmt.lead,
-                                           internal=aSubCallStmt.internal)
+                                           lead=aSubCallStmt.lead)
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|_')
         self.__recursionDepth -= 1
         return replacementStatement
