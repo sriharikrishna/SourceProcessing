@@ -384,6 +384,7 @@ class UnitCanonicalizer(object):
                          isinstance(symtabEntry.entryKind,SymtabEntry.FunctionEntryKind))):
                         if (function2subroutine.wasSubroutinized(symtabEntry.getScopePrefix(self.__myUnit)+anArg)) :
                             replacementArgs.append(function2subroutine.name_init+anArg); 
+                            aSubCallStmt.beenModified=True
                             DebugManager.debug('is an identifier referring to a subroutinized function')
                         else :
                             DebugManager.warning('argument '+anArg+' in call to '+aSubCallStmt.head+' is classified as a function but we have not seen the definition and will assume it is not going to be subroutinized' ,lineNumber=aSubCallStmt.lineNumber)
@@ -410,7 +411,8 @@ class UnitCanonicalizer(object):
                                            replacementArgs,
                                            lineNumber=aSubCallStmt.lineNumber,
                                            label=aSubCallStmt.label,
-                                           lead=aSubCallStmt.lead)
+                                           lead=aSubCallStmt.lead,
+                                           internal=aSubCallStmt.internal)
         DebugManager.debug((self.__recursionDepth-1)*'|\t'+'|_')
         self.__recursionDepth -= 1
         return replacementStatement
