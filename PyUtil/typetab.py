@@ -332,6 +332,7 @@ class Typetab(object):
     # type equivalence between two entries; Do not match array bounds exactly, only rank.
     # used for comparing formal arguments to dummy arguments
     def equivalence(self,entry1,entry2):
+        '''compare two entries & return true if their types are equivalent'''
         if not (entry1.entryKind.keyword==entry2.entryKind.keyword):
             return False
         for aSon in entry1.entryKind._sons:
@@ -356,6 +357,7 @@ class TypetabEntry(object):
             pass
 
     class BuiltInEntryKind(GenericEntryKind):
+        'class to manage built-in types such as integer, real, etc.'
         keyword = 'builtin'
         _sons = ['type_name']
 
@@ -366,16 +368,18 @@ class TypetabEntry(object):
             return '[BuiltInEntryKind: '+str(self.type_name)+']'
 
     class CharacterEntryKind(BuiltInEntryKind):
+        'class to manage character types'
         _sons = ['type_name','charlen_id']
 
         def __init__(self,charLenId):
-            self.charlen_id=charLenId
+            self.charlen_id=charLenId # id for the character length entry in the characterlentab
             TypetabEntry.BuiltInEntryKind.__init__(self,'character')
 
         def debug(self):
             return '[CharacterEntryKind; '+str(self.type_name)+']'
 
     class BuiltInPointerEntryKind(GenericEntryKind):
+        'class to manage pointers to built-in entry types'
         keyword = 'BIpointer'
         _sons = ['typetab_id']
 
@@ -386,6 +390,7 @@ class TypetabEntry(object):
             return '[BuiltInPointerEntryKind; typeid of built-in type pointed to: '+str(self.typetab_id)+']'
 
     class NamedTypeEntryKind(GenericEntryKind):
+        'class to manage named types'
         keyword = 'namedtype'
         _sons = ['localSymtab']
 
@@ -407,6 +412,7 @@ class TypetabEntry(object):
             return returnString
 
     class NamedTypePointerEntryKind(GenericEntryKind):
+        'class to manage pointers to named types'
         keyword = 'NTpointer'
         _sons = ['symbolName','localSymtab']
 
@@ -425,6 +431,7 @@ class TypetabEntry(object):
             return returnString
 
     class ArrayEntryKind(GenericEntryKind):
+        'class to manage array types'
         keyword = 'array'
         _sons = ['arrayid','typetab_id']
 
@@ -448,6 +455,7 @@ class TypetabEntry(object):
                                     ', Type id of built-in or named array type: '+str(self.typetab_id) +']'
 
     class ArrayPointerEntryKind(GenericEntryKind):
+        'class to manage pointers to array types'
         keyword = 'ARpointer'
         _sons = ['typetab_id']
 
@@ -461,6 +469,7 @@ class TypetabEntry(object):
             return globalTypeTable.lookupTypeId(self.typetab_id)
 
     class AllocatableEntryKind(GenericEntryKind):
+        'class to manage allocatable types'
         keyword = 'allocatable'
         _sons = ['typetab_id','rank']
 
@@ -476,6 +485,7 @@ class TypetabEntry(object):
         self.typetab_id=typetab_id # typeid in type table for this TypeTabEntry
 
     def getBaseTypeId(self):
+        'return the id for the base type of the pointer, allocatable, or array entry kind'
         DebugManager.debug('TypetabEntry.getBaseTypeId called on type: '+self.debug())
         if isinstance(self.entryKind,TypetabEntry.ArrayEntryKind):
             return self.entryKind.typetab_id
@@ -489,6 +499,7 @@ class TypetabEntry(object):
             return self.typetab_id
 
     def getBaseTypeEntry(self):
+        'return the type entry for the base type of the pointer, allocatable, or array entry kind'
         DebugManager.debug('TypetabEntry.getBaseTypeEntry called on type: '+self.debug())
         return globalTypeTable.lookupTypeId(self.getBaseTypeId())
 

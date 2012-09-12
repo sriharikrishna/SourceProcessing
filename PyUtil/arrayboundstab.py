@@ -105,6 +105,7 @@ class ArrayBoundsTabEntry(object):
     '''class to manage array bounds table entries'''
 
     class DimensionEntry(object):
+        '''class to manage array dimensions'''
         def __init__(self,lower,upper):
             self.lower=lower
             self.upper=upper
