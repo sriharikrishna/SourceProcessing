@@ -145,7 +145,10 @@ def main():
 
 if __name__ == "__main__":
     # use the following to generate profile data that can be viewed e.g. with RunSnakeRun
+    # by calling:   python /usr/lib/python2.7/site-packages/runsnakerun/runsnake.py  preProcess.profile
+    # ----------
     # import cProfile
     # cProfile.runctx( 'main()', globals(), locals(), filename="preProcess.profile" )
+    # -- else --
     sys.exit(main())
 
