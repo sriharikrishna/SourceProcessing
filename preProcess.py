@@ -77,6 +77,10 @@ def main():
                 aUnit.printit(ourOutFileHandle)
         currentInputFile = '<none>'
         for anInputFile in inputFileList:
+            fileStartTime=None
+            if (config.timing):
+                fileStartTime=datetime.datetime.utcnow()
+
             if (config.outputFile and not ourOutFileHandle): 
                 ourOutFileNameList.append(config.outputFile)
                 ourOutFileHandle = open(config.outputFile,'w')
@@ -95,6 +99,13 @@ def main():
                 ourOutFileHandle.flush()
             for aUnit in fortUnitIterator(anInputFile,config.inputFormat):
                 UnitCanonicalizer(aUnit).canonicalizeUnit().printit(ourOutFileHandle)
+            if (config.progress):
+                msg='SourceProcessing: progress: done with file '+anInputFile
+                if (config.timing):
+                    nTime=datetime.datetime.utcnow()
+                    msg+=' took: '+str(nTime-fileStartTime)
+                    fileStartTime=nTime
+                print msg
         if config.outputFile or config.separateOutput:
             ourOutFileHandle.close()
             if config.separateOutput:
