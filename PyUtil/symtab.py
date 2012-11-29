@@ -324,6 +324,9 @@ class Symtab(object):
                     return cpExpression
         raise SymtabError(sys._getframe().f_code.co_name+": cannot get it for "+str(anExpression)+" parsed as "+repr(anExpression))
 
+    def markTypesAsReferenced(self):
+        for aSymtabEntry in self.ids.values():
+            aSymtabEntry.markTypeAsReferenced()
                 
     def debug(self):
         outString = 'symbol table '+str(self)+' (defaultAccess:'+((self.defaultAccess and self.defaultAccess) or 'None')+'):\n'
@@ -519,6 +522,11 @@ class SymtabEntry(object):
                 raise SymtabError(sys._getframe().f_code.co_name+": invalid argument")
         self.access=anAccessKW
             
+
+    def markTypeAsReferenced(self):
+        # for checking that all entries in type table are referenced by a symtab entry
+        if self.typetab_id:
+            globalTypeTable.lookupTypeId(self.typetab_id).setReferenced()
 
     def debug(self,name='<symbol name unknown>'):
         def attrDump(theEntry,name):

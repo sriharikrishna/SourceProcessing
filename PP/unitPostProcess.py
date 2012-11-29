@@ -106,7 +106,9 @@ class UnitPostProcessor(object):
     @staticmethod
     def setAbstractType(abstractType):
         UnitPostProcessor._abstract_type = abstractType.lower()
-        globalTypeTable.getType(fs.DrvdTypeDecl([abstractType],[],[]),None)
+        typeEntry=globalTypeTable.getTypeEntry(fs.DrvdTypeDecl([abstractType],[],[]),None)
+        typeEntry.setTypeEntryToGlobal()
+        typeEntry.setReferenced()
 
     _mode = 'forward'
 

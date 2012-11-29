@@ -279,9 +279,7 @@ def _processCommonStmt(aCommonStmt,curr):
             dimensions=symtabEntry.lookupDimensions()
             if dimensions:
                 newTypeEntry=globalTypeTable.enterArrayType(commonTypeId,dimensions,TypetabEntry.ArrayEntryKind)
-                globalTypeTable.ids[globalTypeTable.type_counter]=newTypeEntry
-                symtabEntry.typetab_id=globalTypeTable.type_counter
-                globalTypeTable.type_counter+=1
+                symtabEntry.typetab_id=newTypeEntry.typetab_id
             else:
                 symtabEntry.typetab_id=commonTypeId
     return aCommonStmt
