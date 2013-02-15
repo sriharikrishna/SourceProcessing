@@ -74,7 +74,7 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
     localSymtab = curr.val.symtab
     newType = (aTypeDeclStmt.__class__,aTypeDeclStmt.mod)
     newLength = None
-    DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: stmt2unit._processTypedeclStmt('+repr(aTypeDeclStmt)+') with default dimensions '+str(aTypeDeclStmt.dimension))
+    DebugManager.debug('[Line '+str(aTypeDeclStmt.lineNumber)+']: '+sys._getframe().f_code.co_name+' for '+repr(aTypeDeclStmt)+' with default dimensions '+str(aTypeDeclStmt.dimension))
     access=None
     inDrvdTypeDefn=curr.val._in_drvdType
     for anAttribute in aTypeDeclStmt.attrs :
@@ -105,12 +105,12 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                 DebugManager.debug('decl "'+str(aDecl)+'" already present in local symbol table as '+str(theSymtabEntry.debug(name)))
                 theSymtabEntry.enterType(newType,localSymtab)
                 if (theSymtabEntry.dimensions and (newDimensions is None)):
-                    pass
+                    theTmpDeclStmt.dimension=theSymtabEntry.dimensions
                 else:
                     theSymtabEntry.enterDimensions(newDimensions)
                 theSymtabEntry.enterLength(newLength)
                 if (isinstance(aDecl,fs._PointerInit) or isinstance(aDecl,fs._AssignInit) and localSymtab.isConstInit(aDecl.rhs)):
-                   theSymtabEntry.enterConstInit(localSymtab.getConstInit(aDecl.rhs))
+                    theSymtabEntry.enterConstInit(localSymtab.getConstInit(aDecl.rhs))
                 if inDrvdTypeDefn:
                     theSymtabEntry.enterDrvdTypeName(inDrvdTypeDefn)
                 # for function/subroutine entries, also update this information in the parent symbol table
@@ -240,7 +240,7 @@ def _processExternalStmt(anExternalStmt,curr):
 
 def _processCommonStmt(aCommonStmt,curr):
     localSymtab = curr.val.symtab
-    DebugManager.debug('['+':'+str(aCommonStmt.lineNumber)+']: stmt2unit._processCommonStmt: called on "'+repr(aCommonStmt)+'" with localSymtab '+str(localSymtab) +" implicit "+str(localSymtab.implicit))
+    DebugManager.debug('[Line '+str(aCommonStmt.lineNumber)+']: '+sys._getframe().f_code.co_name+' called on "'+repr(aCommonStmt)+'" with localSymtab '+localSymtab.debug())
     commonTypeId=None
     updateDeclTypeList=[]
     for aDecl in aCommonStmt.declList:
@@ -444,6 +444,21 @@ def _unit_exit(self,cur):
         if (parentSymtabEntry):
             parentSymtabEntry.specificFormalArgs.args[arg]=(pos,copy.deepcopy(cur.val.symtab.lookup_name(arg)))
     return self
+
+def _module_exit(stmt,cur):
+    '''exit a module
+    '''
+    DebugManager.debug('[Line '+str(stmt.lineNumber)+']: '+sys._getframe().f_code.co_name+' for '+str(stmt))
+    cur.val.symtab.markTypesAsReferenced(True)
+    return stmt
+
+def _generic_exit(stmt,cur):
+    '''exit something - check if it is a module
+    '''
+    DebugManager.debug('[Line '+str(stmt.lineNumber)+']: '+sys._getframe().f_code.co_name+' for '+str(stmt))
+    if (isinstance(cur.val.uinfo,fs.ModuleStmt)):
+        return _module_exit(stmt,cur)
+    return stmt
 
 def _implicit(self,cur):
     '''update the implicit table
@@ -662,6 +677,8 @@ fs.SubroutineStmt.unit_entry      = _unit_entry         # start definition
 fs.EndSubroutineStmt.unit_exit    = _unit_exit          # end definition 
 fs.FunctionStmt.unit_entry        = _unit_entry         # start definition  
 fs.EndFunctionStmt.unit_exit      = _unit_exit          # end definition
+fs.EndModuleStmt.unit_exit        = _module_exit        # end of a module definition
+fs.EndStmt.unit_exit              = _generic_exit       # figure out what it is we are ending
 
 # a derived type definition is a pseudo sub unit;
 # the symbol table contents is merged with the enclosing

@@ -324,17 +324,17 @@ class Symtab(object):
                     return cpExpression
         raise SymtabError(sys._getframe().f_code.co_name+": cannot get it for "+str(anExpression)+" parsed as "+repr(anExpression))
 
-    def markTypesAsReferenced(self):
-        for aSymtabEntry in self.ids.values():
-            aSymtabEntry.markTypeAsReferenced()
+    def markTypesAsReferenced(self,markAlsoAsGlobal):
+        for name, entry in self.ids.items():
+            #print "about to mark symbol "+name
+            entry.markTypeAsReferenced(markAlsoAsGlobal)
                 
     def debug(self):
-        outString = 'symbol table '+str(self)+' (defaultAccess:'+((self.defaultAccess and self.defaultAccess) or 'None')+'):\n'
+        outString = 'symbol table '+str(self)+' (defaultAccess:'+((self.defaultAccess and self.defaultAccess) or 'None')+'):[\n'
         for aKey in self.ids.keys():
             outString += '\t'+self.ids[aKey].debug(aKey)+'\n'
-        outString+="\timplicit:"+str(self.implicit)+'\n'
-        if self.parent:
-            outString += ' parent:'+self.parent.debug()
+        # outString+="\timplicit:"+str(self.implicit)+'\n'
+        outString += '\t]parent:'+(self.parent and self.parent.debug() or 'None')
         return outString
 
 class SymtabEntry(object):
@@ -522,11 +522,20 @@ class SymtabEntry(object):
                 raise SymtabError(sys._getframe().f_code.co_name+": invalid argument")
         self.access=anAccessKW
             
-
-    def markTypeAsReferenced(self):
+    def markTypeAsReferenced(self,markAlsoAsGlobal):
         # for checking that all entries in type table are referenced by a symtab entry
+        DebugManager.debug(self.__class__.__name__+":"+sys._getframe().f_code.co_name+
+                           " for "+self.debug())
         if self.typetab_id:
-            globalTypeTable.lookupTypeId(self.typetab_id).setReferenced()
+            aTypeTabEntry=globalTypeTable.lookupTypeId(self.typetab_id)
+            aTypeTabEntry.setReferenced()
+            if markAlsoAsGlobal:
+                aTypeTabEntry.setTypeEntryToGlobal()
+        if (isinstance(self.entryKind,SymtabEntry.InterfaceEntryKind)):
+            for gi in self.genericInfo.resolvableTo.values():
+                gi.markTypeAsReferenced(markAlsoAsGlobal)
+                for arg in gi.specificFormalArgs.args.values():
+                    arg[1].markTypeAsReferenced(markAlsoAsGlobal)
 
     def debug(self,name='<symbol name unknown>'):
         def attrDump(theEntry,name):
