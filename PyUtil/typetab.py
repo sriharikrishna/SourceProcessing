@@ -38,16 +38,16 @@ class Typetab(object):
         self.currentUnitTypeEntries=set()   # type ids of type entries added during the processing of the current unit
 
     def debug(self):
-         return  'TypeTab:[\n'+'\n'.join(map(lambda l: '\t'+l.debug(),self.ids.values()))+'\n]'
+        return  'TypeTab:[\n'+'\n'.join(map(lambda l: '\t'+l.debug(),self.ids.values()))+'\n]'
 
     # traverse type table (after symtab traversal to mark all referenced typetab entries) and verify that all remaining types are global and referenced
     def verifyTypeEntries(self):
-	for typeEntry in self.ids.values():
-	    # verify that all user-created type entries in type table are valid
-	    if not typeEntry.isGlobalTypeEntry():			    
-		raise TypetabError('Non-global type in type table: ',theType=typeEntry)
-	    elif not isinstance(typeEntry.entryKind,TypetabEntry.BuiltInEntryKind) and not typeEntry.referenced:
-		raise TypetabError('This type is never referenced by the symbol table: ',theType=typeEntry)
+        for typeEntry in self.ids.values():
+            # verify that all user-created type entries in type table are valid
+            if not typeEntry.isGlobalTypeEntry():			    
+                raise TypetabError('Non-global type in type table: ', theType=typeEntry)
+            elif not isinstance(typeEntry.entryKind, TypetabEntry.BuiltInEntryKind) and not typeEntry.referenced:
+                raise TypetabError('This type is never referenced by the symbol table: ', theType=typeEntry)
 
     def lookupTypeId(self,typeid):
         '''check for typeid in the type table'''
@@ -404,7 +404,7 @@ class TypetabEntry(object):
             TypetabEntry.BuiltInEntryKind.__init__(self,'character')
 
         def debug(self):
-            return '[CharacterEntryKind; '+str(self.type_name)+']'
+            return '[CharacterEntryKind; '+str(self.type_name)+(self.globalTypeEntry and ', isGlobal' or '')+']'
 
     class BuiltInPointerEntryKind(GenericEntryKind):
         'class to manage pointers to built-in entry types'
@@ -438,7 +438,7 @@ class TypetabEntry(object):
                 returnString+=', localSymtab where the type is defined: ' + str(id(self.localSymtab))
             else:
                 returnString+=', localSymtab is None'
-            returnString+=']'    
+            returnString+=(self.globalTypeEntry and ', isGlobal' or '')+']'    
             return returnString
 
     class NamedTypePointerEntryKind(GenericEntryKind):
@@ -458,7 +458,7 @@ class TypetabEntry(object):
                 returnString+=', localSymtab where the type is defined: '+ str(id(self.localSymtab))
             else:
                 returnString+=', localSymtab is None'
-            returnString+=']'    
+            returnString+=(self.globalTypeEntry and ', isGlobal' or '')+']'    
             return returnString
 
     class ArrayEntryKind(GenericEntryKind):
@@ -484,7 +484,7 @@ class TypetabEntry(object):
 
         def debug(self):
             return '[ArrayEntryKind; Array id for array table where dimension information is stored: '+str(self.arrayid)+\
-                                    ', Type id of built-in or named array type: '+str(self.typetab_id) +']'
+                                    ', Type id of built-in or named array type: '+str(self.typetab_id) +(self.globalTypeEntry and ', isGlobal' or '')+']'
 
     class ArrayPointerEntryKind(GenericEntryKind):
         'class to manage pointers to array types'
@@ -496,7 +496,7 @@ class TypetabEntry(object):
             self.typetab_id=typetab_id             # type id of array type of target
 
         def debug(self):
-            return '[ArrayPointerEntryKind; Type id of array type of target: '+str(self.typetab_id)+']'
+            return '[ArrayPointerEntryKind; Type id of array type of target: '+str(self.typetab_id)+(self.globalTypeEntry and ', isGlobal' or '')+']'
 
         def getArrayTypeEntry(self):
             return globalTypeTable.lookupTypeId(self.typetab_id)
@@ -512,12 +512,12 @@ class TypetabEntry(object):
             self.rank=rank             # rank
 
         def debug(self):
-            return '[AllocatableEntryKind; Type id of allocatable base type: '+str(self.typetab_id)+';rank: '+str(self.rank)+']'
+            return '[AllocatableEntryKind; Type id of allocatable base type: '+str(self.typetab_id)+';rank: '+str(self.rank)+(self.globalTypeEntry and ', isGlobal' or '')+']'
 
     def __init__(self,entryKind,typetab_id):
         self.entryKind = entryKind # some instance of self.GenericEntryKind
         self.typetab_id=typetab_id # typeid in type table for this TypeTabEntry
-	self.referenced=False # sanity check that all types are referenced by a symtab entry
+        self.referenced=False # sanity check that all types are referenced by a symtab entry
 
     def setTypeEntryToGlobal(self):
         self.entryKind.setTypeEntryToGlobal()
@@ -526,7 +526,7 @@ class TypetabEntry(object):
         return self.entryKind.globalTypeEntry
 
     def setReferenced(self):
-  	self.referenced=True
+        self.referenced=True
 
     def getBaseTypeId(self):
         'return the id for the base type of the pointer, allocatable, or array entry kind'
