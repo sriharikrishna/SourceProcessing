@@ -58,6 +58,8 @@ class Typetab(object):
             return None
 
     def removeTypeEntry(self,typeid):
+        DebugManager.debug(self.__class__.__name__+":"+sys._getframe().f_code.co_name
+                           +' called on '+self.ids[typeid].debug())
         del self.ids[typeid]
 
     def cleanUpUnitTypeEntries(self):
