@@ -16,6 +16,7 @@ from PyUtil.symtab import Symtab,SymtabError
 from PyFort.inference import InferenceError
 from PyUtil.debugManager import DebugManager
 from PyUtil.options import addPostProcessorOptions,PostProcessorOptErrors,setPostProcessFlags
+from PyUtil.typetab import globalTypeTable               
 
 from PyIR.prog1 import Prog1
 
@@ -121,6 +122,8 @@ def main():
                 ourOutFileNameList.append(outputFile)
                 UnitPostProcessor(aUnit).processUnit().printit(ourOutFileHandle)                    
                 ourOutFileHandle.close()
+                globalTypeTable.cleanUpUnitTypeEntries()
+                globalTypeTable.verifyTypeEntries()               
                 if (config.progress):
                     msg='SourceProcessing: progress: done with unit '+aUnit.uinfo.name
                     if (config.timing):
@@ -171,6 +174,8 @@ def main():
                     raise PostProcessError('option separateOutput specified, no output file can be determined for the first unit',0)
                 # postprocess the unit and print it
                 UnitPostProcessor(aUnit).processUnit().printit(ourOutFileHandle)
+                globalTypeTable.cleanUpUnitTypeEntries()
+                globalTypeTable.verifyTypeEntries()               
             # add new init procedures & global init procedure after module declarations
             if (config.explicitInit):
                 addInitProcedures(initSet,initNames,typeDecls,ourOutFileHandle)
@@ -186,7 +191,9 @@ def main():
                 if (config.explicitInit):
                     UnitPostProcessor(aUnit).getInitCommonStmts(initSet,initNames,typeDecls)
                 UnitPostProcessor(aUnit).processUnit().printit(ourOutFileHandle)
-            # add new init procedures & global init procedure after module declarations
+                globalTypeTable.cleanUpUnitTypeEntries()
+                globalTypeTable.verifyTypeEntries()               
+                # add new init procedures & global init procedure after module declarations
             if (config.explicitInit):
                 addInitProcedures(initSet,initNames,typeDecls,ourOutFileHandle)
             if config.outputFile: 

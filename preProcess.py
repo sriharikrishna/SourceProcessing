@@ -15,6 +15,8 @@ from PyUtil.l_assembler import AssemblerException as ListAssemblerException
 from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabError
 from PyUtil.options import addCanonOptions,CanonOptErrors,setCanonFlags
+from PyUtil.typetab import globalTypeTable               
+
 
 from PyFort.fortUnit import Unit,fortUnitIterator
 from PyFort.fortFile import Ffile
@@ -99,6 +101,11 @@ def main():
                 ourOutFileHandle.flush()
             for aUnit in fortUnitIterator(anInputFile,config.inputFormat):
                 UnitCanonicalizer(aUnit).canonicalizeUnit().printit(ourOutFileHandle)
+                #print aUnit.symtab.debug()
+                #print globalTypeTable.debug()
+                globalTypeTable.cleanUpUnitTypeEntries()
+                #print globalTypeTable.debug()
+                globalTypeTable.verifyTypeEntries()    
             if (config.progress):
                 msg='SourceProcessing: progress: done with file '+anInputFile
                 if (config.timing):
