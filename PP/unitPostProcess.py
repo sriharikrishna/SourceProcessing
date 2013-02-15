@@ -988,6 +988,7 @@ class UnitPostProcessor(object):
     def processUnit(self):
         ''' post-process a unit '''
         DebugManager.debug(('+'*55)+' Begin post-processing unit <'+str(self.__myUnit.uinfo)+'> '+(55*'+'))
+        DebugManager.debug('types '+globalTypeTable.debug())
         DebugManager.debug('local '+self.__myUnit.symtab.debug())
         DebugManager.debug('subunits (len = '+str(len(self.__myUnit.ulist))+'):')
 
