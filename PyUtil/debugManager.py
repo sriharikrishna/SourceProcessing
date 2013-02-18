@@ -68,12 +68,22 @@ class DebugManager(object):
 
     @staticmethod
     def debug(debugMessage,outStream=sys.stdout,newLine=True,lineNumber=None):
+        import inspect
         if (DebugManager._verbose):
             newLineStr = newLine and '\n' \
                                   or ''
             lineNumberStr = ''
             if lineNumber :
                 lineNumberStr += '[Line '+str(lineNumber)+']: '
-            outStream.write(lineNumberStr+debugMessage+newLineStr)
+            frame = inspect.currentframe().f_back
+            func = frame.f_code
+            prefix="("
+            mi=inspect.getmoduleinfo(func.co_filename)
+            if mi:
+                prefix+=mi.name+":"
+            prefix+=func.co_name+":"
+            prefix+=func.co_filename[func.co_filename.rfind('SourceProcessing')+len('SourceProcessing')+1:]+":"
+            prefix+=str(frame.f_lineno)+")"
+            outStream.write(prefix+lineNumberStr+debugMessage+newLineStr)
             outStream.flush()
 
