@@ -315,7 +315,7 @@ class Typetab(object):
             elif typeKind==TypetabEntry.CharacterEntryKind:
                 charId = self.charLenTab.lookupCharLen(theType.get_mod()[0])
                 if charId:
-                    charMatch = [e for e in kindEntryMatches if (e.entryKind.charlen_id==charId)]
+                    charMatch = [e for e in kindEntryMatches if (e.entryKind.charLenId==charId)]
                     if charMatch:
                         return charMatch[0].typetab_id
             elif typeKind==TypetabEntry.AllocatableEntryKind:
@@ -398,15 +398,16 @@ class TypetabEntry(object):
 
     class CharacterEntryKind(BuiltInEntryKind):
         'class to manage character types'
-        _sons = ['type_name','charlen_id']
+        _sons = ['type_name','charLenId']
 
         def __init__(self,charLenId):
             TypetabEntry.GenericEntryKind.__init__(self)
-            self.charlen_id=charLenId # id for the character length entry in the characterlentab
+            self.charLenId=charLenId # id for the character length entry in the characterlentab
             TypetabEntry.BuiltInEntryKind.__init__(self,'character')
+            self.globalTypeEntry=False
 
         def debug(self):
-            return '[CharacterEntryKind; '+str(self.type_name)+(self.globalTypeEntry and ', isGlobal' or '')+']'
+            return '[CharacterEntryKind; '+str(self.type_name)+', lenId='+str(self.charLenId)+(self.globalTypeEntry and ', isGlobal' or '')+']'
 
     class BuiltInPointerEntryKind(GenericEntryKind):
         'class to manage pointers to built-in entry types'
