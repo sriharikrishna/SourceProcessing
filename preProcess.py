@@ -107,7 +107,7 @@ def main():
                 #print globalTypeTable.debug()
                 globalTypeTable.verifyTypeEntries()    
             if (config.progress):
-                msg='SourceProcessing: progress: done with file '+anInputFile
+                msg='SourceProcessing: PROGRESS: done  with file '+anInputFile
                 if (config.timing):
                     nTime=datetime.datetime.utcnow()
                     msg+=' took: '+str(nTime-fileStartTime)

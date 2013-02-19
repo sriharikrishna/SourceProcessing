@@ -125,7 +125,7 @@ def main():
                 globalTypeTable.cleanUpUnitTypeEntries()
                 globalTypeTable.verifyTypeEntries()               
                 if (config.progress):
-                    msg='SourceProcessing: progress: done with unit '+aUnit.uinfo.name
+                    msg='SourceProcessing: PROGRESS: done  with unit '+aUnit.uinfo.name
                     if (config.timing):
                         nTime=datetime.datetime.utcnow()
                         msg+=' took: '+str(nTime-unitStartTime)

@@ -40,7 +40,7 @@ class DebugManager(object):
     def setProcessedFile(aFileName):
         DebugManager._processedFile = aFileName
         if (DebugManager._progress):
-            sys.stdout.write('SourceProcessing: PROGRESS: '+ DebugManager._processedFile+'\n')
+            sys.stdout.write('SourceProcessing: PROGRESS: start with file '+ DebugManager._processedFile+'\n')
 
     @staticmethod
     def processedFile():
