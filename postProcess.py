@@ -148,7 +148,12 @@ def main():
             setFormat = False
             if config.outputFormat == None:
                 setFormat = True
+            unitStartTime=None
+            if (config.timing):
+                unitStartTime=datetime.datetime.utcnow()
             for aUnit in fortUnitIterator(inputFile,config.inputFormat):
+                if (config.progress):
+                    print 'SourceProcessing: PROGRESS: start with unit '+aUnit.uinfo.name
                 if (config.explicitInit):
                     UnitPostProcessor(aUnit).getInitCommonStmts(initSet,initNames,typeDecls)
                 # We expect to find file pragmas in the cmnt section of units exclusively
@@ -175,7 +180,14 @@ def main():
                 # postprocess the unit and print it
                 UnitPostProcessor(aUnit).processUnit().printit(ourOutFileHandle)
                 globalTypeTable.cleanUpUnitTypeEntries()
-                globalTypeTable.verifyTypeEntries()               
+                globalTypeTable.verifyTypeEntries()     
+                if (config.progress):
+                    msg='SourceProcessing: PROGRESS: done  with unit '+aUnit.uinfo.name
+                    if (config.timing):
+                        nTime=datetime.datetime.utcnow()
+                        msg+=' took: '+str(nTime-unitStartTime)
+                        unitStartTime=nTime
+                    print msg          
             # add new init procedures & global init procedure after module declarations
             if (config.explicitInit):
                 addInitProcedures(initSet,initNames,typeDecls,ourOutFileHandle)
