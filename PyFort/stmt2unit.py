@@ -53,7 +53,6 @@ def _beginDrvdTypeDefn(aDrvdTypeDefn,curr):
 
 def _typebound_proc_block(aContainsStmt, curr):
     'if a contains statement occurs in a derived type definition, then there is a type-bound procedure block, and fs.ContainsStmt is a decl'
-    localSymtab = curr.val.symtab
     if curr.val._in_drvdType:
         return True
     return False
@@ -149,7 +148,7 @@ def _processTypedeclStmt(aTypeDeclStmt,curr):
                 typetab_id = globalTypeTable.getType(theTmpDeclStmt,localSymtab)
                 newSymtabEntry.typetab_id=typetab_id
                 DebugManager.debug('decl "'+str(aDecl)+'" NOT already present in symbol table => adding '+str(newSymtabEntry.debug(name)))
-            unitSymbolEntry,sTable=localSymtab.lookup_name_level(curr.val.name())
+            unitSymbolEntry=localSymtab.lookup_name_level(curr.val.name())[0]
             if (unitSymbolEntry and isinstance(unitSymbolEntry.entryKind,SymtabEntry.FunctionEntryKind) and  unitSymbolEntry.genericInfo and unitSymbolEntry.genericInfo.genericName):
                 genericSymbolEntry=localSymtab.lookup_name(unitSymbolEntry.genericInfo.genericName)
                 if (genericSymbolEntry is None):
