@@ -7,7 +7,7 @@ subroutine bar()
 end subroutine
 subroutine common_cb_init()
 	use OAD_active
-	common/cb/ G
+	common /cb/ G
 	type(active) :: G
 	G%d = 0
 end subroutine

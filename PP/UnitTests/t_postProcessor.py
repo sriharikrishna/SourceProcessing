@@ -22,9 +22,9 @@ DebugManager.setCheck(True)
 
 Symtab.setTypeDefaults((RealStmt,[]),(IntegerStmt,[]))
 
-def addInitProcedures(initSet,initNames,typeDecls,output,splitUnits=False,output2=None):
-    for elt in initSet:
-        newUnit = UnitPostProcessor.createInitProcedure(elt,typeDecls)
+def addInitProcedures(initTriples,initNames,output,splitUnits=False,output2=None):
+    for t in initTriples:
+        newUnit = UnitPostProcessor.createInitProcedure(t)
         if newUnit is not None:
             # print new output file
             if splitUnits:
@@ -45,7 +45,6 @@ def addInitProcedures(initSet,initNames,typeDecls,output,splitUnits=False,output
             out.close()
         else:
             newUnit.printit(output)
-        return (newUnit!=None)
 
 def compareFiles(assertFunc,originalFileName,RefFileName,format='fixed',mode='forward',templateFile='dummy.template.f',inlineFile='dummy.inline.f'):
     try:
@@ -53,7 +52,7 @@ def compareFiles(assertFunc,originalFileName,RefFileName,format='fixed',mode='fo
         testFile  = open(testFileName,'w')
         UnitPostProcessor.setMode(mode)
         setOutputFormat(format)
-        initSet = set([]); initNames = []; typeDecls = set([])
+        initTriples = []; initNames = set()
         if (inlineFile):
             UnitPostProcessor.setInlineFile(fname_t(inlineFile))
             UnitPostProcessor.processInlineFile()
@@ -64,14 +63,15 @@ def compareFiles(assertFunc,originalFileName,RefFileName,format='fixed',mode='fo
                 TemplateExpansion.setTemplateFile(fname_t(templateFile))
             # get common block variables to initialize if processing in reverse mode
             for aUnit in fortUnitIterator(fname_t(originalFileName),format):
-                UnitPostProcessor(aUnit).getInitCommonStmts(initSet,initNames,typeDecls)
+                UnitPostProcessor(aUnit).getInitCommonStmts(initTriples,initNames)
         for aUnit in fortUnitIterator(fname_t(originalFileName),format):
             if isinstance(aUnit.uinfo,SubroutineStmt) and len(initNames) > 0:
                 UnitPostProcessor(aUnit).processUnit().printit(testFile)
             else:
                 UnitPostProcessor(aUnit).processUnit().printit(testFile)
-        # add new init procedures & global init procedure
-        addInitProcedures(initSet,initNames,typeDecls,testFile)
+	if (UnitPostProcessor._explicitInit):
+            # add new init procedures & global init procedure
+            addInitProcedures(initTriples,initNames,testFile)
         testFile.close()
         testFile = open(testFileName,'r')
         testFileLines = testFile.readlines()
