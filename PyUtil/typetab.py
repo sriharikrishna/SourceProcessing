@@ -486,8 +486,8 @@ class TypetabEntry(object):
             return arrayTabEntry.rank
 
         def debug(self):
-            return '[ArrayEntryKind; Array id for array table where dimension information is stored: '+str(self.arrayid)+\
-                                    ', Type id of built-in or named array type: '+str(self.typetab_id) +(self.globalTypeEntry and ', isGlobal' or '')+']'
+            return '[ArrayEntryKind; arrayid='+str(self.arrayid)+\
+                                    ', base typetab_id='+str(self.typetab_id) +(self.globalTypeEntry and ', isGlobal' or '')+']'
 
     class ArrayPointerEntryKind(GenericEntryKind):
         'class to manage pointers to array types'
