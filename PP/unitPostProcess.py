@@ -6,7 +6,7 @@ from PyUtil.typetab import TypetabEntry
 from PyUtil.argreplacement import replaceArgs, replaceSon
 from PyUtil.errors import ScanError, ParseError, UserError
 
-from PyFort.inference import InferenceError,expressionType,expressionShape,isArrayReference
+from PyFort.inference import InferenceError,expressionType,expressionShape,isArrayReference, isSpecExpression
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
 import PyFort.intrinsic as intrinsic
@@ -810,12 +810,12 @@ class UnitPostProcessor(object):
     # typeDecls: list of all type declarations for variables in the file
     # being processed
     # RETURNS: a new procedure initializing variables for the common block specified by fortStmt or None
-    def createInitProcedure(fortStmt,typeDecls):
+    def createInitProcedure(initTriple):
         '''creates an initialization subroutine for the active variables in a specified common block'''
-        if isinstance(fortStmt,fs.CommonStmt):
+        if isinstance(initTriple[0],fs.CommonStmt):
             # create a new unit for the initializations
             newUnit = Unit()
-            newUnit.uinfo = fs.SubroutineStmt('common_'+fortStmt.name+'_init',[])
+            newUnit.uinfo = fs.SubroutineStmt('common_'+initTriple[0].name+'_init',[])
             # insert active type module
             if (not UnitPostProcessor._overloadingMode):
                 newDecl=getActiveModuleUse()
@@ -825,33 +825,14 @@ class UnitPostProcessor(object):
                 newDecl=self.getExtraReference()
                 newDecl.lead='\t'
                 newUnit.decls.append(newDecl)
-            newDeclList=[]
-            for aDecl in fortStmt.declList:
-                newDeclList.append(aDecl)
-            newStmt = fs.CommonStmt(fortStmt.name,newDeclList,lead='\t')
-            newUnit.decls.append(newStmt)
-            # insert type declarations for variables which occur in the common statement declList
-            for decl in typeDecls:
-                if isinstance(decl,fs.DrvdTypeDecl):
-                    newDecls = []
-                    for var in decl.get_decls():
-                        if str(var) in fortStmt.declList:
-                            newDecls.append(var)
-                            fortStmt.declList.remove(str(var))
-                    decl.set_decls(newDecls)
-                    if decl.get_mod()[0].lower() == UnitPostProcessor._abstract_type:
-                        decl.set_mod([UnitPostProcessor._replacement_type])
-                    decl.lead = '\t'
-                    if len(decl.get_decls()) > 0:
-                        newUnit.decls.append(decl)
-                else:
-                    for var in decl.get_decls():
-                        if str(var) in fortStmt.declList:
-                            newUnit.decls.append(decl)
-            
+            initTriple[0].lead='\t'
+            newUnit.decls.append(initTriple[0])
+            for decl in initTriple[1]:
+                decl.lead='\t'
+                newUnit.decls.append(decl)
             # create a new AssignStmt to initialize the derivative component to 0 for all 
             # arguments in the common block's declList
-            for arg in newStmt.declList:
+            for arg in initTriple[2]:
                 lhs = fe.Sel(arg,'d')
                 rhs = '0'
                 newExec = fs.AssignStmt(lhs,rhs,lead='\t')
@@ -914,10 +895,41 @@ class UnitPostProcessor(object):
             self.__myUnit.contains.append(fs.ContainsStmt())
         return subUnit
 
+    def __getDecl(self,name,parentStmt):
+        expTypeEntry=expressionType(name,self.__myUnit.symtab,parentStmt.lineNumber)
+        varShape=expressionShape(name,self.__myUnit.symtab,parentStmt.lineNumber)
+        modList=[];attrList=[]
+        if varShape:
+            declDimArgs=[]
+            for dim in varShape:
+                if (not isSpecExpression(dim,self.__myUnit.symtab,parentStmt.lineNumber)):
+                    raise PostProcessError('cannot find dimension for '+name)
+                else:
+                    declDimArgs.append(dim)
+            attrList.append(fe.App('dimension',declDimArgs))
+        isNamedType=False
+        if (isinstance( expTypeEntry.entryKind,TypetabEntry.ArrayEntryKind)):
+            expTypeEntry=globalTypeTable.lookupTypeId(expTypeEntry.getBaseTypeId())
+        if (isinstance(expTypeEntry.entryKind,TypetabEntry.NamedTypeEntryKind)):
+            varTypeClass=fs.DrvdTypeDecl
+            modList.insert(0,expTypeEntry.entryKind.symbolName)
+            isNamedType=True
+        elif (isinstance(expTypeEntry.entryKind,TypetabEntry.CharacterEntryKind)):
+            charLenEntry=globalTypeTable.charLenTab.lookupCharLenId(expTypeEntry.entryKind.charLenId)
+            varTypeClass=fs.CharacterStmt
+            modList.append(charLenEntry.getCharLenExp())
+        else: 
+            (varTypeClass,tk)=globalTypeTable.intrinsicIdToTypeMap[expTypeEntry.getBaseTypeId()]
+        if (not attrList):
+            attrList=None
+        decl=varTypeClass(modList,attrList,[name])
+        if isNamedType:
+            self.__rewriteActiveType(decl);
+        return decl
+
     # find all common block variables to be initialized
     # initNames: contains the names of subroutines which will be called in the global init procedure
-    # typeDecls: type declarations for all variables
-    def getInitCommonStmts(self,initSet,initNames,typeDecls):
+    def getInitCommonStmts(self,initTriples,initNames):
         '''find all common block variables to be initialized and the names of all the initialization procedures which will be created so they can be called later in the global initialization procedure'''
         if isinstance(self.__myUnit.uinfo,fs.ModuleStmt):
             if not self.__myUnit.uinfo.name in initNames:
@@ -927,25 +939,22 @@ class UnitPostProcessor(object):
                     # to initNames
                     if isinstance(decl,fs.DrvdTypeDecl) and \
                             (decl.get_mod()[0].lower() == self._abstract_type):
-                        initNames.append('mod_'+self.__myUnit.uinfo.name)
+                        initNames.add('mod_'+self.__myUnit.uinfo.name)
                         return
-        initCommonStmt = None
         for decl in self.__myUnit.decls:
             if isinstance(decl,fs.CommonStmt):
-                # create a new common statement with a declList that contains all 
-                # active variables from the original common statement 
-                initCommonStmt = fs.CommonStmt(decl.name,[])
+                activeVars=set()
+                commonVarDecls=set()
                 for var in decl.declList:
                     # lookup in symtab
                     if self.__isActive(var,decl):
-                        initCommonStmt.declList.append(var)
+                        activeVars.add(var)
+                    commonVarDecls.add(self.__getDecl(var,decl))
                 # avoid initializing variables twice
                 # don't create subroutines for common blocks with no active variables
-                if not (len(initCommonStmt.declList)==0) and not initCommonStmt.name in initNames:
-                    initSet.add(initCommonStmt)
-                    initNames.append(decl.name)
-            if isinstance(decl,fs.TypeDecl):
-                typeDecls.add(decl)
+                if activeVars and not decl.name in initNames:
+                    initNames.add(decl.name)
+                    initTriples.append((decl,commonVarDecls,activeVars))
 
     def __isActive(self,Exp,parentStmt):
         varName=fs.getVarName(Exp,parentStmt.lineNumber)

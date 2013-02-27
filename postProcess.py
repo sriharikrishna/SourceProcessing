@@ -47,17 +47,16 @@ def cleanup(config):
                 except:
                     print >>sys.stderr,'Cannot remove output file '+fileName
 
-# initSet: a set of common blocks occurring in the file which need variables initialized
+# initTriples: a set of common blocks occurring in the file which need variables initialized paired with the respective type declarations
 # initNames: a list of names of initialization subroutines to be called by the global
 # init procedure
-# typeDecls: a list of variable type declarations from the common blocks
 # output: the file to which new units are printed
 # base,unitNumExt,unit_num,ext: used to create a new output file if splitUnits is true
 # splitUnits: True if units are being split and printed to different files
-def addInitProcedures(initSet,initNames,typeDecls,output=None,base='',unitNumExt='',unit_num=0,ext='',splitUnits=False):
+def addInitProcedures(initTriples,initNames,output=None,base='',unitNumExt='',unit_num=0,ext='',splitUnits=False):
     '''creates active variable derivative initialization procedures and prints them to specified output file(s)'''
-    for elt in initSet:
-        newUnit = UnitPostProcessor.createInitProcedure(elt,typeDecls)
+    for t in initTriples:
+        newUnit = UnitPostProcessor.createInitProcedure(t)
         if newUnit is not None:
             # print new output file
             if splitUnits:
@@ -106,7 +105,7 @@ def main():
         DebugManager.debug("running for <input_file>:"+args[0]+" and the following options: "+str(config))
 
         inputFile = args[0]
-        initSet = set([]); initNames = []; typeDecls = set([])
+        initTriples = []; initNames = set()
         if splitUnits:
             (base,ext) = os.path.splitext(inputFile)
             unitNumExt = "%0"+str(unitNameWidth)+"d"
@@ -116,7 +115,7 @@ def main():
                 unitStartTime=datetime.datetime.utcnow()
             for aUnit in fortUnitIterator(inputFile,config.inputFormat):
                 if (config.explicitInit):
-                    UnitPostProcessor(aUnit).getInitCommonStmts(initSet,initNames,typeDecls)
+                    UnitPostProcessor(aUnit).getInitCommonStmts(initTriples,initNames)
                 outputFile = base + unitNumExt % unit_num + ext; unit_num+=1
                 ourOutFileHandle = open(outputFile,'w')
                 ourOutFileNameList.append(outputFile)
@@ -133,7 +132,7 @@ def main():
                     print msg
             # add new init procedures & global init procedure at end
             if (config.explicitInit):
-                addInitProcedures(initSet,initNames,typeDecls,base=base,unitNumExt=unitNumExt,\
+                addInitProcedures(initTriples,initNames,base=base,unitNumExt=unitNumExt,\
                                       unit_num=unit_num,ext=ext,splitUnits=splitUnits)
 
             makeOut = open('postProcess.make','w')
@@ -155,7 +154,7 @@ def main():
                 if (config.progress):
                     print 'SourceProcessing: PROGRESS: start with unit '+aUnit.uinfo.name
                 if (config.explicitInit):
-                    UnitPostProcessor(aUnit).getInitCommonStmts(initSet,initNames,typeDecls)
+                    UnitPostProcessor(aUnit).getInitCommonStmts(initTriples,initNames)
                 # We expect to find file pragmas in the cmnt section of units exclusively
                 if aUnit.cmnt:
                     if (re.search('openad xxx file_start',aUnit.cmnt.rawline,re.IGNORECASE)):
@@ -190,7 +189,7 @@ def main():
                     print msg          
             # add new init procedures & global init procedure after module declarations
             if (config.explicitInit):
-                addInitProcedures(initSet,initNames,typeDecls,ourOutFileHandle)
+                addInitProcedures(initTriples,initNames,ourOutFileHandle)
             ourOutFileHandle.close()
         else: 
             ourOutFileHandle=None
@@ -201,13 +200,13 @@ def main():
                 ourOutFileHandle=sys.stdout
             for aUnit in fortUnitIterator(inputFile,config.inputFormat):
                 if (config.explicitInit):
-                    UnitPostProcessor(aUnit).getInitCommonStmts(initSet,initNames,typeDecls)
+                    UnitPostProcessor(aUnit).getInitCommonStmts(initTriples,initNames)
                 UnitPostProcessor(aUnit).processUnit().printit(ourOutFileHandle)
                 globalTypeTable.cleanUpUnitTypeEntries()
                 globalTypeTable.verifyTypeEntries()               
                 # add new init procedures & global init procedure after module declarations
             if (config.explicitInit):
-                addInitProcedures(initSet,initNames,typeDecls,ourOutFileHandle)
+                addInitProcedures(initTriples,initNames,ourOutFileHandle)
             if config.outputFile: 
                 ourOutFileHandle.close()
 
