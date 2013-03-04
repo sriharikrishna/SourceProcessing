@@ -317,8 +317,8 @@ def TransformFileOptErrors(config,args):
         opt.error('expected at least one argument <input_file> ;' \
                  +' the following options were given: '+str(config))
     if config.outputFile and len(args) > 1 :
-            opt.error('No output file can be specified when more than one input file is given.' \
-                     +' the following options were given: '+str(config))
+        opt.error('No output file can be specified when more than one input file is given.' \
+                 +' the following options were given: '+str(config))
 
 
 ############## SET FLAGS ##############
