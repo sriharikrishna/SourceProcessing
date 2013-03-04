@@ -1212,6 +1212,7 @@ class EquivalenceStmt(Decl):
         nlist = seq(lit('('),
                     cslist(Exp),
                     lit(')'))
+        nlist = treat(nlist,lambda l:l[1])
         stmt = seq(lit(EquivalenceStmt.kw),cslist(nlist))
         ([equivalence,nlists],rm) = stmt(scan)
         return EquivalenceStmt(nlists,lineNumber,rest=rm)
@@ -1222,7 +1223,7 @@ class EquivalenceStmt(Decl):
         Decl.__init__(self,lineNumber,label,lead,internal,rest)
 
     def __str__(self):
-        declStrList = map(lambda nlist: '('+','.join(str(item) for item in nlist[1])+')',self.nlists)
+        declStrList = map(lambda nlist: '('+','.join(str(item) for item in nlist)+')',self.nlists)
         return '%s %s' % (self.kw,','.join(declStrList))
         
 namedParamPatn = seq(id,lit('='),Exp)

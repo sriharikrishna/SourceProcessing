@@ -303,7 +303,6 @@ def _is_stmt_fn(s,cur):
     DebugManager.debug('checking assignment '+str(s)+' for stmt fn')
     lhs  = s.lhs
     look = cur.val.symtab.lookupDimensions
-
     return isinstance(lhs,fe.App) and isinstance(lhs.head,str) and not look(lhs.head)
 
 reportedMissingModules=set()

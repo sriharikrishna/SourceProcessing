@@ -13,8 +13,9 @@ from PyUtil.debugManager import DebugManager
 from PyUtil.symtab import Symtab,SymtabError
 from PyFort.fortFile import Ffile
 import PyFort.fortStmts as fs
+from PP.activeTypeHelper import ActiveTypeHelper
 
-def cleanup(config):
+def cleanup(config,ourOutFileHandle):
     import os 
     if  ourOutFileHandle and not ourOutFileHandle.closed : 
         ourOutFileHandle.close()
@@ -32,14 +33,15 @@ def main():
 
     TransformFileOptErrors(config,args)
     setTransformFileFlags(config)
+    ActiveTypeHelper.setPlaceholderActiveType(TransformActiveVariables._replacement_type)
     inputFileList = args
     if config.outputDir :
         if not os.path.exists(config.outputDir): os.makedirs(config.outputDir)
 
     currentFile = config.vardefs
+    ourOutFileHandle=None
     try:
-        TransformActiveVariables.getCommonBlocksWithActiveVars(config.vardefs,\
-                                                                   config.inputFormat)
+        TransformActiveVariables.getActiveVars(config.vardefs, config.inputFormat)
         # only one input file
         if len(inputFileList) == 1 :
             currentFile = inputFileList[0]
@@ -51,7 +53,7 @@ def main():
                 ourOutFileHandle.close()
         # multiple input files
         else :
-            for anInputFile in inputFileList :
+            for anInputFile in inputFileList:
                 currentFile = anInputFile
                 ourOutFileHandle = open(os.path.join(config.outputDir,currentFile),'w')
                 for aUnit in fortUnitIterator(currentFile,config.inputFormat):
@@ -59,8 +61,8 @@ def main():
                 ourOutFileHandle.close()
 
     except (TransformError,SymtabError,UserError,ScanError,ParseError),e:
-        sys.stderr.write(str(e))
-        cleanup(config)
+        sys.stderr.write(str(e)+'\n')
+        cleanup(config,ourOutFileHandle)
         return 1
 
 if __name__ == "__main__":

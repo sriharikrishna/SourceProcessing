@@ -11,6 +11,8 @@ from PyFort.flow import setOutputFormat
 from PyUtil.debugManager import DebugManager
 from PP.unitPostProcess import UnitPostProcessor,PostProcessError
 from PP.templateExpansion import TemplateExpansion
+from PyUtil.typetab import globalTypeTable, Typetab
+from PP.activeTypeHelper import ActiveTypeHelper
 
 '''
 Unit tests for post-processor
@@ -23,7 +25,7 @@ DebugManager.setCheck(True)
 Symtab.setTypeDefaults((RealStmt,[]),(IntegerStmt,[]))
 
 def addInitProcedures(initTriples,initNames,output,splitUnits=False,output2=None):
-    for t in initTriples:
+    for t in initTriples.values():
         newUnit = UnitPostProcessor.createInitProcedure(t)
         if newUnit is not None:
             # print new output file
@@ -36,8 +38,8 @@ def addInitProcedures(initTriples,initNames,output,splitUnits=False,output2=None
                 unit_num += 1                
             else:
                 newUnit.printit(output)
-    if len(initNames) > 0:
-        newUnit = UnitPostProcessor.createGlobalInitProcedure(initNames)
+    if (initTriples or initNames):
+        newUnit = UnitPostProcessor.createGlobalInitProcedure(initNames,initTriples)
         if splitUnits:
             out = open(output2,'w')
             outFileNameList.append(output2)
@@ -48,11 +50,13 @@ def addInitProcedures(initTriples,initNames,output,splitUnits=False,output2=None
 
 def compareFiles(assertFunc,originalFileName,RefFileName,format='fixed',mode='forward',templateFile='dummy.template.f',inlineFile='dummy.inline.f'):
     try:
+        globalTypeTable=Typetab()
+        ActiveTypeHelper.setPlaceholderActiveType(UnitPostProcessor._abstract_type)
         (fd,testFileName) = tempfile.mkstemp()
         testFile  = open(testFileName,'w')
         UnitPostProcessor.setMode(mode)
         setOutputFormat(format)
-        initTriples = []; initNames = set()
+        initTriples = {}; initNames = set()
         if (inlineFile):
             UnitPostProcessor.setInlineFile(fname_t(inlineFile))
             UnitPostProcessor.processInlineFile()
@@ -63,13 +67,10 @@ def compareFiles(assertFunc,originalFileName,RefFileName,format='fixed',mode='fo
                 TemplateExpansion.setTemplateFile(fname_t(templateFile))
             # get common block variables to initialize if processing in reverse mode
             for aUnit in fortUnitIterator(fname_t(originalFileName),format):
-                UnitPostProcessor(aUnit).getInitCommonStmts(initTriples,initNames)
+                UnitPostProcessor(aUnit).getInitDecls(initTriples, initNames)
         for aUnit in fortUnitIterator(fname_t(originalFileName),format):
-            if isinstance(aUnit.uinfo,SubroutineStmt) and len(initNames) > 0:
-                UnitPostProcessor(aUnit).processUnit().printit(testFile)
-            else:
-                UnitPostProcessor(aUnit).processUnit().printit(testFile)
-	if (UnitPostProcessor._explicitInit):
+            UnitPostProcessor(aUnit).processUnit().printit(testFile)
+        if (UnitPostProcessor._explicitInit):
             # add new init procedures & global init procedure
             addInitProcedures(initTriples,initNames,testFile)
         testFile.close()

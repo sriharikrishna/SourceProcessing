@@ -6,7 +6,7 @@ from PyUtil.typetab import TypetabEntry
 from PyUtil.argreplacement import replaceArgs, replaceSon
 from PyUtil.errors import ScanError, ParseError, UserError
 
-from PyFort.inference import InferenceError,expressionType,expressionShape,isArrayReference, isSpecExpression
+from PyFort.inference import InferenceError,expressionType,expressionShape,isArrayReference, isSpecExpression, makeDeclFromName
 import PyFort.fortExp as fe
 import PyFort.fortStmts as fs
 import PyFort.intrinsic as intrinsic
@@ -18,6 +18,7 @@ from PyFort.fortFile import Ffile
 from PyFort.fortParse import parse_stmts
 import re
 import copy
+from PP.activeTypeHelper import ActiveTypeHelper
 
 # Handles errors that occur during the postprocessing stage
 class PostProcessError(Exception):
@@ -68,7 +69,7 @@ class UnitPostProcessor(object):
         UnitPostProcessor.__ourInlineWarned=[]
         
     # set something here for the unit tests
-    _replacement_type = 'active' 
+    _replacement_type = ActiveTypeHelper._replacement_type
 
     @staticmethod
     def setReplacementType(replacementType):
@@ -126,6 +127,23 @@ class UnitPostProcessor(object):
     @staticmethod
     def setActiveVariablesFile(fileName):
         UnitPostProcessor._activeVariablesFileName = fileName
+        
+    @staticmethod
+    def activeDecls(initTriples,initNames):
+        if (UnitPostProcessor._activeVariablesFileName) : 
+            currentOutputFormat = flow.outputFormat
+            (base,activeOutputFormat) = os.path.splitext(UnitPostProcessor._activeVariablesFileName)
+            # set active variables file output format
+            flow.setOutputFormat(Ffile.get_format(activeOutputFormat))
+            fHandle = open(UnitPostProcessor._activeVariablesFileName,'a')
+            for t in initTriples.values():
+                newUnit = UnitPostProcessor.createInitProcedure(t)
+                if newUnit is not None:
+                    # print new output file
+                    newUnit.printit(fHandle)
+            fHandle.close()
+            # restore original output format
+            flow.setOutputFormat(currentOutputFormat)
 
     def __init__(self, aUnit):
         self.__myUnit = aUnit
@@ -163,17 +181,19 @@ class UnitPostProcessor(object):
     # DrvdTypeDecl: A derived type declaration to be transformed
     # RETURNS: a transformed declaration statement to apppend to the unit's 
     # declaration statements
-    def __rewriteActiveType(self, DrvdTypeDecl):
+    def __rewriteActiveType(self, aDecl):
         ''' convert abstract to concrete active type 
         only applied to type declaration statements '''
-        DebugManager.debug('unitPostProcessor.__rewriteActiveType called on: "'+str(DrvdTypeDecl)+"'")
-        newDecls=[self.__transformActiveTypesExpression(decl,UnitPostProcessor.__TransformActiveTypesContext()) for decl in DrvdTypeDecl.get_decls()]
-        DrvdTypeDecl.set_decls(newDecls)
-        if ((DrvdTypeDecl.get_mod()[0].lower() == self._abstract_type)
+        DebugManager.debug('unitPostProcessor.__rewriteActiveType called on: "'+str(aDecl)+"'")
+        if (not isinstance(aDecl,fs.DrvdTypeDecl)): 
+            return aDecl
+        newDecls=[self.__transformActiveTypesExpression(decl,UnitPostProcessor.__TransformActiveTypesContext()) for decl in aDecl.get_decls()]
+        aDecl.set_decls(newDecls)
+        if ((aDecl.get_mod()[0].lower() == self._abstract_type)
             or
-            (DrvdTypeDecl.get_mod()[0].lower() == self._abstract_type+'_init')): # with initialization
-            DrvdTypeDecl.set_mod([self._replacement_type])
-        return DrvdTypeDecl
+            (aDecl.get_mod()[0].lower() == self._abstract_type+'_init')): # with initialization
+            aDecl.set_mod([self._replacement_type])
+        return aDecl
 
     # Transforms active types for an expression recursively
     # (replaces instances of things in __ourValDerivTokens
@@ -828,6 +848,7 @@ class UnitPostProcessor(object):
             initTriple[0].lead='\t'
             newUnit.decls.append(initTriple[0])
             for decl in initTriple[1]:
+                UnitPostProcessor(newUnit).__rewriteActiveType(decl);
                 decl.lead='\t'
                 newUnit.decls.append(decl)
             # create a new AssignStmt to initialize the derivative component to 0 for all 
@@ -844,18 +865,18 @@ class UnitPostProcessor(object):
     # initNames: a list of the names of subroutines which initialize active variables
     # RETURNS: a procedure which calls all other initialization subroutines
     @staticmethod
-    def createGlobalInitProcedure(initNames):
+    def createGlobalInitProcedure(initModuleNames,initTriples):
         '''a procedure which initializes all active global variables by calling all initialization subroutines which have been created for modules or common blocks'''
         newUnit = Unit()
         newUnit.uinfo = fs.SubroutineStmt('OAD_globalVar_init',[])
-        for name in initNames:
-            if name[0:3] == 'mod':
-                mod_name = name[4:]
-                newStmt = fs.UseAllStmt(mod_name,[],lead='\t')
-                newUnit.decls.append(newStmt)
-                newStmt = fs.CallStmt(name+'_init',[],lead='\t')
-            else:
-                newStmt = fs.CallStmt('common_'+name+'_init',[],lead='\t')                
+        for name in initModuleNames:
+            mod_name = name[4:]
+            newStmt = fs.UseAllStmt(mod_name,[],lead='\t')
+            newUnit.decls.append(newStmt)
+            newStmt = fs.CallStmt(name+'_init',[],lead='\t')
+            newUnit.execs.append(newStmt)
+        for name in initTriples.keys():
+            newStmt = fs.CallStmt('common_'+name+'_init',[],lead='\t')                
             newUnit.execs.append(newStmt)
         newUnit.end = [fs.EndSubroutineStmt()]
         return newUnit
@@ -895,76 +916,24 @@ class UnitPostProcessor(object):
             self.__myUnit.contains.append(fs.ContainsStmt())
         return subUnit
 
-    def __getDecl(self,name,parentStmt):
-        expTypeEntry=expressionType(name,self.__myUnit.symtab,parentStmt.lineNumber)
-        varShape=expressionShape(name,self.__myUnit.symtab,parentStmt.lineNumber)
-        modList=[];attrList=[]
-        if varShape:
-            declDimArgs=[]
-            for dim in varShape:
-                if (not isSpecExpression(dim,self.__myUnit.symtab,parentStmt.lineNumber)):
-                    raise PostProcessError('cannot find dimension for '+name)
-                else:
-                    declDimArgs.append(dim)
-            attrList.append(fe.App('dimension',declDimArgs))
-        isNamedType=False
-        if (isinstance( expTypeEntry.entryKind,TypetabEntry.ArrayEntryKind)):
-            expTypeEntry=globalTypeTable.lookupTypeId(expTypeEntry.getBaseTypeId())
-        if (isinstance(expTypeEntry.entryKind,TypetabEntry.NamedTypeEntryKind)):
-            varTypeClass=fs.DrvdTypeDecl
-            modList.insert(0,expTypeEntry.entryKind.symbolName)
-            isNamedType=True
-        elif (isinstance(expTypeEntry.entryKind,TypetabEntry.CharacterEntryKind)):
-            charLenEntry=globalTypeTable.charLenTab.lookupCharLenId(expTypeEntry.entryKind.charLenId)
-            varTypeClass=fs.CharacterStmt
-            modList.append(charLenEntry.getCharLenExp())
-        else: 
-            (varTypeClass,tk)=globalTypeTable.intrinsicIdToTypeMap[expTypeEntry.getBaseTypeId()]
-        if (not attrList):
-            attrList=None
-        decl=varTypeClass(modList,attrList,[name])
-        if isNamedType:
-            self.__rewriteActiveType(decl);
-        return decl
-
     # find all common block variables to be initialized
     # initNames: contains the names of subroutines which will be called in the global init procedure
-    def getInitCommonStmts(self,initTriples,initNames):
+    def getInitDecls(self,initTriples,mNames):
         '''find all common block variables to be initialized and the names of all the initialization procedures which will be created so they can be called later in the global initialization procedure'''
         if isinstance(self.__myUnit.uinfo,fs.ModuleStmt):
-            if not self.__myUnit.uinfo.name in initNames:
+            if not self.__myUnit.uinfo.name in mNames:
                 for decl in self.__myUnit.decls:
                     # if there is an active variable in the module, add the the name of 
                     # the initialization subroutine which will be created (in processUnit)
-                    # to initNames
+                    # to cNames
                     if isinstance(decl,fs.DrvdTypeDecl) and \
                             (decl.get_mod()[0].lower() == self._abstract_type):
-                        initNames.add('mod_'+self.__myUnit.uinfo.name)
+                        mNames.add('mod_'+self.__myUnit.uinfo.name)
                         return
-        for decl in self.__myUnit.decls:
-            if isinstance(decl,fs.CommonStmt):
-                activeVars=set()
-                commonVarDecls=set()
-                for var in decl.declList:
-                    # lookup in symtab
-                    if self.__isActive(var,decl):
-                        activeVars.add(var)
-                    commonVarDecls.add(self.__getDecl(var,decl))
-                # avoid initializing variables twice
-                # don't create subroutines for common blocks with no active variables
-                if activeVars and not decl.name in initNames:
-                    initNames.add(decl.name)
-                    initTriples.append((decl,commonVarDecls,activeVars))
+        ActiveTypeHelper.getCommonDecls(self.__myUnit, self.__isActive, initTriples)
 
     def __isActive(self,Exp,parentStmt):
-        varName=fs.getVarName(Exp,parentStmt.lineNumber)
-        expType=expressionType(varName,self.__myUnit.symtab,parentStmt.lineNumber)
-        if isinstance(expType.entryKind,TypetabEntry.ArrayEntryKind):
-            expType=expType.getBaseTypeEntry()
-        if isinstance(expType.entryKind,TypetabEntry.NamedTypeEntryKind):
-            if (expType.entryKind.symbolName.lower()==self._abstract_type):
-                return True
-        return False
+        return ActiveTypeHelper.isActive(self.__myUnit, Exp, parentStmt.lineNumber, self._abstract_type)
 
     # recursively transforms an expression if it contains an active module variable
     def __transformActiveModuleVariables(self,Exp,parentStmt):

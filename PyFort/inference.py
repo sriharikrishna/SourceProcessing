@@ -962,3 +962,31 @@ def isSpecExpression(theExp,localSymtab,lineNumber):
    elif (isinstance(theExp,Ops)):
       retVal=(isSpecExpression(theExp.a1,localSymtab,lineNumber) and isSpecExpression(theExp.a2,localSymtab,lineNumber))
    return retVal
+
+def makeDeclFromName(symtab,name,lineNumber):
+        expTypeEntry=expressionType(name,symtab,lineNumber)
+        varShape=expressionShape(name,symtab,lineNumber)
+        modList=[];attrList=[]
+        if varShape:
+            declDimArgs=[]
+            for dim in varShape:
+                if (not isSpecExpression(dim,symtab,lineNumber)):
+                    raise InferenceError('cannot find dimension for '+name, lineNumber)
+                else:
+                    declDimArgs.append(dim)
+            attrList.append(App('dimension',declDimArgs))
+        if (isinstance( expTypeEntry.entryKind,TypetabEntry.ArrayEntryKind)):
+            expTypeEntry=globalTypeTable.lookupTypeId(expTypeEntry.getBaseTypeId())
+        if (isinstance(expTypeEntry.entryKind,TypetabEntry.NamedTypeEntryKind)):
+            varTypeClass=fortStmts.DrvdTypeDecl
+            modList.insert(0,expTypeEntry.entryKind.symbolName)
+        elif (isinstance(expTypeEntry.entryKind,TypetabEntry.CharacterEntryKind)):
+            charLenEntry=globalTypeTable.charLenTab.lookupCharLenId(expTypeEntry.entryKind.charLenId)
+            varTypeClass=fortStmts.CharacterStmt
+            modList.append(charLenEntry.getCharLenExp())
+        else: 
+            varTypeClass=globalTypeTable.intrinsicIdToTypeMap[expTypeEntry.getBaseTypeId()][0]
+        if (not attrList):
+            attrList=None
+        decl=varTypeClass(modList,attrList,[name])
+        return decl
