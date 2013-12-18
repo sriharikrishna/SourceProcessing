@@ -184,7 +184,8 @@ class _TypeContext:
       if e.lower() in _logicon_set:
          return globalTypeTable.intrinsicTypeNameToEntry('logical')
       if e[0] in _quote_set:
-         return globalTypeTable.getTypeEntry(fortStmts.CharacterStmt([_lenfn(len(e)-2)],[],[]),self.localSymtab)
+         l=max(len(e)-2,1)
+         return globalTypeTable.getTypeEntry(fortStmts.CharacterStmt([_lenfn(l)],[],[]),self.localSymtab)
          #return (_kw2type('character'),_lenfn(len(e)-2))
 
    def __identifierType(self,anId):
