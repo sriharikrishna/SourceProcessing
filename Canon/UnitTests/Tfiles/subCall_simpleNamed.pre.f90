@@ -1,4 +1,5 @@
 program subCall_simpleNamed
+  use OAD_intrinsics
   real :: v
 
   v = 1.4

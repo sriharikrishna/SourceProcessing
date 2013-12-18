@@ -100,13 +100,17 @@ class TestCanonicalizeSubroutineCall(TestCase):
         'Hoist nonintrinsic function call from subroutine call statement'
         compareFiles(self.assertEquals,'subCall_hoistNonintrinsic.f90','subCall_hoistNonintrinsic.pre.f90',format='free')
 
-    def test2(self):
+    def test3(self):
         'no hoisting simple named parameters'
         compareFiles(self.assertEquals,'subCall_simpleNamed.f90','subCall_simpleNamed.pre.f90',format='free')
 
-    def test2(self):
+    def test4(self):
         'hoisting call from named parameter'
         compareFiles(self.assertEquals,'subCall_namedWithCall.f90','subCall_namedWithCall.pre.f90',format='free')
+
+    def test5(self):
+        'hoisting string'
+        compareFiles(self.assertEquals,'charArgument.f90','charArgument.pre.f90',format='free')
 
 class TestFunctionToSubroutine(TestCase):    
     def test1(self):

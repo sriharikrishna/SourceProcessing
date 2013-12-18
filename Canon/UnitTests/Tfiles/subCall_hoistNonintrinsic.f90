@@ -1,9 +1,3 @@
-      subroutine oad_s_bar(x,t)
-        real :: x
-        real,intent(out) :: t
-        t = x*2
-      end subroutine oad_s_bar
-      
       real function bar(x)
         real :: x
         bar = x*2
