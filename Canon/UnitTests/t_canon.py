@@ -20,11 +20,12 @@ DebugManager.setQuiet(True)
 
 Symtab.setTypeDefaults((RealStmt,[]),(IntegerStmt,[]))
 
-def compareFiles(assertFunc,originalFileName,RefFileName,format):
+def compareFiles(assertFunc,originalFileName,RefFileName,format,hoistStrings=False):
     try:
         (fd,testFileName) = tempfile.mkstemp()
         testFile  = open(testFileName,'w')
         setOutputFormat(format)
+        UnitCanonicalizer.setHoistStringsFlag(hoistStrings)
         for aUnit in fortUnitIterator(fname_t(originalFileName),format):
             setOutputFormat(format)
             UnitCanonicalizer(aUnit).canonicalizeUnit().printit(testFile)
@@ -110,7 +111,7 @@ class TestCanonicalizeSubroutineCall(TestCase):
 
     def test5(self):
         'hoisting string'
-        compareFiles(self.assertEquals,'charArgument.f90','charArgument.pre.f90',format='free')
+        compareFiles(self.assertEquals,'charArgument.f90','charArgument.pre.f90',format='free',hoistStrings=True)
 
 class TestFunctionToSubroutine(TestCase):    
     def test1(self):

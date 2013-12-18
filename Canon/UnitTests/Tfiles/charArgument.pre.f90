@@ -5,5 +5,7 @@
       end subroutine
       program p
         use OAD_intrinsics
-        call foo("bar")
+        character*3 :: oad_ctmp0
+        oad_ctmp0 = "bar"
+        call foo(oad_ctmp0)
       end program p
