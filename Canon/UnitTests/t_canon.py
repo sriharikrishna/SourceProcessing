@@ -113,6 +113,10 @@ class TestCanonicalizeSubroutineCall(TestCase):
         'hoisting string'
         compareFiles(self.assertEquals,'charArgument.f90','charArgument.pre.f90',format='free',hoistStrings=True)
 
+    def test6(self):
+        'hoisting empty string'
+        compareFiles(self.assertEquals,'charArgument0Length.f90','charArgument0Length.pre.f90',format='free',hoistStrings=True)
+
 class TestFunctionToSubroutine(TestCase):    
     def test1(self):
         'test converting function to subroutine'
