@@ -20,11 +20,12 @@ DebugManager.setQuiet(True)
 
 Symtab.setTypeDefaults((RealStmt,[]),(IntegerStmt,[]))
 
-def compareFiles(assertFunc,originalFileName,RefFileName,format):
+def compareFiles(assertFunc,originalFileName,RefFileName,format,hoistStrings=False):
     try:
         (fd,testFileName) = tempfile.mkstemp()
         testFile  = open(testFileName,'w')
         setOutputFormat(format)
+        UnitCanonicalizer.setHoistStringsFlag(hoistStrings)
         for aUnit in fortUnitIterator(fname_t(originalFileName),format):
             setOutputFormat(format)
             UnitCanonicalizer(aUnit).canonicalizeUnit().printit(testFile)
@@ -100,13 +101,21 @@ class TestCanonicalizeSubroutineCall(TestCase):
         'Hoist nonintrinsic function call from subroutine call statement'
         compareFiles(self.assertEquals,'subCall_hoistNonintrinsic.f90','subCall_hoistNonintrinsic.pre.f90',format='free')
 
-    def test2(self):
+    def test3(self):
         'no hoisting simple named parameters'
         compareFiles(self.assertEquals,'subCall_simpleNamed.f90','subCall_simpleNamed.pre.f90',format='free')
 
-    def test2(self):
+    def test4(self):
         'hoisting call from named parameter'
         compareFiles(self.assertEquals,'subCall_namedWithCall.f90','subCall_namedWithCall.pre.f90',format='free')
+
+    def test5(self):
+        'hoisting string'
+        compareFiles(self.assertEquals,'charArgument.f90','charArgument.pre.f90',format='free',hoistStrings=True)
+
+    def test6(self):
+        'hoisting empty string'
+        compareFiles(self.assertEquals,'charArgument0Length.f90','charArgument0Length.pre.f90',format='free',hoistStrings=True)
 
 class TestFunctionToSubroutine(TestCase):    
     def test1(self):

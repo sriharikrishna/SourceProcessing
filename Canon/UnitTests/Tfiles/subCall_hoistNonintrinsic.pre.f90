@@ -1,16 +1,19 @@
-      subroutine oad_s_bar(x,t)
-        real :: x
-        real,intent(out) :: t
-        t = x*2
-      end subroutine oad_s_bar
-      
       real function bar(x)
+        use OAD_intrinsics
         real :: x
         bar = x*2
         return
       end function bar
+      subroutine oad_s_bar(x,bar)
+        use OAD_intrinsics
+        real :: x
+        real,intent(out) :: bar
+        bar = x*2
+        return
+      end subroutine oad_s_bar
       
       program subCall_hoistIntrinsic
+        use OAD_intrinsics
         real :: v
         real :: oad_ctmp0
         
