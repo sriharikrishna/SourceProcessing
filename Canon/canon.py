@@ -48,6 +48,8 @@ class UnitCanonicalizer(object):
     _createResultDeclFlag = False
     _keepFunctionDecl = True
     _subroutinizeIntegerFunctions = False
+
+    _warnedTempVars4to8BytesForced = False
     
     _ourPassiveTypes=[fs.IntegerStmt,fs.CharacterStmt]
     _ourPassiveTypeIds=[getBuiltInTypes().index((fs.CharacterStmt,4)),
@@ -163,8 +165,9 @@ class UnitCanonicalizer(object):
             (varTypeClass,typeKind)=globalTypeTable.intrinsicIdToTypeMap[expTypeEntry.getBaseTypeId()]
             varModifierList=[]
         varShape=expressionShape(anExpression,self.__myUnit.symtab,parentStmt.lineNumber)
-        if isinstance(expTypeEntry.entryKind,TypetabEntry.BuiltInEntryKind) and expTypeEntry.entryKind.type_name=='real_8':
-            print >>sys.stderr,'WARNING: Temp variable forced to 8-byte float (real -> double)'
+        if (not UnitCanonicalizer._warnedTempVars4to8BytesForced and isinstance(expTypeEntry.entryKind,TypetabEntry.BuiltInEntryKind) and expTypeEntry.entryKind.type_name=='real_8'):
+            print >>sys.stderr,'WARNING: Temp variable forced to 8-byte float (real -> double); issued for first occurence only, here in unit '+str(self.__myUnit.uinfo)+' for expression >'+str(anExpression)+'< on line '+str(parentStmt.lineNumber)
+            UnitCanonicalizer._warnedTempVars4to8BytesForced=True
         DebugManager.debug('replaced with '+str(theNewTemp)+' of type '+expTypeEntry.debug())
         typeAttrList=[]
         needsAlloc=False
